@@ -236,3 +236,12 @@ docs/build/
 
 # Mac
 .DS_Store
+
+# Quarto
+docs/_site
+docs/.quarto
+docs/reference
+docs/objects.json
+
+# Top-level .md files
+*.md
