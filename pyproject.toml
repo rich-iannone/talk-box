@@ -1,0 +1,207 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "talk-box"
+dynamic = ["version"]
+description = "The best way to generate, test, and deploy LLM chatbots"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    {name = "Richard Iannone", email = "riannone@me.com"},
+]
+keywords = [
+    "chatbot",
+    "llm",
+    "ai",
+    "conversation",
+    "testing",
+    "deployment",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "chatlas>=0.1.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "requests>=2.28.0",
+    "typing-extensions>=4.4.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+# Development dependencies
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.10.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.0.0",
+    "quarto>=1.4.0",
+    "quartodoc>=0.7.0",
+]
+
+# Documentation dependencies  
+docs = [
+    "quarto>=1.4.0",
+    "quartodoc>=0.7.0",
+    "jupyter>=1.0.0",
+]
+
+# Testing framework dependencies
+testing = [
+    "bert-score>=0.3.13",
+    "tiktoken>=0.5.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+]
+
+# Tool dependencies
+tools = [
+    "beautifulsoup4>=4.12.0",
+    "sympy>=1.12",
+    "python-docx>=0.8.11",
+    "pypdf>=3.15.0",
+]
+
+# All optional dependencies
+all = [
+    "talk-box[dev,docs,testing,tools]",
+]
+
+[project.urls]
+Homepage = "https://github.com/rich-iannone/talk-box"
+Documentation = "https://talk-box.readthedocs.io"
+Repository = "https://github.com/rich-iannone/talk-box"
+"Bug Tracker" = "https://github.com/rich-iannone/talk-box/issues"
+
+[project.scripts]
+talk-box = "talk_box.cli:main"
+
+[tool.hatch.version]
+path = "talk_box/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["talk_box"]
+
+# Ruff configuration
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "PTH", # flake8-use-pathlib
+    "ERA", # eradicate
+    "PL",  # pylint
+    "RUF", # Ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long, handled by black
+    "B008",   # do not perform function calls in argument defaults
+    "C901",   # too complex
+    "PLR0913", # too many arguments
+    "PLR0912", # too many branches
+    "PLR0915", # too many statements
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["talk_box"]
+force-sort-within-sections = true
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+# Pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=talk_box",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=90",
+]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unreachable = true
+pretty = true
+show_column_numbers = true
+show_error_codes = true
+show_error_context = true
+
+[[tool.mypy.overrides]]
+module = [
+    "chatlas.*",
+    "bert_score.*",
+    "tiktoken.*",
+    "sympy.*",
+]
+ignore_missing_imports = true
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["talk_box"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
