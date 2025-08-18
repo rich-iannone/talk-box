@@ -1,0 +1,110 @@
+project:
+  type: website
+  post-render: scripts/post-render.py
+  title: "Talk Box"
+
+format:
+  html:
+    theme: flatly
+    css:
+      - styles.css
+      - reference/_styles-quartodoc.css
+    toc: true
+    grid:
+      sidebar-width: 270px
+      body-width: 950px
+      margin-width: 225px
+      gutter-width: 1rem
+  
+website:
+  title: "Talk Box"
+  description: "The best way to generate, test, and deploy LLM chatbots"
+  site-url: "https://rich-iannone.github.io/talk-box"
+  repo-url: "https://github.com/rich-iannone/talk-box"
+  search:
+    show-item-context: true
+  page-navigation: true
+  bread-crumbs: false
+  navbar:
+    background: primary
+    search: true
+    left:
+      - text: "Home"
+        href: index.qmd
+      - text: "Get Started"
+        href: get-started.qmd
+      - text: "Examples"
+        href: examples.qmd
+      - href: reference/index.qmd
+        text: API Reference
+    right:
+      - icon: github
+        href: "https://github.com/rich-iannone/talk-box"
+        aria-label: "GitHub"
+  page-footer:
+    left: |
+      Talk Box is developed by [Rich Iannone](https://github.com/rich-iannone).
+    center: |
+      Made with [Quarto](https://quarto.org/).
+    right: |
+      [License](https://github.com/rich-iannone/talk-box/blob/main/LICENSE)
+
+html-table-processing: none
+
+quartodoc:
+  dir: reference
+  package: talk_box
+  style: pkgdown
+  renderer:
+    style: markdown
+    table_style: description-list
+  sections:
+    - title: "Core Classes"
+      desc: "Main classes for building and managing chatbots"
+      contents:
+        - name: ChatBot
+          members: []
+        - name: Conversation
+          members: []
+        - name: Message
+          members: []
+    - title: "ChatBot Configuration Methods"
+      desc: "Chainable methods for configuring ChatBot behavior and parameters"
+      contents:
+        - ChatBot.model
+        - ChatBot.preset
+        - ChatBot.temperature
+        - ChatBot.max_tokens
+        - ChatBot.tools
+        - ChatBot.persona
+        - ChatBot.avoid
+        - ChatBot.verbose
+    - title: "Conversation Management Methods"
+      desc: "Methods for managing conversation messages and context"
+      contents:
+        - Conversation.add_message
+        - Conversation.add_user_message
+        - Conversation.add_assistant_message
+        - Conversation.add_system_message
+        - Conversation.clear_messages
+        - Conversation.get_messages
+        - Conversation.get_last_message
+        - Conversation.get_message_count
+        - Conversation.get_context_messages
+        - Conversation.set_context_window
+        - Conversation.to_dict
+        - Conversation.from_dict
+    - title: "Message Serialization Methods"
+      desc: "Methods for converting messages to/from dictionary format"
+      contents:
+        - Message.to_dict
+        - Message.from_dict
+    - title: "Presets"
+      desc: "Behavior templates and preset management"
+      contents:
+        - name: Preset
+          members: []
+        - name: PresetManager
+          members: []
+
+
