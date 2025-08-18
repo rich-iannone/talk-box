@@ -1,0 +1,352 @@
+---
+jupyter: python3
+html-table-processing: none
+---
+
+<div style="text-align: center;">
+
+![](assets/talk_box_logo.svg){width=75%}
+
+_The best way to generate, test, and deploy LLM chatbots_
+
+</div>
+
+Talk Box is a powerful, yet elegant chatbot framework for Python that transforms how you
+create and deploy conversational AI. With its intuitive, chainable API, you can quickly build
+sophisticated chatbots with behavior presets, real LLM integration, and stunning browser interfaces
+that make chatbot development immediately productive.
+
+Whether you're a data scientist, AI engineer, or developer, Talk Box helps you go from concept
+to production-ready chatbot in minutes, not hours.
+
+## Getting Started in 30 Seconds
+
+```python
+from talk_box import ChatBot
+from talk_box.integrations.chatlas_adapter import enhance_chatbot_with_chatlas
+
+# Enable real LLM integration
+enhance_chatbot_with_chatlas()
+
+# Create a sophisticated chatbot in just a few lines
+bot = (
+    ChatBot()
+    .model("claude-3-5-sonnet-20241022")
+    .preset("technical_advisor")
+    .persona("Senior Data Scientist")
+    .avoid(["medical_advice"])
+    .enable_llm_mode()
+)
+
+# Chat immediately
+response = bot.chat("What's the best approach for handling missing data?")
+print(response.content)
+```
+
+<div style="text-align: center;">
+
+![](assets/talk-box-chat-response.png){width=100%}
+
+</div>
+
+## Real-World Example: Customer Support Bot
+
+```python
+from talk_box import ChatBot
+from talk_box.integrations.chatlas_adapter import enhance_chatbot_with_chatlas
+
+# Enable LLM integration
+enhance_chatbot_with_chatlas()
+
+# Create a comprehensive customer support chatbot
+support_bot = (
+    ChatBot()
+    .model("claude-3-5-sonnet-20241022")
+    .preset("customer_support")
+    .persona("Senior Technical Support Specialist with 10+ years experience")
+    .tools(["knowledge_base", "ticket_system"])
+    .avoid(["billing_issues", "account_management"])
+    .temperature(0.3)
+    .max_tokens(500)
+    .enable_llm_mode()
+)
+
+# Test the bot with a complex technical question
+customer_inquiry = """
+Hi, I'm having trouble with your API. I keep getting a 429 error 
+when trying to upload files larger than 10MB. Is there a rate limit 
+I should know about?
+"""
+
+response = support_bot.chat(customer_inquiry)
+print(f"Bot Response:\n{response.content}")
+
+# Launch a professional browser interface
+support_bot.create_chat_session().app()
+```
+
+<div style="text-align: center;">
+
+![](assets/talk-box-browser-interface.png){width=100%}
+
+</div>
+
+## Built-in Behavior Presets
+
+Talk Box includes professionally crafted personality presets that provide sophisticated behavior
+patterns out of the box:
+
+```python
+# Technical advisor - authoritative, detailed, evidence-based
+tech_bot = ChatBot().preset("technical_advisor")
+
+# Customer support - polite, helpful, solution-focused
+support_bot = ChatBot().preset("customer_support")
+
+# Creative writer - imaginative, expressive, storytelling
+creative_bot = ChatBot().preset("creative_writer")
+
+# Data analyst - analytical, precise, metrics-driven
+analyst_bot = ChatBot().preset("data_analyst")
+
+# Legal advisor - professional, thorough, disclaimer-aware
+legal_bot = ChatBot().preset("legal_advisor")
+```
+
+Each preset includes:
+
+- **Tone and personality** settings
+- **Domain expertise** configuration
+- **Built-in constraints** and safety measures
+- **Optimized system prompts** for best performance
+
+## Browser-Based Chat Interface
+
+Get a production-ready web interface with just one line of code:
+
+```python
+# Launch browser chat with automatic setup
+bot.create_chat_session().app()
+```
+
+Features include:
+
+- **Professional UI** with responsive design
+- **Real-time messaging** via WebSocket connections
+- **Preset selection** for dynamic behavior switching
+- **Message history** and conversation management
+- **Mobile-friendly** interface for any device
+
+<div style="text-align: center;">
+
+![](assets/talk-box-shiny-interface.gif){width=100%}
+
+</div>
+
+## Multi-Provider LLM Support
+
+Talk Box works seamlessly with all major LLM providers through the powerful chatlas integration:
+
+```python
+# OpenAI models
+openai_bot = ChatBot().model("gpt-4-turbo")
+
+# Anthropic Claude
+claude_bot = ChatBot().model("claude-3-5-sonnet-20241022")
+
+# Google Gemini
+gemini_bot = ChatBot().model("gemini-pro")
+
+# Automatic provider detection based on model name
+mixed_deployment = [
+    ChatBot().model("gpt-4").preset("technical_advisor"),
+    ChatBot().model("claude-3-5-sonnet").preset("creative_writer"),
+    ChatBot().model("gemini-pro").preset("data_analyst")
+]
+```
+
+## Custom Presets and Extensions
+
+Create your own behavior presets for specialized use cases:
+
+```python
+from talk_box.core.presets import Preset, PresetManager
+
+# Define a custom financial advisor preset
+financial_preset = Preset(
+    name="financial_advisor",
+    tone="professional",
+    expertise="finance,investment,risk_management",
+    verbosity="detailed",
+    constraints=["no_guarantees", "include_disclaimers", "cite_sources"],
+    system_prompt="""You are a certified financial advisor with expertise in 
+    investment strategies and risk management. Always include appropriate disclaimers 
+    and encourage users to consult with qualified professionals for personalized advice."""
+)
+
+# Register the custom preset
+manager = PresetManager()
+manager.add_preset(financial_preset)
+
+# Use your custom preset
+financial_bot = ChatBot().preset("financial_advisor")
+```
+
+## Testing and Quality Assurance
+
+Talk Box includes comprehensive testing capabilities with 98% code coverage:
+
+```python
+# Built-in testing for your custom bots
+def test_support_bot_responses():
+    bot = ChatBot().preset("customer_support")
+    
+    # Test basic functionality
+    response = bot.chat("Hello, I need help")
+    assert response.content
+    assert "help" in response.content.lower()
+    
+    # Test preset behavior
+    assert bot.preset_manager.current_preset.name == "customer_support"
+    assert "polite" in bot.preset_manager.current_preset.tone
+
+# Run comprehensive validation
+pytest tests/                    # Full test suite
+pytest --cov=talk_box           # Coverage report
+```
+
+## Production Deployment
+
+### Environment Configuration
+
+```bash
+# .env file for production
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
+CHATLAS_CHAT_PROVIDER=anthropic
+CHATLAS_CHAT_MODEL=claude-3-5-sonnet-20241022
+```
+
+### Docker Deployment
+
+```dockerfile
+FROM python:3.11-slim
+
+# Install Talk Box with all dependencies
+COPY requirements.txt .
+RUN pip install talk-box[all]
+
+# Copy your application
+COPY . /app
+WORKDIR /app
+
+# Launch the browser interface
+CMD ["python", "apps/browser_chat.py"]
+```
+
+### Production Bot Configuration
+
+```python
+import os
+from talk_box import ChatBot
+from talk_box.integrations.chatlas_adapter import enhance_chatbot_with_chatlas
+
+# Production-ready configuration
+enhance_chatbot_with_chatlas()
+
+production_bot = (
+    ChatBot()
+    .model(os.getenv("PRODUCTION_MODEL", "claude-3-5-sonnet"))
+    .preset("customer_support")
+    .persona("Professional Customer Success Agent")
+    .avoid(["internal_information", "competitor_details"])
+    .temperature(0.2)
+    .max_tokens(800)
+    .verbose(False)  # Reduce logging in production
+    .enable_llm_mode()
+)
+
+# Deploy with monitoring and error handling
+app = production_bot.create_chat_session().app()
+```
+
+## Installation
+
+You can install Talk Box using pip:
+
+```bash
+pip install talk-box
+```
+
+For development with all optional dependencies:
+
+```bash
+pip install "talk-box[all]"  # Install with all features
+```
+
+To use Talk Box with specific LLM providers:
+
+```bash
+pip install "talk-box[openai]"     # OpenAI integration
+pip install "talk-box[anthropic]"  # Anthropic Claude integration
+pip install "talk-box[google]"     # Google Gemini integration
+```
+
+**Key Dependencies:**
+
+- **[chatlas](https://github.com/cpsievert/chatlas)** - Excellent LLM integration with automatic provider detection
+- **[Shiny for Python](https://shiny.posit.co/py/)** - Modern, reactive web application framework
+- **[ruff](https://github.com/astral-sh/ruff)** - Lightning-fast Python linter and formatter
+
+## Contributing to Talk Box
+
+There are many ways to contribute to the ongoing development of Talk Box:
+
+**Simple Contributions:**
+- Fix typos and improve documentation
+- File issues for feature requests or bugs
+- Share examples and use cases
+- Test new features and provide feedback
+
+**Code Contributions:**
+- Add new behavior presets for different domains
+- Create tool integrations (web search, databases, APIs)
+- Build deployment adapters (FastAPI, Streamlit, etc.)
+- Improve testing frameworks and add metrics
+
+Please read over the [contributing guidelines](https://github.com/rich-iannone/talk-box/blob/main/CONTRIBUTING.md)
+for information on how to get started.
+
+## Roadmap
+
+We're actively working on enhancing Talk Box with exciting new features:
+
+1. **Advanced Tool Integration** - Web search, database queries, API calls
+2. **Multi-Modal Support** - Image, audio, and document processing capabilities
+3. **Conversation Analytics** - Built-in metrics and performance monitoring
+4. **Enterprise Features** - SSO integration, audit logging, compliance tools
+5. **Advanced Testing** - A/B testing framework, automated quality assurance
+6. **Cloud Deployment** - One-click deployment to major cloud platforms
+7. **Visual Bot Builder** - Drag-and-drop interface for non-technical users
+8. **Plugin Ecosystem** - Marketplace for community-contributed extensions
+
+If you have ideas for features or improvements, we'd love to hear them! Talk Box is designed
+to be the most powerful and user-friendly chatbot framework available.
+
+## Code of Conduct
+
+Please note that the Talk Box project is released with a
+[contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+<br>By participating in this project you agree to abide by its terms.
+
+## 📄 License
+
+Talk Box is licensed under the MIT license.
+
+© Rich Iannone
+
+## 🏛️ Governance
+
+This project is primarily maintained by
+[Rich Iannone](https://github.com/rich-iannone). Other contributors may occasionally
+assist with development and maintenance duties.
