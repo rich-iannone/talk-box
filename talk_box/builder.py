@@ -25,7 +25,7 @@ class ChatBot:
     and discover `Message` objects within conversations.
 
     **Layered API Design**:
-    
+
     1. **ChatBot** (this class): Configuration and interaction entry point
     2. **Conversation**: Multi-turn conversation management and message history  
     3. **Message**: Individual message data structures with metadata
@@ -149,9 +149,22 @@ class ChatBot:
     ```
     """
 
-    def __init__(self) -> None:
-        """Initialize a new ChatBot instance."""
+    def __init__(self, name: Optional[str] = None, description: Optional[str] = None, id: Optional[str] = None) -> None:
+        """Initialize a new ChatBot instance.
+        
+        Parameters
+        ----------
+        name : str, optional
+            A human-readable name for this chatbot (e.g., "Customer Support Bot")
+        description : str, optional  
+            A brief description of the chatbot's purpose and capabilities
+        id : str, optional
+            A unique identifier for this chatbot configuration (useful for A/B testing)
+        """
         self._config: dict[str, Any] = {
+            "name": name or "Untitled ChatBot",
+            "description": description or "A Talk Box chatbot",
+            "id": id,
             "model": "gpt-3.5-turbo",
             "temperature": 0.7,
             "max_tokens": 1000,
@@ -160,6 +173,7 @@ class ChatBot:
             "persona": None,
             "avoid": [],
             "verbose": False,
+            "system_prompt": None,  # Custom system prompt override
         }
         # Initialize preset manager
         self._preset_manager = None
@@ -1250,6 +1264,136 @@ class ChatBot:
         self._config["persona"] = persona_description
         return self
 
+    def system_prompt(self, prompt: str) -> "ChatBot":
+        """
+        Set a custom system prompt, overriding any preset system prompt.
+
+        This method allows for fine-grained prompt engineering. The custom system prompt
+        will take precedence over any preset system prompt, though it will still be
+        combined with persona, constraints, and other configuration elements.
+
+        Parameters
+        ----------
+        prompt : str
+            The custom system prompt text. Can include prompt engineering techniques,
+            specific instructions, formatting requirements, etc.
+
+        Returns
+        -------
+        ChatBot
+            Returns self for method chaining
+
+        Examples
+        --------
+        >>> bot = ChatBot().system_prompt('''
+        ... You are an expert data analyst. Follow these rules:
+        ... 1. Always provide statistical context
+        ... 2. Cite data sources when possible
+        ... 3. Use tables for structured data
+        ... 4. Explain your methodology
+        ... ''')
+        """
+        self._config["system_prompt"] = prompt
+        return self
+
+    def get_system_prompt(self) -> str:
+        """
+        Get the final constructed system prompt that will be sent to the LLM.
+
+        This combines preset system prompts, custom system prompts, persona descriptions,
+        constraints from 'avoid' settings, and other configuration elements into the
+        final prompt text.
+
+        Returns
+        -------
+        str
+            The complete system prompt that will be used for LLM interactions
+
+        Examples
+        --------
+        >>> bot = ChatBot().preset("technical_advisor").persona("Senior Engineer")
+        >>> print(bot.get_system_prompt())
+        "You are a senior technical advisor..."
+        """
+        prompt_parts = []
+
+        # Start with preset system prompt if available
+        if self._config["preset"] and self._current_preset:
+            preset_config = self._current_preset.to_dict()
+            if preset_config.get("system_prompt"):
+                prompt_parts.append(preset_config["system_prompt"])
+
+        # Add custom system prompt override
+        if self._config["system_prompt"]:
+            prompt_parts.append(self._config["system_prompt"])
+
+        # Add persona if specified
+        if self._config["persona"]:
+            if prompt_parts:
+                prompt_parts.append(f"\nAdditional persona: {self._config['persona']}")
+            else:
+                prompt_parts.append(f"You are: {self._config['persona']}")
+
+        # Add constraints from 'avoid' settings
+        if self._config["avoid"]:
+            constraints = ", ".join(self._config["avoid"])
+            prompt_parts.append(f"\nImportant constraints: Avoid discussing or providing {constraints}.")
+
+        # Default fallback
+        if not prompt_parts:
+            prompt_parts.append("You are a helpful AI assistant.")
+
+        return "\n".join(prompt_parts)
+
+    def get_config_summary(self) -> dict[str, Any]:
+        """
+        Get a comprehensive summary of the current chatbot configuration.
+
+        This includes model settings, prompt configuration, and metadata - useful
+        for debugging, logging, A/B testing, and displaying in UI components.
+
+        Returns
+        -------
+        dict[str, Any]
+            Complete configuration summary including:
+            - Basic info (name, description, id)
+            - Model parameters (model, temperature, max_tokens)
+            - Prompt components (preset, custom prompt, persona, constraints)
+            - System prompt (final constructed prompt)
+            - Advanced settings (tools, verbose mode, LLM status)
+
+        Examples
+        --------
+        >>> bot = ChatBot(name="Support Bot").preset("customer_support")
+        >>> config = bot.get_config_summary()
+        >>> print(config["name"], config["model"], len(config["system_prompt"]))
+        "Support Bot" "gpt-3.5-turbo" 245
+        """
+        return {
+            # Basic metadata
+            "name": self._config["name"],
+            "description": self._config["description"],
+            "id": self._config["id"],
+
+            # Model configuration
+            "model": self._config["model"],
+            "temperature": self._config["temperature"],
+            "max_tokens": self._config["max_tokens"],
+
+            # Prompt configuration
+            "preset": self._config["preset"],
+            "custom_system_prompt": self._config["system_prompt"],
+            "persona": self._config["persona"],
+            "avoid_topics": self._config["avoid"],
+            "system_prompt": self.get_system_prompt(),  # Final constructed prompt
+
+            # Advanced settings
+            "tools": self._config["tools"],
+            "verbose": self._config["verbose"],
+            "llm_enabled": self._llm_enabled,
+            "llm_integration": "Active" if self._llm_enabled else "Mock mode"
+        }
+
     def verbose(self, enabled: bool = True) -> "ChatBot":
         """Enable or disable verbose output."""
         self._config["verbose"] = enabled
@@ -1257,10 +1401,21 @@ class ChatBot:
 
     def enable_llm_mode(self) -> "ChatBot":
         """
-        Enable LLM mode explicitly (already auto-enabled by default).
+        Enable LLM mode explicitly (DEPRECATED - LLM is auto-enabled by default).
         
-        This method is mainly for backward compatibility and explicit intent.
-        LLM integration is automatically enabled during ChatBot initialization.
+        This method is deprecated and unnecessary since LLM integration is
+        automatically enabled during ChatBot initialization. It remains for
+        backward compatibility only.
+        
+        Returns
+        -------
+        ChatBot
+            Returns self for method chaining
+            
+        Note
+        ----
+        LLM integration is automatically enabled when you create a ChatBot.
+        You do not need to call this method unless you're using legacy code.
         """
         if not self._llm_enabled:
             self._auto_enable_llm()
@@ -1411,53 +1566,94 @@ class ChatBot:
             return SimpleChatSession(self)
     
     def _repr_html_(self) -> str:
-        """HTML representation for Jupyter notebooks - automatically launches chat interface."""
-        try:
-            # If LLM is enabled, launch the chat interface immediately
-            if self._llm_enabled:
-                import threading
-                
-                # Launch the chat interface in a background thread
-                def launch_chat():
-                    try:
-                        session = self.create_chat_session()
-                        if hasattr(session, 'app'):
-                            session.app()
-                    except Exception as e:
-                        # Don't print errors for missing API keys - that's expected
-                        if "api_key" not in str(e).lower():
-                            print("Note: Browser chat requires environment setup. See docs for details.")
-                
-                # Start the browser launch in background
-                thread = threading.Thread(target=launch_chat, daemon=True)
-                thread.start()
-                
-                return f"""
-                <div style="padding: 20px; border: 2px solid #2E86AB; border-radius: 8px; background-color: #f8f9fa;">
-                    <h3 style="color: #2E86AB; margin-top: 0;">🚀 Talk Box ChatBot Launched!</h3>
-                    <p><strong>Configuration:</strong></p>
-                    <ul>
-                        <li><strong>Model:</strong> {self._config.get('model', 'Not set')}</li>
-                        <li><strong>Preset:</strong> {self._config.get('preset', 'Not set')}</li>
-                        <li><strong>Persona:</strong> {self._config.get('persona', 'Not set')}</li>
-                        <li><strong>Temperature:</strong> {self._config.get('temperature', 0.7)}</li>
-                    </ul>
-                    <div style="background-color: #d4edda; padding: 15px; border-radius: 4px; margin-top: 15px; border-left: 4px solid #28a745;">
-                        <strong>✅ Chat Interface Starting...</strong>
-                        <p style="margin: 5px 0 0 0;">Your browser should open automatically with a ready-to-use chat interface!</p>
-                        <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #666;">
-                            <em>If the browser doesn't open, run: <code>bot.create_chat_session().app()</code></em>
-                        </p>
+        """
+        Rich HTML representation for Jupyter notebooks with enhanced diagnostics.
+        
+        Shows comprehensive configuration information and provides easy access
+        to the enhanced diagnostic chat interface.
+        """
+        config = self.get_config_summary()
+        system_prompt = self.get_system_prompt()
+        
+        # Automatically launch browser chat if LLM is enabled
+        if self._llm_enabled:
+            import threading
+            
+            def launch_basic_chat():
+                try:
+                    # Launch the basic chatlas interface (more reliable)
+                    session = self.create_chat_session()
+                    if hasattr(session, 'app'):
+                        session.app()
+                except Exception as e:
+                    # Don't print errors for missing API keys - that's expected
+                    if "api_key" not in str(e).lower():
+                        print(f"Note: Browser chat requires environment setup. See docs for details.")
+            
+            # Start the basic chat in background
+            thread = threading.Thread(target=launch_basic_chat, daemon=True)
+            thread.start()
+        
+        # Create a comprehensive diagnostic display
+        html = f"""
+        <div style="padding: 20px; border: 2px solid #2E86AB; border-radius: 8px; background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+            <h3 style="color: #2E86AB; margin-top: 0; display: flex; align-items: center;">
+                🤖 Talk Box ChatBot
+                <span style="margin-left: 10px; font-size: 0.7em; background: #28a745; color: white; padding: 2px 8px; border-radius: 12px;">
+                    {config['llm_integration']}
+                </span>
+            </h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 15px 0;">
+                <div>
+                    <h4 style="color: #495057; margin-bottom: 10px; font-size: 1em;">📊 Configuration</h4>
+                    <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #2E86AB;">
+                        <div style="margin: 4px 0;"><strong>Model:</strong> {config['model']}</div>
+                        <div style="margin: 4px 0;"><strong>Temperature:</strong> {config['temperature']}</div>
+                        <div style="margin: 4px 0;"><strong>Max Tokens:</strong> {config['max_tokens']}</div>
+                        <div style="margin: 4px 0;"><strong>Preset:</strong> {config['preset'] or 'Custom'}</div>
                     </div>
                 </div>
-                """
-            else:
-                # Fallback: show configuration and instructions
-                return self._repr_html_fallback()
                 
-        except Exception:
-            # Fallback if anything goes wrong
-            return self._repr_html_fallback()
+                <div>
+                    <h4 style="color: #495057; margin-bottom: 10px; font-size: 1em;">� Advanced Settings</h4>
+                    <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #6f42c1;">
+                        <div style="margin: 4px 0;"><strong>Name:</strong> {config['name'] or 'Unnamed Bot'}</div>
+                        <div style="margin: 4px 0;"><strong>Persona:</strong> {config['persona'] or 'None'}</div>
+                        <div style="margin: 4px 0;"><strong>Constraints:</strong> {len(config['avoid_topics'])} topic(s)</div>
+                        <div style="margin: 4px 0;"><strong>Tools:</strong> {len(config['tools'])} enabled</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin: 15px 0;">
+                <h4 style="color: #495057; margin-bottom: 8px; font-size: 1em;">📝 System Prompt ({len(system_prompt)} characters)</h4>
+                <div style="background: #f1f3f4; padding: 12px; border-radius: 6px; font-family: 'Monaco', 'Menlo', monospace; font-size: 0.85em; max-height: 120px; overflow-y: auto; white-space: pre-wrap; border-left: 4px solid #fd7e14;">
+{system_prompt}</div>
+            </div>
+            
+            <div style="background: linear-gradient(90deg, #28a745, #20c997); padding: 15px; border-radius: 6px; margin-top: 15px; color: white;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <strong>🚀 Browser Chat Launching!</strong>
+                        <div style="font-size: 0.9em; margin-top: 4px;">
+                            Basic chat interface opening automatically
+                        </div>
+                    </div>
+                    <div style="text-align: right; font-size: 0.85em;">
+                        <div>� Enhanced Diagnostics:</div>
+                        <div><code style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">python launch_chat.py enhanced</code></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 12px; font-size: 0.8em; color: #6c757d; text-align: center;">
+                ⚡ Basic chat launching now • 🔍 For full diagnostics: <strong>python launch_chat.py enhanced</strong>
+            </div>
+        </div>
+        """
+        
+        return html
     
     def _repr_html_fallback(self) -> str:
         """Fallback HTML representation when chat interface isn't available."""
