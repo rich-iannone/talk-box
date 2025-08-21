@@ -84,7 +84,7 @@ class Message:
 
     Create messages for different conversation participants:
 
-    ```{python}
+    ```python
     from talk_box import Message
     from datetime import datetime
 
@@ -115,7 +115,7 @@ class Message:
 
     Use metadata to store additional context and processing information:
 
-    ```{python}
+    ```python
     # Message with rich metadata
     detailed_msg = Message(
         content="Here's the code implementation you requested...",
@@ -140,7 +140,7 @@ class Message:
 
     Convert messages to/from dictionaries for storage and transmission:
 
-    ```{python}
+    ```python
     # Create a message
     original_msg = Message(
         content="Serialize this message for storage",
@@ -162,7 +162,7 @@ class Message:
 
     Create messages for function calls and tool usage:
 
-    ```{python}
+    ```python
     # Function call request
     function_call = Message(
         content="calculate_statistics",
@@ -194,7 +194,7 @@ class Message:
 
     Use custom roles for specialized conversation types:
 
-    ```{python}
+    ```python
     # Code review workflow
     code_submission = Message(
         content="def fibonacci(n): return n if n <= 1 else fibonacci(n-1) + fibonacci(n-2)",
@@ -231,7 +231,7 @@ class Message:
 
     Messages can be validated and filtered based on their attributes:
 
-    ```{python}
+    ```python
     messages = [user_msg, assistant_msg, system_msg, detailed_msg]
 
     # Filter by role
@@ -255,7 +255,7 @@ class Message:
 
     Messages are designed to integrate seamlessly with conversation management:
 
-    ```{python}
+    ```python
     from talk_box import Conversation
 
     # Create conversation and add messages
@@ -410,7 +410,7 @@ class Conversation:
 
     Create a conversation and add messages using convenience methods:
 
-    ```{python}
+    ```python
     from talk_box import Conversation
 
     # Create a new conversation
@@ -429,7 +429,7 @@ class Conversation:
 
     Use system messages to provide context and instructions:
 
-    ```{python}
+    ```python
     # Create conversation with initial system context
     tech_conversation = Conversation()
 
@@ -458,7 +458,7 @@ class Conversation:
 
     Control conversation length to work within model limitations:
 
-    ```{python}
+    ```python
     # Create conversation with context window
     long_conversation = Conversation()
     long_conversation.set_context_window(10)  # Keep only last 10 messages
@@ -481,7 +481,7 @@ class Conversation:
 
     Analyze conversation patterns and extract insights:
 
-    ```{python}
+    ```python
     from datetime import datetime, timedelta
 
     # Create a conversation with varied message types
@@ -523,7 +523,7 @@ class Conversation:
 
     Save and restore conversations for session management:
 
-    ```{python}
+    ```python
     import json
     from pathlib import Path
 
@@ -559,7 +559,7 @@ class Conversation:
 
     Build complex conversation workflows with branching logic:
 
-    ```{python}
+    ```python
     # Customer support conversation workflow
     support_conversation = Conversation()
 
@@ -606,7 +606,7 @@ class Conversation:
 
     Use conversations as the foundation for chatbot interactions:
 
-    ```{python}
+    ```python
     from talk_box import ChatBot
 
     # Create chatbot and conversation
