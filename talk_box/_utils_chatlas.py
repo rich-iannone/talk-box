@@ -106,22 +106,28 @@ class ChatlasAdapter:
         # Create the chat instance with the specified model
         chat = self._create_chat_instance(model=model)
 
-        # Build system prompt from preset and persona
+        # Build system prompt from config elements
         system_messages = []
 
-        # Apply preset if specified
-        preset_name = config.get("preset")
-        if preset_name:
-            preset = self.preset_manager.get_preset(preset_name)
-            if preset and preset.system_prompt:
-                system_messages.append(preset.system_prompt)
+        # Priority order: custom system_prompt > preset > persona
+        # 1. Custom system prompt (highest priority)
+        custom_system_prompt = config.get("system_prompt")
+        if custom_system_prompt:
+            system_messages.append(custom_system_prompt)
+        else:
+            # 2. Preset system prompt (if no custom prompt)
+            preset_name = config.get("preset")
+            if preset_name:
+                preset = self.preset_manager.get_preset(preset_name)
+                if preset and preset.system_prompt:
+                    system_messages.append(preset.system_prompt)
 
-        # Apply persona if specified
-        persona = config.get("persona")
-        if persona:
-            system_messages.append(f"You are {persona}.")
+            # 3. Persona (if no custom prompt)
+            persona = config.get("persona")
+            if persona:
+                system_messages.append(f"You are {persona}.")
 
-        # Apply constraints from avoid list
+        # Always apply constraints from avoid list
         avoid_list = config.get("avoid", [])
         if avoid_list:
             constraints = ", ".join(avoid_list)
@@ -136,9 +142,7 @@ class ChatlasAdapter:
 
         return chat
 
-    def chat_with_session(
-        self, chat_session: chatlas.Chat, message: str
-    ) -> ChatResponse:
+    def chat_with_session(self, chat_session: chatlas.Chat, message: str) -> ChatResponse:
         """
         Send a message to a chatlas session and get response.
 
