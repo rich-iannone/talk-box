@@ -46,7 +46,7 @@ class Preset:
         The primary areas of knowledge or specialization for this chatbot. This can be
         a single domain or comma-separated list of expertise areas. Examples include:
         - `"python,ml"`: Python programming and machine learning
-        - `"customer_service"`: Customer support and service excellence  
+        - `"customer_service"`: Customer support and service excellence
         - `"data_analysis,statistics"`: Data analysis and statistical methods
         - `"legal_knowledge"`: Legal information and procedures
         - `"creative_writing"`: Creative writing and storytelling
@@ -104,7 +104,7 @@ class Preset:
 
     Define presets for specific business or technical domains:
 
-    ```{python}
+    ```python
     from talk_box import Preset
 
     # DevOps engineering specialist
@@ -119,7 +119,7 @@ class Preset:
                      "solutions with security and scalability considerations."
     )
 
-    # Marketing content specialist  
+    # Marketing content specialist
     marketing_preset = Preset(
         name="marketing_specialist",
         tone="persuasive",
@@ -139,7 +139,7 @@ class Preset:
 
     Create presets for educational and training scenarios:
 
-    ```{python}
+    ```python
     # Programming tutor for beginners
     tutor_preset = Preset(
         name="programming_tutor",
@@ -181,7 +181,7 @@ class Preset:
 
     Design presets for specific industry applications:
 
-    ```{python}
+    ```python
     # Healthcare information assistant
     healthcare_preset = Preset(
         name="healthcare_info",
@@ -190,7 +190,7 @@ class Preset:
         verbosity="thorough",
         constraints=[
             "no_diagnosis",
-            "no_treatment_advice", 
+            "no_treatment_advice",
             "medical_disclaimers",
             "professional_referral"
         ],
@@ -233,7 +233,7 @@ class Preset:
 
     Build presets for creative and content creation tasks:
 
-    ```{python}
+    ```python
     # Storytelling specialist
     storyteller_preset = Preset(
         name="storyteller",
@@ -275,10 +275,10 @@ class Preset:
 
     Extract preset data for integration with other systems:
 
-    ```{python}
+    ```python
     # Convert preset to dictionary for storage or API transmission
     preset_data = tutor_preset.to_dict()
-    
+
     print("Preset configuration:")
     for key, value in preset_data.items():
         if isinstance(value, list):
@@ -289,7 +289,7 @@ class Preset:
     # Example output structure:
     # {
     #     "name": "programming_tutor",
-    #     "tone": "encouraging", 
+    #     "tone": "encouraging",
     #     "expertise": "python,programming_fundamentals,debugging",
     #     "verbosity": "thorough",
     #     "constraints": ["beginner_friendly", "step_by_step", "encouraging", "no_jargon"],
@@ -352,6 +352,56 @@ class Preset:
             "constraints": self.constraints,
             "system_prompt": self.system_prompt,
         }
+
+
+class PresetNames:
+    """
+    Predefined preset names for autocomplete and type safety.
+
+    This class provides constants for all available preset names, enabling IDE
+    autocomplete and preventing typos in preset names. Use these constants instead
+    of string literals when calling the preset() method.
+
+    Values
+    ------
+    The following preset names are available:
+
+    **Business and Support:**
+    - `CUSTOMER_SUPPORT`: Polite, professional customer service interactions
+    - `LEGAL_ADVISOR`: Professional legal information with appropriate disclaimers
+
+    **Technical and Development:**
+    - `TECHNICAL_ADVISOR`: Authoritative technical guidance with detailed explanations
+    - `DATA_ANALYST`: Analytical, evidence-based responses for data science tasks
+
+    **Creative and Content:**
+    - `CREATIVE_WRITER`: Imaginative storytelling and creative content generation
+
+    Examples
+    --------
+    Use these constants instead of strings for better autocomplete:
+
+    ```python
+    import talk_box as tb
+
+    # Use constants for autocomplete and type safety
+    bot = tb.ChatBot().preset(tb.PresetNames.TECHNICAL_ADVISOR)
+
+    # Instead of error-prone strings
+    bot = tb.ChatBot().preset("technical_advisor")  # Risk of typos
+    ```
+    """
+
+    # Business and Support presets
+    CUSTOMER_SUPPORT = "customer_support"
+    LEGAL_ADVISOR = "legal_advisor"
+
+    # Technical and Development presets
+    TECHNICAL_ADVISOR = "technical_advisor"
+    DATA_ANALYST = "data_analyst"
+
+    # Creative and Content presets
+    CREATIVE_WRITER = "creative_writer"
 
 
 class PresetManager:
@@ -421,7 +471,7 @@ class PresetManager:
 
     Get and use presets from the default library:
 
-    ```{python}
+    ```python
     from talk_box import PresetManager, ChatBot
 
     # Create a preset manager (loads defaults automatically)
@@ -446,7 +496,7 @@ class PresetManager:
 
     Create and register custom presets for specific business needs:
 
-    ```{python}
+    ```python
     from talk_box import Preset, PresetManager
 
     # Create a custom preset for e-commerce support
@@ -477,7 +527,7 @@ class PresetManager:
 
     Create specialized preset collections for different teams or applications:
 
-    ```{python}
+    ```python
     # Educational presets
     educational_presets = [
         Preset(
@@ -523,7 +573,7 @@ class PresetManager:
 
     Understand how presets merge with explicit configuration settings:
 
-    ```{python}
+    ```python
     manager = PresetManager()
 
     # Start with base configuration
@@ -554,13 +604,13 @@ class PresetManager:
 
     Manage presets dynamically during application runtime:
 
-    ```{python}
+    ```python
     manager = PresetManager()
 
     # Check if preset exists before removal
     if manager.get_preset("legal_advisor"):
         print("Legal advisor preset is available")
-        
+
         # Remove preset (returns True if removed)
         if manager.remove_preset("legal_advisor"):
             print("✅ Legal advisor preset removed")
