@@ -1,0 +1,31 @@
+{
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "editor.formatOnSave": true,
+  "editor.tabSize": 4,
+  "files.exclude": {
+    "**/__pycache__": true
+  },
+  "editor.rulers": [100],
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    }
+  },
+  "python.testing.pytestArgs": ["tests"],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+
+  // Python interpreter settings for virtual environment
+  "python.defaultInterpreterPath": "./.venv/bin/python",
+  "python.pythonPath": "./.venv/bin/python",
+
+  // File associations for Quarto
+  "files.associations": {
+    "playground.qmd": "quarto",
+    "*.qmd": "quarto"
+  }
+}
