@@ -15,7 +15,7 @@ format:
       body-width: 950px
       margin-width: 225px
       gutter-width: 1rem
-  
+
 website:
   title: "Talk Box"
   description: "The best way to generate, test, and deploy LLM chatbots"
@@ -68,6 +68,42 @@ quartodoc:
           members: []
         - name: Message
           members: []
+    - title: "Attention-Based Prompt Engineering"
+      desc: "Advanced prompt building using attention mechanisms and cognitive principles"
+      contents:
+        - name: PromptBuilder
+          members: []
+        - name: Priority
+          members: []
+        - name: PromptSection
+          members: []
+    - title: "PromptBuilder Methods"
+      desc: "Fluent API for building attention-optimized prompts"
+      contents:
+        - PromptBuilder.task_context
+        - PromptBuilder.constraint
+        - PromptBuilder.critical_constraint
+        - PromptBuilder.example
+        - PromptBuilder.core_analysis
+        - PromptBuilder.output_format
+        - PromptBuilder.focus_on
+        - PromptBuilder.final_emphasis
+        - PromptBuilder.persona
+        - PromptBuilder.avoid_topics
+        - PromptBuilder.structured_section
+        - PromptBuilder.build
+    - title: "Pre-configured Prompt Builders"
+      desc: "Ready-to-use attention-based prompt templates"
+      contents:
+        - architectural_analysis_prompt
+        - code_review_prompt
+        - debugging_prompt
+    - title: "ChatBot Prompt Engineering Methods"
+      desc: "Integration methods for attention-based prompting"
+      contents:
+        - ChatBot.prompt_builder
+        - ChatBot.structured_prompt
+        - ChatBot.chain_prompts
     - title: "ChatBot Configuration Methods"
       desc: "Chainable methods for configuring ChatBot behavior and parameters"
       contents:
