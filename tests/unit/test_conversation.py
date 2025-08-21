@@ -5,7 +5,7 @@ from uuid import UUID
 
 import pytest
 
-from talk_box.core.conversation import Conversation, Message
+from talk_box.conversation import Conversation, Message
 
 
 class TestMessage:

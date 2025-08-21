@@ -110,8 +110,13 @@ class TestChatBot:
     def test_chat_basic_functionality(self):
         """Test basic chat functionality (echo for now)."""
         bot = ChatBot()
-        response = bot.chat("Hello, world!")
+        conversation = bot.chat("Hello, world!")
 
-        assert response is not None
-        assert "Hello, world!" in response.content
-        assert hasattr(response, "metadata")
+        assert conversation is not None
+        assert hasattr(conversation, "get_last_message")
+
+        # Get the last message (assistant response)
+        last_message = conversation.get_last_message()
+        assert last_message is not None
+        assert "Hello, world!" in last_message.content
+        assert last_message.role == "assistant"

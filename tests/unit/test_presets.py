@@ -2,7 +2,7 @@
 
 import pytest
 
-from talk_box.core.presets import Preset, PresetManager
+from talk_box.presets import Preset, PresetManager
 
 
 class TestPreset:
