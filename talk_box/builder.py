@@ -1,14 +1,17 @@
 """
 ChatBot builder module for Talk Box.
 
-This module implements the chainable API for configuring and creating chatbots.
+This module implements the chainable API for configuring and creating chatbots,
+including attention-based prompt engineering capabilities.
 """
 
 import socket
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
     from talk_box.conversation import Conversation
+    from talk_box.presets import PresetNames
+    from talk_box.prompt_builder import PromptBuilder
 
 # Constants for validation
 MAX_TEMPERATURE = 2.0
@@ -101,11 +104,11 @@ class ChatBot:
 
     The natural progression from ChatBot to Conversation to Message:
 
-    ```{python}
-    from talk_box import ChatBot
+    ```python
+    import talk_box as tb
 
     # 1. Configure chatbot (entry point)
-    bot = ChatBot().model("gpt-4").temperature(0.7).preset("helpful")
+    bot = tb.ChatBot().model("gpt-4").temperature(0.7).preset("helpful")
 
     # 2. Start conversation (returns Conversation object)
     conversation = bot.chat("Hello! What can you help me with?")
@@ -123,7 +126,7 @@ class ChatBot:
 
     Explicit conversation management for complex workflows:
 
-    ```{python}
+    ```python
     # Start with empty conversation
     conversation = bot.start_conversation()
 
@@ -144,9 +147,11 @@ class ChatBot:
 
     Start simple and naturally discover more advanced features:
 
-    ```{python}
+    ```python
+    import talk_box as tb
+
     # Layer 1: Basic ChatBot usage
-    bot = ChatBot().model("gpt-4")
+    bot = tb.ChatBot().model("gpt-4")
     convo = bot.chat("Hello!")
 
     # Layer 2: Conversation management (discovered from return type)
@@ -292,7 +297,7 @@ class ChatBot:
             Detailed installation guide for different environments
         """
         return """
-🔧 ChatLAS Installation Guide
+🔧 Chatlas Installation Guide
 
 📦 Install chatlas for real LLM integration:
 
@@ -323,8 +328,8 @@ class ChatBot:
    os.environ["OPENAI_API_KEY"] = "your_key"
 
 4️⃣ Test installation:
-   from talk_box import ChatBot
-   bot = ChatBot()
+   import talk_box as tb
+   bot = tb.ChatBot()
    bot.show("status")  # Should show "LLM Ready"
 
 💡 Once installed, all ChatBot instances automatically get real LLM capabilities!
@@ -388,19 +393,7 @@ class ChatBot:
         model_name : str
             The name of the language model to use. Supported models include:
 
-            **OpenAI Models:**
-            - `"gpt-4-turbo"`: Latest GPT-4 with improved performance and lower cost
-            - `"gpt-4"`: Original GPT-4 model with excellent reasoning capabilities
-            - `"gpt-3.5-turbo"`: Fast, cost-effective model good for most tasks
-            - `"gpt-4o"`: Multimodal model supporting text, images, and audio
 
-            **Anthropic Models:**
-            - `"claude-3-5-sonnet-20241022"`: Latest Claude with excellent reasoning
-            - `"claude-3-haiku-20240307"`: Fast, efficient model for simple tasks
-            - `"claude-3-opus-20240229"`: Most capable Claude model for complex tasks
-
-            **Google Models:**
-            - `"gemini-pro"`: The flagship model from Google
             - `"gemini-pro-vision"`: Multimodal version supporting images
 
             The exact model names may vary by provider. Check provider documentation
@@ -419,6 +412,28 @@ class ChatBot:
             model availability at configuration time - validation occurs when
             creating chat sessions.
 
+
+        Model Types by Provider
+        ------------------------
+        Here are some examples of model types by provider:
+
+        **OpenAI Models:**
+
+        - `"gpt-4-turbo"`: Latest GPT-4 with improved performance and lower cost
+        - `"gpt-4"`: Original GPT-4 model with excellent reasoning capabilities
+        - `"gpt-3.5-turbo"`: Fast, cost-effective model good for most tasks
+        - `"gpt-4o"`: Multimodal model supporting text, images, and audio
+
+        **Anthropic Models:**
+
+        - `"claude-3-5-sonnet-20241022"`: Latest Claude with excellent reasoning
+        - `"claude-3-haiku-20240307"`: Fast, efficient model for simple tasks
+        - `"claude-3-opus-20240229"`: Most capable Claude model for complex tasks
+
+        **Google Models:**
+
+        - `"gemini-pro"`: The flagship model from Google
+
         Examples
         --------
         ### Using different models for different purposes
@@ -426,19 +441,19 @@ class ChatBot:
         Configure chatbots with models optimized for specific tasks:
 
         ```python
-        from talk_box import ChatBot
+        import talk_box as tb
 
         # High-performance model for complex reasoning
-        reasoning_bot = ChatBot().model("gpt-4-turbo")
+        reasoning_bot = tb.ChatBot().model("gpt-4-turbo")
 
         # Fast, cost-effective model for simple tasks
-        quick_bot = ChatBot().model("gpt-3.5-turbo")
+        quick_bot = tb.ChatBot().model("gpt-3.5-turbo")
 
         # Creative model for storytelling
-        creative_bot = ChatBot().model("claude-3-opus-20240229")
+        creative_bot = tb.ChatBot().model("claude-3-opus-20240229")
 
         # Multimodal model for image analysis
-        vision_bot = ChatBot().model("gpt-4o")
+        vision_bot = tb.ChatBot().model("gpt-4o")
         ```
 
         ### Model selection with method chaining
@@ -446,9 +461,11 @@ class ChatBot:
         Combine model selection with other configuration options:
 
         ```python
+        import talk_box as tb
+
         # Technical advisor with high-performance model
         tech_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("gpt-4-turbo")
             .preset("technical_advisor")
             .temperature(0.2)  # Low creativity for factual responses
@@ -457,7 +474,7 @@ class ChatBot:
 
         # Creative writer with Claude
         writer_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("claude-3-opus-20240229")
             .preset("creative_writer")
             .temperature(0.8)  # High creativity
@@ -470,7 +487,9 @@ class ChatBot:
         Change models based on task requirements:
 
         ```python
-        bot = ChatBot().preset("technical_advisor")
+        import talk_box as tb
+
+        bot = tb.ChatBot().preset("technical_advisor")
 
         # Use fast model for quick questions
         bot.model("gpt-3.5-turbo")
@@ -486,17 +505,19 @@ class ChatBot:
         Choose models based on your specific requirements:
 
         ```python
+        import talk_box as tb
+
         # For code generation and technical tasks
-        code_bot = ChatBot().model("gpt-4-turbo").preset("technical_advisor")
+        code_bot = tb.ChatBot().model("gpt-4-turbo").preset("technical_advisor")
 
         # For creative writing and storytelling
-        creative_bot = ChatBot().model("claude-3-opus-20240229").preset("creative_writer")
+        creative_bot = tb.ChatBot().model("claude-3-opus-20240229").preset("creative_writer")
 
         # For cost-effective general tasks
-        general_bot = ChatBot().model("gpt-3.5-turbo").preset("customer_support")
+        general_bot = tb.ChatBot().model("gpt-3.5-turbo").preset("customer_support")
 
         # For multimodal tasks (text + images)
-        vision_bot = ChatBot().model("gpt-4o")
+        vision_bot = tb.ChatBot().model("gpt-4o")
         ```
 
         Notes
@@ -556,19 +577,19 @@ class ChatBot:
         ### Using explicit provider and model combinations
 
         ```python
-        from talk_box import ChatBot
+        import talk_box as tb
 
         # OpenAI models
-        openai_bot = ChatBot().provider_model("openai:gpt-4o")
+        openai_bot = tb.ChatBot().provider_model("openai:gpt-4o")
 
         # Anthropic models
-        anthropic_bot = ChatBot().provider_model("anthropic:claude-3-opus-20240229")
+        anthropic_bot = tb.ChatBot().provider_model("anthropic:claude-3-opus-20240229")
 
         # Google models
-        google_bot = ChatBot().provider_model("google:gemini-pro")
+        google_bot = tb.ChatBot().provider_model("google:gemini-pro")
 
         # Default to OpenAI if no provider specified
-        default_bot = ChatBot().provider_model("gpt-4-turbo")
+        default_bot = tb.ChatBot().provider_model("gpt-4-turbo")
         ```
 
         ### Method chaining with provider_model
@@ -615,7 +636,7 @@ class ChatBot:
         self._config["model"] = model
         return self
 
-    def preset(self, preset_name: str) -> "ChatBot":
+    def preset(self, preset_name: Union[str, "PresetNames"]) -> "ChatBot":
         """
         Apply a pre-configured behavior template to instantly specialize the chatbot.
 
@@ -636,24 +657,34 @@ class ChatBot:
 
         Parameters
         ----------
-        preset_name : str
-            The name of the behavior preset to apply. Available presets include:
+        preset_name : str or PresetNames
+            The name of the behavior preset to apply. You can use either a string or
+            a constant from `PresetNames` for better autocomplete and type safety.
+
+            **Using PresetNames constants (recommended):**
+
+            ```python
+            import talk_box as tb
+            bot = tb.ChatBot().preset(tb.PresetNames.TECHNICAL_ADVISOR)
+            ```
+
+            **Available presets:**
 
             **Business and Support:**
-            - `"customer_support"`: Polite, professional customer service interactions
-              with concise responses and helpful guidance
-            - `"legal_advisor"`: Professional legal information with appropriate disclaimers
-              and thorough, well-sourced responses
+            - `PresetNames.CUSTOMER_SUPPORT` or `"customer_support"`: Polite, professional
+              customer service interactions with concise responses and helpful guidance
+            - `PresetNames.LEGAL_ADVISOR` or `"legal_advisor"`: Professional legal information
+              with appropriate disclaimers and thorough, well-sourced responses
 
             **Technical and Development:**
-            - `"technical_advisor"`: Authoritative technical guidance with detailed
-              explanations, code examples, and best practices
-            - `"data_analyst"`: Analytical, evidence-based responses for data science
-              and statistical analysis tasks
+            - `PresetNames.TECHNICAL_ADVISOR` or `"technical_advisor"`: Authoritative technical
+              guidance with detailed explanations, code examples, and best practices
+            - `PresetNames.DATA_ANALYST` or `"data_analyst"`: Analytical, evidence-based
+              responses for data science and statistical analysis tasks
 
             **Creative and Content:**
-            - `"creative_writer"`: Imaginative storytelling and creative content generation
-              with descriptive, engaging responses
+            - `PresetNames.CREATIVE_WRITER` or `"creative_writer"`: Imaginative storytelling
+              and creative content generation with descriptive, engaging responses
 
             Additional presets may be available through custom preset libraries or
             organizational preset collections.
@@ -754,10 +785,10 @@ class ChatBot:
         View what a preset configures before applying it:
 
         ```python
-        from talk_box import PresetManager
+        import talk_box as tb
 
         # Get preset details
-        manager = PresetManager()
+        manager = tb.PresetManager()
         tech_preset = manager.get_preset("technical_advisor")
 
         if tech_preset:
@@ -767,7 +798,7 @@ class ChatBot:
             print(f"Constraints: {', '.join(tech_preset.constraints)}")
 
         # Apply preset and check final configuration
-        bot = ChatBot().preset("technical_advisor")
+        bot = tb.ChatBot().preset("technical_advisor")
         config = bot.get_config()
         print(f"Final config: {config}")
         ```
@@ -777,8 +808,10 @@ class ChatBot:
         Change presets based on conversation context:
 
         ```python
+        import talk_box as tb
+
         # Start with customer support
-        bot = ChatBot().preset("customer_support")
+        bot = tb.ChatBot().preset("customer_support")
 
         # Handle general customer inquiry
         response1 = bot.chat("I need help with my order")
@@ -827,12 +860,15 @@ class ChatBot:
         model : Choose models that work well with specific presets
         temperature : Adjust creativity levels appropriate for the preset domain
         """
-        self._config["preset"] = preset_name
+        # Convert PresetNames constant to string if needed
+        preset_str = preset_name if isinstance(preset_name, str) else str(preset_name)
+
+        self._config["preset"] = preset_str
 
         # Apply the preset if preset manager is available
         if self.preset_manager:
             try:
-                preset_obj = self.preset_manager.get_preset(preset_name)
+                preset_obj = self.preset_manager.get_preset(preset_str)
                 if preset_obj:
                     # Store the preset for display in _repr_html_
                     self._current_preset = preset_obj
@@ -1652,6 +1688,290 @@ class ChatBot:
         self._config["verbose"] = enabled
         return self
 
+    # Attention-based prompt engineering methods
+
+    def prompt_builder(self, builder_type: str = "general") -> "PromptBuilder":
+        """
+        Create an attention-optimized prompt builder for declarative prompt composition.
+
+        This method returns a specialized prompt builder that implements attention-based
+        structuring principles from modern prompt engineering research. The builder helps
+        engineers create prompts with optimal attention patterns through a fluent,
+        declarative API.
+
+        Based on research showing that structure matters more than specific word choices,
+        this builder enables you to:
+        - Front-load critical information (primacy bias)
+        - Create structured sections for clear attention clustering
+        - Avoid attention drift through specific constraints
+        - Build modular, maintainable prompt components
+
+        Parameters
+        ----------
+        builder_type : str, optional
+            Type of prompt builder to create. Options include:
+            - "general": Basic attention-optimized builder
+            - "architectural": Pre-configured for code architecture analysis
+            - "code_review": Pre-configured for code review tasks
+            - "debugging": Pre-configured for debugging assistance
+
+        Returns
+        -------
+        PromptBuilder
+            A prompt builder with methods for declarative prompt composition
+
+        Examples
+        --------
+        ### Basic attention-optimized prompt building
+
+        ```python
+        from talk_box import ChatBot
+
+        bot = ChatBot().model("gpt-4-turbo")
+
+        # Build an attention-optimized prompt
+        prompt = (bot.prompt_builder()
+            .persona("senior software architect", "comprehensive codebase analysis")
+            .task_context("Create architectural documentation")
+            .critical_constraint("Focus on identifying architectural debt")
+            .core_analysis([
+                "Tools, frameworks, and design patterns",
+                "Data models and API design patterns",
+                "Architectural inconsistencies"
+            ])
+            .output_format([
+                "Use clear headings and bullet points",
+                "Include specific examples from codebase"
+            ])
+            .final_emphasis("Prioritize findings by impact and consistency")
+            .build())
+
+        # Use the structured prompt
+        response = bot.chat(prompt)
+        ```
+
+        ### Pre-configured builders for common tasks
+
+        ```python
+        # Architectural analysis with pre-configured structure
+        arch_prompt = (bot.prompt_builder("architectural")
+            .focus_on("identifying technical debt")
+            .build())
+
+        # Code review with attention-optimized structure
+        review_prompt = (bot.prompt_builder("code_review")
+            .avoid_topics(["personal criticism"])
+            .focus_on("actionable improvement suggestions")
+            .build())
+        ```
+
+        ### Preview prompt structure before building
+
+        ```python
+        builder = (bot.prompt_builder()
+            .persona("technical advisor")
+            .core_analysis(["Security", "Performance", "Maintainability"])
+            .output_format(["Structured sections", "Specific examples"]))
+
+        # Preview the attention structure
+        structure = builder.preview_structure()
+        print(f"Estimated tokens: {structure['estimated_tokens']}")
+        print(f"Priority sections: {len(structure['structured_sections'])}")
+
+        # Build when satisfied with structure
+        prompt = builder.build()
+        ```
+
+        Notes
+        -----
+        The returned builder implements attention-based principles:
+        - **Primacy bias**: Critical information is front-loaded
+        - **Structured sections**: Clear attention clustering prevents drift
+        - **Personas**: Behavioral anchoring for consistent responses
+        - **Specific constraints**: Avoid vague instructions that cause attention drift
+        - **Recency bias**: Final emphasis leverages end-of-prompt attention
+
+        See Also
+        --------
+        PromptBuilder : The full prompt builder API
+        preset : Use presets for quick specialized configurations
+        persona : Set behavioral context for responses
+        """
+        from talk_box.prompt_builder import (
+            PromptBuilder,
+            architectural_analysis_prompt,
+            code_review_prompt,
+            debugging_prompt,
+        )
+
+        if builder_type == "architectural":
+            return architectural_analysis_prompt()
+        elif builder_type == "code_review":
+            return code_review_prompt()
+        elif builder_type == "debugging":
+            return debugging_prompt()
+        else:
+            return PromptBuilder()
+
+    def structured_prompt(self, **sections) -> "ChatBot":
+        """
+        Configure the chatbot with a structured prompt built from keyword sections.
+
+        This is a convenience method for quickly building attention-optimized prompts
+        without using the full prompt builder API. It automatically structures the
+        provided sections according to attention-based principles.
+
+        Parameters
+        ----------
+        **sections : dict
+            Keyword arguments defining prompt sections. Recognized keys include:
+            - persona: Behavioral role (e.g., "senior developer")
+            - task: Primary task description
+            - constraints: List of requirements or constraints
+            - format: List of output formatting requirements
+            - examples: Dict of input/output examples
+            - focus: Primary goal to emphasize
+
+        Returns
+        -------
+        ChatBot
+            Returns self for method chaining
+
+        Examples
+        --------
+        ### Quick structured prompt creation
+
+        ```python
+        bot = (ChatBot()
+            .model("gpt-4-turbo")
+            .structured_prompt(
+                persona="senior software architect",
+                task="Analyze codebase architecture and identify improvements",
+                constraints=[
+                    "Focus on security vulnerabilities",
+                    "Identify performance bottlenecks",
+                    "Suggest specific fixes"
+                ],
+                format=[
+                    "Use bullet points for findings",
+                    "Include code examples",
+                    "Prioritize by severity"
+                ],
+                focus="actionable recommendations for immediate implementation"
+            ))
+        ```
+
+        ### Combining with other configuration
+
+        ```python
+        expert_bot = (ChatBot()
+            .model("gpt-4-turbo")
+            .temperature(0.2)
+            .structured_prompt(
+                persona="expert debugger",
+                task="Identify root cause of performance issues",
+                constraints=["Provide reproducible test cases"],
+                focus="finding the root cause, not just symptoms"
+            )
+            .max_tokens(1500))
+        ```
+        """
+        from talk_box.prompt_builder import PromptBuilder
+
+        builder = PromptBuilder()
+
+        # Apply sections in attention-optimized order
+        if "persona" in sections:
+            builder.persona(sections["persona"])
+
+        if "task" in sections:
+            builder.task_context(sections["task"])
+
+        if "constraints" in sections:
+            for constraint in sections["constraints"]:
+                builder.constraint(constraint)
+
+        if "format" in sections:
+            builder.output_format(sections["format"])
+
+        if "examples" in sections:
+            examples = sections["examples"]
+            if isinstance(examples, dict):
+                for input_ex, output_ex in examples.items():
+                    builder.example(input_ex, output_ex)
+
+        if "focus" in sections:
+            builder.final_emphasis(sections["focus"])
+
+        # Set the built prompt as system prompt
+        structured_prompt = builder.build()
+        self._config["system_prompt"] = structured_prompt
+
+        return self
+
+    def chain_prompts(self, *prompts) -> "ChatBot":
+        """
+        Chain multiple structured prompts in attention-optimized order.
+
+        This method allows you to combine multiple prompt components while maintaining
+        optimal attention patterns. Components are automatically ordered to maximize
+        the model's focus on the most important information.
+
+        Parameters
+        ----------
+        *prompts : str or PromptBuilder
+            Prompt components to chain together. Can be raw strings or
+            PromptBuilder instances.
+
+        Returns
+        -------
+        ChatBot
+            Returns self for method chaining
+
+        Examples
+        --------
+        ### Chaining different prompt components
+
+        ```python
+        # Create specialized prompt components
+        security_prompt = (bot.prompt_builder()
+            .core_analysis(["SQL injection risks", "XSS vulnerabilities"])
+            .build())
+
+        performance_prompt = (bot.prompt_builder()
+            .core_analysis(["Database query optimization", "Memory usage"])
+            .build())
+
+        # Chain them with attention optimization
+        bot.chain_prompts(
+            "You are a senior security and performance engineer.",
+            security_prompt,
+            performance_prompt,
+            "Focus on the most critical issues that impact user security."
+        )
+        ```
+        """
+        from talk_box.prompt_builder import PromptBuilder
+
+        # Build a master prompt that chains all components
+        master_builder = PromptBuilder()
+
+        combined_content = []
+
+        for prompt in prompts:
+            if hasattr(prompt, "build"):
+                # It's a prompt builder
+                combined_content.append(prompt.build())
+            else:
+                # It's a string
+                combined_content.append(str(prompt))
+
+        # Join with proper spacing and set as system prompt
+        final_prompt = "\n\n".join(combined_content)
+        self._config["system_prompt"] = final_prompt
+
+        return self
+
     def enable_llm_mode(self) -> "ChatBot":
         """
         Enable LLM mode explicitly (DEPRECATED - LLM is auto-enabled by default).
@@ -1674,9 +1994,7 @@ class ChatBot:
             self._auto_enable_llm()
         return self
 
-    def chat(
-        self, message: str, conversation: Optional["Conversation"] = None
-    ) -> "Conversation":
+    def chat(self, message: str, conversation: Optional["Conversation"] = None) -> "Conversation":
         """
         Send a message to the chatbot and get a response within a conversation context.
 
@@ -1778,9 +2096,7 @@ class ChatBot:
 
         return Conversation()
 
-    def continue_conversation(
-        self, conversation: "Conversation", message: str
-    ) -> "Conversation":
+    def continue_conversation(self, conversation: "Conversation", message: str) -> "Conversation":
         """
         Continue an existing conversation with a new message.
 
@@ -2021,7 +2337,35 @@ class ChatBot:
             print(f"Total Length: {len(system_prompt)} characters")
             print(f"Custom Prompt: {'Yes' if config['custom_system_prompt'] else 'No'}")
             print(f"Preset: {config['preset'] or 'None'}")
-            print(f"Persona: {config['persona'] or 'None'}")
+
+            # Better persona analysis that accounts for both ChatBot and PromptBuilder personas
+            chatbot_persona = config["persona"]
+            custom_prompt = config["custom_system_prompt"]
+
+            # Extract persona from PromptBuilder if present
+            promptbuilder_persona = None
+            if custom_prompt and "You are a" in custom_prompt:
+                # Extract the first line that starts with "You are a"
+                lines = custom_prompt.split("\n")
+                for line in lines:
+                    if line.strip().startswith("You are a") or line.strip().startswith(
+                        "You are an"
+                    ):
+                        promptbuilder_persona = (
+                            line.strip().replace("You are a ", "").replace("You are an ", "")
+                        )
+                        break
+
+            # Display persona information more accurately
+            if promptbuilder_persona and chatbot_persona:
+                print(f"Persona: {promptbuilder_persona} + Additional: {chatbot_persona}")
+            elif promptbuilder_persona:
+                print(f"Persona: {promptbuilder_persona}")
+            elif chatbot_persona:
+                print(f"Persona: {chatbot_persona}")
+            else:
+                print("Persona: None")
+
             print()
             print("Final System Prompt:")
             print("-" * 30)
