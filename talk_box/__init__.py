@@ -13,14 +13,31 @@ __email__ = "riannone@me.com"
 # Core imports for easy access
 from talk_box.builder import ChatBot
 from talk_box.conversation import Conversation, Message
-from talk_box.presets import Preset, PresetManager
+from talk_box.presets import Preset, PresetManager, PresetNames
+from talk_box.prompt_builder import (
+    Priority,
+    PromptBuilder,
+    PromptSection,
+    architectural_analysis_prompt,
+    code_review_prompt,
+    debugging_prompt,
+)
 
 # Make key classes available at package level
 __all__ = [
+    # Core classes
     "ChatBot",
     "Conversation",
     "Message",
+    # Prompt engineering
+    "PromptBuilder",
+    "Priority",
+    "PromptSection",
+    "architectural_analysis_prompt",
+    "code_review_prompt",
+    "debugging_prompt",
+    # Preset management
     "Preset",
     "PresetManager",
-    "__version__",
+    "PresetNames",
 ]
