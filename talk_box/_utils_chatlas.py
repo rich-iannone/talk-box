@@ -9,7 +9,19 @@ import os
 from typing import Any, Optional
 
 import chatlas
-from chatlas import ChatAuto
+from chatlas import (
+    ChatAnthropic,
+    ChatCloudflare,
+    ChatDeepSeek,
+    ChatGoogle,
+    ChatGroq,
+    ChatHuggingFace,
+    ChatMistral,
+    ChatOllama,
+    ChatOpenAI,
+    ChatOpenRouter,
+    ChatPerplexity,
+)
 
 from talk_box.builder import ChatBot, ChatResponse
 from talk_box.presets import PresetManager
@@ -36,17 +48,42 @@ class ChatlasAdapter:
         self.preset_manager = PresetManager()
 
     def _create_chat_instance(self, model: str) -> chatlas.Chat:
-        """Create a chatlas Chat instance using ChatAuto for automatic provider selection."""
+        """Create a chatlas Chat instance using the appropriate provider class."""
         try:
-            # Set provider in environment if not already set and we have one
-            if self.provider and not os.getenv("CHATLAS_CHAT_PROVIDER"):
-                os.environ["CHATLAS_CHAT_PROVIDER"] = self.provider
+            provider = self.provider.lower()
 
-            # Use ChatAuto for automatic provider detection - only pass model
-            chat = ChatAuto(model=model)
+            # Map provider names to their corresponding chatlas classes
+            if provider == "openai":
+                chat = ChatOpenAI(model=model)
+            elif provider == "anthropic":
+                chat = ChatAnthropic(model=model)
+            elif provider == "google":
+                chat = ChatGoogle(model=model)
+            elif provider == "ollama":
+                chat = ChatOllama(model=model)
+            elif provider == "openrouter":
+                chat = ChatOpenRouter(model=model)
+            elif provider == "deepseek":
+                chat = ChatDeepSeek(model=model)
+            elif provider == "huggingface":
+                chat = ChatHuggingFace(model=model)
+            elif provider == "mistral":
+                chat = ChatMistral(model=model)
+            elif provider == "groq":
+                chat = ChatGroq(model=model)
+            elif provider == "perplexity":
+                chat = ChatPerplexity(model=model)
+            elif provider == "cloudflare":
+                chat = ChatCloudflare(model=model)
+            else:
+                # Default to OpenAI for unknown providers
+                chat = ChatOpenAI(model=model)
+
             return chat
         except Exception as e:
-            raise ValueError(f"Failed to create chat session with model '{model}': {e}") from e
+            raise ValueError(
+                f"Failed to create chat session with provider '{self.provider}' and model '{model}': {e}"
+            ) from e
 
     def create_chat_session(self, config: dict[str, Any]) -> chatlas.Chat:
         """
@@ -60,8 +97,13 @@ class ChatlasAdapter:
         """
         # Extract chatlas-compatible parameters
         model = config.get("model", self.default_model)
+        provider = config.get("provider", self.provider)
 
-        # Create the chat instance (just with model)
+        # Set provider in environment for chatlas to use
+        if provider:
+            os.environ["CHATLAS_CHAT_PROVIDER"] = provider
+
+        # Create the chat instance with the specified model
         chat = self._create_chat_instance(model=model)
 
         # Build system prompt from preset and persona
@@ -145,7 +187,10 @@ def enhance_chatbot_with_chatlas():
 
     def create_chat_session(self) -> chatlas.Chat:
         """Create a chatlas session from the current configuration."""
-        adapter = ChatlasAdapter()
+        # Extract provider and model from config to pass to adapter
+        provider = self._config.get("provider")
+        model = self._config.get("model")
+        adapter = ChatlasAdapter(provider=provider, model=model)
         return adapter.create_chat_session(self._config)
 
     def chat_with_llm(self, message: str) -> ChatResponse:
@@ -154,7 +199,10 @@ def enhance_chatbot_with_chatlas():
 
         This replaces the default echo behavior with actual LLM interaction.
         """
-        adapter = ChatlasAdapter()
+        # Extract provider and model from config to pass to adapter
+        provider = self._config.get("provider")
+        model = self._config.get("model")
+        adapter = ChatlasAdapter(provider=provider, model=model)
         chat_session = adapter.create_chat_session(self._config)
         return adapter.chat_with_session(chat_session, message)
 
