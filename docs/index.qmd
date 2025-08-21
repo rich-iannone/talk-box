@@ -22,15 +22,11 @@ to production-ready chatbot in minutes, not hours.
 ## Getting Started in 30 Seconds
 
 ```python
-from talk_box import ChatBot
-from talk_box.integrations.chatlas_adapter import enhance_chatbot_with_chatlas
-
-# Enable real LLM integration
-enhance_chatbot_with_chatlas()
+import talk_box as tb
 
 # Create a sophisticated chatbot in just a few lines
 bot = (
-    ChatBot()
+    tb.ChatBot()
     .model("claude-3-5-sonnet-20241022")
     .preset("technical_advisor")
     .persona("Senior Data Scientist")
@@ -52,15 +48,11 @@ print(response.content)
 ## Real-World Example: Customer Support Bot
 
 ```python
-from talk_box import ChatBot
-from talk_box.integrations.chatlas_adapter import enhance_chatbot_with_chatlas
-
-# Enable LLM integration
-enhance_chatbot_with_chatlas()
+import talk_box as tb
 
 # Create a comprehensive customer support chatbot
 support_bot = (
-    ChatBot()
+    tb.ChatBot()
     .model("claude-3-5-sonnet-20241022")
     .preset("customer_support")
     .persona("Senior Technical Support Specialist with 10+ years experience")
@@ -73,8 +65,8 @@ support_bot = (
 
 # Test the bot with a complex technical question
 customer_inquiry = """
-Hi, I'm having trouble with your API. I keep getting a 429 error 
-when trying to upload files larger than 10MB. Is there a rate limit 
+Hi, I'm having trouble with your API. I keep getting a 429 error
+when trying to upload files larger than 10MB. Is there a rate limit
 I should know about?
 """
 
@@ -179,8 +171,8 @@ financial_preset = Preset(
     expertise="finance,investment,risk_management",
     verbosity="detailed",
     constraints=["no_guarantees", "include_disclaimers", "cite_sources"],
-    system_prompt="""You are a certified financial advisor with expertise in 
-    investment strategies and risk management. Always include appropriate disclaimers 
+    system_prompt="""You are a certified financial advisor with expertise in
+    investment strategies and risk management. Always include appropriate disclaimers
     and encourage users to consult with qualified professionals for personalized advice."""
 )
 
@@ -200,12 +192,12 @@ Talk Box includes comprehensive testing capabilities with 98% code coverage:
 # Built-in testing for your custom bots
 def test_support_bot_responses():
     bot = ChatBot().preset("customer_support")
-    
+
     # Test basic functionality
     response = bot.chat("Hello, I need help")
     assert response.content
     assert "help" in response.content.lower()
-    
+
     # Test preset behavior
     assert bot.preset_manager.current_preset.name == "customer_support"
     assert "polite" in bot.preset_manager.current_preset.tone
@@ -248,14 +240,11 @@ CMD ["python", "apps/browser_chat.py"]
 
 ```python
 import os
-from talk_box import ChatBot
-from talk_box.integrations.chatlas_adapter import enhance_chatbot_with_chatlas
+import talk_box as tb
 
 # Production-ready configuration
-enhance_chatbot_with_chatlas()
-
 production_bot = (
-    ChatBot()
+    tb.ChatBot()
     .model(os.getenv("PRODUCTION_MODEL", "claude-3-5-sonnet"))
     .preset("customer_support")
     .persona("Professional Customer Success Agent")
