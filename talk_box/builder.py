@@ -32,6 +32,37 @@ def find_available_port(start_port: int = 8000, max_attempts: int = 100) -> int:
     )
 
 
+class BuilderTypes:
+    """
+    Predefined builder types for autocomplete and type safety.
+
+    This class provides constants for all available prompt builder types, enabling IDE
+    autocomplete and preventing typos when calling the prompt_builder() method.
+
+    Values
+    ------
+    GENERAL : str
+        Basic attention-optimized builder for general-purpose prompts
+    ARCHITECTURAL : str
+        Pre-configured builder for code architecture analysis
+    CODE_REVIEW : str
+        Pre-configured builder for code review tasks
+    DEBUGGING : str
+        Pre-configured builder for debugging assistance
+
+    Examples
+    --------
+    >>> import talk_box as tb
+    >>> bot = tb.ChatBot().model("gpt-4-turbo")
+    >>> builder = bot.prompt_builder(tb.BuilderTypes.ARCHITECTURAL)
+    """
+
+    GENERAL = "general"
+    ARCHITECTURAL = "architectural"
+    CODE_REVIEW = "code_review"
+    DEBUGGING = "debugging"
+
+
 class ChatBot:
     """
     Main entry point for building and managing conversational AI chatbots with integrated conversation handling.
@@ -359,14 +390,19 @@ class ChatBot:
             return
 
         try:
-            from talk_box._utils_chatlas import enhance_chatbot_with_chatlas
+            # chatlas is a direct dependency, so this should always work
+            import importlib.util
 
-            enhance_chatbot_with_chatlas()
-            self.enable_llm_mode()  # Actually enable LLM mode on this instance
-            self._llm_enabled = True
-            self._llm_status = "enabled"
+            if importlib.util.find_spec("chatlas") is not None:
+                self._llm_enabled = True
+                self._llm_status = "enabled"
+            else:
+                self._llm_enabled = False
+                self._llm_status = "chatlas_not_available"
         except ImportError:
-            # Chatlas not available, continue without LLM integration
+            # Fallback to echo mode if chatlas somehow not available
+            self._llm_enabled = False
+            self._llm_status = "chatlas_not_available"
             self._llm_enabled = False
             self._llm_status = "missing_chatlas"
         except Exception as e:
@@ -1690,7 +1726,9 @@ class ChatBot:
 
     # Attention-based prompt engineering methods
 
-    def prompt_builder(self, builder_type: str = "general") -> "PromptBuilder":
+    def prompt_builder(
+        self, builder_type: Union[str, "BuilderTypes"] = "general"
+    ) -> "PromptBuilder":
         """
         Create an attention-optimized prompt builder for declarative prompt composition.
 
@@ -1708,12 +1746,24 @@ class ChatBot:
 
         Parameters
         ----------
-        builder_type : str, optional
-            Type of prompt builder to create. Options include:
-            - "general": Basic attention-optimized builder
-            - "architectural": Pre-configured for code architecture analysis
-            - "code_review": Pre-configured for code review tasks
-            - "debugging": Pre-configured for debugging assistance
+        builder_type : str or BuilderTypes, optional
+            Type of prompt builder to create. You can use either a string or
+            a constant from `BuilderTypes` for better autocomplete and type safety.
+
+            **Using BuilderTypes constants (recommended):**
+
+            ```python
+            import talk_box as tb
+            bot = tb.ChatBot().model("gpt-4-turbo")
+            builder = bot.prompt_builder(tb.BuilderTypes.ARCHITECTURAL)
+            ```
+
+            **Available builder types:**
+
+            - `BuilderTypes.GENERAL` or `"general"`: Basic attention-optimized builder
+            - `BuilderTypes.ARCHITECTURAL` or `"architectural"`: Pre-configured for code architecture analysis
+            - `BuilderTypes.CODE_REVIEW` or `"code_review"`: Pre-configured for code review tasks
+            - `BuilderTypes.DEBUGGING` or `"debugging"`: Pre-configured for debugging assistance
 
         Returns
         -------
@@ -1754,12 +1804,12 @@ class ChatBot:
 
         ```python
         # Architectural analysis with pre-configured structure
-        arch_prompt = (bot.prompt_builder("architectural")
+        arch_prompt = (bot.prompt_builder(tb.BuilderTypes.ARCHITECTURAL)
             .focus_on("identifying technical debt")
             .build())
 
         # Code review with attention-optimized structure
-        review_prompt = (bot.prompt_builder("code_review")
+        review_prompt = (bot.prompt_builder(tb.BuilderTypes.CODE_REVIEW)
             .avoid_topics(["personal criticism"])
             .focus_on("actionable improvement suggestions")
             .build())
@@ -1785,6 +1835,7 @@ class ChatBot:
         Notes
         -----
         The returned builder implements attention-based principles:
+
         - **Primacy bias**: Critical information is front-loaded
         - **Structured sections**: Clear attention clustering prevents drift
         - **Personas**: Behavioral anchoring for consistent responses
@@ -1804,11 +1855,14 @@ class ChatBot:
             debugging_prompt,
         )
 
-        if builder_type == "architectural":
+        # Convert BuilderTypes constant to string if needed
+        builder_str = builder_type if isinstance(builder_type, str) else str(builder_type)
+
+        if builder_str == "architectural":
             return architectural_analysis_prompt()
-        elif builder_type == "code_review":
+        elif builder_str == "code_review":
             return code_review_prompt()
-        elif builder_type == "debugging":
+        elif builder_str == "debugging":
             return debugging_prompt()
         else:
             return PromptBuilder()
@@ -1994,6 +2048,33 @@ class ChatBot:
             self._auto_enable_llm()
         return self
 
+    def _chat_with_llm(self, message: str) -> str:
+        """
+        Send a message to a real LLM via chatlas and return the response content.
+
+        Parameters
+        ----------
+        message : str
+            The message to send to the LLM
+
+        Returns
+        -------
+        str
+            The LLM's response content
+        """
+        from talk_box._utils_chatlas import ChatlasAdapter
+
+        # Extract provider and model from config
+        provider = self._config.get("provider")
+        model = self._config.get("model")
+
+        # Create adapter and get response
+        adapter = ChatlasAdapter(provider=provider, model=model)
+        chat_session = adapter.create_chat_session(self._config)
+        response = adapter.chat_with_session(chat_session, message)
+
+        return response.content
+
     def chat(self, message: str, conversation: Optional["Conversation"] = None) -> "Conversation":
         """
         Send a message to the chatbot and get a response within a conversation context.
@@ -2053,9 +2134,17 @@ class ChatBot:
         # Add user message
         conversation.add_user_message(message)
 
-        # TODO: Implement actual chat functionality with LLM
-        # For now, return a simple echo response
-        response_content = f"Echo: {message}"
+        # Get response based on LLM availability
+        if self._llm_enabled:
+            try:
+                response_content = self._chat_with_llm(message)
+            except Exception as e:
+                # Fallback to echo mode if LLM fails
+                response_content = f"LLM Error: {e}. Echo: {message}"
+        else:
+            # Echo mode for demo/testing
+            response_content = f"Echo: {message}"
+
         conversation.add_assistant_message(response_content)
 
         return conversation
@@ -2239,9 +2328,9 @@ class ChatBot:
             <div style="background-color: #e8f4f8; padding: 10px; border-radius: 4px; margin-top: 15px;">
                 <strong>💡 Next Steps:</strong>
                 <ol style="margin: 5px 0 0 20px;">
-                    <li>Enable LLM integration: <code>enhance_chatbot_with_chatlas()</code></li>
                     <li>Launch chat interface: <code>bot.create_chat_session().app()</code></li>
                     <li>Or chat directly: <code>bot.chat("Hello!")</code></li>
+                    <li>Check status: <code>bot.show("status")</code></li>
                 </ol>
             </div>
         </div>
@@ -2472,7 +2561,7 @@ class SimpleChatSession:
                 display_value = value
             print(f"  {key.title()}: {display_value}")
         print("\n💡 To enable the browser chat interface:")
-        print("  1. Run: enhance_chatbot_with_chatlas()")
+        print("  1. Install chatlas: pip install chatlas")
         print("  2. Then: bot.create_chat_session().app()")
 
     def _get_interface_url(self) -> Optional[str]:
