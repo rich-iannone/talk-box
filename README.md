@@ -1,4 +1,4 @@
-# Talk Box
+![Talk Box Logo](talk-box-logo.png)
 
 **The best way to generate, test, and deploy LLM chatbots with attention-optimized prompt engineering**
 
@@ -10,20 +10,17 @@ mechanisms, then deploy them with powerful conversation management.
 
 ## 🎯 Why Talk Box?
 
-- **🧠 Attention-Based Prompt Engineering**: build prompts that leverage how LLMs actually process information
-- **📚 Layered API Design**: start simple, discover advanced features as you need them
-- **⚡ Multiple Usage Patterns**: from quick structured prompts to complex modular components
-- **🔄 Integrated Conversation Management**: seamless multi-turn conversations with full history
-- **🛠️ Built-in Behavior Presets**: professional templates for common engineering tasks
-- **🧪 Test-First Design**: develop and test without API keys, deploy when ready
+- **Attention-Based Prompt Engineering**: build prompts that leverage how LLMs actually process
+  information
+- **Layered API Design**: start simple, discover advanced features as you need them
+- **Multiple Usage Patterns**: from quick structured prompts to complex modular components
+- **Integrated Conversation Management**: seamless multi-turn conversations with full history
+- **Built-in Behavior Presets**: professional templates for common engineering tasks
+- **Test-First Design**: develop and test without API keys, deploy when ready
+
+![Prompt Structure Diagram](prompt-structure.png)
 
 ## Quick Start
-
-### Installation
-
-```bash
-pip install talk-box
-```
 
 ### 30-Second Demo: Attention-Optimized Prompts
 
@@ -33,7 +30,7 @@ import talk_box as tb
 # Create a security-focused chatbot with structured prompts
 bot = (
     tb.ChatBot()
-    .model("gpt-4.1-mini")
+    .provider_model("anthropic:claude-sonnet-4-20250514")
     .system_prompt(
         tb.PromptBuilder()
         .persona("senior security engineer", "web application security")
@@ -52,7 +49,7 @@ bot = (
     )
 )
 
-# Use the structured prompt
+# View details of the structured prompt
 bot.show("prompt")
 ```
 
@@ -60,15 +57,6 @@ bot.show("prompt")
 <summary>🔍 View Generated Prompt</summary>
 
 ```
-📝 System Prompt Analysis
-==================================================
-Total Length: 402 characters
-Custom Prompt: Yes
-Preset: None
-Persona: senior security engineer with expertise in web application security.
-
-Final System Prompt:
-------------------------------
 You are a senior security engineer with expertise in web application security.
 
 CRITICAL REQUIREMENTS:
@@ -84,34 +72,58 @@ OUTPUT FORMAT:
 - Include specific line numbers and fixes
 
 Prioritize vulnerabilities leading to data breaches
-------------------------------
 ```
 
 </details>
 
-### Even Simpler: Quick Structured Prompts
+### Even Simpler: Quick Structured Prompts with `structured_prompt()`
 
 ```python
 import talk_box as tb
 
 # Configure a bot with structured prompts in one go
-security_bot = (tb.ChatBot()
-    .model("gpt-4.1-mini")
+doc_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
     .structured_prompt(
-        persona="cybersecurity expert",
-        task="Audit web application security",
-        constraints=["Focus on OWASP Top 10", "Include CVSS scores"],
-        format=["Critical issues", "Important fixes"],
-        focus="preventing data breaches"
-    ))
+        persona="technical writer",
+        task="Review and improve documentation",
+        constraints=["Focus on clarity and accessibility", "Include code examples"],
+        format=["Content improvements", "Structure suggestions"],
+        focus="making complex topics easy to understand"
+    )
+)
 
-# Now just chat directly - the structure is built in
-response = security_bot.chat("Here's my authentication code...")
+# Now just chat directly as the structure is built into the bot's system prompt
+response = doc_bot.chat("Here's my API documentation draft...")
 ```
 
-## 🚀 Core Features
+<details>
+<summary>🔍 View Generated Prompt</summary>
 
-### **🧠 Attention-Based Prompt Engineering**
+```
+You are a technical writer with expertise in documentation and user education.
+
+CRITICAL REQUIREMENTS:
+- Focus on clarity and accessibility
+
+CORE ANALYSIS (Required):
+- Include code examples
+- Ensure content improvements
+- Provide structure suggestions
+
+OUTPUT FORMAT:
+- Content improvements
+- Structure suggestions
+
+Prioritize making complex topics easy to understand
+```
+
+</details>
+
+## Core Features
+
+### **Attention-Based Prompt Engineering**
 
 Build prompts that leverage how transformer attention mechanisms actually work:
 
@@ -119,137 +131,71 @@ Build prompts that leverage how transformer attention mechanisms actually work:
 import talk_box as tb
 
 # Traditional approach (attention-diffused)
-old_prompt = "Analyze this code for issues and provide recommendations."
+old_prompt = "Help me learn Spanish and correct my mistakes."
 
 # Attention-optimized approach
-bot = tb.ChatBot().model("gpt-4.1-mini")
-structured_prompt = (bot.prompt_builder()
-    .persona("senior software architect", "security and performance")
-    .critical_constraint("Focus on critical security vulnerabilities")
-    .core_analysis([
-        "SQL injection vulnerabilities",
-        "Performance bottlenecks",
-        "Code maintainability issues"
-    ])
-    .output_format([
-        "CRITICAL: Security issues requiring immediate fix",
-        "IMPORTANT: Performance improvements",
-        "Include specific line numbers and remediation code"
-    ])
-    .final_emphasis("Prioritize by business impact and fix complexity")
-    .build())
-
-response = bot.chat(structured_prompt)
-```
-
-<details>
-<summary>🔍 View Generated Prompt</summary>
-
-```
-You are a senior software architect with expertise in security and performance.
-
-CRITICAL REQUIREMENTS:
-- Focus on critical security vulnerabilities
-
-CORE ANALYSIS (Required):
-- SQL injection vulnerabilities
-- Performance bottlenecks
-- Code maintainability issues
-
-OUTPUT FORMAT:
-- CRITICAL: Security issues requiring immediate fix
-- IMPORTANT: Performance improvements
-- Include specific line numbers and remediation code
-
-Prioritize by business impact and fix complexity
-```
-
-</details>
-
-**Key principles implemented:**
-
-- 🎯 **Front-load critical information** (primacy bias)
-- 📋 **Structure creates focus** (attention clustering)
-- 🎭 **Personas for behavioral anchoring**
-- ⚡ **Specific constraints prevent attention drift**
-- 🔚 **Final emphasis leverages recency bias**
-
-### **⚙️ Multiple Usage Patterns**
-
-Choose the approach that fits your workflow:
-
-```python
-import talk_box as tb
-
-# Create a base bot first
-bot = tb.ChatBot().model("gpt-4.1-mini")
-
-# Pattern 1: Full builder control
-prompt = (bot.prompt_builder()
-    .persona("security expert")
-    .critical_constraint("Focus on critical issues")
-    .build())
-
-# Pattern 2: Pre-configured builders for common tasks
-arch_prompt = (bot.prompt_builder("architectural")
-    .focus_on("microservices migration readiness")
-    .build())
-```
-
-<details>
-<summary>🔍 View Generated Prompt</summary>
-
-```
-You are a senior software architect with expertise in comprehensive codebase analysis.
-
-CRITICAL REQUIREMENTS:
-- Primary objective: microservices migration readiness
-
-TASK: Create comprehensive architectural documentation
-
-CORE ANALYSIS (Required):
-- Tools, frameworks, and design patterns used across the repository
-- Data models and API design & versioning patterns
-- Any architectural inconsistencies or deviations from language/framework best practices
-
-LEGACY ASSESSMENT:
-- Identify conflicting or multiple architectural patterns
-- Recommend a best path forward with external source citations
-- Distinguish between old and new architectural approaches
-
-ADDITIONAL CONSTRAINTS:
-- Primary objective: identifying architectural debt and deviations from expected patterns
-
-OUTPUT FORMAT:
-- Use clear headings and bullet points
-- Prioritize findings by impact and consistency
-- Include specific examples from the codebase
-- Reference external best practice sources for any recommendations
-
-Focus your entire response on: microservices migration readiness
-```
-
-</details>
-
-```python
-import talk_box as tb
-
-# Create a base bot first
-bot = tb.ChatBot().model("gpt-4.1-mini")
-
-bot.structured_prompt(
-    persona="code reviewer",
-    task="Review for bugs and security issues",
-    focus="critical errors that could crash the application"
+bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("experienced Spanish teacher", "conversational fluency and grammar")
+        .critical_constraint("Focus on practical, everyday Spanish usage")
+        .core_analysis([
+            "Grammar accuracy and common mistakes",
+            "Vocabulary building with context",
+            "Pronunciation and speaking confidence"
+        ])
+        .output_format([
+            "CORRECCIONES: Grammar fixes with explanations",
+            "VOCABULARIO: New words with example sentences",
+            "PRÁCTICA: Conversation prompts for next lesson"
+        ])
+        .final_emphasis("Encourage progress and build confidence through positive reinforcement")
+        .build()
+    )
 )
 
-# Pattern 4: Modular prompt components
-security_component = bot.prompt_builder().core_analysis(["Auth", "Validation"]).build()
-performance_component = bot.prompt_builder().core_analysis(["Queries", "Memory"]).build()
-bot.chain_prompts(security_component, performance_component)
+# Get learning right in the console
+response = bot.show("console")
 ```
 
-### **🏗️ Pre-configured Engineering Templates**
+<details>
+<summary>🔍 View Generated Prompt</summary>
+
+```
+You are an experienced Spanish teacher with expertise in conversational fluency and grammar.
+
+CRITICAL REQUIREMENTS:
+- Focus on practical, everyday Spanish usage
+
+CORE ANALYSIS (Required):
+- Grammar accuracy and common mistakes
+- Vocabulary building with context
+- Pronunciation and speaking confidence
+
+OUTPUT FORMAT:
+- CORRECCIONES: Grammar fixes with explanations
+- VOCABULARIO: New words with example sentences
+- PRÁCTICA: Conversation prompts for next lesson
+
+Prioritize encouraging progress and building confidence through positive reinforcement
+```
+
+</details>
+
+The key principles of a successful structured prompt implementation are:
+
+- **Front-loading critical information** (primacy bias)
+- **Structure creates focus** (attention clustering)
+- **Personas for behavioral anchoring**
+- **Specific constraints prevent attention drift**
+- **Final emphasis leverages recency bias**
+
+And we've implemented these principles in our prompt engineering process, ensuring that the prompts
+you create and use are effective and aligned with these best practices.
+
+### **Pre-configured Engineering Templates**
 
 Start with expert-crafted prompts for common engineering tasks:
 
@@ -257,33 +203,39 @@ Start with expert-crafted prompts for common engineering tasks:
 import talk_box as tb
 
 # Architectural analysis with attention optimization
-arch_bot = (tb.ChatBot()
-    .model("gpt-4-turbo")
+arch_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
     .prompt_builder("architectural")
-    .focus_on("identifying technical debt and modernization opportunities"))
+    .focus_on("identifying technical debt and modernization opportunities")
+)
 
 # Code review with structured feedback
-review_bot = (tb.ChatBot()
-    .model("gpt-4-turbo")
+review_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
     .prompt_builder("code_review")
     .avoid_topics(["personal criticism", "style nitpicking"])
-    .focus_on("actionable security and performance improvements"))
+    .focus_on("actionable security and performance improvements")
+)
 
 # Systematic debugging approach
-debug_bot = (tb.ChatBot()
-    .model("gpt-4-turbo")
+debug_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
     .prompt_builder("debugging")
-    .critical_constraint("Always identify root cause, not just symptoms"))
+    .critical_constraint("Always identify root cause, not just symptoms")
+)
 ```
 
-### **🔄 Integrated Conversation Management**
+### **Integrated Conversation Management**
 
 All chat interactions automatically return conversation objects for seamless multi-turn conversations:
 
 ```python
 import talk_box as tb
 
-bot = tb.ChatBot().model("gpt-4").preset("technical_advisor")
+bot = tb.ChatBot().model("gpt-4o-mini").preset("technical_advisor")
 
 # Every chat returns a conversation object with full history
 conversation = bot.chat("What's the best way to implement authentication?")
@@ -296,51 +248,8 @@ latest = conversation.get_last_message()
 print(f"Conversation has {conversation.get_message_count()} messages")
 ```
 
-### **🎛️ Layered API Discovery**
-
-Start simple and naturally discover advanced features as you need them:
-
-```python
-import talk_box as tb
-
-# Layer 1: Basic ChatBot (everyone starts here)
-bot = tb.ChatBot().model("gpt-4")
-conversation = bot.chat("Hello!")
-
-# Layer 2: Conversation management (discovered from return values)
-conversation.add_user_message("Follow-up question")
-messages = conversation.get_messages()
-
-# Layer 3: Advanced prompt engineering (discovered through methods)
-structured_response = (bot.prompt_builder()
-    .persona("expert consultant")
-    .critical_constraint("Be actionable and specific")
-    .output_format(["Key findings", "Recommended next steps"])
-    .build())
-
-# Layer 4: Pre-configured patterns for complex tasks
-arch_analysis = bot.prompt_builder("architectural").focus_on("scalability concerns")
 ```
-
-### **🧪 Test Without Setup**
-
-Works immediately with mock responses - no API keys needed for development:
-
-```python
-import talk_box as tb
-
-# Explore the full API without external dependencies
-bot = tb.ChatBot().preset("creative_writer").temperature(0.8)
-conversation = bot.chat("Write a short story about a robot")
-
-# Test attention-based prompts
-structured = (bot.prompt_builder()
-    .persona("storyteller")
-    .core_analysis(["character development", "plot structure"])
-    .build())
-
-print(f"Messages: {conversation.get_message_count()}")
-print(f"Latest: {conversation.get_last_message().content}")
+Conversation has 6 messages
 ```
 
 ### **Built-in Behavior Presets**
@@ -362,173 +271,25 @@ creative_bot = tb.ChatBot().preset("creative_writer")
 analyst_bot = tb.ChatBot().preset("data_analyst")
 ```
 
-### **Chainable Configuration**
+### Installation
 
-Build exactly the chatbot you need with method chaining:
+The Talk Box framework can be installed via pip:
 
-```python
-import talk_box as tb
-
-specialized_bot = (
-    tb.ChatBot()
-    .model("gpt-4")
-    .preset("technical_advisor")
-    .temperature(0.3)
-    .persona("Senior Software Engineer")
-)
-
-conversation = specialized_bot.chat("Explain microservices")
+```bash
+pip install talk-box
 ```
 
-### **Test-First Design**
+If you encounter a bug, have usage questions, or want to share ideas to make this package better, please feel free to [open an issue](https://github.com/rich-iannone/talk-box/issues).
 
-Start testing immediately, add real LLM integration when ready:
+## Code of Conduct
 
-```python
-import talk_box as tb
-
-# Works without any API keys - perfect for development
-bot = tb.ChatBot().preset("data_analyst").temperature(0.2)
-conversation = bot.chat("Analyze this dataset")
-
-# Test your conversation logic
-assert conversation.get_message_count() == 2
-assert "data" in conversation.get_last_message().content.lower()
-
-# Add real LLM when ready for production
-# bot.enable_llm_mode()  # Connects to actual models
-```
-
-## Complete Examples
-
-### **Code Review with Attention Engineering**
-
-```python
-import talk_box as tb
-
-# Create an attention-optimized code reviewer
-review_bot = (
-    tb.ChatBot()
-    .model("gpt-4-turbo")
-    .prompt_builder("code_review")
-    .critical_constraint("Focus on critical security and performance issues")
-    .avoid_topics(["style nitpicking", "personal preferences"])
-    .output_format([
-        "🔴 CRITICAL: Security vulnerabilities requiring immediate attention",
-        "🟡 IMPORTANT: Performance issues with business impact",
-        "📝 SUGGESTIONS: Code quality improvements",
-        "Include specific line numbers and remediation examples"
-    ])
-)
-
-# Structured review with attention optimization
-conversation = review_bot.chat("""
-Review this authentication function:
-
-def login(username, password):
-    query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
-    result = db.execute(query)
-    return result.fetchone() is not None
-""")
-
-print(f"Review: {conversation.get_last_message().content}")
-```
-
-<details>
-<summary>🔍 View Generated Prompt</summary>
-
-```
-You are a senior software engineer with expertise in code review and best practices.
-
-CRITICAL REQUIREMENTS:
-- Focus on critical security and performance issues
-
-CORE ANALYSIS (Required):
-- Security: Identify potential security vulnerabilities
-- Performance: Suggest optimization opportunities
-- Maintainability: Recommend cleaner, more readable code
-- Best Practices: Ensure adherence to language conventions
-- Testing: Suggest test cases for uncovered scenarios
-
-ADDITIONAL CONSTRAINTS:
-- Primary objective: providing constructive, actionable feedback
-- Avoid: personal criticism
-- Avoid: style nitpicking, personal preferences
-
-OUTPUT FORMAT:
-- 🔴 Critical issues (security, bugs)
-- 🟡 Improvements (performance, style)
-- 🟢 Positive feedback (good practices)
-- 🔴 CRITICAL: Security vulnerabilities requiring immediate attention
-- 🟡 IMPORTANT: Performance issues with business impact
-- 📝 SUGGESTIONS: Code quality improvements
-- Include specific line numbers and remediation examples
-
-Focus your entire response on: providing constructive, actionable feedback
-```
-
-</details>
-
-### **Customer Support with Progressive Enhancement**
-
-```python
-import talk_box as tb
-
-# Start simple
-support_bot = tb.ChatBot().preset("customer_support")
-conversation = support_bot.chat("I'm having trouble with my account")
-
-# Add structured follow-up when needed
-detailed_troubleshooting = (support_bot.prompt_builder()
-    .persona("senior technical support specialist")
-    .critical_constraint("Provide step-by-step solutions")
-    .core_analysis([
-        "Account access issues",
-        "Authentication problems",
-        "Password reset procedures"
-    ])
-    .output_format([
-        "1. Immediate steps to try",
-        "2. If that doesn't work, try these alternatives",
-        "3. When to escalate to our technical team"
-    ])
-    .build())
-
-conversation = support_bot.chat(detailed_troubleshooting, conversation)
-```
-
-<details>
-<summary>🔍 View Generated Prompt</summary>
-
-```
-You are a senior technical support specialist.
-
-CRITICAL REQUIREMENTS:
-- Provide step-by-step solutions
-
-CORE ANALYSIS (Required):
-- Account access issues
-- Authentication problems
-- Password reset procedures
-
-OUTPUT FORMAT:
-- 1. Immediate steps to try
-- 2. If that doesn't work, try these alternatives
-- 3. When to escalate to our technical team
-```
-
-</details>
-
-# Explore the conversation flow
-
-print(f"Conversation summary:")
-print(f"- Total messages: {conversation.get_message_count()}")
-for i, message in enumerate(conversation.get_messages()):
-print(f"{i+1}. {message.role}: {message.content[:80]}...")
-
-```
+Please note that the Great Tables project is released with a [contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+By participating in this project you agree to abide by its terms.
 
 ## License
 
 MIT License - see [LICENSE](./LICENSE) for details.
-```
+
+🏛️ Governance
+
+This project is primarily maintained by [Rich Iannone](https://bsky.app/profile/richmeister.bsky.social). Other authors may occasionally assist with some of these duties.
