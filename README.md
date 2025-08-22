@@ -300,7 +300,7 @@ If you encounter a bug, have usage questions, or want to share ideas to make thi
 
 ## Code of Conduct
 
-Please note that the Great Tables project is released with a [contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+Please note that the Talk Box project is released with a [contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 By participating in this project you agree to abide by its terms.
 
 ## License
