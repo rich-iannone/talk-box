@@ -220,9 +220,9 @@ class ChatBot:
 
     **Layered API Design**:
 
-    1. **ChatBot** (this class): Configuration and interaction entry point
-    2. **Conversation**: Multi-turn conversation management and message history
-    3. **Message**: Individual message data structures with metadata
+    1. **ChatBot** (this class): configuration and interaction entry point
+    2. **Conversation**: multi-turn conversation management and message history
+    3. **Message**: individual message data structures with metadata
 
     The integration ensures that all chat interactions automatically create and manage conversation
     history, making multi-turn conversations natural and persistent. Advanced users can access
@@ -230,49 +230,51 @@ class ChatBot:
 
     Notes
     -----
-    The ChatBot class takes no initialization parameters. All configuration is done
-    through the chainable methods after instantiation.
+    The `ChatBot` class takes no initialization parameters. All configuration is done through the
+    chainable methods after instantiation.
 
     Returns
     -------
     ChatBot
-        A new ChatBot instance with default configuration and auto-enabled LLM integration
+        A new `ChatBot` instance with default configuration and auto-enabled LLM integration
         (when available).
 
     Conversation Management
     ----------------------
     All chat interactions return `Conversation` objects, providing seamless conversation management:
 
-    - [`chat()`](`talk_box.ChatBot.chat`): Send message and get conversation with response
-    - [`start_conversation()`](`talk_box.ChatBot.start_conversation`): Create new empty conversation
-    - [`continue_conversation()`](`talk_box.ChatBot.continue_conversation`): Continue existing conversation
+    - [`chat()`](`talk_box.ChatBot.chat`): send message and get conversation with response
+    - [`start_conversation()`](`talk_box.ChatBot.start_conversation`): create new empty conversation
+    - [`continue_conversation()`](`talk_box.ChatBot.continue_conversation`): continue existing
+    conversation
 
-    Conversations automatically handle message history, chronological ordering, and context management.
-    Users can access individual `Message` objects within conversations for detailed inspection.
+    Conversations automatically handle message history, chronological ordering, and context
+    management. Users can access individual `Message` objects within conversations for detailed
+    inspection.
 
     Chainable Configuration Methods
     ------------------------------
     Configure your chatbot behavior with these chainable methods:
 
-    - [`model()`](`talk_box.ChatBot.model`): Set the language model to use
-    - [`preset()`](`talk_box.ChatBot.preset`): Apply behavior presets like "technical_advisor"
-    - [`temperature()`](`talk_box.ChatBot.temperature`): Control response randomness (0.0-2.0)
-    - [`max_tokens()`](`talk_box.ChatBot.max_tokens`): Set maximum response length
-    - [`tools()`](`talk_box.ChatBot.tools`): Enable specific tools and capabilities
-    - [`persona()`](`talk_box.ChatBot.persona`): Define the chatbot's personality
-    - [`avoid()`](`talk_box.ChatBot.avoid`): Specify topics or behaviors to avoid
-    - [`verbose()`](`talk_box.ChatBot.verbose`): Enable detailed output logging
+    - [`model()`](`talk_box.ChatBot.model`): set the language model to use
+    - [`preset()`](`talk_box.ChatBot.preset`): apply behavior presets like `"technical_advisor"`
+    - [`temperature()`](`talk_box.ChatBot.temperature`): control response randomness (`0.0`-`2.0`)
+    - [`max_tokens()`](`talk_box.ChatBot.max_tokens`): set maximum response length
+    - [`tools()`](`talk_box.ChatBot.tools`): enable specific tools and capabilities
+    - [`persona()`](`talk_box.ChatBot.persona`): define the chatbot's personality
+    - [`avoid()`](`talk_box.ChatBot.avoid`): specify topics or behaviors to avoid
+    - [`verbose()`](`talk_box.ChatBot.verbose`): enable detailed output logging
 
     All configuration methods return `self`, enabling method chaining for concise setup.
 
     Browser Integration
     ------------------
-    The ChatBot class provides interactive browser interfaces:
+    The `ChatBot` class provides interactive browser interfaces:
 
-    - **Automatic Launch**: When displayed in Jupyter notebooks, opens browser chat interface
-    - **Manual Sessions**: Use [`create_chat_session()`](`talk_box.ChatBot.create_chat_session`)
+    - **Automatic Launch**: when displayed in Jupyter notebooks, opens browser chat interface
+    - **Manual Sessions**: use [`create_chat_session()`](`talk_box.ChatBot.create_chat_session`)
       for explicit browser interface control
-    - **Configuration Display**: Shows current configuration when LLM integration unavailable
+    - **Configuration Display**: shows current configuration when LLM integration unavailable
 
     Examples
     --------
@@ -355,19 +357,19 @@ class ChatBot:
 
         Parameters
         ----------
-        name : str, optional
-            A human-readable name for this chatbot (e.g., "Customer Support Bot")
-        description : str, optional
-            A brief description of the chatbot's purpose and capabilities
-        id : str, optional
-            A unique identifier for this chatbot configuration (useful for A/B testing)
+        name
+            A human-readable name for this chatbot (e.g., `"Customer Support Bot"`).
+        description
+            A brief description of the chatbot's purpose and capabilities.
+        id
+            A unique identifier for this chatbot configuration (useful for A/B testing).
         """
         self._config: dict[str, Any] = {
             "name": name or "Untitled ChatBot",
             "description": description or "A Talk Box chatbot",
             "id": id,
             "provider": "openai",  # Default provider
-            "model": "gpt-3.5-turbo",
+            "model": "gpt-3.5-turbo",  # Default model
             "temperature": 0.7,
             "max_tokens": 1000,
             "tools": [],
@@ -559,34 +561,33 @@ class ChatBot:
         """
         Configure the language model to use for generating responses.
 
-        Sets the specific language model that will be used when the chatbot generates
-        responses. This method supports models from various providers including OpenAI,
-        Anthropic, Google, and others through the chatlas integration. The model choice
-        significantly impacts response quality, speed, cost, and capabilities.
+        Sets the specific language model that will be used when the chatbot generates responses.
+        This method supports models from various providers including OpenAI, Anthropic, Google, and
+        others through the chatlas integration. The model choice significantly impacts response
+        quality, speed, cost, and capabilities.
 
-        The chatbot automatically detects the appropriate provider based on the model
-        name and handles authentication via environment variables. Different models
-        have different strengths - some excel at reasoning, others at creativity,
-        and others at specific domains like code generation.
+        The chatbot automatically detects the appropriate provider based on the model name and
+        handles authentication via environment variables. Different models have different strengths
+        as some excel at reasoning, others at creativity, and others at specific domains like code
+        generation.
 
         Parameters
         ----------
-        model_name : str
+        model_name
             The name of the language model to use. Exact model names may vary by provider. Check
             provider documentation for the most current model names and capabilities.
 
         Returns
         -------
         ChatBot
-            Returns self to enable method chaining, allowing you to configure
-            multiple parameters in a single fluent expression.
+            Returns self to enable method chaining, allowing you to configure multiple parameters in
+            a single fluent expression.
 
         Raises
         ------
         ValueError
-            If the model name is empty or None. The method does not validate
-            model availability at configuration time - validation occurs when
-            creating chat sessions.
+            If the model name is empty or None. The method does not validate model availability at
+            configuration time. Validation occurs when creating chat sessions.
 
 
         Model Types by Provider
@@ -595,10 +596,10 @@ class ChatBot:
 
         **OpenAI Models:**
 
+        - `"gpt-4o"`: Latest multimodal model with excellent capabilities
         - `"gpt-4-turbo"`: GPT-4 with improved performance and lower cost
         - `"gpt-4"`: Original GPT-4 model with excellent reasoning capabilities
-        - `"gpt-3.5-turbo"`: Fast, cost-effective model good for most tasks
-        - `"gpt-4o"`: Multimodal model supporting text, images, and audio
+        - `"gpt-3.5-turbo"`: Fast, cost-effective model good for most tasks (default)
 
         **Anthropic Models:**
 
@@ -621,6 +622,9 @@ class ChatBot:
 
         # High-performance model for complex reasoning
         reasoning_bot = tb.ChatBot().model("gpt-4-turbo")
+
+        # Default balanced model (recommended starting point)
+        balanced_bot = tb.ChatBot().model("gpt-3.5-turbo")
 
         # Fast, cost-effective model for simple tasks
         quick_bot = tb.ChatBot().model("gpt-3.5-turbo")
