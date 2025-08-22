@@ -457,7 +457,7 @@ class PromptBuilder:
     """
     Builds structured prompts using attention mechanisms and cognitive principles.
 
-    The PromptBuilder leverages insights from modern prompt engineering research to create prompts
+    The `PromptBuilder` leverages insights from modern prompt engineering research to create prompts
     that maximize model attention on critical information while maintaining natural conversation
     flow.
 
@@ -468,23 +468,56 @@ class PromptBuilder:
 
     Notes
     -----
-    This implementation integrates cutting-edge research from attention mechanisms and cognitive psychology
-    to optimize prompt effectiveness. The PromptBuilder applies proven principles that enhance model
+    This implementation integrates recent research from attention mechanisms and cognitive psychology
+    to optimize prompt effectiveness. The `PromptBuilder` applies proven principles that enhance model
     performance and response quality through strategic information placement and cognitive load management.
 
     **Attention Mechanisms Applied:**
 
-    - **Positional encoding**: Critical information placed strategically
-    - **Multi-head attention**: Different types of context handled separately
-    - **Hierarchical structure**: Information organized by importance and relevance
-    - **Context windowing**: Optimal information density for model processing
+    - **Positional encoding**: critical information placed strategically
+    - **Multi-head attention**: different types of context handled separately
+    - **Hierarchical structure**: information organized by importance and relevance
+    - **Context windowing**: optimal information density for model processing
 
     **Cognitive Psychology Integration:**
 
-    - **Primacy effect**: Important instructions placed early
-    - **Recency effect**: Final emphasis reinforces key objectives
-    - **Chunking**: Information grouped into digestible, logical units
-    - **Salience**: Critical constraints highlighted for maximum attention
+    - **Primacy effect**: important instructions placed early
+    - **Recency effect**: final emphasis reinforces key objectives
+    - **Chunking**: information grouped into digestible, logical units
+    - **Salience**: critical constraints highlighted for maximum attention
+
+    **Prompt Building Methods**
+
+    The `PromptBuilder` provides a comprehensive set of methods for creating structured, attention-optimized prompts.
+    All methods support fluent chaining for natural prompt construction:
+
+    **Core Foundation Methods:**
+
+    - `persona(role, expertise=None)`: set the AI's identity and behavioral framework
+    - `task_context(context, priority=CRITICAL)`: define the primary objective and scope
+    - `critical_constraint(constraint)`: add front-loaded, non-negotiable requirements
+    - `constraint(constraint)`: add important but secondary requirements
+
+    **Structure and Analysis Methods:**
+
+    - `structured_section(title, content, priority=MEDIUM, required=False)`: create organized content sections
+    - `core_analysis(analysis_points)`: define required analytical focus areas
+    - `output_format(format_specs)`: specify response structure and formatting requirements
+    - `example(input_example, output_example)`: provide concrete input/output demonstrations
+
+    **Focus and Guidance Methods:**
+
+    - `focus_on(primary_goal)`: emphasize the most important objective
+    - `avoid_topics(topics)`: explicitly exclude irrelevant or problematic areas
+    - `final_emphasis(emphasis)`: add closing reinforcement using recency bias
+
+    **Output Methods:**
+
+    - `build()`: generate the final structured prompt string
+    - `preview_structure()`: preview the prompt organization and metadata
+
+    Each method is designed to work together in the attention-optimized prompt structure,
+    with positioning and formatting automatically handled to maximize model performance.
 
     Examples
     --------
