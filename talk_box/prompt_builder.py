@@ -54,22 +54,22 @@ class PromptSection:
 
     Parameters
     ----------
-    content : str
+    content
         The text content of the prompt section. This is the actual text that will appear
         in the final prompt. Content should be crafted to serve the section's specific
         purpose within the overall prompt strategy.
-    priority : Priority, optional
+    priority
         Attention priority level determining section placement order and emphasis.
         Higher priority sections are typically placed in more prominent positions.
         Defaults to `Priority.MEDIUM`.
-    section_type : str, optional
+    section_type
         Type classification for the section enabling specialized handling and grouping.
         This allows the prompt builder to apply type-specific optimization strategies.
         Defaults to `"general"`.
-    order_hint : int, optional
+    order_hint
         Fine-grained ordering hint where lower numbers appear earlier in the prompt.
         This provides precise control over section positioning beyond priority levels.
-        Sections with the same priority are ordered by this value. Defaults to 0.
+        Sections with the same priority are ordered by this value. Defaults to `0`.
 
     Returns
     -------
@@ -80,61 +80,61 @@ class PromptSection:
     ---------------
     The available priority levels are:
 
-    - `Priority.CRITICAL`: Highest importance, placed prominently
-    - `Priority.HIGH`: Important content requiring strong attention
-    - `Priority.MEDIUM`: Standard priority for general content
-    - `Priority.LOW`: Supporting information, de-emphasized placement
-    - `Priority.MINIMAL`: Background context, least prominent placement
+    - `Priority.CRITICAL`: highest importance, placed prominently
+    - `Priority.HIGH`: important content requiring strong attention
+    - `Priority.MEDIUM`: standard priority for general content
+    - `Priority.LOW`: supporting information, de-emphasized placement
+    - `Priority.MINIMAL`: background context, least prominent placement
 
     Section Types
     -------------
     Common section types include:
 
-    - `"persona"`: Role and behavioral context
-    - `"constraint"`: Requirements and limitations
-    - `"analysis"`: Core analysis tasks and objectives
-    - `"format"`: Output formatting requirements
-    - `"example"`: Input/output examples and demonstrations
-    - `"emphasis"`: Final reinforcement and focus directives
-    - `"general"`: General-purpose content
+    - `"persona"`: role and behavioral context
+    - `"constraint"`: requirements and limitations
+    - `"analysis"`: core analysis tasks and objectives
+    - `"format"`: output formatting requirements
+    - `"example"`: input/output examples and demonstrations
+    - `"emphasis"`: final reinforcement and focus directives
+    - `"general"`: general-purpose content
 
     Section Lifecycle
     -----------------
     Prompt sections typically follow this lifecycle within the prompt building process:
 
-    1. **Creation**: Sections are created with content and metadata
-    2. **Collection**: Multiple sections are gathered by the PromptBuilder
-    3. **Sorting**: Sections are ordered by priority and order_hint values
-    4. **Grouping**: Sections are grouped by type for specialized handling
-    5. **Assembly**: Final prompt is constructed from ordered sections
-    6. **Optimization**: Content is refined for attention and coherence
+    1. **Creation**: sections are created with content and metadata
+    2. **Collection**: multiple sections are gathered by the PromptBuilder
+    3. **Sorting**: sections are ordered by priority and order_hint values
+    4. **Grouping**: sections are grouped by type for specialized handling
+    5. **Assembly**: final prompt is constructed from ordered sections
+    6. **Optimization**: content is refined for attention and coherence
 
     Design Principles
     -----------------
-    **Attention Optimization**: Sections are designed to work together to guide model
+    **Attention Optimization**: sections are designed to work together to guide model
     attention effectively, with priority and positioning controlling information hierarchy.
 
-    **Modularity**: Each section encapsulates a specific aspect of the prompt, enabling
+    **Modularity**: each section encapsulates a specific aspect of the prompt, enabling
     reusable components and systematic prompt construction.
 
-    **Flexibility**: The section system supports both structured workflows through
+    **Flexibility**: the section system supports both structured workflows through
     standard section types and custom applications through extensible metadata.
 
-    **Composability**: Sections can be combined, reordered, and manipulated to create
+    **Composability**: sections can be combined, reordered, and manipulated to create
     sophisticated prompt strategies for different use cases.
 
-    **Cognitive Alignment**: Section design aligns with cognitive psychology principles
+    **Cognitive Alignment**: section design aligns with cognitive psychology principles
     like primacy/recency effects and information chunking for optimal comprehension.
 
     Integration Notes
     -----------------
-    - **Automatic Ordering**: When used with `PromptBuilder`, sections are automatically ordered by
+    - **Automatic Ordering**: when used with `PromptBuilder`, sections are automatically ordered by
     priority and order_hint for optimal attention flow
-    - **Type-Based Processing**: Section types enable specialized handling and validation within the
+    - **Type-Based Processing**: section types enable specialized handling and validation within the
     prompt building pipeline
-    - **Content Optimization**: Section content should be crafted for clarity and specificity to
+    - **Content Optimization**: section content should be crafted for clarity and specificity to
     maximize prompt effectiveness
-    - **Memory Efficiency**: Sections are lightweight dataclasses suitable for large-scale prompt
+    - **Memory Efficiency**: sections are lightweight dataclasses suitable for large-scale prompt
     construction workflows
 
     The `PromptSection` class provides the foundation for systematic, attention-optimized prompt
@@ -148,28 +148,28 @@ class PromptSection:
     Create sections for different types of prompt content:
 
     ```python
-    from talk_box import PromptSection, Priority
+    import talk_box as tb
 
     # High-priority persona section
-    persona_section = PromptSection(
+    persona_section = tb.PromptSection(
         content="You are a senior software architect with expertise in distributed systems.",
-        priority=Priority.CRITICAL,
+        priority=tb.Priority.CRITICAL,
         section_type="persona",
         order_hint=1
     )
 
     # Critical constraint section
-    constraint_section = PromptSection(
+    constraint_section = tb.PromptSection(
         content="Focus only on scalability issues that impact performance.",
-        priority=Priority.CRITICAL,
+        priority=tb.Priority.CRITICAL,
         section_type="constraint",
         order_hint=2
     )
 
     # Medium-priority analysis section
-    analysis_section = PromptSection(
+    analysis_section = tb.PromptSection(
         content="Analyze the system architecture for bottlenecks and optimization opportunities.",
-        priority=Priority.MEDIUM,
+        priority=tb.Priority.MEDIUM,
         section_type="analysis",
         order_hint=10
     )
@@ -186,37 +186,27 @@ class PromptSection:
     ```python
     # Create sections with different priorities
     sections = [
-        PromptSection(
+        tb.PromptSection(
             content="Secondary consideration: Check for code style consistency.",
-            priority=Priority.LOW,
+            priority=tb.Priority.LOW,
             section_type="analysis"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="CRITICAL: Identify security vulnerabilities immediately.",
-            priority=Priority.CRITICAL,
+            priority=tb.Priority.CRITICAL,
             section_type="constraint"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="Important: Focus on performance bottlenecks.",
-            priority=Priority.HIGH,
+            priority=tb.Priority.HIGH,
             section_type="analysis"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="Background context: This is a financial application.",
-            priority=Priority.MINIMAL,
+            priority=tb.Priority.MINIMAL,
             section_type="general"
         )
     ]
-
-    # Sort by priority (higher priority first) then by order_hint
-    sorted_sections = sorted(
-        sections,
-        key=lambda s: (-s.priority.value, s.order_hint)
-    )
-
-    print("Sections in priority order:")
-    for i, section in enumerate(sorted_sections, 1):
-        print(f"{i}. [{section.priority.name}] {section.content}")
     ```
 
     ### Using section types for specialized handling
@@ -226,29 +216,29 @@ class PromptSection:
     ```python
     # Create sections representing different prompt components
     prompt_sections = [
-        PromptSection(
+        tb.PromptSection(
             content="You are an expert code reviewer.",
-            priority=Priority.CRITICAL,
+            priority=tb.Priority.CRITICAL,
             section_type="persona"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="Focus on security issues and performance problems.",
-            priority=Priority.HIGH,
+            priority=tb.Priority.HIGH,
             section_type="constraint"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="Analyze the code for bugs, security flaws, and inefficiencies.",
-            priority=Priority.MEDIUM,
+            priority=tb.Priority.MEDIUM,
             section_type="analysis"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="Format: List critical issues first, then suggestions.",
-            priority=Priority.MEDIUM,
+            priority=tb.Priority.MEDIUM,
             section_type="format"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="Example: 'CRITICAL: SQL injection vulnerability on line 42'",
-            priority=Priority.LOW,
+            priority=tb.Priority.LOW,
             section_type="example"
         )
     ]
@@ -261,35 +251,25 @@ class PromptSection:
     ```python
     # Create sections with same priority but different order hints
     setup_sections = [
-        PromptSection(
+        tb.PromptSection(
             content="You are a helpful assistant.",
-            priority=Priority.HIGH,
+            priority=tb.Priority.HIGH,
             section_type="persona",
             order_hint=1  # First
         ),
-        PromptSection(
+        tb.PromptSection(
             content="You specialize in Python programming.",
-            priority=Priority.HIGH,
+            priority=tb.Priority.HIGH,
             section_type="persona",
             order_hint=2  # Second
         ),
-        PromptSection(
+        tb.PromptSection(
             content="You focus on writing clean, efficient code.",
             priority=Priority.HIGH,
             section_type="persona",
             order_hint=3  # Third
         )
     ]
-
-    # Sort by priority, then order_hint
-    ordered_sections = sorted(
-        setup_sections,
-        key=lambda s: (-s.priority.value, s.order_hint)
-    )
-
-    print("Ordered persona sections:")
-    for i, section in enumerate(ordered_sections, 1):
-        print(f"{i}. {section.content}")
     ```
 
     ### Building sections for different prompt strategies
@@ -298,35 +278,28 @@ class PromptSection:
 
     ```python
     # Front-loading critical information (primacy bias)
-    critical_first = PromptSection(
+    critical_first = tb.PromptSection(
         content="IMMEDIATE PRIORITY: Check for buffer overflow vulnerabilities.",
-        priority=Priority.CRITICAL,
+        priority=tb.Priority.CRITICAL,
         section_type="constraint",
         order_hint=1
     )
 
     # Core task definition
-    main_task = PromptSection(
+    main_task = tb.PromptSection(
         content="Review this C++ code for security issues and memory management problems.",
-        priority=Priority.HIGH,
+        priority=tb.Priority.HIGH,
         section_type="analysis",
         order_hint=10
     )
 
     # Final emphasis (recency bias)
-    final_emphasis = PromptSection(
+    final_emphasis = tb.PromptSection(
         content="Remember: Security vulnerabilities are the highest priority.",
         priority=Priority.HIGH,
         section_type="emphasis",
         order_hint=100
     )
-
-    # Assemble attention-optimized sequence
-    attention_sequence = [critical_first, main_task, final_emphasis]
-
-    print("Attention-optimized prompt sequence:")
-    for section in attention_sequence:
-        print(f"[{section.section_type}] {section.content}")
     ```
 
     ### Integration with PromptBuilder workflow
@@ -334,10 +307,8 @@ class PromptSection:
     See how sections work within the larger prompt building process:
 
     ```python
-    from talk_box import PromptBuilder
-
     # Create a prompt builder
-    builder = PromptBuilder()
+    builder = tb.PromptBuilder()
 
     # Builder methods create PromptSection objects internally
     builder.persona("senior developer", "code review")
@@ -345,9 +316,9 @@ class PromptSection:
     builder.core_analysis(["Memory management", "Input validation", "Error handling"])
 
     # You can also add custom sections directly
-    custom_section = PromptSection(
+    custom_section = tb.PromptSection(
         content="Pay special attention to authentication mechanisms.",
-        priority=Priority.HIGH,
+        priority=tb.Priority.HIGH,
         section_type="constraint",
         order_hint=5
     )
@@ -368,15 +339,15 @@ class PromptSection:
     ```python
     # Create a collection of mixed sections
     mixed_sections = [
-        PromptSection("Core task", Priority.HIGH, "analysis", 1),
-        PromptSection("Important constraint", Priority.HIGH, "constraint", 2),
-        PromptSection("Background info", Priority.LOW, "general", 3),
-        PromptSection("Critical requirement", Priority.CRITICAL, "constraint", 0),
-        PromptSection("Output format", Priority.MEDIUM, "format", 4)
+        tb.PromptSection("Core task", tb.Priority.HIGH, "analysis", 1),
+        tb.PromptSection("Important constraint", tb.Priority.HIGH, "constraint", 2),
+        tb.PromptSection("Background info", tb.Priority.LOW, "general", 3),
+        tb.PromptSection("Critical requirement", tb.Priority.CRITICAL, "constraint", 0),
+        tb.PromptSection("Output format", tb.Priority.MEDIUM, "format", 4)
     ]
 
     # Filter high-priority sections
-    high_priority = [s for s in mixed_sections if s.priority.value >= Priority.HIGH.value]
+    high_priority = [s for s in mixed_sections if s.priority.value >= tb.Priority.HIGH.value]
 
     # Find all constraint sections
     constraints = [s for s in mixed_sections if s.section_type == "constraint"]
@@ -400,29 +371,29 @@ class PromptSection:
     ```python
     # Custom section types for code review workflow
     code_review_sections = [
-        PromptSection(
+        tb.PromptSection(
             content="You are a senior code reviewer with 10+ years experience.",
-            priority=Priority.CRITICAL,
+            priority=tb.Priority.CRITICAL,
             section_type="reviewer_persona"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="This code will be deployed to production systems.",
-            priority=Priority.HIGH,
+            priority=tb.Priority.HIGH,
             section_type="deployment_context"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="Check: Security, Performance, Maintainability, Testing",
-            priority=Priority.HIGH,
+            priority=tb.Priority.HIGH,
             section_type="review_checklist"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="Format: Critical issues first, then improvements, then praise",
-            priority=Priority.MEDIUM,
+            priority=tb.Priority.MEDIUM,
             section_type="response_structure"
         ),
-        PromptSection(
+        tb.PromptSection(
             content="Remember: Constructive feedback builds better developers.",
-            priority=Priority.MEDIUM,
+            priority=tb.Priority.MEDIUM,
             section_type="review_philosophy"
         )
     ]
@@ -443,8 +414,6 @@ class PromptSection:
         print(f"  Content: {section.content}")
         print()
     ```
-
-
     """
 
     content: str
@@ -675,12 +644,12 @@ class PromptBuilder:
 
         Parameters
         ----------
-        role : str
+        role
             The primary professional role or identity the AI should adopt. This should be
             specific and professional (e.g., "senior software architect", "data scientist",
             "technical writer"). The role influences response style, terminology, and the
             level of technical depth provided.
-        expertise : str, optional
+        expertise
             Specific area of expertise or specialization within the role. This narrows
             the focus and enhances domain-specific knowledge application (e.g.,
             "distributed systems", "machine learning", "API documentation").
@@ -903,11 +872,11 @@ class PromptBuilder:
 
         Parameters
         ----------
-        context : str
+        context
             Clear, specific description of what needs to be accomplished. Should be
             action-oriented and provide sufficient detail for the AI to understand
             the expected scope and deliverables.
-        priority : Priority, optional
+        priority
             Attention priority level for task placement in the final prompt.
             Defaults to `Priority.CRITICAL` to ensure the main task receives
             prominent positioning and maximum attention.
@@ -1247,24 +1216,24 @@ class PromptBuilder:
         `ADDITIONAL CONSTRAINTS` section after the main task context and structured sections,
         providing important guidance while maintaining the attention hierarchy of the prompt.
 
-        **Positioning Strategy**: Standard constraints are positioned after critical constraints
+        **Positioning Strategy**: standard constraints are positioned after critical constraints
         and core content to maintain optimal attention flow. This positioning ensures that
         essential task information receives primary focus while still communicating important
         requirements and preferences to the model.
 
-        **Use Cases**: Standard constraints are ideal for:
+        **Use Cases**: standard constraints are ideal for:
 
-        - Quality preferences and style guidelines
-        - Secondary requirements that enhance output quality
-        - Behavioral preferences that improve response tone
-        - Technical preferences for implementation approaches
-        - Context-specific guidelines that refine the response scope
+        - quality preferences and style guidelines
+        - secondary requirements that enhance output quality
+        - behavioral preferences that improve response tone
+        - technical preferences for implementation approaches
+        - context-specific guidelines that refine the response scope
 
-        **Constraint Hierarchy**: Standard constraints appear in the order they are added,
+        **Constraint Hierarchy**: standard constraints appear in the order they are added,
         after any critical constraints. This allows for logical grouping of related
         requirements and systematic constraint organization.
 
-        **Relationship to Critical Constraints**: While `critical_constraint()` is used for
+        **Relationship to Critical Constraints**: while `critical_constraint()` is used for
         non-negotiable requirements that must be front-loaded, `constraint()` is used for
         important but secondary requirements that guide response quality and style.
 
@@ -1554,44 +1523,44 @@ class PromptBuilder:
         model to process information in logical, digestible chunks while maintaining focus on
         specific aspects of the task.
 
-        **Research Foundation**: Creates distinct attention clusters as recommended by Liu et al.
+        **Research Foundation**: creates distinct attention clusters as recommended by Liu et al.
         (2023) for preventing attention drift in complex prompts. The structured approach leverages
         cognitive psychology principles of chunking and visual hierarchy to improve information
         processing and comprehension.
 
-        **Attention Clustering**: Structured sections group related information together, creating
+        **Attention Clustering**: structured sections group related information together, creating
         focused attention zones that help the model process complex requirements systematically.
         This prevents attention from being scattered across disconnected information and maintains
         cognitive coherence throughout the prompt.
 
-        **Visual Hierarchy**: Each section uses uppercase titles and consistent formatting to
+        **Visual Hierarchy**: each section uses uppercase titles and consistent formatting to
         create clear visual boundaries. This visual organization helps both human readers and
         AI models navigate complex prompts more effectively.
 
-        **Priority-Based Ordering**: Sections are automatically ordered by priority and insertion
+        **Priority-Based Ordering**: sections are automatically ordered by priority and insertion
         order in the final prompt, ensuring that higher-priority content receives appropriate
         attention placement while maintaining logical information flow.
 
         Parameters
         ----------
-        title : str
+        title
             Section heading that will be converted to uppercase for clear visual separation.
-            Should be descriptive and specific to the content type (e.g., "Review Areas",
-            "Performance Metrics", "Security Requirements"). The title helps create mental
+            Should be descriptive and specific to the content type (e.g., `"Review Areas"`,
+            `"Performance Metrics"`, `"Security Requirements"`). The title helps create mental
             models for information organization.
-        content : Union[str, List[str]]
+        content
             Section content provided as either a single string or a list of items. When
             provided as a list, each item is automatically formatted with bullet points
             for clear visual organization. Content should be specific, actionable, and
             relevant to the section's purpose.
-        priority : Priority, optional
+        priority
             Attention priority level for section placement in the final prompt structure.
             Higher priority sections appear earlier in the prompt to leverage primacy
             effects. Defaults to `Priority.MEDIUM` for balanced attention allocation.
-        required : bool, optional
-            Whether to mark the section as required in the output by appending "(Required)"
+        required
+            Whether to mark the section as required in the output by appending `"(Required)"`
             to the section title. This visual indicator emphasizes critical sections that
-            must be addressed in the response. Defaults to False.
+            must be addressed in the response. Defaults to `False`.
 
         Returns
         -------
@@ -1947,35 +1916,35 @@ class PromptBuilder:
         the fundamental analytical requirements receive prominent attention and are treated as
         non-negotiable deliverables.
 
-        **Strategic Purpose**: Core analysis requirements serve as the analytical backbone of the
+        **Strategic Purpose**: core analysis requirements serve as the analytical backbone of the
         prompt, defining the specific dimensions of investigation that must be covered. Unlike
         general constraints or suggestions, core analysis points are treated as mandatory
         analytical objectives that structure the AI's systematic examination of the subject matter.
 
-        **Attention Priority**: This method automatically assigns `Priority.HIGH` and marks the
+        **Attention Priority**: this method automatically assigns `Priority.HIGH` and marks the
         section as required, ensuring that core analysis requirements are prominently positioned
         after critical constraints and task context but before standard constraints and formatting
         requirements. This placement leverages attention optimization principles to ensure
         analytical objectives receive appropriate focus.
 
-        **Analytical Framework**: Each analysis point should represent a distinct analytical
+        **Analytical Framework**: each analysis point should represent a distinct analytical
         dimension or investigative angle that contributes to comprehensive coverage of the task.
         The points work together to create a systematic analytical framework that guides the AI's
         examination process and ensures thorough, structured analysis.
 
-        **Quality Assurance**: By marking core analysis as required, this method establishes
-        analytical accountability - the AI must address each specified analysis point to provide
+        **Quality Assurance**: by marking core analysis as required, this method establishes
+        analytical accountability and the AI must address each specified analysis point to provide
         a complete response. This prevents superficial analysis and ensures comprehensive coverage
         of critical analytical dimensions.
 
         Parameters
         ----------
-        analysis_points : List[str]
+        analysis_points
             List of specific analysis requirements that define the mandatory analytical
             dimensions. Each point should be clear, actionable, and represent a distinct
             aspect of the analysis. Points should be formulated as analytical objectives
-            rather than general suggestions (e.g., "Evaluate security implementation patterns"
-            rather than "Look at security").
+            rather than general suggestions (e.g., `"Evaluate security implementation patterns"`
+            rather than `"Look at security"`).
 
         Returns
         -------
@@ -2248,38 +2217,38 @@ class PromptBuilder:
 
         Output formatting requirements define the structural and organizational expectations for the AI's
         response, providing clear specifications that prevent ambiguous or inconsistently formatted outputs.
-        These requirements appear in the "OUTPUT FORMAT" section near the end of the prompt, ensuring
+        These requirements appear in the `"OUTPUT FORMAT"` section near the end of the prompt, ensuring
         that formatting guidance influences response generation while maintaining the attention hierarchy
         for more critical content.
 
-        **Research Foundation**: Addresses attention drift issues identified in Brown et al. (2020) by
+        **Research Foundation**: addresses attention drift issues by
         providing specific, measurable formatting constraints that anchor response structure. Clear
         formatting requirements help maintain cognitive coherence and ensure that complex responses
         remain organized and accessible to human readers.
 
-        **Structural Guidance**: Output format specifications serve as response templates that guide
+        **Structural Guidance**: output format specifications serve as response templates that guide
         the AI's information organization and presentation. Unlike content-focused constraints, these
         requirements focus on how information should be structured, ordered, and presented to maximize
         clarity and usability.
 
-        **Response Quality**: Well-defined formatting requirements significantly improve response
+        **Response Quality**: well-defined formatting requirements significantly improve response
         quality by preventing stream-of-consciousness outputs and ensuring systematic information
         organization. This is particularly important for complex analytical tasks where information
         hierarchy and clear structure are essential for comprehension.
 
-        **Professional Standards**: Formatting specifications enable alignment with professional
+        **Professional Standards**: formatting specifications enable alignment with professional
         documentation standards, report formats, and organizational communication preferences,
         ensuring that AI-generated content meets workplace and industry expectations.
 
         Parameters
         ----------
-        format_specs : List[str]
+        format_specs
             List of specific formatting requirements that define how the response should be
             structured and organized. Each specification should be clear, actionable, and
             measurable when possible. Specifications can address organization, headings,
             lists, examples, priorities, or any structural aspects of the response
-            (e.g., "Start with executive summary", "Use bullet points for key findings",
-            "Include code examples for each recommendation").
+            (e.g., `"Start with executive summary"`, `"Use bullet points for key findings"`,
+            `"Include code examples for each recommendation"`).
 
         Returns
         -------
@@ -2601,37 +2570,37 @@ Add an input/output example for few-shot learning and response format demonstrat
 
 Examples are a powerful few-shot learning technique that provides concrete demonstrations
 of expected input/output patterns, helping the AI understand the desired response format,
-style, and level of detail. Examples appear in the "EXAMPLES" section near the end of
+style, and level of detail. Examples appear in the `"EXAMPLES"` section near the end of
 the prompt, allowing the model to learn from specific demonstrations while maintaining
 the attention hierarchy for core content.
 
-**Few-Shot Learning**: Examples leverage the AI model's ability to learn from demonstrations
+**Few-Shot Learning**: examples leverage the AI model's ability to learn from demonstrations
 without explicit training. By providing concrete input/output pairs, examples enable the
 model to infer patterns, styles, and expected behaviors that might be difficult to specify
 through constraints alone.
 
-**Response Calibration**: Examples serve as calibration tools that help establish the
+**Response Calibration**: examples serve as calibration tools that help establish the
 appropriate level of detail, technical depth, formatting style, and analytical approach
 for responses. This is particularly valuable for complex tasks where abstract descriptions
 of requirements might be ambiguous.
 
-**Pattern Recognition**: Multiple examples can demonstrate variations in approach, showing
+**Pattern Recognition**: multiple examples can demonstrate variations in approach, showing
 how different types of inputs should be handled while maintaining consistent output quality
 and format. This helps the AI generalize appropriately across different scenarios.
 
-**Quality Anchoring**: Examples set quality expectations by demonstrating high-quality
+**Quality Anchoring**: examples set quality expectations by demonstrating high-quality
 responses that serve as benchmarks for the AI's own outputs. This helps maintain
 consistency and professionalism across different prompt executions.
 
 Parameters
 ----------
-input_example : str
+input_example
     Example input that represents a typical or representative case that the AI might
     encounter. Should be realistic, relevant to the task context, and demonstrate
     the type and complexity of input the AI will be processing. The input should
     be specific enough to provide clear guidance while being generalizable to
     similar scenarios.
-output_example : str
+output_example
     Expected output format and content that demonstrates the desired response style,
     level of detail, structure, and quality. Should exemplify the formatting
     requirements, analytical depth, and professional standards expected in the
@@ -3020,34 +2989,34 @@ pattern recognition rather than abstract instruction following.
         fresh in the AI's attention during response generation. This method provides a powerful way to
         reinforce the most essential requirement or constraint that must not be overlooked.
 
-        **Recency Bias**: Research in cognitive psychology demonstrates that information presented at the
+        **Recency Bias**: research in cognitive psychology demonstrates that information presented at the
         end of a sequence receives heightened attention and retention. By placing critical instructions
         at the prompt's conclusion, final emphasis ensures that the most important guidance influences
         the AI's response generation process when attention is most focused on producing output.
 
-        **Attention Anchoring**: Final emphasis serves as an attention anchor that prevents drift from
+        **Attention Anchoring**: final emphasis serves as an attention anchor that prevents drift from
         core objectives during complex prompt processing. When prompts contain extensive context,
         constraints, and examples, the final emphasis acts as a cognitive reset that refocuses attention
         on the primary objective before response generation begins.
 
-        **Override Mechanism**: Final emphasis can serve as an override mechanism for complex prompts
+        **Override Mechanism**: final emphasis can serve as an override mechanism for complex prompts
         where multiple competing priorities might create confusion. By explicitly stating the most
         critical requirement at the end, this method ensures that primary objectives take precedence
         over secondary considerations when trade-offs must be made.
 
-        **Quality Assurance**: The strategic placement of final emphasis helps prevent AI responses
+        **Quality Assurance**: the strategic placement of final emphasis helps prevent AI responses
         that technically satisfy prompt requirements but miss the primary intent. This is particularly
         valuable for complex analytical tasks where technical completeness might overshadow the
         core objective.
 
         Parameters
         ----------
-        emphasis : str
+        emphasis
             The most critical instruction or objective that must receive primary attention
             during response generation. Should be formulated as a clear, actionable directive
-            that captures the essential requirement (e.g., "Focus your entire response on
-            practical implementation steps", "Prioritize security considerations above all else",
-            "Ensure all recommendations are cost-effective and implementable").
+            that captures the essential requirement (e.g., `"Focus your entire response on
+            practical implementation steps"`, `"Prioritize security considerations above all else"`,
+            `"Ensure all recommendations are cost-effective and implementable"`).
 
         Returns
         -------
@@ -3357,23 +3326,23 @@ pattern recognition rather than abstract instruction following.
         or off-topic discussions. This method adds an "Avoid:" constraint that appears in the standard
         constraints section, providing clear guidance about prohibited topics or approaches.
 
-        **Negative Guidance**: Research in cognitive psychology shows that explicit negative instructions
+        **Negative Guidance**: research in cognitive psychology shows that explicit negative instructions
         can be effective when combined with positive guidance. By clearly stating what to avoid, this
         method helps the AI navigate complex topics while staying within appropriate boundaries and
         maintaining focus on desired outcomes.
 
-        **Boundary Setting**: Avoid topics serves as a content filter and boundary-setting mechanism
+        **Boundary Setting**: avoid topics serves as a content filter and boundary-setting mechanism
         that prevents responses from venturing into sensitive, irrelevant, or counterproductive areas.
         This is particularly valuable for professional contexts where certain topics or approaches
         could be inappropriate or harmful.
 
-        **Risk Mitigation**: Negative constraints help mitigate risks associated with AI-generated
+        **Risk Mitigation**: negative constraints help mitigate risks associated with AI-generated
         content by explicitly excluding potentially problematic topics, biased perspectives, or
         approaches that could lead to harmful or inappropriate recommendations.
 
-        **Focus Enhancement**: By eliminating distracting or irrelevant topics, avoid_topics helps
-        maintain laser focus on the core objectives and prevents the AI from exploring tangential
-        areas that might dilute the quality or relevance of the response.
+        **Focus Enhancement**: by eliminating distracting or irrelevant topics, `avoid_topics()`
+        helps maintain laser focus on the core objectives and prevents the AI from exploring
+        tangential areas that might dilute the quality or relevance of the response.
 
         Parameters
         ----------
@@ -3619,114 +3588,19 @@ pattern recognition rather than abstract instruction following.
         )
         ```
 
-        ### Healthcare system analysis
-
-        Avoid recommendations that compromise patient safety:
-
-        ```python
-        # Healthcare analysis avoiding patient safety risks
-        builder = (
-            tb.PromptBuilder()
-            .persona("healthcare systems analyst", "patient safety and quality improvement")
-            .task_context("Analyze hospital workflow efficiency improvements")
-            .core_analysis([
-                "Patient flow and care coordination",
-                "Resource utilization optimization",
-                "Technology integration opportunities",
-                "Staff workflow and communication"
-            ])
-            .avoid_topics([
-                "Efficiency improvements that reduce patient care time",
-                "Cost-cutting measures affecting patient safety",
-                "Technology implementations without proper training",
-                "Workflow changes without clinical validation",
-                "Staff reductions in critical care areas"
-            ])
-            .critical_constraint("Patient safety must never be compromised for efficiency")
-            .output_format([
-                "Workflow analysis with safety impact assessment",
-                "Improvement recommendations with patient focus",
-                "Implementation plan with safety protocols"
-            ])
-        )
-        ```
-
-        ### Research methodology guidance
-
-        Avoid biased or methodologically flawed approaches:
-
-        ```python
-        # Research design avoiding methodological problems
-        builder = (
-            tb.PromptBuilder()
-            .persona("research methodologist", "rigorous quantitative analysis")
-            .task_context("Design study to evaluate educational intervention effectiveness")
-            .core_analysis([
-                "Research design appropriateness for objectives",
-                "Sample size and statistical power requirements",
-                "Bias mitigation and control strategies",
-                "Measurement validity and reliability"
-            ])
-            .avoid_topics([
-                "P-hacking or selective result reporting",
-                "Inadequate sample sizes for statistical power",
-                "Cherry-picking data points to support hypothesis",
-                "Ignoring confounding variables",
-                "Using convenience sampling without acknowledging limitations"
-            ])
-            .constraint("Maintain rigorous scientific standards throughout")
-            .output_format([
-                "Study design with methodological justification",
-                "Statistical analysis plan with power calculations",
-                "Bias mitigation and limitation acknowledgments"
-            ])
-        )
-        ```
-
-        ### Content strategy development
-
-        Avoid manipulative or low-quality content approaches:
-
-        ```python
-        # Content strategy avoiding poor practices
-        builder = (
-            tb.PromptBuilder()
-            .persona("content strategist", "authentic engagement and value creation")
-            .task_context("Develop content marketing strategy for B2B software company")
-            .core_analysis([
-                "Audience needs and pain point analysis",
-                "Content format effectiveness assessment",
-                "Distribution channel optimization",
-                "Performance measurement and optimization"
-            ])
-            .avoid_topics([
-                "Clickbait headlines without delivering value",
-                "Keyword stuffing for SEO manipulation",
-                "Creating content solely for volume metrics",
-                "Copying competitor content without attribution",
-                "Misleading claims about product capabilities"
-            ])
-            .constraint("Focus on providing genuine value to target audience")
-            .output_format([
-                "Content calendar with audience-value mapping",
-                "Content type recommendations with rationale",
-                "Distribution and promotion strategy"
-            ])
-        )
-        ```
-
         Integration Notes
         -----------------
-        - **Boundary Setting**: Establishes clear content and approach boundaries for AI responses
-        - **Risk Mitigation**: Prevents problematic or inappropriate content through explicit exclusion
-        - **Focus Enhancement**: Eliminates distracting topics to maintain response relevance
-        - **Professional Standards**: Ensures responses align with ethical and professional guidelines
-        - **Quality Assurance**: Prevents low-quality approaches through negative guidance
-        - **Complementary Constraints**: Works alongside positive constraints to create comprehensive guidance
+        - **Boundary Setting**: establishes clear content and approach boundaries for AI responses
+        - **Risk Mitigation**: prevents problematic or inappropriate content through explicit exclusion
+        - **Focus Enhancement**: eliminates distracting topics to maintain response relevance
+        - **Professional Standards**: ensures responses align with ethical and professional guidelines
+        - **Quality Assurance**: prevents low-quality approaches through negative guidance
+        - **Complementary Constraints**: works alongside positive constraints to create comprehensive guidance
 
-        The avoid_topics method provides essential boundary-setting capabilities that ensure AI responses
-        remain appropriate, focused, and aligned with professional standards while explicitly excluding
-        problematic approaches or content areas that could compromise response quality or appropriateness.
+        The `avoid_topics()` method provides essential boundary-setting capabilities that ensure AI
+        responses remain appropriate, focused, and aligned with professional standards while
+        explicitly excluding problematic approaches or content areas that could compromise response
+        quality or appropriateness.
         """
         avoid_text = "Avoid: " + ", ".join(topics)
         return self.constraint(avoid_text)
@@ -3741,22 +3615,22 @@ pattern recognition rather than abstract instruction following.
         both primacy and recency effects to create the strongest possible attention focus on the primary
         objective.
 
-        **Dual Attention Strategy**: Research in cognitive psychology demonstrates that information
+        **Dual Attention Strategy**: research in cognitive psychology demonstrates that information
         positioned at both the beginning and end of a sequence receives the highest attention and
         retention. By anchoring the primary goal at both positions, focus_on ensures that the most
         critical objective maintains prominence throughout the entire prompt processing sequence.
 
-        **Primacy and Recency Effects**: The method capitalizes on both primacy bias (heightened
+        **Primacy and Recency Effects**: the method capitalizes on both primacy bias (heightened
         attention to early information) and recency bias (heightened attention to final information)
         to create a reinforcing attention pattern that keeps the primary objective at the forefront
         of the AI's processing throughout response generation.
 
-        **Objective Reinforcement**: Unlike single-position emphasis methods, focus_on creates a
+        **Objective Reinforcement**: unlike single-position emphasis methods, focus_on creates a
         reinforcing loop where the primary goal is established early as a critical requirement and
         then reinforced at the end as the ultimate focus. This dual reinforcement significantly
         reduces the risk of objective drift in complex prompts.
 
-        **Attention Hierarchy Management**: By explicitly establishing one primary objective above
+        **Attention Hierarchy Management**: by explicitly establishing one primary objective above
         all others, this method helps manage attention hierarchy in complex prompts with multiple
         competing requirements, ensuring that when trade-offs must be made, the primary goal takes
         clear precedence.
@@ -4083,26 +3957,26 @@ pattern recognition rather than abstract instruction following.
         and cognitive load optimization to ensure that the most critical information receives maximum focus
         during AI processing.
 
-        **Attention Architecture**: The prompt structure follows a carefully researched sequence that aligns
+        **Attention Architecture**: the prompt structure follows a carefully researched sequence that aligns
         with how large language models process and prioritize information. Each section is positioned to
         optimize attention allocation, with critical elements placed at psychologically proven high-attention
         positions (beginning and end) while supporting information is organized to minimize cognitive load.
 
-        **Cognitive Load Management**: The structured approach prevents cognitive overload by presenting
+        **Cognitive Load Management**: the structured approach prevents cognitive overload by presenting
         information in digestible, hierarchically organized sections. This allows the AI to process complex
         requirements systematically while maintaining focus on the most important objectives throughout
         response generation.
 
-        **Priority-Based Organization**: All prompt sections are automatically sorted by priority level,
+        **Priority-Based Organization**: all prompt sections are automatically sorted by priority level,
         ensuring that high-priority information receives prominent placement and attention. This systematic
         prioritization prevents important requirements from being overshadowed by less critical details.
 
-        **Behavioral Anchoring**: The persona-first structure establishes behavioral context before presenting
+        **Behavioral Anchoring**: the persona-first structure establishes behavioral context before presenting
         tasks or constraints, allowing the AI to adopt the appropriate role and mindset before processing
         specific requirements. This behavioral anchoring significantly improves response quality and
         consistency with desired expertise levels.
 
-        **Structural Sequence**: The method implements an 8-section attention-optimized structure:
+        **Structural Sequence**: the method implements an 8-section attention-optimized structure:
 
         1. **Persona**: establishes behavioral context and expertise level
         2. **Critical Constraints**: front-loads most important requirements (primacy effect)
@@ -4577,7 +4451,6 @@ pattern recognition rather than abstract instruction following.
         return "\n".join(prompt_parts)
 
     def preview_structure(self) -> Dict[str, Any]:
-        # fmt: off
         """
         Preview the prompt structure without building the full text for debugging and optimization.
 
@@ -4587,24 +4460,24 @@ pattern recognition rather than abstract instruction following.
         essential for optimizing prompt effectiveness, debugging complex prompts, and understanding
         how components will be arranged in the final output.
 
-        **Attention Pattern Analysis**: The preview reveals how attention will be distributed across
+        **Attention Pattern Analysis**: the preview reveals how attention will be distributed across
         different prompt sections, showing the hierarchical organization that maximizes AI focus on
         critical requirements. This visibility helps identify potential attention conflicts or
         suboptimal priority arrangements before prompt execution.
 
-        **Structure Validation**: By examining the preview, developers can verify that all intended
+        **Structure Validation**: by examining the preview, developers can verify that all intended
         components are present and properly prioritized. This is particularly valuable for complex
         prompts with multiple sections, constraints, and emphasis points that need careful coordination.
 
-        **Optimization Guidance**: The preview provides metrics like estimated token count and section
+        **Optimization Guidance**: the preview provides metrics like estimated token count and section
         distribution that help optimize prompt length and complexity. This information enables
         developers to balance comprehensiveness with efficiency for specific AI model capabilities.
 
-        **Debugging Support**: When prompts don't produce expected results, the preview helps identify
+        **Debugging Support**: when prompts don't produce expected results, the preview helps identify
         structural issues such as missing sections, incorrect priorities, or attention imbalances
         that might be affecting AI response quality.
 
-        **Development Workflow**: The preview supports iterative prompt development by allowing
+        **Development Workflow**: the preview supports iterative prompt development by allowing
         developers to inspect and refine prompt structure without generating full text until the
         architecture is optimized. This speeds development and reduces API costs during testing.
 
@@ -4613,16 +4486,16 @@ pattern recognition rather than abstract instruction following.
         Dict
             Comprehensive dictionary containing prompt structure analysis with the following keys:
 
-            - **persona** (str | None): The behavioral context and expertise specification
-            - **critical_constraints** (List[str]): Front-loaded requirements with maximum priority
-            - **task_context** (str | None): The primary objective and context description
-            - **task_priority** (str | None): Priority level of the main task ("CRITICAL", "HIGH", "MEDIUM", "LOW")
-            - **structured_sections** (List[Dict]): Ordered list of sections with content preview, priority, and type
-            - **standard_constraints** (List[str]): Additional requirements and limitations
-            - **output_format** (List[str] | None): Response structure and formatting specifications
-            - **examples_count** (int): Number of input/output examples included
-            - **final_emphasis** (str | None): Recency-positioned ultimate priority statement
-            - **estimated_tokens** (float): Approximate token count for the complete prompt
+            - **persona** (str | None): the behavioral context and expertise specification
+            - **critical_constraints** (List[str]): front-loaded requirements with maximum priority
+            - **task_context** (str | None): the primary objective and context description
+            - **task_priority** (str | None): priority level of the main task ("CRITICAL", "HIGH", "MEDIUM", "LOW")
+            - **structured_sections** (List[Dict]): ordered list of sections with content preview, priority, and type
+            - **standard_constraints** (List[str]): additional requirements and limitations
+            - **output_format** (List[str] | None): response structure and formatting specifications
+            - **examples_count** (int): number of input/output examples included
+            - **final_emphasis** (str | None): recency-positioned ultimate priority statement
+            - **estimated_tokens** (float): approximate token count for the complete prompt
 
         Examples
         --------
@@ -4719,392 +4592,20 @@ pattern recognition rather than abstract instruction following.
             print(f"Priority {section['priority']}: {section['content']}")
         ```
 
-        Output:
-        ```
-        === PROMPT STRUCTURE ANALYSIS ===
-        Persona: You are a security engineer specializing in application security.
-        Task Priority: HIGH
-        Critical Constraints: 1
-        Standard Constraints: 2
-        Structured Sections: 2
-        Examples: 1
-        Final Emphasis: Yes
-        Estimated Tokens: 285
-
-        === SECTION PRIORITIES ===
-        Priority 1: Core Analysis Requirements:
-        - Authentication and authorization mechanisms...
-        Priority 2: Risk Assessment:
-        Evaluate findings using CVSS methodology
-        ```
-
-        ### Structure optimization workflow
-
-        Use preview to optimize prompt structure iteratively:
-
-        ```python
-        # Initial prompt version
-        builder_v1 = (
-            tb.PromptBuilder()
-            .persona("business analyst", "market research")
-            .task_context("Analyze competitive landscape")
-            .core_analysis([
-                "Competitor product features and pricing",
-                "Market positioning and messaging",
-                "Strengths and weaknesses assessment"
-            ])
-            .output_format(["Market analysis report"])
-        )
-
-        # Check initial structure
-        structure_v1 = builder_v1.preview_structure()
-        print(f"V1 - Sections: {len(structure_v1['structured_sections'])}, Tokens: {structure_v1['estimated_tokens']:.0f}")
-
-        # Enhanced version with better structure
-        builder_v2 = (
-            tb.PromptBuilder()
-            .persona("business analyst", "competitive intelligence")
-            .focus_on("Identify actionable competitive advantages and market opportunities")
-            .task_context("Analyze competitive landscape for strategic positioning", priority=tb.Priority.HIGH)
-            .core_analysis([
-                "Competitor product features and pricing analysis",
-                "Market positioning and messaging strategy",
-                "Competitive strengths and vulnerabilities"
-            ], priority=tb.Priority.HIGH)
-            .structured_section(
-                "Strategic Implications",
-                "Connect competitive insights to actionable business strategy",
-                priority=tb.Priority.MEDIUM
-            )
-            .constraint("Focus on actionable insights over comprehensive coverage")
-            .output_format([
-                "Executive summary with strategic recommendations",
-                "Detailed competitive analysis matrix",
-                "Action items with implementation priorities"
-            ])
-            .example(
-                "Competitor pricing 20% below market average",
-                "Strategic Response: Emphasize premium value proposition and unique differentiators rather than competing on price"
-            )
-        )
-
-        # Compare optimized structure
-        structure_v2 = builder_v2.preview_structure()
-        print(f"V2 - Sections: {len(structure_v2['structured_sections'])}, Tokens: {structure_v2['estimated_tokens']:.0f}")
-        print(f"Improvement: +{len(structure_v2['structured_sections']) - len(structure_v1['structured_sections'])} sections")
-        ```
-
-        Output:
-        ```
-        V1 - Sections: 1, Tokens: 95
-        V2 - Sections: 2, Tokens: 234
-        Improvement: +1 sections
-        ```
-
-        ### Priority distribution analysis
-
-        Examine attention allocation across priority levels:
-
-        ```python
-        # Build prompt with mixed priorities
-        builder = (
-            tb.PromptBuilder()
-            .persona("product manager", "user experience design")
-            .task_context("Prioritize feature roadmap for mobile app")
-            .core_analysis([
-                "User needs analysis and pain points",
-                "Technical feasibility assessment",
-                "Business impact and revenue potential"
-            ], priority=tb.Priority.CRITICAL)
-            .structured_section(
-                "Market Research",
-                "Competitive feature analysis and industry trends",
-                priority=tb.Priority.HIGH
-            )
-            .structured_section(
-                "Resource Planning",
-                "Development effort estimates and team capacity",
-                priority=tb.Priority.MEDIUM
-            )
-            .structured_section(
-                "Success Metrics",
-                "KPIs and measurement framework",
-                priority=tb.Priority.LOW
-            )
-            .output_format([
-                "Feature prioritization matrix",
-                "Roadmap timeline with dependencies",
-                "Resource allocation plan"
-            ])
-        )
-
-        # Analyze priority distribution
-        structure = builder.preview_structure()
-
-        # Count sections by priority
-        priority_counts = {}
-        for section in structure['structured_sections']:
-            priority = section['priority']
-            priority_counts[priority] = priority_counts.get(priority, 0) + 1
-
-        print("Priority Distribution:")
-        for priority, count in sorted(priority_counts.items()):
-            print(f"  Priority {priority}: {count} sections")
-
-        print(f"\nAttention Balance: {structure['estimated_tokens']:.0f} tokens across {len(structure['structured_sections'])} sections")
-        ```
-
-        Output:
-        ```
-        Priority Distribution:
-          Priority 1: 1 sections
-          Priority 2: 1 sections
-          Priority 3: 1 sections
-          Priority 4: 1 sections
-
-        Attention Balance: 198 tokens across 4 sections
-        ```
-
-        ### Development debugging workflow
-
-        Use preview to identify and fix structural issues:
-
-        ```python
-        # Build prompt with potential issues
-        builder = (
-            tb.PromptBuilder()
-            .persona("software architect", "system design")
-            .task_context("Design microservices architecture")
-            # Missing core analysis - potential issue
-            .constraint("Must be scalable")
-            .constraint("Include security considerations")
-            .constraint("Consider team capabilities")
-            # No output format - potential issue
-        )
-
-        # Check for structural completeness
-        structure = builder.preview_structure()
-
-        # Identify missing components
-        issues = []
-        if not structure['structured_sections']:
-            issues.append("No structured analysis sections defined")
-        if not structure['output_format']:
-            issues.append("No output format specified")
-        if structure['estimated_tokens'] < 50:
-            issues.append("Prompt may be too minimal")
-        if len(structure['standard_constraints']) > 5:
-            issues.append("Too many constraints may cause cognitive overload")
-
-        if issues:
-            print("Structural Issues Detected:")
-            for issue in issues:
-                print(f"  ⚠️  {issue}")
-        else:
-            print("✅ Prompt structure looks good!")
-
-        print(f"\nCurrent structure: {structure['estimated_tokens']:.0f} tokens, {len(structure['structured_sections'])} sections")
-        ```
-
-        Output:
-        ```
-        Structural Issues Detected:
-          ⚠️  No structured analysis sections defined
-          ⚠️  No output format specified
-
-        Current structure: 67 tokens, 0 sections
-        ```
-
-        ### Performance optimization analysis
-
-        Optimize prompt for specific AI model capabilities:
-
-        ```python
-        # Check if prompt fits within model context limits
-        builder = (
-            tb.PromptBuilder()
-            .persona("research scientist", "clinical trials and biostatistics")
-            .task_context("Design Phase III clinical trial protocol")
-            .core_analysis([
-                "Primary and secondary endpoint selection",
-                "Sample size calculations and statistical power",
-                "Randomization and blinding strategies",
-                "Inclusion/exclusion criteria optimization",
-                "Data collection and monitoring procedures"
-            ])
-            .structured_section(
-                "Regulatory Compliance",
-                "FDA guidelines and Good Clinical Practice standards",
-                priority=tb.Priority.CRITICAL
-            )
-            .structured_section(
-                "Risk Management",
-                "Safety monitoring and adverse event protocols",
-                priority=tb.Priority.HIGH
-            )
-            .constraint("Comply with ICH-GCP guidelines")
-            .constraint("Include biomarker analysis plan")
-            .constraint("Consider patient recruitment feasibility")
-            .output_format([
-                "Complete protocol document outline",
-                "Statistical analysis plan",
-                "Regulatory submission strategy"
-            ])
-        )
-
-        # Check token efficiency
-        structure = builder.preview_structure()
-        tokens = structure['estimated_tokens']
-
-        # Model capacity planning
-        print(f"Prompt Analysis for Model Planning:")
-        print(f"  Estimated tokens: {tokens:.0f}")
-        print(f"  GPT-4 capacity usage: {(tokens/8000)*100:.1f}%")
-        print(f"  Claude capacity usage: {(tokens/100000)*100:.1f}%")
-
-        # Efficiency metrics
-        sections = len(structure['structured_sections'])
-        tokens_per_section = tokens / max(sections, 1)
-        print(f"  Average tokens per section: {tokens_per_section:.0f}")
-
-        if tokens > 4000:
-            print("  ⚠️  Consider chunking for smaller models")
-        elif tokens < 100:
-            print("  ⚠️  Prompt may be too minimal for complex tasks")
-        else:
-            print("  ✅ Good token efficiency for most models")
-        ```
-
-        Output:
-        ```
-        Prompt Analysis for Model Planning:
-          Estimated tokens: 312
-          GPT-4 capacity usage: 3.9%
-          Claude capacity usage: 0.3%
-          Average tokens per section: 156
-          ✅ Good token efficiency for most models
-        ```
-
-        ### Quality assurance checklist
-
-        Systematic structure validation for production prompts:
-
-        ```python
-        def validate_prompt_structure(builder: tb.PromptBuilder) -> Dict[str, Any]:
-            \"\"\"Validate prompt structure for production readiness.\"\"\"
-            structure = builder.preview_structure()
-
-            validation = {
-                "passed": True,
-                "score": 0,
-                "max_score": 10,
-                "issues": [],
-                "recommendations": []
-            }
-
-            # Check essential components
-            if structure['persona']:
-                validation["score"] += 2
-            else:
-                validation["issues"].append("Missing persona specification")
-                validation["passed"] = False
-
-            if structure['task_context']:
-                validation["score"] += 2
-            else:
-                validation["issues"].append("Missing task context")
-                validation["passed"] = False
-
-            if structure['structured_sections']:
-                validation["score"] += 2
-            else:
-                validation["issues"].append("No analysis sections defined")
-                validation["recommendations"].append("Add core_analysis() or structured_section()")
-
-            if structure['output_format']:
-                validation["score"] += 2
-            else:
-                validation["recommendations"].append("Add output_format() for clearer responses")
-
-            # Check optimization
-            if structure['critical_constraints']:
-                validation["score"] += 1
-            else:
-                validation["recommendations"].append("Consider adding critical constraints for priority")
-
-            if structure['final_emphasis']:
-                validation["score"] += 1
-            else:
-                validation["recommendations"].append("Add final_emphasis() for recency bias")
-
-            # Token efficiency
-            tokens = structure['estimated_tokens']
-            if 100 <= tokens <= 1000:
-                validation["score"] += 0  # Neutral - already counted above
-            elif tokens < 100:
-                validation["recommendations"].append("Prompt may be too minimal - consider adding detail")
-            elif tokens > 2000:
-                validation["recommendations"].append("Large prompt - consider chunking for efficiency")
-
-            return validation
-
-        # Test prompt validation
-        builder = (
-            tb.PromptBuilder()
-            .persona("financial advisor", "retirement planning")
-            .task_context("Develop comprehensive retirement strategy")
-            .core_analysis([
-                "Risk tolerance and investment timeline",
-                "Current assets and income analysis",
-                "Tax optimization strategies"
-            ])
-            .output_format([
-                "Investment allocation recommendations",
-                "Timeline with milestones",
-                "Tax-efficient strategy plan"
-            ])
-            .final_emphasis("Prioritize long-term stability over short-term gains")
-        )
-
-        validation = validate_prompt_structure(builder)
-        print(f"Validation Score: {validation['score']}/{validation['max_score']}")
-        print(f"Production Ready: {'✅ Yes' if validation['passed'] else '❌ No'}")
-
-        if validation['issues']:
-            print("\nCritical Issues:")
-            for issue in validation['issues']:
-                print(f"  ❌ {issue}")
-
-        if validation['recommendations']:
-            print("\nRecommendations:")
-            for rec in validation['recommendations']:
-                print(f"  💡 {rec}")
-        ```
-
-        Output:
-        ```
-        Validation Score: 9/10
-        Production Ready: ✅ Yes
-
-        Recommendations:
-          💡 Consider adding critical constraints for priority
-        ```
-
         Integration Notes
         -----------------
-        - **Development Support**: Enables iterative prompt optimization without full text generation
-        - **Attention Analysis**: Reveals priority distribution and attention allocation patterns
-        - **Structure Validation**: Identifies missing components and structural issues before execution
-        - **Performance Planning**: Provides token estimates for model capacity planning
-        - **Quality Assurance**: Supports systematic validation of prompt completeness and effectiveness
-        - **Debugging Tool**: Helps identify why prompts may not be producing expected results
+        - **Development Support**: enables iterative prompt optimization without full text generation
+        - **Attention Analysis**: reveals priority distribution and attention allocation patterns
+        - **Structure Validation**: identifies missing components and structural issues before execution
+        - **Performance Planning**: provides token estimates for model capacity planning
+        - **Quality Assurance**: supports systematic validation of prompt completeness and effectiveness
+        - **Debugging Tool**: helps identify why prompts may not be producing expected results
 
         The preview_structure method serves as an essential development and debugging tool that provides
         comprehensive insight into prompt architecture, enabling developers to optimize attention patterns,
         validate structural completeness, and ensure production readiness before deploying prompts to
         language models.
         """
-        # fmt: on
         return {
             "persona": self._persona,
             "critical_constraints": self._constraints[:1] if self._constraints else [],
@@ -5136,7 +4637,7 @@ def architectural_analysis_prompt() -> PromptBuilder:
     Returns
     -------
     PromptBuilder
-        Configured PromptBuilder for architectural analysis
+        Configured PromptBuilder for architectural analysis.
     """
     return (
         PromptBuilder()
@@ -5177,7 +4678,7 @@ def code_review_prompt() -> PromptBuilder:
     Returns
     -------
     PromptBuilder
-        Configured PromptBuilder for code reviews
+        Configured PromptBuilder for code reviews.
     """
     return (
         PromptBuilder()
@@ -5210,7 +4711,7 @@ def debugging_prompt() -> PromptBuilder:
     Returns
     -------
     PromptBuilder
-        Configured PromptBuilder for debugging
+        Configured PromptBuilder for debugging tasks.
     """
     return (
         PromptBuilder()
