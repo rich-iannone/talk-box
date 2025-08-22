@@ -3,6 +3,8 @@
 **The best way to generate, test, and deploy LLM chatbots with attention-optimized prompt engineering**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Repo Status](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.1%20adopted-ff69b4.svg)](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html)
 
 Talk Box is a Python framework that transforms prompt engineering from an art into a systematic
 engineering discipline. Create effective, maintainable prompts using research-backed attention
