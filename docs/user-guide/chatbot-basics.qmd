@@ -1,0 +1,313 @@
+---
+title: "ChatBot Basics"
+---
+
+The `ChatBot` class is your main entry point for creating conversational AI applications. It provides a simple, chainable API for configuring behavior and generates `Conversation` objects that manage message history automatically.
+
+## Your First ChatBot
+
+Start with the simplest possible chatbot:
+
+```python
+import talk_box as tb
+
+# Create a basic chatbot
+bot = tb.ChatBot()
+
+# Start chatting
+conversation = bot.chat("Hello! How are you today?")
+print(conversation.get_last_message().content)
+```
+
+## The Chainable Configuration API
+
+Configure your chatbot by chaining methods together:
+
+```python
+import talk_box as tb
+
+# Build a specialized technical advisor
+tech_bot = (tb.ChatBot()
+    .model("gpt-4-turbo")           # Choose the AI model
+    .preset("technical_advisor")    # Apply behavior template
+    .temperature(0.3)               # Lower randomness for accuracy
+    .max_tokens(1500)              # Allow detailed responses
+    .persona("Senior Python developer with 10+ years experience"))
+
+# Now use it
+response = tech_bot.chat("How do I optimize database queries in Django?")
+```
+
+## Core Configuration Methods
+
+### Model Selection
+
+Choose which AI model powers your chatbot:
+
+```python
+# OpenAI models
+bot = tb.ChatBot().model("gpt-4-turbo")      # Best reasoning
+bot = tb.ChatBot().model("gpt-3.5-turbo")    # Fast and cost-effective
+
+# Anthropic models
+bot = tb.ChatBot().model("claude-3-opus-20240229")    # Excellent for creative tasks
+bot = tb.ChatBot().model("claude-3-haiku-20240307")   # Fast for simple tasks
+
+# Or specify provider explicitly
+bot = tb.ChatBot().provider_model("anthropic:claude-3-opus-20240229")
+```
+
+### Behavior Presets
+
+Apply professional behavior templates instantly:
+
+```python
+# Customer support chatbot
+support_bot = tb.ChatBot().preset("customer_support")
+
+# Technical advisor for developers
+tech_bot = tb.ChatBot().preset("technical_advisor")
+
+# Creative writing assistant
+writer_bot = tb.ChatBot().preset("creative_writer")
+
+# Data analysis expert
+analyst_bot = tb.ChatBot().preset("data_analyst")
+```
+
+### Fine-Tuning Behavior
+
+Control how your chatbot responds:
+
+```python
+bot = (tb.ChatBot()
+    .temperature(0.2)              # Low randomness (0.0-2.0)
+    .max_tokens(500)               # Limit response length
+    .persona("Friendly but professional customer service rep")
+    .avoid(["technical jargon", "complex explanations"]))
+```
+
+## Understanding Conversations
+
+Every chat interaction returns a `Conversation` object that manages message history:
+
+```python
+bot = tb.ChatBot().preset("technical_advisor")
+
+# First interaction creates a new conversation
+conv = bot.chat("What's the difference between lists and tuples in Python?")
+
+# Continue the same conversation (maintains context)
+conv = bot.chat("Which one should I use for storing coordinates?", conversation=conv)
+
+# Access the conversation history
+for message in conv.get_messages():
+    print(f"{message.role}: {message.content[:50]}...")
+```
+
+### Conversation Management
+
+```python
+# Start an empty conversation
+conversation = bot.start_conversation()
+
+# Add messages and get responses
+conversation = bot.continue_conversation(conversation, "Hello!")
+conversation = bot.continue_conversation(conversation, "Tell me about Python")
+
+# Check conversation details
+print(f"Message count: {conversation.get_message_count()}")
+print(f"Last message: {conversation.get_last_message().content}")
+
+# Filter messages by role
+user_messages = conversation.get_messages(role="user")
+assistant_messages = conversation.get_messages(role="assistant")
+```
+
+## Common Patterns
+
+### Quick Task-Specific Bots
+
+```python
+import talk_box as tb
+
+# Code reviewer
+code_bot = (tb.ChatBot()
+    .model("gpt-4-turbo")
+    .preset("technical_advisor")
+    .temperature(0.2)
+    .persona("Senior engineer focused on code quality and security"))
+
+# Creative writer
+story_bot = (tb.ChatBot()
+    .model("claude-3-opus-20240229")
+    .preset("creative_writer")
+    .temperature(0.8)
+    .persona("Imaginative storyteller with vivid descriptions"))
+
+# Data analyst
+data_bot = (tb.ChatBot()
+    .model("gpt-4-turbo")
+    .preset("data_analyst")
+    .temperature(0.3)
+    .persona("Statistical expert focused on actionable insights"))
+```
+
+### Multi-Turn Conversations
+
+```python
+# Create a persistent technical consultant
+consultant = tb.ChatBot().preset("technical_advisor").temperature(0.3)
+
+# Start a consulting session
+session = consultant.chat("I'm building a web API. What framework should I use?")
+
+# Continue the conversation with context
+session = consultant.chat("I'm using Python and need it to handle 1000 requests/second", conversation=session)
+session = consultant.chat("What about database choice?", conversation=session)
+session = consultant.chat("How do I handle authentication?", conversation=session)
+
+# The consultant remembers the entire conversation context
+print(f"Full conversation has {session.get_message_count()} messages")
+```
+
+### Dynamic Configuration
+
+```python
+class SmartChatBot:
+    def __init__(self):
+        self.bot = tb.ChatBot().model("gpt-4-turbo")
+
+    def answer(self, question: str, domain: str = "general"):
+        # Configure based on the domain
+        if domain == "technical":
+            self.bot.preset("technical_advisor").temperature(0.2)
+        elif domain == "creative":
+            self.bot.preset("creative_writer").temperature(0.8)
+        elif domain == "support":
+            self.bot.preset("customer_support").temperature(0.4)
+        else:
+            self.bot.temperature(0.7)
+
+        return self.bot.chat(question)
+
+# Usage
+smart_bot = SmartChatBot()
+
+tech_response = smart_bot.answer("How do I optimize SQL queries?", "technical")
+creative_response = smart_bot.answer("Write a short story about AI", "creative")
+support_response = smart_bot.answer("I can't log into my account", "support")
+```
+
+## Advanced Configuration
+
+### Custom System Prompts
+
+For complete control over behavior:
+
+```python
+# Method 1: Direct string
+custom_bot = tb.ChatBot().system_prompt("""
+You are a senior software architect specializing in microservices.
+Always consider scalability, security, and maintainability.
+Provide concrete, actionable recommendations with code examples.
+""")
+
+# Method 2: Using PromptBuilder (recommended for complex prompts)
+prompt = (tb.ChatBot().prompt_builder()
+    .persona("software architect", "microservices and distributed systems")
+    .core_analysis(["scalability", "security", "maintainability"])
+    .output_format(["concrete recommendations", "code examples"])
+    .build())
+
+structured_bot = tb.ChatBot().system_prompt(prompt)
+```
+
+### Tool Integration
+
+Enable specific capabilities:
+
+```python
+enhanced_bot = (tb.ChatBot()
+    .model("gpt-4-turbo")
+    .tools(["code_executor", "web_search", "calculator"])
+    .verbose(True))  # Enable detailed logging
+```
+
+## Error Handling and Debugging
+
+```python
+import talk_box as tb
+
+try:
+    bot = tb.ChatBot().model("gpt-4-turbo")
+    response = bot.chat("Hello!")
+    print(response.get_last_message().content)
+
+except Exception as e:
+    print(f"Error: {e}")
+
+    # Check LLM status
+    status = bot.check_llm_status()
+    if not status["enabled"]:
+        print("Help:", status["help"])
+```
+
+### Configuration Inspection
+
+```python
+bot = (tb.ChatBot()
+    .model("gpt-4-turbo")
+    .preset("technical_advisor")
+    .temperature(0.3))
+
+# See current configuration
+config = bot.get_config_summary()
+print(f"Model: {config['model']}")
+print(f"Temperature: {config['temperature']}")
+print(f"Preset: {config['preset']}")
+print(f"System prompt: {config['system_prompt'][:100]}...")
+```
+
+## Best Practices
+
+### ✅ Do's
+
+- **Chain configurations** for readable setup
+- **Use presets** as starting points, then customize
+- **Keep conversations** for multi-turn context
+- **Match temperature to task** (low for accuracy, high for creativity)
+- **Test with different models** for optimal performance
+
+### ❌ Don'ts
+
+- **Don't mix conversation objects** between different bots
+- **Don't ignore conversation context** for multi-turn interactions
+- **Don't use extreme temperatures** without testing
+- **Don't hardcode API keys** in your code
+
+## Troubleshooting
+
+**"No response from chatbot"**
+- Check if your API key is set correctly
+- Verify internet connection
+- Try a simpler model like `gpt-3.5-turbo`
+
+**"Inconsistent responses"**
+- Lower the temperature (try 0.3 instead of 0.7)
+- Use more specific prompts or presets
+- Consider using `PromptBuilder` for structured prompts
+
+**"Responses too short/long"**
+- Adjust `max_tokens` parameter
+- Modify your persona or system prompt
+- Use output format specifications in PromptBuilder
+
+---
+
+## Quick Reference
+
+**Basic Setup**: `tb.ChatBot().model("gpt-4-turbo").preset("technical_advisor")`
+**Chat**: `conversation = bot.chat("Your message")`
+**Continue**: `conversation = bot.chat("Next message", conversation=conversation)`
+**Access**: `conversation.get_last_message().content`
