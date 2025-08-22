@@ -1,0 +1,391 @@
+---
+title: "PromptBuilder: Advanced Prompt Engineering"
+---
+
+The `PromptBuilder` class is Talk Box's powerful tool for creating attention-optimized prompts based on modern prompt engineering research. Instead of writing prompts as unstructured text, PromptBuilder helps you create prompts that work better with how AI models process information.
+
+## Why Use PromptBuilder?
+
+There are many reasons to go with `PromptBuilder`.
+
+- **Research-Based**: built on cognitive psychology and attention mechanism research
+- **Better Results**: structured prompts consistently outperform ad-hoc text
+- **Maintainable**: easy to modify, version, and share prompt templates
+- **Reusable**: create templates that work across multiple chatbots
+
+## The Science Behind Structured Prompts
+
+AI models don't read prompts the way humans do. They process information through attention
+mechanisms that:
+
+- **Front-load importance** (primacy bias): critical info should come first
+- **Cluster related concepts**: group similar instructions together
+- **Avoid attention drift**: unclear instructions scatter focus
+- **Leverage recency bias**: important reminders work best at the end
+
+`PromptBuilder` automatically structures your prompts to work with these patterns.
+
+## Three Ways to Use `PromptBuilder`
+
+### 1. `ChatBot.prompt_builder()` Method (Recommended for single use)
+
+```python
+import talk_box as tb
+
+bot = tb.ChatBot().model("gpt-4-turbo")
+
+# Build an attention-optimized prompt
+prompt = (bot.prompt_builder()
+    .persona("senior software engineer", "code review specialist")
+    .task_context("Comprehensive code review for production deployment")
+    .core_analysis([
+        "Security vulnerabilities and best practices",
+        "Performance optimization opportunities",
+        "Code maintainability and readability",
+        "Test coverage and edge cases"
+    ])
+    .output_format([
+        "## Critical Issues: Security and blocking problems",
+        "## Improvements: Performance and maintainability suggestions",
+        "## Strengths: What the code does well"
+    ])
+    .final_emphasis("Provide constructive feedback that helps developers improve")
+    .build())
+
+# Apply the structured prompt
+bot.system_prompt(prompt)
+```
+
+### 2. `PromptBuilder` Class Directly (Best for reusable templates)
+
+```python
+import talk_box as tb
+
+# Create a reusable template
+data_analysis_template = (
+    tb.PromptBuilder()
+    .persona("expert data analyst", "statistical analysis and insights")
+    .task_context("Thorough analysis of business data with actionable recommendations")
+    .critical_constraint("Always validate data quality before analysis")
+    .core_analysis([
+        "Data validation and quality assessment",
+        "Statistical patterns and trends",
+        "Correlations and potential causations",
+        "Business impact and implications"
+    ])
+    .output_format([
+        "📊 Executive Summary: 3 key insights",
+        "📈 Statistical Analysis: Methods and findings",
+        "💡 Recommendations: Prioritized by impact",
+        "⚠️ Limitations: Data quality and assumptions"
+    ])
+    .final_emphasis("Focus on actionable insights that drive business decisions")
+    .build()
+)
+
+# Use the template across multiple bots
+analyst_bot = tb.ChatBot().model("gpt-4-turbo").system_prompt(data_analysis_template)
+backup_bot = tb.ChatBot().model("claude-3-opus").system_prompt(data_analysis_template)
+```
+
+### 3. Pre-configured Builder Types
+
+```python
+import talk_box as tb
+
+bot = tb.ChatBot().model("gpt-4-turbo")
+
+# Use specialized builder types
+arch_prompt = bot.prompt_builder(tb.BuilderTypes.ARCHITECTURAL).build()
+review_prompt = bot.prompt_builder(tb.BuilderTypes.CODE_REVIEW).build()
+debug_prompt = bot.prompt_builder(tb.BuilderTypes.DEBUGGING).build()
+```
+
+## `PromptBuilder` Methods Reference
+
+### Core Foundation Methods
+
+**`persona(role, expertise)`** - Define who the AI is and what they're expert in
+```python
+.persona("senior DevOps engineer", "cloud infrastructure and automation")
+```
+
+**`task_context(description)`** - Clearly state what the AI should do
+```python
+.task_context("Design a scalable microservices architecture for an e-commerce platform")
+```
+
+### Structure & Analysis Methods
+
+**`core_analysis(analysis_points)`** - Key areas the AI should focus on
+```python
+.core_analysis([
+    "Scalability and load handling",
+    "Security and data protection",
+    "Cost optimization",
+    "Monitoring and observability"
+])
+```
+
+**`structured_section(title, content, priority)`** - Add custom sections with priority
+```python
+.structured_section("Performance Requirements", [
+    "Handle 10,000 concurrent users",
+    "Sub-200ms response times",
+    "99.9% uptime SLA"
+], priority="high")
+```
+
+### Focus & Guidance Methods
+
+**`focus_on(specific_aspects)`** - Direct attention to specific areas
+```python
+.focus_on("identifying single points of failure and bottlenecks")
+```
+
+**`critical_constraint(requirement)`** - Mandatory requirements that cannot be violated
+```python
+.critical_constraint("Must comply with PCI DSS standards for payment processing")
+```
+
+**`constraint(requirement, priority)`** - Additional constraints with priority levels
+```python
+.constraint("Prefer open-source solutions when possible", priority="medium")
+```
+
+**`avoid_topics(topics)`** - Topics or approaches to explicitly avoid
+```python
+.avoid_topics(["deprecated frameworks", "vendor lock-in solutions"])
+```
+
+### Output Methods
+
+**`output_format(format_specifications)`** - Structure the response format
+```python
+.output_format([
+    "# Architecture Overview: High-level system design",
+    "## Core Services: Microservice breakdown with responsibilities",
+    "## Infrastructure: Deployment and scaling strategy",
+    "## Implementation Plan: Phased rollout approach"
+])
+```
+
+**`example(example_text)`** - Provide examples of desired output style
+```python
+.example("""
+## Service: User Authentication
+**Responsibility**: Handle user login, registration, JWT tokens
+**Technology**: FastAPI + Redis + PostgreSQL
+**Scaling**: Horizontal with load balancer
+""")
+```
+
+**`final_emphasis(emphasis)`** - End-of-prompt reminders that leverage recency bias
+```python
+.final_emphasis("Prioritize security and maintainability over clever optimizations")
+```
+
+## Advanced Prompt Engineering Patterns
+
+### Hierarchical Information Structure
+
+```python
+# Build prompts with clear information hierarchy
+security_expert = (
+    tb.PromptBuilder()
+    .persona("cybersecurity expert", "application security and threat modeling")
+    .task_context("Security assessment of web application architecture")
+
+    # Critical requirements first (primacy bias)
+    .critical_constraint("Identify ALL potential security vulnerabilities")
+    .critical_constraint("Follow OWASP Top 10 methodology")
+
+    # Core analysis areas (attention clustering)
+    .core_analysis([
+        "Authentication and authorization flaws",
+        "Input validation and injection attacks",
+        "Data exposure and encryption issues",
+        "Infrastructure and deployment security"
+    ])
+
+    # Structured output format
+    .output_format([
+        "🚨 CRITICAL: Immediate security risks requiring urgent action",
+        "⚠️ HIGH: Significant vulnerabilities to address soon",
+        "🔍 MEDIUM: Security improvements and best practices",
+        "✅ STRENGTHS: Security measures already in place"
+    ])
+
+    # Final emphasis (recency bias)
+    .final_emphasis("Security assessment must be thorough - missing vulnerabilities could be catastrophic")
+    .build()
+)
+```
+
+### Context-Aware Templates
+
+```python
+# Create templates that adapt to different contexts
+def create_code_reviewer(language: str, focus_area: str) -> str:
+    return (
+        tb.PromptBuilder()
+        .persona(f"senior {language} developer", f"{language} best practices and {focus_area}")
+        .task_context(f"Code review focusing on {focus_area} for {language} application")
+        .core_analysis([
+            f"{language}-specific best practices and idioms",
+            f"{focus_area} optimization opportunities",
+            "Code maintainability and readability",
+            "Potential bugs and edge cases"
+        ])
+        .output_format([
+            f"## {language} Best Practices: Language-specific improvements",
+            f"## {focus_area}: Optimization opportunities",
+            "## Code Quality: Maintainability suggestions",
+            "## Testing: Coverage and edge case recommendations"
+        ])
+        .final_emphasis(f"Focus on {language} idioms and {focus_area} optimization")
+        .build()
+    )
+
+# Use the template factory
+python_performance_reviewer = create_code_reviewer("Python", "performance")
+javascript_security_reviewer = create_code_reviewer("JavaScript", "security")
+```
+
+### Multi-Stage Prompt Building
+
+```python
+# Build complex prompts in stages
+base_consultant = (
+    tb.PromptBuilder()
+    .persona("senior business consultant", "strategic planning and analysis")
+    .task_context("Business strategy analysis and recommendations")
+)
+
+# Extend for specific domains
+marketing_consultant = (
+    tb.PromptBuilder()
+    .from_template(base_consultant.build())  # Start with base
+    .core_analysis([
+        "Market positioning and competitive analysis",
+        "Customer segmentation and targeting",
+        "Channel optimization and ROI",
+        "Brand differentiation strategies"
+    ])
+    .output_format([
+        "🎯 Market Opportunity: Size, segments, and positioning",
+        "📊 Competitive Analysis: Advantages and threats",
+        "💰 ROI Projections: Expected returns and timelines",
+        "📈 Implementation Roadmap: Phase-by-phase execution"
+    ])
+    .build()
+)
+```
+
+## Prompt Optimization Tips
+
+### ✅ Do's
+
+- **Be specific**: "Analyze for SQL injection vulnerabilities" vs "check security"
+- **Use bullet points**: Lists are easier for AI models to process
+- **Front-load critical info**: Most important instructions come first
+- **Group related concepts**: Keep similar instructions together
+- **End with emphasis**: Leverage recency bias for important reminders
+
+### ❌ Don'ts
+
+- **Avoid long paragraphs**: Break complex instructions into bullet points
+- **Don't bury critical info**: Important instructions should be prominent
+- **Avoid conflicting instructions**: Be consistent throughout the prompt
+- **Don't overload**: Too many instructions can cause attention drift
+- **Avoid vague language**: Be concrete and specific
+
+## Debugging Prompts
+
+Use `preview_structure()` to see how your prompt will be organized:
+
+```python
+builder = (
+    tb.PromptBuilder()
+    .persona("data scientist", "machine learning and statistics")
+    .core_analysis(["data quality", "model performance", "business impact"])
+)
+
+# Preview the structure before building
+structure = builder.preview_structure()
+print(f"Estimated tokens: {structure['estimated_tokens']}")
+print(f"Sections: {len(structure['structured_sections'])}")
+
+# Build when satisfied
+prompt = builder.build()
+```
+
+## Real-World Examples
+
+### Technical Documentation Writer
+
+```python
+docs_specialist = (
+    tb.PromptBuilder()
+    .persona("technical documentation specialist", "developer-focused documentation")
+    .task_context("Create comprehensive API documentation that developers actually use")
+    .core_analysis([
+        "API endpoint functionality and parameters",
+        "Code examples in multiple languages",
+        "Error handling and troubleshooting",
+        "Authentication and rate limiting"
+    ])
+    .output_format([
+        "## Quick Start: Working example that runs immediately",
+        "## Endpoints: Complete parameter reference with examples",
+        "## Error Codes: Troubleshooting guide with solutions",
+        "## SDKs: Language-specific implementation examples"
+    ])
+    .constraint("Every code example must be tested and functional")
+    .final_emphasis("Documentation quality is measured by developer success, not completeness")
+    .build()
+)
+```
+
+### Product Requirements Analyst
+
+```python
+product_analyst = (
+    tb.PromptBuilder()
+    .persona("senior product manager", "requirements analysis and user experience")
+    .task_context("Analyze product requirements and create actionable development specifications")
+    .critical_constraint("All requirements must be testable and measurable")
+    .core_analysis([
+        "User stories and acceptance criteria",
+        "Technical feasibility and constraints",
+        "Business value and priority ranking",
+        "Risk assessment and mitigation strategies"
+    ])
+    .output_format([
+        "📋 Epic Breakdown: Major features with user stories",
+        "⚖️ Priority Matrix: Business value vs implementation effort",
+        "🔧 Technical Specs: Architecture and implementation notes",
+        "⚠️ Risk Assessment: Potential issues and mitigation plans"
+    ])
+    .example("""
+**User Story**: As a customer, I want to save items to a wishlist so I can purchase them later
+**Acceptance Criteria**:
+- ✅ Users can add/remove items from wishlist
+- ✅ Wishlist persists across sessions
+- ✅ Users can share wishlists with others
+**Business Value**: High (increases conversion rate)
+**Effort**: Medium (requires new database tables)
+""")
+    .final_emphasis("Requirements must be specific enough for developers to estimate and implement")
+    .build()
+)
+```
+
+---
+
+## Quick Reference
+
+**Core Methods**: `persona()`, `task_context()`, `core_analysis()`
+**Focus Methods**: `focus_on()`, `critical_constraint()`, `avoid_topics()`
+**Output Methods**: `output_format()`, `example()`, `final_emphasis()`
+**Build Methods**: `build()`, `preview_structure()`
