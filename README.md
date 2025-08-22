@@ -18,7 +18,24 @@ mechanisms, then deploy them with powerful conversation management.
 - **Built-in Behavior Presets**: professional templates for common engineering tasks
 - **Test-First Design**: develop and test without API keys, deploy when ready
 
+## The Science Behind Structured Prompts
+
+Most prompt engineering is done ad-hoc, leading to inconsistent results and hard-to-maintain systems. Talk Box applies research from transformer attention mechanisms to create a systematic approach.
+
+Having structure matters because LLMs process information through attention patterns. Unstructured prompts scatter attention across irrelevant details, while structured prompts focus attention on what matters most.
+
+**Key Principles**:
+
+- **Primacy Bias**: critical information goes first (personas, constraints)
+- **Attention Clustering**: related concepts are grouped together
+- **Recency Bias**: final emphasis reinforces the most important outcomes
+- **Hierarchical Processing**: clear sections help models organize their reasoning
+
+Here is a schematic of how we consistently structure a prompt:
+
 ![Prompt Structure Diagram](prompt-structure.png)
+
+Now let's see how this works in practice.
 
 ## Quick Start
 
@@ -121,11 +138,11 @@ Prioritize making complex topics easy to understand
 
 </details>
 
-## Core Features
+## The Core Feature is Attention Optimization
 
-### **Attention-Based Prompt Engineering**
+We can build prompts that leverage how transformer attention mechanisms actually work. The PromptBuilder class in Talk Box is designed to help you create these optimized prompts easily.
 
-Build prompts that leverage how transformer attention mechanisms actually work:
+Let's see an example on how to create a language learning bot:
 
 ```python
 import talk_box as tb
@@ -184,7 +201,7 @@ Prioritize encouraging progress and building confidence through positive reinfor
 
 </details>
 
-The key principles of a successful structured prompt implementation are:
+Looking at the generated prompts, we can identify several key principles that contribute to their effectiveness. The key principles of a successful structured prompt implementation are:
 
 - **Front-loading critical information** (primacy bias)
 - **Structure creates focus** (attention clustering)
@@ -195,7 +212,7 @@ The key principles of a successful structured prompt implementation are:
 And we've implemented these principles in our prompt engineering process, ensuring that the prompts
 you create and use are effective and aligned with these best practices.
 
-### **Pre-configured Engineering Templates**
+## Pre-configured Engineering Templates
 
 Start with expert-crafted prompts for common engineering tasks:
 
@@ -228,7 +245,7 @@ debug_bot = (
 )
 ```
 
-### **Integrated Conversation Management**
+## Integrated Conversation Management
 
 All chat interactions automatically return conversation objects for seamless multi-turn conversations:
 
@@ -252,15 +269,15 @@ print(f"Conversation has {conversation.get_message_count()} messages")
 Conversation has 6 messages
 ```
 
-### **Built-in Behavior Presets**
+## Built-in Behavior Presets
 
 Choose from professionally crafted personalities:
 
-- **`technical_advisor`**: Authoritative, detailed, evidence-based
-- **`customer_support`**: Polite, helpful, solution-focused
-- **`creative_writer`**: Imaginative, expressive, storytelling
-- **`data_analyst`**: Analytical, precise, metrics-driven
-- **`legal_advisor`**: Professional, thorough, disclaimer-aware
+- **`technical_advisor`**: authoritative, detailed, evidence-based
+- **`customer_support`**: polite, helpful, solution-focused
+- **`creative_writer`**: imaginative, expressive, storytelling
+- **`data_analyst`**: analytical, precise, metrics-driven
+- **`legal_advisor`**: professional, thorough, disclaimer-aware
 
 ```python
 import talk_box as tb
