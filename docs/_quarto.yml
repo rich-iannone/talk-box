@@ -31,8 +31,8 @@ website:
     left:
       - text: "Home"
         href: index.qmd
-      - text: "Get Started"
-        href: get-started.qmd
+      - text: "User Guide"
+        file: user-guide/index.qmd
       - text: "Examples"
         href: examples.qmd
       - href: reference/index.qmd
@@ -41,6 +41,21 @@ website:
       - icon: github
         href: "https://github.com/rich-iannone/talk-box"
         aria-label: "GitHub"
+  sidebar:
+    id: user-guide
+    contents:
+      - section: "Getting Started"
+        contents:
+          - user-guide/index.qmd
+          - user-guide/installation.qmd
+      - section: "Core Concepts"
+        contents:
+          - user-guide/chatbot-basics.qmd
+          - user-guide/model-selection.qmd
+      - section: "Prompt Engineering"
+        contents:
+          - user-guide/prompt-engineering-guide.qmd
+          - user-guide/prompt-builder.qmd
   page-footer:
     left: |
       Talk Box is developed by [Rich Iannone](https://github.com/rich-iannone).
