@@ -8,7 +8,7 @@ Talk Box is a Python framework that transforms prompt engineering from an art in
 engineering discipline. Create effective, maintainable prompts using research-backed attention
 mechanisms, then deploy them with powerful conversation management.
 
-## 🎯 Why Talk Box?
+## Why Talk Box?
 
 - **Attention-Based Prompt Engineering**: build prompts that leverage how LLMs actually process
   information
@@ -140,7 +140,7 @@ Prioritize making complex topics easy to understand
 
 ## The Core Feature is Attention Optimization
 
-We can build prompts that leverage how transformer attention mechanisms actually work. The PromptBuilder class in Talk Box is designed to help you create these optimized prompts easily.
+We can build prompts that leverage how transformer attention mechanisms actually work. The `PromptBuilder` class in Talk Box is designed to help you create these optimized prompts easily.
 
 Let's see an example on how to create a language learning bot:
 
