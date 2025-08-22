@@ -35,11 +35,11 @@ jobs:
 
       - name: Run linting
         run: |
-          uv run ruff check sweet tests
+          uv run ruff check talk_box tests
 
       - name: Run tests with coverage
         run: |
-          uv run pytest --cov=sweet --cov-report=term-missing --cov-report=html
+          uv run pytest --cov=talk_box --cov-report=term-missing --cov-report=html
 
       - name: Upload coverage reports to Codecov
         if: env.CODECOV_TOKEN != ''
