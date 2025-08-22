@@ -17,13 +17,7 @@ Get Talk Box up and running in your Python environment with these simple install
 pip install talk-box
 ```
 
-### Option 2: Install with Conda
-
-```bash
-conda install -c conda-forge talk-box
-```
-
-### Option 3: Development Installation
+### Option 2: Development Installation
 
 For the latest features or to contribute to development:
 
@@ -37,13 +31,35 @@ pip install -e .
 
 Talk Box integrates with multiple AI providers. You'll need to set up at least one provider to use real AI models.
 
+::: {.callout-tip}
+## Using a `.env` file (Recommended)
+
+For security and convenience, you can store all your API keys in a `.env` file in your project directory:
+
+1. Create a file named `.env` in your project root
+2. Add your API keys (one per line):
+   ```
+   OPENAI_API_KEY=your-openai-key-here
+   ANTHROPIC_API_KEY=your-anthropic-key-here
+   GOOGLE_API_KEY=your-google-key-here
+   ```
+3. Install python-dotenv: `pip install python-dotenv`
+4. Load in Python:
+   ```python
+   from dotenv import load_dotenv
+   load_dotenv()  # Loads variables from .env file
+   ```
+
+**Important:** Add `.env` to your `.gitignore` file to avoid committing API keys to version control!
+:::
+
 ### OpenAI (Recommended for beginners)
 
 1. **Get an API key** from [OpenAI](https://platform.openai.com/api-keys)
 
 2. **Set your API key** (choose one method):
 
-   **Environment Variable (Recommended):**
+   **Environment Variable:**
    ```bash
    export OPENAI_API_KEY="your-api-key-here"
    ```
@@ -52,11 +68,6 @@ Talk Box integrates with multiple AI providers. You'll need to set up at least o
    ```python
    import os
    os.environ["OPENAI_API_KEY"] = "your-api-key-here"
-   ```
-
-   **In a `.env` file:**
-   ```
-   OPENAI_API_KEY=your-api-key-here
    ```
 
 ### Anthropic (Claude)
@@ -91,10 +102,10 @@ print("✅ Talk Box installed successfully!")
 # Check AI integration (requires API key)
 try:
     response = bot.chat("Say hello!")
-    print("✅ AI integration working!")
+    print("LLM integration working!")
     print(f"Response: {response.get_last_message().content}")
 except Exception as e:
-    print("⚠️  AI integration needs setup:")
+    print("LLM integration needs setup:")
     print(f"   {e}")
     print("   See the AI Provider Setup section above")
 ```
@@ -119,33 +130,7 @@ except Exception as e:
 - Try: `pip install --user talk-box`
 - Or use a virtual environment (recommended)
 
-### Virtual Environment Setup (Recommended)
-
-Using a virtual environment prevents package conflicts:
-
-```bash
-# Create virtual environment
-python -m venv talk-box-env
-
-# Activate it
-source talk-box-env/bin/activate  # On Windows: talk-box-env\Scripts\activate
-
-# Install Talk Box
-pip install talk-box
-
-# Set your API keys
-export OPENAI_API_KEY="your-key-here"
-```
-
 ## Optional Dependencies
-
-### For Advanced Features
-
-**Jupyter Notebook support:**
-
-```bash
-pip install talk-box[jupyter]
-```
 
 **Development tools:**
 
