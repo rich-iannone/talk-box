@@ -1,10 +1,3 @@
-"""
-Chatlas adapter for Talk Box framework.
-
-This module provides seamless integration with the chatlas library to enable
-real LLM interactions using various providers (OpenAI, Anthropic, etc.).
-"""
-
 import os
 from typing import Any, Optional
 
@@ -23,7 +16,7 @@ from chatlas import (
     ChatPerplexity,
 )
 
-from talk_box.builder import ChatBot, ChatResponse
+from talk_box.builder import ChatResponse
 from talk_box.presets import PresetManager
 
 
@@ -179,46 +172,3 @@ class ChatlasAdapter:
                 content=f"Error communicating with LLM: {e!s}",
                 metadata={"provider": self.provider, "error": str(e), "success": False},
             )
-
-
-def enhance_chatbot_with_chatlas():
-    """
-    Enhance the ChatBot class with real LLM integration via chatlas.
-
-    This function monkey-patches the ChatBot class to add LLM functionality.
-    Call this once at startup to enable real chat capabilities.
-    """
-
-    def create_chat_session(self) -> chatlas.Chat:
-        """Create a chatlas session from the current configuration."""
-        # Extract provider and model from config to pass to adapter
-        provider = self._config.get("provider")
-        model = self._config.get("model")
-        adapter = ChatlasAdapter(provider=provider, model=model)
-        return adapter.create_chat_session(self._config)
-
-    def chat_with_llm(self, message: str) -> ChatResponse:
-        """
-        Send a message to a real LLM via chatlas.
-
-        This replaces the default echo behavior with actual LLM interaction.
-        """
-        # Extract provider and model from config to pass to adapter
-        provider = self._config.get("provider")
-        model = self._config.get("model")
-        adapter = ChatlasAdapter(provider=provider, model=model)
-        chat_session = adapter.create_chat_session(self._config)
-        return adapter.chat_with_session(chat_session, message)
-
-    def enable_llm_mode(self):
-        """Enable LLM mode by replacing the chat method with chat_with_llm."""
-        # Replace the default chat method with LLM-powered version
-        self.chat = lambda message: self.chat_with_llm(message)
-        return self
-
-    # Add methods to ChatBot class
-    ChatBot.create_chat_session = create_chat_session
-    ChatBot.chat_with_llm = chat_with_llm
-    ChatBot.enable_llm_mode = enable_llm_mode
-
-    return ChatBot
