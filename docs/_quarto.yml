@@ -77,21 +77,24 @@ quartodoc:
           members: []
         - name: PromptSection
           members: []
+        - name: BuilderTypes
+          members: []
     - title: "PromptBuilder Methods"
       desc: "Fluent API for building attention-optimized prompts"
       contents:
-        - PromptBuilder.task_context
-        - PromptBuilder.constraint
-        - PromptBuilder.critical_constraint
-        - PromptBuilder.example
-        - PromptBuilder.core_analysis
-        - PromptBuilder.output_format
-        - PromptBuilder.focus_on
-        - PromptBuilder.final_emphasis
         - PromptBuilder.persona
-        - PromptBuilder.avoid_topics
+        - PromptBuilder.task_context
+        - PromptBuilder.focus_on
+        - PromptBuilder.critical_constraint
+        - PromptBuilder.core_analysis
         - PromptBuilder.structured_section
+        - PromptBuilder.constraint
+        - PromptBuilder.avoid_topics
+        - PromptBuilder.output_format
+        - PromptBuilder.example
+        - PromptBuilder.final_emphasis
         - PromptBuilder.build
+        - PromptBuilder.preview_structure
     - title: "Pre-configured Prompt Builders"
       desc: "Ready-to-use attention-based prompt templates"
       contents:
