@@ -307,7 +307,7 @@ By participating in this project you agree to abide by its terms.
 
 ## License
 
-MIT License - see [LICENSE](./LICENSE) for details.
+MIT License. See [LICENSE](./LICENSE) for details.
 
 🏛️ Governance
 
