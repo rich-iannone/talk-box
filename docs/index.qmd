@@ -27,9 +27,13 @@ mechanisms, then deploy them with powerful conversation management.
 
 ## The Science Behind Structured Prompts
 
-Most prompt engineering is done ad-hoc, leading to inconsistent results and hard-to-maintain systems. Talk Box applies research from transformer attention mechanisms to create a systematic approach.
+Most prompt engineering is done ad-hoc, leading to inconsistent results and hard-to-maintain
+systems. Talk Box applies research from transformer attention mechanisms to create a systematic
+approach.
 
-Having structure matters because LLMs process information through attention patterns. Unstructured prompts scatter attention across irrelevant details, while structured prompts focus attention on what matters most.
+Having structure matters because LLMs process information through attention patterns. Unstructured
+prompts scatter attention across irrelevant details, while structured prompts focus attention on
+what matters most.
 
 **Key Principles**:
 
@@ -151,7 +155,8 @@ Prioritize making complex topics easy to understand
 
 ## The Core Feature is Attention Optimization
 
-We can build prompts that leverage how transformer attention mechanisms actually work. The `PromptBuilder` class in Talk Box is designed to help you create these optimized prompts easily.
+We can build prompts that leverage how transformer attention mechanisms actually work. The
+`PromptBuilder` class in Talk Box is designed to help you create these optimized prompts easily.
 
 Let's see an example on how to create a language learning bot:
 
@@ -212,7 +217,8 @@ Prioritize encouraging progress and building confidence through positive reinfor
 
 </details>
 
-Looking at the generated prompts, we can identify several key principles that contribute to their effectiveness. The key principles of a successful structured prompt implementation are:
+Looking at the generated prompts, we can identify several key principles that contribute to their
+effectiveness. The key principles of a successful structured prompt implementation are:
 
 - **Front-loading critical information** (primacy bias)
 - **Structure creates focus** (attention clustering)
@@ -258,7 +264,8 @@ debug_bot = (
 
 ## Integrated Conversation Management
 
-All chat interactions automatically return conversation objects for seamless multi-turn conversations:
+All chat interactions automatically return conversation objects for seamless multi-turn
+conversations:
 
 ```python
 import talk_box as tb
@@ -307,17 +314,21 @@ The Talk Box framework can be installed via pip:
 pip install talk-box
 ```
 
-If you encounter a bug, have usage questions, or want to share ideas to make this package better, please feel free to [open an issue](https://github.com/rich-iannone/talk-box/issues).
+If you encounter a bug, have usage questions, or want to share ideas to make this package better,
+please feel free to [open an issue](https://github.com/rich-iannone/talk-box/issues).
 
 ## Code of Conduct
 
-Please note that the Talk Box project is released with a [contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+Please note that the Talk Box project is released with a
+[contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 By participating in this project you agree to abide by its terms.
 
 ## License
 
-MIT License - see [LICENSE](./LICENSE) for details.
+MIT License. See [LICENSE](./LICENSE) for details.
 
 🏛️ Governance
 
-This project is primarily maintained by [Rich Iannone](https://bsky.app/profile/richmeister.bsky.social). Other authors may occasionally assist with some of these duties.
+This project is primarily maintained by
+[Rich Iannone](https://bsky.app/profile/richmeister.bsky.social). Other authors may occasionally
+assist with some of these duties.
