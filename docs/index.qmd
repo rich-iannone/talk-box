@@ -5,337 +5,319 @@ html-table-processing: none
 
 <div style="text-align: center;">
 
-![](assets/talk_box_logo.svg){width=75%}
+![](assets/talk-box-logo.png){width=35%}
 
-_The best way to generate, test, and deploy LLM chatbots_
+_The best way to generate, test, and deploy LLM chatbots with attention-optimized prompt engineering_
 
 </div>
 
-Talk Box is a powerful, yet elegant chatbot framework for Python that transforms how you
-create and deploy conversational AI. With its intuitive, chainable API, you can quickly build
-sophisticated chatbots with behavior presets, real LLM integration, and stunning browser interfaces
-that make chatbot development immediately productive.
+Talk Box is a Python framework that transforms prompt engineering from an art into a systematic
+engineering discipline. Create effective, maintainable prompts using research-backed attention
+mechanisms, then deploy them with powerful conversation management.
 
-Whether you're a data scientist, AI engineer, or developer, Talk Box helps you go from concept
-to production-ready chatbot in minutes, not hours.
+## Why Talk Box?
 
-## Getting Started in 30 Seconds
+- **Attention-Based Prompt Engineering**: build prompts that leverage how LLMs actually process
+  information
+- **Layered API Design**: start simple, discover advanced features as you need them
+- **Multiple Usage Patterns**: from quick structured prompts to complex modular components
+- **Integrated Conversation Management**: seamless multi-turn conversations with full history
+- **Built-in Behavior Presets**: professional templates for common engineering tasks
+- **Test-First Design**: develop and test without API keys, deploy when ready
+
+## The Science Behind Structured Prompts
+
+Most prompt engineering is done ad-hoc, leading to inconsistent results and hard-to-maintain systems. Talk Box applies research from transformer attention mechanisms to create a systematic approach.
+
+Having structure matters because LLMs process information through attention patterns. Unstructured prompts scatter attention across irrelevant details, while structured prompts focus attention on what matters most.
+
+**Key Principles**:
+
+- **Primacy Bias**: critical information goes first (personas, constraints)
+- **Attention Clustering**: related concepts are grouped together
+- **Recency Bias**: final emphasis reinforces the most important outcomes
+- **Hierarchical Processing**: clear sections help models organize their reasoning
+
+Here is a schematic of how we consistently structure a prompt:
+
+<div style="text-align: center;">
+
+![](assets/prompt-structure.png)
+
+</div>
+
+Now let's see how this works in practice.
+
+## Quick Start
+
+### 30-Second Demo: Attention-Optimized Prompts
 
 ```python
 import talk_box as tb
 
-# Create a sophisticated chatbot in just a few lines
+# Create a security-focused chatbot with structured prompts
 bot = (
     tb.ChatBot()
-    .model("claude-3-5-sonnet-20241022")
-    .preset("technical_advisor")
-    .persona("Senior Data Scientist")
-    .avoid(["medical_advice"])
-    .enable_llm_mode()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("senior security engineer", "web application security")
+        .critical_constraint("Focus only on CVSS 7.0+ vulnerabilities")
+        .core_analysis([
+            "SQL injection risks",
+            "Authentication bypass possibilities",
+            "Data validation gaps"
+        ])
+        .output_format([
+            "CRITICAL: Immediate security risks",
+            "Include specific line numbers and fixes"
+        ])
+        .final_emphasis("Prioritize vulnerabilities leading to data breaches")
+        .build()
+    )
 )
 
-# Chat immediately
-response = bot.chat("What's the best approach for handling missing data?")
-print(response.content)
+# View details of the structured prompt
+bot.show("prompt")
 ```
 
-<div style="text-align: center;">
+<details>
+<summary>🔍 View Generated Prompt</summary>
 
-![](assets/talk-box-chat-response.png){width=100%}
+```
+You are a senior security engineer with expertise in web application security.
 
-</div>
+CRITICAL REQUIREMENTS:
+- Focus only on CVSS 7.0+ vulnerabilities
 
-## Real-World Example: Customer Support Bot
+CORE ANALYSIS (Required):
+- SQL injection risks
+- Authentication bypass possibilities
+- Data validation gaps
+
+OUTPUT FORMAT:
+- CRITICAL: Immediate security risks
+- Include specific line numbers and fixes
+
+Prioritize vulnerabilities leading to data breaches
+```
+
+</details>
+
+### Even Simpler: Quick Structured Prompts with `structured_prompt()`
 
 ```python
 import talk_box as tb
 
-# Create a comprehensive customer support chatbot
-support_bot = (
+# Configure a bot with structured prompts in one go
+doc_bot = (
     tb.ChatBot()
-    .model("claude-3-5-sonnet-20241022")
-    .preset("customer_support")
-    .persona("Senior Technical Support Specialist with 10+ years experience")
-    .tools(["knowledge_base", "ticket_system"])
-    .avoid(["billing_issues", "account_management"])
-    .temperature(0.3)
-    .max_tokens(500)
-    .enable_llm_mode()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .structured_prompt(
+        persona="technical writer",
+        task="Review and improve documentation",
+        constraints=["Focus on clarity and accessibility", "Include code examples"],
+        format=["Content improvements", "Structure suggestions"],
+        focus="making complex topics easy to understand"
+    )
 )
 
-# Test the bot with a complex technical question
-customer_inquiry = """
-Hi, I'm having trouble with your API. I keep getting a 429 error
-when trying to upload files larger than 10MB. Is there a rate limit
-I should know about?
-"""
-
-response = support_bot.chat(customer_inquiry)
-print(f"Bot Response:\n{response.content}")
-
-# Launch a professional browser interface
-support_bot.create_chat_session().app()
+# Now just chat directly as the structure is built into the bot's system prompt
+response = doc_bot.chat("Here's my API documentation draft...")
 ```
 
-<div style="text-align: center;">
+<details>
+<summary>🔍 View Generated Prompt</summary>
 
-![](assets/talk-box-browser-interface.png){width=100%}
+```
+You are a technical writer with expertise in documentation and user education.
 
-</div>
+CRITICAL REQUIREMENTS:
+- Focus on clarity and accessibility
+
+CORE ANALYSIS (Required):
+- Include code examples
+- Ensure content improvements
+- Provide structure suggestions
+
+OUTPUT FORMAT:
+- Content improvements
+- Structure suggestions
+
+Prioritize making complex topics easy to understand
+```
+
+</details>
+
+## The Core Feature is Attention Optimization
+
+We can build prompts that leverage how transformer attention mechanisms actually work. The `PromptBuilder` class in Talk Box is designed to help you create these optimized prompts easily.
+
+Let's see an example on how to create a language learning bot:
+
+```python
+import talk_box as tb
+
+# Traditional approach (attention-diffused)
+old_prompt = "Help me learn Spanish and correct my mistakes."
+
+# Attention-optimized approach
+bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("experienced Spanish teacher", "conversational fluency and grammar")
+        .critical_constraint("Focus on practical, everyday Spanish usage")
+        .core_analysis([
+            "Grammar accuracy and common mistakes",
+            "Vocabulary building with context",
+            "Pronunciation and speaking confidence"
+        ])
+        .output_format([
+            "CORRECCIONES: Grammar fixes with explanations",
+            "VOCABULARIO: New words with example sentences",
+            "PRÁCTICA: Conversation prompts for next lesson"
+        ])
+        .final_emphasis("Encourage progress and build confidence through positive reinforcement")
+        .build()
+    )
+)
+
+# Get learning right in the console
+response = bot.show("console")
+```
+
+<details>
+<summary>🔍 View Generated Prompt</summary>
+
+```
+You are an experienced Spanish teacher with expertise in conversational fluency and grammar.
+
+CRITICAL REQUIREMENTS:
+- Focus on practical, everyday Spanish usage
+
+CORE ANALYSIS (Required):
+- Grammar accuracy and common mistakes
+- Vocabulary building with context
+- Pronunciation and speaking confidence
+
+OUTPUT FORMAT:
+- CORRECCIONES: Grammar fixes with explanations
+- VOCABULARIO: New words with example sentences
+- PRÁCTICA: Conversation prompts for next lesson
+
+Prioritize encouraging progress and building confidence through positive reinforcement
+```
+
+</details>
+
+Looking at the generated prompts, we can identify several key principles that contribute to their effectiveness. The key principles of a successful structured prompt implementation are:
+
+- **Front-loading critical information** (primacy bias)
+- **Structure creates focus** (attention clustering)
+- **Personas for behavioral anchoring**
+- **Specific constraints prevent attention drift**
+- **Final emphasis leverages recency bias**
+
+And we've implemented these principles in our prompt engineering process, ensuring that the prompts
+you create and use are effective and aligned with these best practices.
+
+## Pre-configured Engineering Templates
+
+Start with expert-crafted prompts for common engineering tasks:
+
+```python
+import talk_box as tb
+
+# Architectural analysis with attention optimization
+arch_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .prompt_builder("architectural")
+    .focus_on("identifying technical debt and modernization opportunities")
+)
+
+# Code review with structured feedback
+review_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .prompt_builder("code_review")
+    .avoid_topics(["personal criticism", "style nitpicking"])
+    .focus_on("actionable security and performance improvements")
+)
+
+# Systematic debugging approach
+debug_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .prompt_builder("debugging")
+    .critical_constraint("Always identify root cause, not just symptoms")
+)
+```
+
+## Integrated Conversation Management
+
+All chat interactions automatically return conversation objects for seamless multi-turn conversations:
+
+```python
+import talk_box as tb
+
+bot = tb.ChatBot().model("gpt-4o-mini").preset("technical_advisor")
+
+# Every chat returns a conversation object with full history
+conversation = bot.chat("What's the best way to implement authentication?")
+conversation = bot.chat("What about JWT tokens specifically?", conversation)
+conversation = bot.chat("Show me a Python example", conversation)
+
+# Access the full conversation history
+messages = conversation.get_messages()
+latest = conversation.get_last_message()
+print(f"Conversation has {conversation.get_message_count()} messages")
+```
+
+```
+Conversation has 6 messages
+```
 
 ## Built-in Behavior Presets
 
-Talk Box includes professionally crafted personality presets that provide sophisticated behavior
-patterns out of the box:
+Choose from professionally crafted personalities:
+
+- **`technical_advisor`**: authoritative, detailed, evidence-based
+- **`customer_support`**: polite, helpful, solution-focused
+- **`creative_writer`**: imaginative, expressive, storytelling
+- **`data_analyst`**: analytical, precise, metrics-driven
+- **`legal_advisor`**: professional, thorough, disclaimer-aware
 
 ```python
-# Technical advisor - authoritative, detailed, evidence-based
-tech_bot = ChatBot().preset("technical_advisor")
-
-# Customer support - polite, helpful, solution-focused
-support_bot = ChatBot().preset("customer_support")
-
-# Creative writer - imaginative, expressive, storytelling
-creative_bot = ChatBot().preset("creative_writer")
-
-# Data analyst - analytical, precise, metrics-driven
-analyst_bot = ChatBot().preset("data_analyst")
-
-# Legal advisor - professional, thorough, disclaimer-aware
-legal_bot = ChatBot().preset("legal_advisor")
-```
-
-Each preset includes:
-
-- **Tone and personality** settings
-- **Domain expertise** configuration
-- **Built-in constraints** and safety measures
-- **Optimized system prompts** for best performance
-
-## Browser-Based Chat Interface
-
-Get a production-ready web interface with just one line of code:
-
-```python
-# Launch browser chat with automatic setup
-bot.create_chat_session().app()
-```
-
-Features include:
-
-- **Professional UI** with responsive design
-- **Real-time messaging** via WebSocket connections
-- **Preset selection** for dynamic behavior switching
-- **Message history** and conversation management
-- **Mobile-friendly** interface for any device
-
-<div style="text-align: center;">
-
-![](assets/talk-box-shiny-interface.gif){width=100%}
-
-</div>
-
-## Multi-Provider LLM Support
-
-Talk Box works seamlessly with all major LLM providers through the powerful chatlas integration:
-
-```python
-# OpenAI models
-openai_bot = ChatBot().model("gpt-4-turbo")
-
-# Anthropic Claude
-claude_bot = ChatBot().model("claude-3-5-sonnet-20241022")
-
-# Google Gemini
-gemini_bot = ChatBot().model("gemini-pro")
-
-# Automatic provider detection based on model name
-mixed_deployment = [
-    ChatBot().model("gpt-4").preset("technical_advisor"),
-    ChatBot().model("claude-3-5-sonnet").preset("creative_writer"),
-    ChatBot().model("gemini-pro").preset("data_analyst")
-]
-```
-
-## Custom Presets and Extensions
-
-Create your own behavior presets for specialized use cases:
-
-```python
-from talk_box.core.presets import Preset, PresetManager
-
-# Define a custom financial advisor preset
-financial_preset = Preset(
-    name="financial_advisor",
-    tone="professional",
-    expertise="finance,investment,risk_management",
-    verbosity="detailed",
-    constraints=["no_guarantees", "include_disclaimers", "cite_sources"],
-    system_prompt="""You are a certified financial advisor with expertise in
-    investment strategies and risk management. Always include appropriate disclaimers
-    and encourage users to consult with qualified professionals for personalized advice."""
-)
-
-# Register the custom preset
-manager = PresetManager()
-manager.add_preset(financial_preset)
-
-# Use your custom preset
-financial_bot = ChatBot().preset("financial_advisor")
-```
-
-## Testing and Quality Assurance
-
-Talk Box includes comprehensive testing capabilities with 98% code coverage:
-
-```python
-# Built-in testing for your custom bots
-def test_support_bot_responses():
-    bot = ChatBot().preset("customer_support")
-
-    # Test basic functionality
-    response = bot.chat("Hello, I need help")
-    assert response.content
-    assert "help" in response.content.lower()
-
-    # Test preset behavior
-    assert bot.preset_manager.current_preset.name == "customer_support"
-    assert "polite" in bot.preset_manager.current_preset.tone
-
-# Run comprehensive validation
-pytest tests/                    # Full test suite
-pytest --cov=talk_box           # Coverage report
-```
-
-## Production Deployment
-
-### Environment Configuration
-
-```bash
-# .env file for production
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
-CHATLAS_CHAT_PROVIDER=anthropic
-CHATLAS_CHAT_MODEL=claude-3-5-sonnet-20241022
-```
-
-### Docker Deployment
-
-```dockerfile
-FROM python:3.11-slim
-
-# Install Talk Box with all dependencies
-COPY requirements.txt .
-RUN pip install talk-box[all]
-
-# Copy your application
-COPY . /app
-WORKDIR /app
-
-# Launch the browser interface
-CMD ["python", "apps/browser_chat.py"]
-```
-
-### Production Bot Configuration
-
-```python
-import os
 import talk_box as tb
 
-# Production-ready configuration
-production_bot = (
-    tb.ChatBot()
-    .model(os.getenv("PRODUCTION_MODEL", "claude-3-5-sonnet"))
-    .preset("customer_support")
-    .persona("Professional Customer Success Agent")
-    .avoid(["internal_information", "competitor_details"])
-    .temperature(0.2)
-    .max_tokens(800)
-    .verbose(False)  # Reduce logging in production
-    .enable_llm_mode()
-)
-
-# Deploy with monitoring and error handling
-app = production_bot.create_chat_session().app()
+# Each preset includes tone, expertise, constraints, and system prompts
+support_bot = tb.ChatBot().preset("customer_support")
+creative_bot = tb.ChatBot().preset("creative_writer")
+analyst_bot = tb.ChatBot().preset("data_analyst")
 ```
 
-## Installation
+### Installation
 
-You can install Talk Box using pip:
+The Talk Box framework can be installed via pip:
 
 ```bash
 pip install talk-box
 ```
 
-For development with all optional dependencies:
-
-```bash
-pip install "talk-box[all]"  # Install with all features
-```
-
-To use Talk Box with specific LLM providers:
-
-```bash
-pip install "talk-box[openai]"     # OpenAI integration
-pip install "talk-box[anthropic]"  # Anthropic Claude integration
-pip install "talk-box[google]"     # Google Gemini integration
-```
-
-**Key Dependencies:**
-
-- **[chatlas](https://github.com/cpsievert/chatlas)** - Excellent LLM integration with automatic provider detection
-- **[Shiny for Python](https://shiny.posit.co/py/)** - Modern, reactive web application framework
-- **[ruff](https://github.com/astral-sh/ruff)** - Lightning-fast Python linter and formatter
-
-## Contributing to Talk Box
-
-There are many ways to contribute to the ongoing development of Talk Box:
-
-**Simple Contributions:**
-- Fix typos and improve documentation
-- File issues for feature requests or bugs
-- Share examples and use cases
-- Test new features and provide feedback
-
-**Code Contributions:**
-- Add new behavior presets for different domains
-- Create tool integrations (web search, databases, APIs)
-- Build deployment adapters (FastAPI, Streamlit, etc.)
-- Improve testing frameworks and add metrics
-
-Please read over the [contributing guidelines](https://github.com/rich-iannone/talk-box/blob/main/CONTRIBUTING.md)
-for information on how to get started.
-
-## Roadmap
-
-We're actively working on enhancing Talk Box with exciting new features:
-
-1. **Advanced Tool Integration** - Web search, database queries, API calls
-2. **Multi-Modal Support** - Image, audio, and document processing capabilities
-3. **Conversation Analytics** - Built-in metrics and performance monitoring
-4. **Enterprise Features** - SSO integration, audit logging, compliance tools
-5. **Advanced Testing** - A/B testing framework, automated quality assurance
-6. **Cloud Deployment** - One-click deployment to major cloud platforms
-7. **Visual Bot Builder** - Drag-and-drop interface for non-technical users
-8. **Plugin Ecosystem** - Marketplace for community-contributed extensions
-
-If you have ideas for features or improvements, we'd love to hear them! Talk Box is designed
-to be the most powerful and user-friendly chatbot framework available.
+If you encounter a bug, have usage questions, or want to share ideas to make this package better, please feel free to [open an issue](https://github.com/rich-iannone/talk-box/issues).
 
 ## Code of Conduct
 
-Please note that the Talk Box project is released with a
-[contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
-<br>By participating in this project you agree to abide by its terms.
+Please note that the Talk Box project is released with a [contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+By participating in this project you agree to abide by its terms.
 
-## 📄 License
+## License
 
-Talk Box is licensed under the MIT license.
+MIT License - see [LICENSE](./LICENSE) for details.
 
-© Rich Iannone
+🏛️ Governance
 
-## 🏛️ Governance
-
-This project is primarily maintained by
-[Rich Iannone](https://github.com/rich-iannone). Other contributors may occasionally
-assist with development and maintenance duties.
+This project is primarily maintained by [Rich Iannone](https://bsky.app/profile/richmeister.bsky.social). Other authors may occasionally assist with some of these duties.
