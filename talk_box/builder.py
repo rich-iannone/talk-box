@@ -34,27 +34,172 @@ def find_available_port(start_port: int = 8000, max_attempts: int = 100) -> int:
 
 class BuilderTypes:
     """
-    Predefined builder types for autocomplete and type safety.
+    Predefined builder types for autocomplete and type safety when using prompt builders.
 
     This class provides constants for all available prompt builder types, enabling IDE
-    autocomplete and preventing typos when calling the prompt_builder() method.
+    autocomplete support and preventing typos when calling the `prompt_builder()` method.
+    Using these constants instead of string literals improves code maintainability and
+    provides better development experience through IDE features like auto-completion
+    and type checking.
 
-    Values
-    ------
-    GENERAL : str
-        Basic attention-optimized builder for general-purpose prompts
-    ARCHITECTURAL : str
-        Pre-configured builder for code architecture analysis
-    CODE_REVIEW : str
-        Pre-configured builder for code review tasks
-    DEBUGGING : str
-        Pre-configured builder for debugging assistance
+    The builder types represent different pre-configured prompt engineering templates
+    optimized for specific use cases. Each type includes specialized attention patterns,
+    section structures, and formatting guidelines based on the intended domain.
+
+    Attributes
+    ----------
+    GENERAL:
+        Basic attention-optimized builder for general-purpose prompts. Provides
+        fundamental prompt engineering structure without domain-specific optimizations.
+        Best for: Custom prompts, exploratory use cases, general AI interactions.
+
+    ARCHITECTURAL:
+        Pre-configured builder for software architecture analysis and documentation.
+        Includes specialized sections for system design, patterns, dependencies,
+        and architectural recommendations.
+        Best for: Code architecture reviews, system design documentation, technical debt analysis.
+
+    CODE_REVIEW:
+        Pre-configured builder for comprehensive code review tasks. Optimized for
+        identifying issues, suggesting improvements, and providing constructive feedback
+        with proper prioritization of concerns.
+        Best for: Pull request reviews, code quality assessment, mentoring feedback.
+
+    DEBUGGING:
+        Pre-configured builder for debugging assistance and troubleshooting. Structured
+        to systematically identify problems, analyze root causes, and provide step-by-step
+        debugging guidance.
+        Best for: Error analysis, troubleshooting guides, debugging workflows.
 
     Examples
     --------
-    >>> import talk_box as tb
-    >>> bot = tb.ChatBot().model("gpt-4-turbo")
-    >>> builder = bot.prompt_builder(tb.BuilderTypes.ARCHITECTURAL)
+    ### Using BuilderTypes constants for type safety
+
+    Recommended approach with autocomplete and type checking:
+
+    ```python
+    import talk_box as tb
+
+    # Type-safe builder selection with IDE support
+    bot = tb.ChatBot().model("gpt-4-turbo")
+
+    # Architectural analysis builder
+    arch_builder = bot.prompt_builder(tb.BuilderTypes.ARCHITECTURAL)
+    arch_prompt = arch_builder.focus_on("identifying design patterns").build()
+
+    # Code review builder
+    review_builder = bot.prompt_builder(tb.BuilderTypes.CODE_REVIEW)
+    review_prompt = review_builder.avoid_topics(["personal criticism"]).build()
+
+    # Debugging builder
+    debug_builder = bot.prompt_builder(tb.BuilderTypes.DEBUGGING)
+    debug_prompt = debug_builder.focus_on("systematic problem solving").build()
+    ```
+
+    ### Comparing with string literals
+
+    While string literals work, constants provide better development experience:
+
+    ```python
+    import talk_box as tb
+
+    bot = tb.ChatBot().model("gpt-4-turbo")
+
+    # Using string literals (works but less maintainable)
+    builder1 = bot.prompt_builder("architectural")  # No autocomplete, typo-prone
+
+    # Using constants (recommended)
+    builder2 = bot.prompt_builder(tb.BuilderTypes.ARCHITECTURAL)  # IDE support
+    ```
+
+    ### Dynamic builder type selection
+
+    Use constants in conditional logic and configuration:
+
+    ```python
+    import talk_box as tb
+
+    def create_specialized_bot(task_type: str) -> tb.ChatBot:
+        bot = tb.ChatBot().model("gpt-4-turbo")
+
+        if task_type == "architecture":
+            builder_type = tb.BuilderTypes.ARCHITECTURAL
+        elif task_type == "review":
+            builder_type = tb.BuilderTypes.CODE_REVIEW
+        elif task_type == "debug":
+            builder_type = tb.BuilderTypes.DEBUGGING
+        else:
+            builder_type = tb.BuilderTypes.GENERAL
+
+        prompt = bot.prompt_builder(builder_type).build()
+        return bot.system_prompt(prompt)
+
+    # Usage
+    arch_bot = create_specialized_bot("architecture")
+    review_bot = create_specialized_bot("review")
+    ```
+
+    ### Integration with configuration systems
+
+    Use constants in configuration files and team standards:
+
+    ```python
+    import talk_box as tb
+
+    # Team configuration using constants
+    TEAM_BOT_CONFIGS = {
+        "code_reviewer": {
+            "model": "gpt-4-turbo",
+            "builder_type": tb.BuilderTypes.CODE_REVIEW,
+            "temperature": 0.3
+        },
+        "architect": {
+            "model": "gpt-4-turbo",
+            "builder_type": tb.BuilderTypes.ARCHITECTURAL,
+            "temperature": 0.2
+        }
+    }
+
+    def create_team_bot(role: str) -> tb.ChatBot:
+        config = TEAM_BOT_CONFIGS[role]
+        bot = tb.ChatBot().model(config["model"]).temperature(config["temperature"])
+        prompt = bot.prompt_builder(config["builder_type"]).build()
+        return bot.system_prompt(prompt)
+    ```
+
+    Builder Type Selection Guide
+    ---------------------------
+    **GENERAL**: Choose when you need maximum flexibility and plan to define
+    custom prompt structure. Provides basic attention optimization without
+    domain constraints.
+
+    **ARCHITECTURAL**: Select for system design tasks, architecture documentation,
+    technical debt analysis, and design pattern identification.
+
+    **CODE_REVIEW**: Use for pull request reviews, code quality assessment,
+    mentoring feedback, and development best practices guidance.
+
+    **DEBUGGING**: Apply for error analysis, troubleshooting workflows,
+    systematic problem solving, and debugging assistance.
+
+    Notes
+    -----
+    **IDE Support**: Using these constants enables autocomplete, type checking,
+    and refactoring support in most modern IDEs and editors.
+
+    **Maintainability**: Constants prevent typos and make code more maintainable
+    when builder types change or new types are added.
+
+    **Consistency**: Using constants ensures consistent builder type names
+    across different parts of your application.
+
+    **Extensibility**: New builder types can be added to this class while
+    maintaining backward compatibility.
+
+    See Also
+    --------
+    ChatBot.prompt_builder : Create attention-optimized prompt builders
+    PromptBuilder : The prompt builder class for structured prompt creation
     """
 
     GENERAL = "general"
@@ -427,13 +572,8 @@ class ChatBot:
         Parameters
         ----------
         model_name : str
-            The name of the language model to use. Supported models include:
-
-
-            - `"gemini-pro-vision"`: Multimodal version supporting images
-
-            The exact model names may vary by provider. Check provider documentation
-            for the most current model names and capabilities.
+            The name of the language model to use. Exact model names may vary by provider. Check
+            provider documentation for the most current model names and capabilities.
 
         Returns
         -------
@@ -455,16 +595,16 @@ class ChatBot:
 
         **OpenAI Models:**
 
-        - `"gpt-4-turbo"`: Latest GPT-4 with improved performance and lower cost
+        - `"gpt-4-turbo"`: GPT-4 with improved performance and lower cost
         - `"gpt-4"`: Original GPT-4 model with excellent reasoning capabilities
         - `"gpt-3.5-turbo"`: Fast, cost-effective model good for most tasks
         - `"gpt-4o"`: Multimodal model supporting text, images, and audio
 
         **Anthropic Models:**
 
-        - `"claude-3-5-sonnet-20241022"`: Latest Claude with excellent reasoning
+        - `"claude-3-5-sonnet-20241022"`: Claude model with excellent reasoning
         - `"claude-3-haiku-20240307"`: Fast, efficient model for simple tasks
-        - `"claude-3-opus-20240229"`: Most capable Claude model for complex tasks
+        - `"claude-3-opus-20240229"`: Very capable Claude model for complex tasks
 
         **Google Models:**
 
@@ -643,10 +783,10 @@ class ChatBot:
 
         Notes
         -----
-        **Provider Authentication**: Ensure appropriate API keys are set in environment
-        variables for the specified provider (e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY).
+        **Provider Authentication**: ensure appropriate API keys are set in environment
+        variables for the specified provider (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`).
 
-        **Provider Detection**: When only a model name is provided, the system defaults
+        **Provider Detection**: when only a model name is provided, the system defaults
         to OpenAI. For other providers, always specify the provider explicitly.
 
         See Also
@@ -693,7 +833,7 @@ class ChatBot:
 
         Parameters
         ----------
-        preset_name : str or PresetNames
+        preset_name
             The name of the behavior preset to apply. You can use either a string or
             a constant from `PresetNames` for better autocomplete and type safety.
 
@@ -704,26 +844,8 @@ class ChatBot:
             bot = tb.ChatBot().preset(tb.PresetNames.TECHNICAL_ADVISOR)
             ```
 
-            **Available presets:**
-
-            **Business and Support:**
-            - `PresetNames.CUSTOMER_SUPPORT` or `"customer_support"`: Polite, professional
-              customer service interactions with concise responses and helpful guidance
-            - `PresetNames.LEGAL_ADVISOR` or `"legal_advisor"`: Professional legal information
-              with appropriate disclaimers and thorough, well-sourced responses
-
-            **Technical and Development:**
-            - `PresetNames.TECHNICAL_ADVISOR` or `"technical_advisor"`: Authoritative technical
-              guidance with detailed explanations, code examples, and best practices
-            - `PresetNames.DATA_ANALYST` or `"data_analyst"`: Analytical, evidence-based
-              responses for data science and statistical analysis tasks
-
-            **Creative and Content:**
-            - `PresetNames.CREATIVE_WRITER` or `"creative_writer"`: Imaginative storytelling
-              and creative content generation with descriptive, engaging responses
-
-            Additional presets may be available through custom preset libraries or
-            organizational preset collections.
+            See the "Available Presets" section below for a complete list of
+            available presets and their descriptions.
 
         Returns
         -------
@@ -737,6 +859,32 @@ class ChatBot:
             If the preset name is not found in the available preset library. The
             method fails gracefully and continues if preset loading encounters issues.
 
+        Available Presets
+        -----------------
+        The Talk Box framework includes professionally crafted presets for common use cases:
+
+        **Business and Support:**
+
+        - `PresetNames.CUSTOMER_SUPPORT` or `"customer_support"`: polite, professional
+          customer service interactions with concise responses and helpful guidance
+        - `PresetNames.LEGAL_ADVISOR` or `"legal_advisor"`: professional legal information
+          with appropriate disclaimers and thorough, well-sourced responses
+
+        **Technical and Development:**
+
+        - `PresetNames.TECHNICAL_ADVISOR` or `"technical_advisor"`: authoritative technical
+          guidance with detailed explanations, code examples, and best practices
+        - `PresetNames.DATA_ANALYST` or `"data_analyst"`: analytical, evidence-based
+          responses for data science and statistical analysis tasks
+
+        **Creative and Content:**
+
+        - `PresetNames.CREATIVE_WRITER` or `"creative_writer"`: imaginative storytelling
+          and creative content generation with descriptive, engaging responses
+
+        Additional presets may be available through custom preset libraries or
+        organizational preset collections.
+
         Examples
         --------
         ### Using default presets for common scenarios
@@ -744,25 +892,25 @@ class ChatBot:
         Apply presets for different types of interactions:
 
         ```python
-        from talk_box import ChatBot
+        import talk_box as tb
 
         # Customer support chatbot
         support_bot = (
-            ChatBot()
+            tb.ChatBot()
             .preset("customer_support")
             .model("gpt-3.5-turbo")  # Fast, cost-effective for support
         )
 
         # Technical advisor for development questions
         tech_bot = (
-            ChatBot()
+            tb.ChatBot()
             .preset("technical_advisor")
             .model("gpt-4-turbo")  # Powerful model for complex technical questions
         )
 
         # Creative writing assistant
         writer_bot = (
-            ChatBot()
+            tb.ChatBot()
             .preset("creative_writer")
             .model("claude-3-opus-20240229")  # Excellent for creative tasks
         )
@@ -775,7 +923,7 @@ class ChatBot:
         ```python
         # Start with technical advisor preset, then customize
         specialized_bot = (
-            ChatBot()
+            tb.ChatBot()
             .preset("technical_advisor")
             .persona("Senior Python developer specializing in web frameworks")
             .temperature(0.1)  # Very low randomness for precise technical answers
@@ -785,7 +933,7 @@ class ChatBot:
 
         # Customer support with custom personality
         friendly_support = (
-            ChatBot()
+            tb.ChatBot()
             .preset("customer_support")
             .persona("Enthusiastic and empathetic customer advocate")
             .verbose(True)  # Detailed explanations for complex issues
@@ -799,7 +947,7 @@ class ChatBot:
         ```python
         # Data analyst with analytical model and settings
         analyst_bot = (
-            ChatBot()
+            tb.ChatBot()
             .preset("data_analyst")
             .model("gpt-4-turbo")  # Strong reasoning capabilities
             .temperature(0.2)  # Low creativity, high accuracy
@@ -808,7 +956,7 @@ class ChatBot:
 
         # Creative writer with creative model and settings
         creative_bot = (
-            ChatBot()
+            tb.ChatBot()
             .preset("creative_writer")
             .model("claude-3-opus-20240229")  # Excellent creative capabilities
             .temperature(0.8)  # High creativity
@@ -821,8 +969,6 @@ class ChatBot:
         View what a preset configures before applying it:
 
         ```python
-        import talk_box as tb
-
         # Get preset details
         manager = tb.PresetManager()
         tech_preset = manager.get_preset("technical_advisor")
@@ -844,8 +990,6 @@ class ChatBot:
         Change presets based on conversation context:
 
         ```python
-        import talk_box as tb
-
         # Start with customer support
         bot = tb.ChatBot().preset("customer_support")
 
@@ -936,41 +1080,11 @@ class ChatBot:
 
         Parameters
         ----------
-        temp : float
+        temp
             The temperature value controlling response randomness, typically ranging
-            from 0.0 to 2.0:
-
-            **Ultra-Low (0.0-0.2):**
-            - 0.0: Completely deterministic, always chooses most likely response
-            - 0.1: Near-deterministic with minimal variation
-            - 0.2: Highly consistent with occasional minor variations
-            - Best for: Code generation, mathematical calculations, factual Q&A
-
-            **Low (0.3-0.5):**
-            - 0.3: Consistent with slight creative touches
-            - 0.4: Balanced consistency with controlled variation
-            - 0.5: Moderate creativity while maintaining reliability
-            - Best for: Technical documentation, structured analysis, tutorials
-
-            **Medium (0.6-0.8):**
-            - 0.6: Balanced creativity and consistency
-            - 0.7: Default setting for most general-purpose applications
-            - 0.8: Enhanced creativity with good coherence
-            - Best for: Conversational AI, content writing, explanations
-
-            **High (0.9-1.2):**
-            - 0.9: Creative responses with acceptable coherence
-            - 1.0: High creativity, more diverse phrasings
-            - 1.2: Very creative, potentially unexpected responses
-            - Best for: Brainstorming, creative writing, ideation
-
-            **Ultra-High (1.3-2.0):**
-            - 1.5: Highly experimental and creative outputs
-            - 2.0: Maximum creativity, potentially incoherent
-            - Best for: Artistic exploration, experimental content
-
-            Values above 2.0 are generally not recommended as they may produce
-            incoherent or nonsensical responses.
+            from `0.0` to `2.0`. Lower values produce more deterministic and consistent
+            responses, while higher values encourage creativity and variability.
+            See the "Temperature Ranges" section below for detailed guidance.
 
         Returns
         -------
@@ -984,6 +1098,47 @@ class ChatBot:
             If temperature is negative or excessively high (typically > 2.0),
             though exact limits depend on the underlying model provider.
 
+        Temperature Ranges
+        ------------------
+        Choose temperature values based on your specific use case requirements:
+
+        **Ultra-Low (`0.0`-`0.2`):**
+
+        - `0.0`: completely deterministic, always chooses most likely response
+        - `0.1`: near-deterministic with minimal variation
+        - `0.2`: highly consistent with occasional minor variations
+        - Best for: code generation, mathematical calculations, factual Q&A
+
+        **Low (`0.3`-`0.5`):**
+
+        - `0.3`: consistent with slight creative touches
+        - `0.4`: balanced consistency with controlled variation
+        - `0.5`: moderate creativity while maintaining reliability
+        - Best for: technical documentation, structured analysis, tutorials
+
+        **Medium (`0.6`-`0.8`):**
+
+        - `0.6`: balanced creativity and consistency
+        - `0.7`: default setting for most general-purpose applications
+        - `0.8`: enhanced creativity with good coherence
+        - Best for: conversational AI, content writing, explanations
+
+        **High (`0.9`-`1.2`):**
+
+        - `0.9`: creative responses with acceptable coherence
+        - `1.0`: high creativity, more diverse phrasings
+        - `1.2`: very creative, potentially unexpected responses
+        - Best for: brainstorming, creative writing, ideation
+
+        **Ultra-High (`1.3`-`2.0`):**
+
+        - `1.5`: highly experimental and creative outputs
+        - `2.0`: maximum creativity, potentially incoherent
+        - Best for: artistic exploration, experimental content
+
+        Values above `2.0` are generally not recommended as they may produce
+        incoherent or nonsensical responses.
+
         Examples
         --------
         ### Temperature for different use cases
@@ -991,11 +1146,11 @@ class ChatBot:
         Configure temperature based on your specific needs:
 
         ```python
-        from talk_box import ChatBot
+        import talk_box as tb
 
         # Ultra-precise for code generation and technical tasks
         code_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("gpt-4-turbo")
             .temperature(0.0)  # Deterministic outputs
             .preset("technical_advisor")
@@ -1003,14 +1158,14 @@ class ChatBot:
 
         # Balanced for general conversation
         general_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("gpt-3.5-turbo")
             .temperature(0.7)  # Default balanced setting
         )
 
         # Creative for content generation
         creative_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("claude-3-opus-20240229")
             .temperature(1.0)  # High creativity
             .preset("creative_writer")
@@ -1024,21 +1179,21 @@ class ChatBot:
         ```python
         # For mathematical calculations - use minimal temperature
         math_bot = (
-            ChatBot()
+            tb.ChatBot()
             .temperature(0.1)
             .persona("Mathematics tutor focused on step-by-step solutions")
         )
 
         # For brainstorming - use higher temperature
         brainstorm_bot = (
-            ChatBot()
+            tb.ChatBot()
             .temperature(1.1)
             .persona("Creative strategist generating innovative ideas")
         )
 
         # For customer support - balanced approach
         support_bot = (
-            ChatBot()
+            tb.ChatBot()
             .temperature(0.4)
             .preset("customer_support")
             .persona("Helpful and consistent customer service representative")
@@ -1052,7 +1207,7 @@ class ChatBot:
         ```python
         # Legal analysis - high precision required
         legal_bot = (
-            ChatBot()
+            tb.ChatBot()
             .preset("legal_advisor")
             .temperature(0.2)  # Low creativity, high accuracy
             .model("gpt-4-turbo")
@@ -1060,7 +1215,7 @@ class ChatBot:
 
         # Marketing content - creative but controlled
         marketing_bot = (
-            ChatBot()
+            tb.ChatBot()
             .temperature(0.8)  # Creative but coherent
             .persona("Brand-aware marketing specialist")
             .avoid(["generic_language", "cliches"])
@@ -1068,7 +1223,7 @@ class ChatBot:
 
         # Data analysis - analytical precision
         analyst_bot = (
-            ChatBot()
+            tb.ChatBot()
             .preset("data_analyst")
             .temperature(0.3)  # Consistent analytical approach
             .tools(["statistical_analysis", "data_visualization"])
@@ -1082,7 +1237,7 @@ class ChatBot:
         ```python
         class AdaptiveBot:
             def __init__(self):
-                self.bot = ChatBot().model("gpt-4-turbo")
+                self.bot = tb.ChatBot().model("gpt-4-turbo")
 
             def answer_question(self, question: str, question_type: str):
                 if question_type == "factual":
@@ -1117,23 +1272,23 @@ class ChatBot:
         Different models respond differently to temperature settings:
 
         ```python
-        # GPT models - standard temperature ranges
+        # GPT models: standard temperature ranges
         gpt_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("gpt-4-turbo")
             .temperature(0.7)  # Works well with GPT models
         )
 
-        # Claude models - may handle higher temperatures better
+        # Claude models: may handle higher temperatures better
         claude_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("claude-3-opus-20240229")
             .temperature(0.9)  # Claude often maintains coherence at higher temps
         )
 
-        # Local models - may need different calibration
+        # Local models: may need different calibration
         local_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("llama-2-13b-chat")
             .temperature(0.5)  # Conservative for smaller models
         )
@@ -1150,7 +1305,7 @@ class ChatBot:
 
             for temp in temperatures:
                 bot = (
-                    ChatBot()
+                    tb.ChatBot()
                     .model("gpt-4-turbo")
                     .temperature(temp)
                 )
@@ -1173,7 +1328,7 @@ class ChatBot:
         ```
 
         Temperature Guidelines
-        ---------------------
+        ----------------------
         **Code Generation**: Use 0.0-0.2 for precise, syntactically correct code
         with minimal variation.
 
@@ -1190,7 +1345,7 @@ class ChatBot:
         out-of-the-box thinking.
 
         Model Considerations
-        -------------------
+        --------------------
         **Provider Differences**: Different AI providers may interpret temperature
         values differently, so test with your specific model.
 
@@ -1234,7 +1389,7 @@ class ChatBot:
         """
         Set the maximum number of tokens for chatbot responses.
 
-        The max_tokens parameter controls the maximum length of generated responses
+        The `max_tokens` parameter controls the maximum length of generated responses
         by limiting the number of tokens (roughly equivalent to words and punctuation)
         that the language model can produce in a single response. This is crucial for
         managing response length, controlling costs, ensuring consistent behavior,
@@ -1247,6 +1402,7 @@ class ChatBot:
         optimization tool and a cost management mechanism.
 
         Token counting varies by model and provider, but generally:
+
         - 1 token ≈ 0.75 English words
         - 100 tokens ≈ 75 words or ~1-2 sentences
         - 500 tokens ≈ 375 words or ~1-2 paragraphs
@@ -1254,40 +1410,10 @@ class ChatBot:
 
         Parameters
         ----------
-        tokens : int
+        tokens
             Maximum number of tokens for response generation. Must be positive.
-
-            **Recommended ranges by use case:**
-
-            **Short Responses (50-200 tokens):**
-            - Quick answers, confirmations, brief explanations
-            - Customer support acknowledgments
-            - Code snippets and short technical answers
-            - Chat-style interactions
-
-            **Medium Responses (200-800 tokens):**
-            - Detailed explanations and tutorials
-            - Code documentation and examples
-            - Product descriptions and feature explanations
-            - Structured analysis and recommendations
-
-            **Long Responses (800-2000 tokens):**
-            - Comprehensive guides and documentation
-            - Detailed technical analysis
-            - Creative writing and storytelling
-            - In-depth research summaries
-
-            **Extended Responses (2000+ tokens):**
-            - Long-form content generation
-            - Detailed reports and documentation
-            - Comprehensive tutorials and guides
-            - Complex analysis requiring extensive explanation
-
-            **Model-specific limits vary significantly:**
-            - GPT-3.5-turbo: Up to 4,096 tokens (shared with input)
-            - GPT-4: Up to 8,192 tokens (shared with input)
-            - GPT-4-turbo: Up to 128,000 tokens (shared with input)
-            - Claude-3: Up to 200,000 tokens (shared with input)
+            See the "Token Usage Guidelines" section below for detailed recommendations
+            and model-specific limits.
 
         Returns
         -------
@@ -1301,6 +1427,46 @@ class ChatBot:
             If tokens is not a positive integer. Some models may also have
             specific upper limits that could trigger additional validation errors.
 
+        Token Usage Guidelines
+        ----------------------
+        Choose token limits based on your specific use case and content requirements:
+
+        **Short Responses (50-200 tokens):**
+
+        - quick answers, confirmations, brief explanations
+        - customer support acknowledgments
+        - code snippets and short technical answers
+        - chat-style interactions
+
+        **Medium Responses (200-800 tokens):**
+
+        - detailed explanations and tutorials
+        - code documentation and examples
+        - product descriptions and feature explanations
+        - structured analysis and recommendations
+
+        **Long Responses (800-2000 tokens):**
+
+        - comprehensive guides and documentation
+        - detailed technical analysis
+        - creative writing and storytelling
+        - in-depth research summaries
+
+        **Extended Responses (2000+ tokens):**
+
+        - long-form content generation
+        - detailed reports and documentation
+        - comprehensive tutorials and guides
+        - complex analysis requiring extensive explanation
+
+        **Model-Specific Limits:**
+        Different models have varying maximum context windows (shared between input and output):
+
+        - GPT-3.5-turbo: up to 4,096 tokens total
+        - GPT-4: up to 8,192 tokens total
+        - GPT-4-turbo: up to 128,000 tokens total
+        - Claude-3: up to 200,000 tokens total
+
         Examples
         --------
         ### Setting tokens for different response types
@@ -1308,11 +1474,11 @@ class ChatBot:
         Configure max_tokens based on your expected response length:
 
         ```python
-        from talk_box import ChatBot
+        import talk_box as tb
 
         # Brief answers for quick interactions
         quick_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("gpt-3.5-turbo")
             .max_tokens(150)  # ~100-120 words
             .preset("customer_support")
@@ -1320,7 +1486,7 @@ class ChatBot:
 
         # Detailed explanations for technical questions
         detailed_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("gpt-4-turbo")
             .max_tokens(1000)  # ~750 words
             .preset("technical_advisor")
@@ -1328,7 +1494,7 @@ class ChatBot:
 
         # Long-form content generation
         content_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("claude-3-opus-20240229")
             .max_tokens(3000)  # ~2250 words
             .preset("creative_writer")
@@ -1342,7 +1508,7 @@ class ChatBot:
         ```python
         # Code generation - precise and concise
         code_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("gpt-4-turbo")
             .max_tokens(500)  # Focus on essential code
             .temperature(0.1)
@@ -1351,7 +1517,7 @@ class ChatBot:
 
         # Documentation writing - comprehensive but structured
         docs_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("gpt-4-turbo")
             .max_tokens(1500)  # Detailed but focused
             .temperature(0.3)
@@ -1360,7 +1526,7 @@ class ChatBot:
 
         # Creative writing - longer form allowed
         story_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("claude-3-opus-20240229")
             .max_tokens(2500)  # Allow creative expression
             .temperature(0.9)
@@ -1375,7 +1541,7 @@ class ChatBot:
         ```python
         class AdaptiveTokenBot:
             def __init__(self):
-                self.bot = ChatBot().model("gpt-4-turbo")
+                self.bot = tb.ChatBot().model("gpt-4-turbo")
 
             def respond(self, message: str, response_type: str):
                 if response_type == "brief":
@@ -1412,7 +1578,7 @@ class ChatBot:
         ```python
         # Cost-conscious configuration for high-volume usage
         efficient_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("gpt-3.5-turbo")  # Lower cost model
             .max_tokens(300)  # Limit response length
             .temperature(0.5)  # Balanced creativity
@@ -1420,7 +1586,7 @@ class ChatBot:
 
         # Premium configuration for important interactions
         premium_bot = (
-            ChatBot()
+            tb.ChatBot()
             .model("gpt-4-turbo")
             .max_tokens(1500)  # Allow detailed responses
             .temperature(0.7)
@@ -1429,11 +1595,11 @@ class ChatBot:
         # Budget tracking example
         def cost_aware_chat(message: str, budget_tier: str):
             if budget_tier == "economy":
-                bot = ChatBot().model("gpt-3.5-turbo").max_tokens(200)
+                bot = tb.ChatBot().model("gpt-3.5-turbo").max_tokens(200)
             elif budget_tier == "standard":
-                bot = ChatBot().model("gpt-4").max_tokens(500)
+                bot = tb.ChatBot().model("gpt-4").max_tokens(500)
             else:  # premium
-                bot = ChatBot().model("gpt-4-turbo").max_tokens(1500)
+                bot = tb.ChatBot().model("gpt-4-turbo").max_tokens(1500)
 
             return bot.chat(message)
         ```
@@ -1445,7 +1611,7 @@ class ChatBot:
         ```python
         # Email responses - professional length
         email_bot = (
-            ChatBot()
+            tb.ChatBot()
             .max_tokens(400)  # Professional email length
             .persona("Professional and concise business communicator")
             .preset("customer_support")
@@ -1453,7 +1619,7 @@ class ChatBot:
 
         # Blog post generation - substantial content
         blog_bot = (
-            ChatBot()
+            tb.ChatBot()
             .max_tokens(2000)  # Article-length content
             .temperature(0.8)
             .persona("Engaging content writer")
@@ -1461,7 +1627,7 @@ class ChatBot:
 
         # Social media responses - very brief
         social_bot = (
-            ChatBot()
+            tb.ChatBot()
             .max_tokens(100)  # Tweet-length responses
             .temperature(0.7)
             .persona("Friendly and engaging social media manager")
@@ -1469,7 +1635,7 @@ class ChatBot:
 
         # Technical documentation - comprehensive
         tech_docs_bot = (
-            ChatBot()
+            tb.ChatBot()
             .max_tokens(1800)  # Detailed technical content
             .temperature(0.2)
             .preset("technical_advisor")
@@ -1483,7 +1649,7 @@ class ChatBot:
         ```python
         def monitor_token_usage(messages: list[str], max_tokens: int):
             \"\"\"Monitor actual token usage vs. limits.\"\"\"
-            bot = ChatBot().model("gpt-4-turbo").max_tokens(max_tokens)
+            bot = tb.ChatBot().model("gpt-4-turbo").max_tokens(max_tokens)
 
             usage_data = []
             for message in messages:
@@ -1516,48 +1682,48 @@ class ChatBot:
         ```
 
         Token Management Best Practices
-        ------------------------------
-        **Start Conservative**: Begin with lower token limits and increase as needed
+        -------------------------------
+        **Start Conservative**: begin with lower token limits and increase as needed
         to avoid unexpectedly long responses.
 
-        **Content-Specific Limits**: Set different limits for different types of content
+        **Content-Specific Limits**: set different limits for different types of content
         (code, explanations, creative writing, etc.).
 
-        **Cost Monitoring**: Use token limits as a cost control mechanism, especially
+        **Cost Monitoring**: use token limits as a cost control mechanism, especially
         for high-volume applications.
 
-        **User Experience**: Balance completeness with readability - very long responses
+        **User Experience**: balance completeness with readability as very long responses
         can overwhelm users.
 
-        **Model Considerations**: Different models have different token counting methods
+        **Model Considerations**: different models have different token counting methods
         and optimal ranges.
 
         Performance Implications
-        -----------------------
-        **Response Time**: Higher token limits may increase response generation time,
+        ------------------------
+        **Response Time**: higher token limits may increase response generation time,
         especially for complex requests.
 
-        **Cost Scaling**: Most API providers charge based on token usage, making this
+        **Cost Scaling**: most API providers charge based on token usage, making this
         parameter directly tied to operational costs.
 
-        **Context Window**: Remember that max_tokens is shared with input tokens in
+        **Context Window**: remember that max_tokens is shared with input tokens in
         most models' context windows.
 
-        **Completion Quality**: Very low token limits may result in incomplete responses,
+        **Completion Quality**: very low token limits may result in incomplete responses,
         while very high limits may lead to verbose, unfocused outputs.
 
         Notes
         -----
-        **Model Variations**: Different models count tokens differently and have
+        **Model Variations**: different models count tokens differently and have
         varying optimal token ranges for quality output.
 
-        **Shared Context**: In most models, max_tokens counts toward the total context
+        **Shared Context**: in most models, max_tokens counts toward the total context
         window, which includes both input and output tokens.
 
-        **Truncation Behavior**: When a response reaches the max_tokens limit, it's
+        **Truncation Behavior**: when a response reaches the max_tokens limit, it is
         typically truncated, which may result in incomplete sentences or thoughts.
 
-        **Dynamic Adjustment**: Consider implementing dynamic token adjustment based
+        **Dynamic Adjustment**: consider implementing dynamic token adjustment based
         on response type, user preferences, or conversation context.
 
         See Also
@@ -1595,9 +1761,29 @@ class ChatBot:
         will take precedence over any preset system prompt, though it will still be
         combined with persona, constraints, and other configuration elements.
 
+        Three Approaches to System Prompt Creation
+        ------------------------------------------
+        **Direct String Approach**: pass a complete system prompt as a single string.
+        This is straightforward for simple prompts or when adapting existing prompts.
+
+        **ChatBot.prompt_builder() Method (Recommended)**: use the attention-optimized
+        `prompt_builder()` method from a ChatBot instance. This provides better structure,
+        maintainability, and leverages modern prompt engineering research on attention patterns.
+
+        **`PromptBuilder` Class**: use the `PromptBuilder` class directly for maximum flexibility
+        and reusable prompt templates that can be used across multiple `ChatBot` instances.
+
+        The structured prompt approaches (methods 2 and 3) are especially valuable for:
+
+        - complex multi-section prompts
+        - professional domain specializations
+        - prompts requiring consistent structure across variations
+        - team environments where prompt templates need to be maintainable
+        - reusable prompt templates across different chatbot configurations
+
         Parameters
         ----------
-        prompt : str
+        prompt
             The custom system prompt text. Can include prompt engineering techniques,
             specific instructions, formatting requirements, etc.
 
@@ -1608,13 +1794,189 @@ class ChatBot:
 
         Examples
         --------
-        >>> bot = ChatBot().system_prompt('''
-        ... You are an expert data analyst. Follow these rules:
-        ... 1. Always provide statistical context
-        ... 2. Cite data sources when possible
-        ... 3. Use tables for structured data
-        ... 4. Explain your methodology
-        ... ''')
+        ### Comparing the three approaches
+
+        **Direct String Approach**: simple and direct:
+
+        ```python
+        import talk_box as tb
+
+        # Quick setup with string prompt
+        bot = tb.ChatBot().model("gpt-4-turbo").system_prompt(
+            "You are a helpful Python tutor. Always provide working code examples "
+            "and explain the reasoning behind each solution."
+        )
+        ```
+
+        **ChatBot.prompt_builder() Method**: structured and maintainable:
+
+        ```python
+        import talk_box as tb
+
+        # Same functionality with better structure
+        bot = tb.ChatBot().model("gpt-4-turbo")
+
+        # Build an attention-optimized prompt
+        prompt = (
+            bot.prompt_builder()
+            .persona("helpful Python tutor", "educational programming assistance")
+            .core_analysis(["Provide working code examples", "Explain reasoning behind solutions"])
+            .output_format(["Clear step-by-step explanations", "Commented code examples"])
+            .build()
+        )
+
+        # Apply the structured prompt
+        bot.system_prompt(prompt)
+        ```
+
+        **PromptBuilder Class Directly**: maximum flexibility and reusability:
+
+        ```python
+        import talk_box as tb
+
+        # Create reusable prompt template
+        python_tutor_template = (
+            tb.PromptBuilder()
+            .persona("helpful Python tutor", "educational programming assistance")
+            .core_analysis(["Provide working code examples", "Explain reasoning behind solutions"])
+            .output_format(["Clear step-by-step explanations", "Commented code examples"])
+            .build()
+        )
+
+        # Use the same template across multiple bots
+        beginner_bot = tb.ChatBot().model("gpt-3.5-turbo").system_prompt(python_tutor_template)
+        advanced_bot = tb.ChatBot().model("gpt-4-turbo").system_prompt(python_tutor_template)
+        ```
+
+        ### Why structured approaches are recommended for complex prompts
+
+        **For complex professional domains, structured prompt building provides superior results:**
+
+        ```python
+        import talk_box as tb
+
+        # Create a security code reviewer with attention-optimized structure
+        bot = tb.ChatBot().model("gpt-4-turbo")
+
+        security_prompt = (
+            bot.prompt_builder()
+            .persona("senior security engineer", "application security code review")
+            .task_context("Comprehensive security review following OWASP methodology")
+            .critical_constraint("Prioritize security vulnerabilities over style issues")
+            .core_analysis([
+                "Input validation and sanitization",
+                "Authentication and authorization controls",
+                "Secure data handling (encryption, PII protection)",
+                "Error handling (no sensitive info in errors)",
+                "Dependencies and third-party library security"
+            ])
+            .output_format([
+                "🚨 CRITICAL ISSUES: Security vulnerabilities with CVSS scores",
+                "⚠️ HIGH PRIORITY: Logic errors and architectural problems",
+                "📈 IMPROVEMENTS: Performance and maintainability suggestions"
+            ])
+            .final_emphasis("Professional, constructive tone with educational explanations")
+            .build()
+        )
+
+        bot.system_prompt(security_prompt)
+        ```
+
+        **Benefits of this structured approach:**
+
+        - clear attention hierarchy (critical info first)
+        - maintainable and modifiable sections
+        - consistent output format across reviews
+        - research-backed attention optimization
+
+        ### Using `PromptBuilder` class for reusable templates
+
+        **The direct `PromptBuilder` class approach excels for template reuse across teams:**
+
+        ```python
+        import talk_box as tb
+
+        # Create a reusable code review template
+        code_review_template = (
+            tb.PromptBuilder()
+            .persona("experienced software engineer", "comprehensive code review")
+            .task_context("Thorough code review focusing on quality and best practices")
+            .core_analysis([
+                "Code correctness and logic",
+                "Performance and efficiency",
+                "Security considerations",
+                "Maintainability and readability",
+                "Test coverage and edge cases"
+            ])
+            .output_format([
+                "## Summary: Overall assessment and key points",
+                "## Issues: Specific problems with line references",
+                "## Suggestions: Concrete improvement recommendations",
+                "## Strengths: What the code does well"
+            ])
+            .final_emphasis("Constructive feedback that helps developers improve")
+            .build()
+        )
+
+        # Use the same template across different team contexts
+        senior_reviewer = tb.ChatBot().model("gpt-4-turbo").system_prompt(code_review_template)
+        junior_reviewer = tb.ChatBot().model("gpt-3.5-turbo").system_prompt(code_review_template)
+
+        # Customize for specific languages while keeping base structure
+        python_template = (
+            tb.PromptBuilder()
+            .from_template(code_review_template)  # Inherit base structure
+            .add_constraint("Focus on Pythonic idioms and PEP 8 compliance")
+            .build()
+        )
+
+        python_reviewer = tb.ChatBot().model("gpt-4-turbo").system_prompt(python_template)
+        ```
+
+        **When to use each approach:**
+
+        - **Direct String**: simple, one-off prompts
+        - **ChatBot.prompt_builder()**: complex prompts for single bot instance
+        - **PromptBuilder Class**: reusable templates, team standards, prompt libraries
+
+        Best Practices
+        --------------
+        **Use direct strings for simple prompts**: quick, straightforward prompts work well
+        with direct string assignment when you need something fast and simple.
+
+        **Use `ChatBot.prompt_builder()` for complex single-use prompts**: When creating
+        sophisticated system prompts for a specific ChatBot instance with multiple sections,
+        constraints, and formatting requirements.
+
+        **Use `PromptBuilder` class directly for reusable templates**: When you need prompt
+        templates that can be shared across multiple ChatBot instances, team standards,
+        or organizational prompt libraries.
+
+        **Combine with other methods**: All three approaches work seamlessly with `.persona()`,
+        `.avoid()`, and other configuration methods for additional customization.
+
+        **Template Hierarchy**: Consider creating base templates with PromptBuilder class
+        and extending them for specific use cases to maintain consistency while allowing
+        customization.
+
+        Notes
+        -----
+        **Attention Optimization**: both `PromptBuilder` approaches create prompts that follow modern
+        prompt engineering research on attention patterns and cognitive load optimization.
+
+        **Maintenance**: structured prompts created with `PromptBuilder` are easier to modify,
+        debug, and version control in team environments.
+
+        **Performance**: all three approaches result in equivalent runtime performance; the choice
+        is primarily about development experience, maintainability, and reusability needs.
+
+        See Also
+        --------
+        prompt_builder : Create attention-optimized structured prompts from ChatBot instances
+        PromptBuilder : The `PromptBuilder` class for reusable prompt templates and team standards
+        persona : Add personality context that complements system prompts
+        preset : Use pre-configured system prompts for common use cases
+        avoid : Add constraints that work with any system prompt approach
         """
         self._config["system_prompt"] = prompt
         return self
@@ -1739,45 +2101,40 @@ class ChatBot:
 
         Based on research showing that structure matters more than specific word choices,
         this builder enables you to:
-        - Front-load critical information (primacy bias)
-        - Create structured sections for clear attention clustering
-        - Avoid attention drift through specific constraints
-        - Build modular, maintainable prompt components
+
+        - front-load critical information (primacy bias)
+        - create structured sections for clear attention clustering
+        - avoid attention drift through specific constraints
+        - build modular, maintainable prompt components
 
         Parameters
         ----------
-        builder_type : str or BuilderTypes, optional
+        builder_type
             Type of prompt builder to create. You can use either a string or
             a constant from `BuilderTypes` for better autocomplete and type safety.
-
-            **Using BuilderTypes constants (recommended):**
-
-            ```python
-            import talk_box as tb
-            bot = tb.ChatBot().model("gpt-4-turbo")
-            builder = bot.prompt_builder(tb.BuilderTypes.ARCHITECTURAL)
-            ```
-
-            **Available builder types:**
-
-            - `BuilderTypes.GENERAL` or `"general"`: Basic attention-optimized builder
-            - `BuilderTypes.ARCHITECTURAL` or `"architectural"`: Pre-configured for code architecture analysis
-            - `BuilderTypes.CODE_REVIEW` or `"code_review"`: Pre-configured for code review tasks
-            - `BuilderTypes.DEBUGGING` or `"debugging"`: Pre-configured for debugging assistance
 
         Returns
         -------
         PromptBuilder
             A prompt builder with methods for declarative prompt composition
 
+        Available builder types
+        -----------------------
+        The following builder types are available:
+
+        - `BuilderTypes.GENERAL` or `"general"`: basic attention-optimized builder
+        - `BuilderTypes.ARCHITECTURAL` or `"architectural"`: pre-configured for code architecture analysis
+        - `BuilderTypes.CODE_REVIEW` or `"code_review"`: pre-configured for code review tasks
+        - `BuilderTypes.DEBUGGING` or `"debugging"`: pre-configured for debugging assistance
+
         Examples
         --------
         ### Basic attention-optimized prompt building
 
         ```python
-        from talk_box import ChatBot
+        import talk_box as tb
 
-        bot = ChatBot().model("gpt-4-turbo")
+        bot = tb.ChatBot().model("gpt-4-turbo")
 
         # Build an attention-optimized prompt
         prompt = (bot.prompt_builder()
@@ -1836,11 +2193,11 @@ class ChatBot:
         -----
         The returned builder implements attention-based principles:
 
-        - **Primacy bias**: Critical information is front-loaded
-        - **Structured sections**: Clear attention clustering prevents drift
-        - **Personas**: Behavioral anchoring for consistent responses
-        - **Specific constraints**: Avoid vague instructions that cause attention drift
-        - **Recency bias**: Final emphasis leverages end-of-prompt attention
+        - **Primacy bias**: critical information is front-loaded
+        - **Structured sections**: clear attention clustering prevents drift
+        - **Personas**: behavioral anchoring for consistent responses
+        - **Specific constraints**: avoid vague instructions that cause attention drift
+        - **Recency bias**: final emphasis leverages end-of-prompt attention
 
         See Also
         --------
@@ -1871,32 +2228,38 @@ class ChatBot:
         """
         Configure the chatbot with a structured prompt built from keyword sections.
 
-        This is a convenience method for quickly building attention-optimized prompts
-        without using the full prompt builder API. It automatically structures the
-        provided sections according to attention-based principles.
+        This is a convenience method for quickly building attention-optimized prompts without using
+        the full prompt builder API. It automatically structures the provided sections according to
+        attention-based principles.
 
         Parameters
         ----------
-        **sections : dict
-            Keyword arguments defining prompt sections. Recognized keys include:
-            - persona: Behavioral role (e.g., "senior developer")
-            - task: Primary task description
-            - constraints: List of requirements or constraints
-            - format: List of output formatting requirements
-            - examples: Dict of input/output examples
-            - focus: Primary goal to emphasize
+        **sections
+            Keyword arguments defining prompt sections.
 
         Returns
         -------
         ChatBot
             Returns self for method chaining
 
+        Recognized Keyword Arguments
+        -----------------------------
+        - `persona`: behavioral role (e.g., `"senior developer"`)
+        - `task`: primary task description
+        - `constraints`: list of requirements or constraints
+        - `format`: list of output formatting requirements
+        - `examples`: dict of input/output examples
+        - `focus`: primary goal to emphasize
+
         Examples
         --------
         ### Quick structured prompt creation
 
         ```python
-        bot = (ChatBot()
+        import talk_box as tb
+
+        bot = (
+            tb.ChatBot()
             .model("gpt-4-turbo")
             .structured_prompt(
                 persona="senior software architect",
@@ -1912,13 +2275,15 @@ class ChatBot:
                     "Prioritize by severity"
                 ],
                 focus="actionable recommendations for immediate implementation"
-            ))
+            )
+        )
         ```
 
         ### Combining with other configuration
 
         ```python
-        expert_bot = (ChatBot()
+        expert_bot = (
+            tb.ChatBot()
             .model("gpt-4-turbo")
             .temperature(0.2)
             .structured_prompt(
@@ -1927,7 +2292,8 @@ class ChatBot:
                 constraints=["Provide reproducible test cases"],
                 focus="finding the root cause, not just symptoms"
             )
-            .max_tokens(1500))
+            .max_tokens(1500)
+        )
         ```
         """
         from talk_box.prompt_builder import PromptBuilder
@@ -2054,7 +2420,7 @@ class ChatBot:
 
         Parameters
         ----------
-        message : str
+        message
             The message to send to the LLM
 
         Returns
@@ -2103,9 +2469,9 @@ class ChatBot:
         ### Basic single-message chat
 
         ```python
-        from talk_box import ChatBot
+        import talk_box as tb
 
-        bot = ChatBot().model("gpt-4").temperature(0.7)
+        bot = tb.ChatBot().model("gpt-4").temperature(0.7)
         convo = bot.chat("Hello! How are you?")
         print(convo.get_last_message().content)
         ```
@@ -2167,10 +2533,10 @@ class ChatBot:
         ### Starting a managed conversation
 
         ```python
-        from talk_box import ChatBot
+        import talk_box as tb
 
         # Configure chatbot
-        bot = ChatBot().model("gpt-4").temperature(0.7).preset("helpful")
+        bot = tb.ChatBot().model("gpt-4").temperature(0.7).preset("helpful")
 
         # Start a new conversation
         conversation = bot.start_conversation()
@@ -2195,9 +2561,9 @@ class ChatBot:
 
         Parameters
         ----------
-        conversation : Conversation
+        conversation
             The existing conversation to continue.
-        message : str
+        message
             The user's message to add to the conversation.
 
         Returns
