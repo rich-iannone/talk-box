@@ -105,10 +105,10 @@ class Preset:
     Define presets for specific business or technical domains:
 
     ```python
-    from talk_box import Preset
+    import talk_box as tb
 
     # DevOps engineering specialist
-    devops_preset = Preset(
+    devops_preset = tb.Preset(
         name="devops_engineer",
         tone="authoritative",
         expertise="kubernetes,docker,ci_cd,monitoring",
@@ -120,7 +120,7 @@ class Preset:
     )
 
     # Marketing content specialist
-    marketing_preset = Preset(
+    marketing_preset = tb.Preset(
         name="marketing_specialist",
         tone="persuasive",
         expertise="copywriting,branding,digital_marketing",
@@ -141,7 +141,7 @@ class Preset:
 
     ```python
     # Programming tutor for beginners
-    tutor_preset = Preset(
+    tutor_preset = tb.Preset(
         name="programming_tutor",
         tone="encouraging",
         expertise="python,programming_fundamentals,debugging",
@@ -153,7 +153,7 @@ class Preset:
     )
 
     # Research assistant for academics
-    research_preset = Preset(
+    research_preset = tb.Preset(
         name="research_assistant",
         tone="scholarly",
         expertise="academic_research,citation,methodology",
@@ -165,7 +165,7 @@ class Preset:
     )
 
     # Language learning coach
-    language_preset = Preset(
+    language_preset = tb.Preset(
         name="language_coach",
         tone="supportive",
         expertise="language_learning,grammar,pronunciation",
@@ -183,7 +183,7 @@ class Preset:
 
     ```python
     # Healthcare information assistant
-    healthcare_preset = Preset(
+    healthcare_preset = tb.Preset(
         name="healthcare_info",
         tone="professional",
         expertise="medical_information,health_education",
@@ -200,7 +200,7 @@ class Preset:
     )
 
     # Financial planning assistant
-    finance_preset = Preset(
+    finance_preset = tb.Preset(
         name="financial_planner",
         tone="advisory",
         expertise="personal_finance,investment_basics,budgeting",
@@ -217,7 +217,7 @@ class Preset:
     )
 
     # Real estate advisor
-    realestate_preset = Preset(
+    realestate_preset = tb.Preset(
         name="realestate_advisor",
         tone="consultative",
         expertise="real_estate,market_analysis,property_investment",
@@ -235,7 +235,7 @@ class Preset:
 
     ```python
     # Storytelling specialist
-    storyteller_preset = Preset(
+    storyteller_preset = tb.Preset(
         name="storyteller",
         tone="narrative",
         expertise="creative_writing,character_development,plot_structure",
@@ -247,7 +247,7 @@ class Preset:
     )
 
     # Technical writer
-    techwriter_preset = Preset(
+    techwriter_preset = tb.Preset(
         name="technical_writer",
         tone="clear",
         expertise="documentation,technical_communication,user_guides",
@@ -259,7 +259,7 @@ class Preset:
     )
 
     # Social media specialist
-    social_preset = Preset(
+    social_preset = tb.Preset(
         name="social_media_manager",
         tone="engaging",
         expertise="social_media,content_strategy,audience_engagement",
@@ -325,11 +325,11 @@ class Preset:
 
     Integration Notes
     ----------------
-    - **Serialization**: All preset data serializes to JSON via `to_dict()` for storage and transmission
-    - **Immutability**: Presets are dataclasses and should be treated as immutable templates
-    - **Validation**: Consider implementing validation logic for preset consistency and completeness
-    - **Versioning**: For production use, consider versioning presets to manage behavioral changes
-    - **Documentation**: Maintain clear documentation of available presets and their intended use cases
+    - **Serialization**: all preset data serializes to JSON via `to_dict()` for storage and transmission
+    - **Immutability**: presets are dataclasses and should be treated as immutable templates
+    - **Validation**: consider implementing validation logic for preset consistency and completeness
+    - **Versioning**: for production use, consider versioning presets to manage behavioral changes
+    - **Documentation**: maintain clear documentation of available presets and their intended use cases
 
     The Preset class enables rapid deployment of specialized chatbot behaviors, making it easy to
     create consistent, purpose-built AI assistants for specific domains and use cases.
@@ -472,10 +472,10 @@ class PresetManager:
     Get and use presets from the default library:
 
     ```python
-    from talk_box import PresetManager, ChatBot
+    import talk_box as tb
 
     # Create a preset manager (loads defaults automatically)
-    manager = PresetManager()
+    manager = tb.PresetManager()
 
     # List available presets
     available_presets = manager.list_presets()
@@ -497,10 +497,8 @@ class PresetManager:
     Create and register custom presets for specific business needs:
 
     ```python
-    from talk_box import Preset, PresetManager
-
     # Create a custom preset for e-commerce support
-    ecommerce_preset = Preset(
+    ecommerce_preset = tb.Preset(
         name="ecommerce_support",
         tone="helpful",
         expertise="product_knowledge,order_management,returns",
@@ -512,7 +510,7 @@ class PresetManager:
     )
 
     # Add to manager
-    manager = PresetManager()
+    manager = tb.PresetManager()
     manager.add_preset(ecommerce_preset)
 
     # Verify it was added
@@ -520,7 +518,7 @@ class PresetManager:
         print("✅ E-commerce preset successfully added")
 
     # Use the custom preset
-    ecommerce_bot = ChatBot().preset("ecommerce_support")
+    ecommerce_bot = tb.ChatBot().preset("ecommerce_support")
     ```
 
     ### Building domain-specific preset collections
@@ -530,7 +528,7 @@ class PresetManager:
     ```python
     # Educational presets
     educational_presets = [
-        Preset(
+        tb.Preset(
             name="math_tutor",
             tone="patient",
             expertise="mathematics,problem_solving,step_by_step_explanation",
@@ -538,7 +536,7 @@ class PresetManager:
             constraints=["show_work", "encourage_learning", "no_direct_answers"],
             system_prompt="You are a math tutor. Guide students through problems step-by-step."
         ),
-        Preset(
+        tb.Preset(
             name="science_teacher",
             tone="enthusiastic",
             expertise="physics,chemistry,biology,scientific_method",
@@ -546,7 +544,7 @@ class PresetManager:
             constraints=["age_appropriate", "safety_conscious", "experiment_focused"],
             system_prompt="You are a science teacher who makes science exciting and accessible."
         ),
-        Preset(
+        tb.Preset(
             name="language_coach",
             tone="encouraging",
             expertise="grammar,vocabulary,pronunciation,cultural_context",
@@ -557,14 +555,14 @@ class PresetManager:
     ]
 
     # Add all educational presets
-    manager = PresetManager()
+    manager = tb.PresetManager()
     for preset in educational_presets:
         manager.add_preset(preset)
 
     # Create specialized chatbots
-    math_bot = ChatBot().preset("math_tutor").temperature(0.3)
-    science_bot = ChatBot().preset("science_teacher").temperature(0.7)
-    language_bot = ChatBot().preset("language_coach").temperature(0.5)
+    math_bot = tb.ChatBot().preset("math_tutor").temperature(0.3)
+    science_bot = tb.ChatBot().preset("science_teacher").temperature(0.7)
+    language_bot = tb.ChatBot().preset("language_coach").temperature(0.5)
 
     print(f"Created {len(educational_presets)} educational chatbots")
     ```
@@ -574,7 +572,7 @@ class PresetManager:
     Understand how presets merge with explicit configuration settings:
 
     ```python
-    manager = PresetManager()
+    manager = tb.PresetManager()
 
     # Start with base configuration
     base_config = {
@@ -605,7 +603,7 @@ class PresetManager:
     Manage presets dynamically during application runtime:
 
     ```python
-    manager = PresetManager()
+    manager = tb.PresetManager()
 
     # Check if preset exists before removal
     if manager.get_preset("legal_advisor"):
@@ -613,12 +611,12 @@ class PresetManager:
 
         # Remove preset (returns True if removed)
         if manager.remove_preset("legal_advisor"):
-            print("✅ Legal advisor preset removed")
+            print("Legal advisor preset removed")
         else:
-            print("❌ Failed to remove preset")
+            print("Failed to remove preset")
 
     # Add updated version
-    updated_legal_preset = Preset(
+    updated_legal_preset = tb.Preset(
         name="legal_advisor_v2",
         tone="professional",
         expertise="legal_information,compliance,risk_assessment",
@@ -666,13 +664,13 @@ class PresetManager:
 
     Integration Notes
     ----------------
-    - **Thread Safety**: PresetManager is not thread-safe; use external synchronization for concurrent access
-    - **Memory Usage**: All presets are stored in memory; consider external storage for large collections
-    - **Persistence**: The manager doesn't automatically persist changes; implement external persistence as needed
-    - **Validation**: Consider implementing comprehensive preset validation for production use
-    - **Namespace Management**: Use clear naming conventions to avoid preset name conflicts
+    - **Thread Safety**: `PresetManager` is not thread-safe; use external synchronization for concurrent access
+    - **Memory Usage**: all presets are stored in memory; consider external storage for large collections
+    - **Persistence**: the manager doesn't automatically persist changes; implement external persistence as needed
+    - **Validation**: consider implementing comprehensive preset validation for production use
+    - **Namespace Management**: use clear naming conventions to avoid preset name conflicts
 
-    The PresetManager class provides a robust foundation for managing chatbot behavior templates,
+    The `PresetManager` class provides a robust foundation for managing chatbot behavior templates,
     enabling consistent deployment of specialized AI assistants across different domains and use cases.
     """
 
