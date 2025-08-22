@@ -1,0 +1,839 @@
+---
+title: "Model Selection"
+---
+
+Selecting the appropriate AI model is crucial for achieving optimal performance, cost-effectiveness, and user experience in your Talk Box applications. This guide covers the key considerations and trade-offs for different model types and providers.
+
+## Understanding Model Categories
+
+### Model Capabilities by Size
+
+AI models fall into different capability tiers based on their parameter count and training:
+
+```python
+import talk_box as tb
+
+# Tier 1: Large, most capable models (best for complex reasoning)
+advanced_models = [
+    "gpt-4",           # OpenAI's most capable model
+    "gpt-4-turbo",     # Faster, more cost-effective GPT-4
+    "claude-3-opus",   # Anthropic's most capable model
+    "gemini-pro",      # Google's advanced model
+]
+
+# Tier 2: Balanced models (good performance/cost ratio)
+balanced_models = [
+    "gpt-3.5-turbo",   # OpenAI's reliable balanced option (recommended default)
+    "claude-3-sonnet", # Anthropic's balanced model
+    "gemini-flash",    # Google's fast, efficient model
+]
+
+# Tier 3: Fast, lightweight models (best for simple tasks)
+lightweight_models = [
+    "gpt-3.5-turbo-16k",  # Extended context version
+    "claude-3-haiku",     # Anthropic's fastest model
+]
+```
+
+### Model Characteristics Comparison
+
+| Model | Reasoning | Speed | Cost | Context Length | Best Use Cases |
+|-------|-----------|-------|------|----------------|----------------|
+| **GPT-4** | Excellent | Slow | High | 8K-128K | Complex analysis, research, creative writing |
+| **GPT-4 Turbo** | Excellent | Medium | Medium | 128K | Production apps needing GPT-4 quality |
+| **GPT-4o** | Excellent | Fast | Medium | 128K | Multimodal tasks, excellent default choice |
+| **GPT-3.5 Turbo** | Good | Fast | Low | 4K-16K | General chatbots, quick responses |
+| **Claude 3 Opus** | Excellent | Slow | High | 200K | Long documents, detailed analysis |
+| **Claude 3 Sonnet** | Very Good | Medium | Medium | 200K | Balanced apps, content creation |
+| **Claude 3 Haiku** | Good | Very Fast | Very Low | 200K | High-volume, simple interactions |
+| **Gemini Pro** | Very Good | Medium | Medium | 32K | Multimodal tasks, Google ecosystem |
+
+## Model Selection Framework
+
+### 1. Define Your Requirements
+
+Start by clearly defining your application's needs:
+
+```python
+class ModelRequirements:
+    """Framework for defining model selection criteria."""
+
+    def __init__(self):
+        self.task_complexity = None      # simple, moderate, complex
+        self.response_time_requirement = None  # <1s, <3s, <10s, flexible
+        self.cost_sensitivity = None     # low, medium, high
+        self.context_length_needed = None  # <4K, <16K, <128K, >128K
+        self.accuracy_requirement = None  # acceptable, good, excellent
+        self.volume_expectation = None   # <100/day, <1K/day, >1K/day
+
+    def recommend_models(self):
+        """Recommend models based on requirements."""
+        recommendations = []
+
+        if self.task_complexity == "complex":
+            if self.cost_sensitivity == "low":
+                recommendations.extend(["gpt-4", "claude-3-opus"])
+            else:
+                recommendations.extend(["gpt-4-turbo", "claude-3-sonnet"])
+
+        elif self.task_complexity == "moderate":
+            if self.response_time_requirement == "<1s":
+                recommendations.extend(["gpt-3.5-turbo", "claude-3-haiku"])
+            else:
+                recommendations.extend(["gpt-4-turbo", "claude-3-sonnet"])
+
+        elif self.task_complexity == "simple":
+            recommendations.extend(["gpt-3.5-turbo", "claude-3-haiku"])
+
+        return recommendations
+
+# Example usage
+requirements = ModelRequirements()
+requirements.task_complexity = "moderate"
+requirements.response_time_requirement = "<3s"
+requirements.cost_sensitivity = "medium"
+requirements.context_length_needed = "<16K"
+
+recommended_models = requirements.recommend_models()
+print(f"Recommended models: {recommended_models}")
+```
+
+### 2. Task-Specific Model Selection
+
+Different tasks benefit from different model strengths:
+
+```python
+def select_model_for_task(task_type: str) -> str:
+    """Select optimal model based on task type."""
+
+    task_model_map = {
+        # Code-related tasks
+        "code_review": "gpt-4",           # Needs deep reasoning
+        "code_generation": "gpt-4-turbo", # Good balance of quality/speed
+        "syntax_checking": "gpt-3.5-turbo", # Simple pattern matching
+
+        # Analysis tasks
+        "document_analysis": "claude-3-opus",   # Excellent with long text
+        "data_interpretation": "gpt-4",         # Strong analytical reasoning
+        "summarization": "claude-3-sonnet",     # Good balance for summaries
+
+        # Creative tasks
+        "creative_writing": "gpt-4",            # Best creative capabilities
+        "content_editing": "claude-3-sonnet",   # Good language skills
+        "translation": "gpt-4-turbo",          # Strong multilingual
+
+        # Conversational tasks
+        "customer_support": "gpt-3.5-turbo",   # Fast, cost-effective
+        "general_chat": "claude-3-haiku",      # Very responsive
+        "educational_tutor": "gpt-4-turbo",    # Needs good explanations
+
+        # Technical tasks
+        "api_documentation": "gpt-4",          # Needs technical accuracy
+        "troubleshooting": "claude-3-sonnet",  # Good reasoning, fast
+        "configuration": "gpt-3.5-turbo",     # Straightforward tasks
+    }
+
+    return task_model_map.get(task_type, "gpt-3.5-turbo")  # Default fallback
+
+# Example specialized bots
+code_reviewer = (tb.ChatBot()
+    .model(select_model_for_task("code_review"))
+    .persona("senior developer", "thorough code analysis")
+    .temperature(0.3))  # Lower creativity for accuracy
+
+content_creator = (tb.ChatBot()
+    .model(select_model_for_task("creative_writing"))
+    .persona("creative writer", "engaging content creation")
+    .temperature(0.8))  # Higher creativity
+
+support_bot = (tb.ChatBot()
+    .model(select_model_for_task("customer_support"))
+    .persona("helpful support agent", "quick problem resolution")
+    .temperature(0.4))  # Balanced and consistent
+```
+
+### 3. Performance vs Cost Optimization
+
+```python
+import time
+from dataclasses import dataclass
+from typing import List, Dict
+
+@dataclass
+class ModelPerformanceMetrics:
+    """Track model performance metrics."""
+    model_name: str
+    avg_response_time: float
+    cost_per_1k_tokens: float
+    accuracy_score: float  # 0-1 scale
+    context_limit: int
+
+class ModelOptimizer:
+    """Optimize model selection based on performance and cost."""
+
+    def __init__(self):
+        # Approximate metrics (update with real data)
+        self.model_metrics = {
+            "gpt-4": ModelPerformanceMetrics(
+                model_name="gpt-4",
+                avg_response_time=8.0,
+                cost_per_1k_tokens=0.03,
+                accuracy_score=0.95,
+                context_limit=8192
+            ),
+            "gpt-4-turbo": ModelPerformanceMetrics(
+                model_name="gpt-4-turbo",
+                avg_response_time=4.0,
+                cost_per_1k_tokens=0.01,
+                accuracy_score=0.93,
+                context_limit=128000
+            ),
+            "gpt-4o": ModelPerformanceMetrics(
+                model_name="gpt-4o",
+                avg_response_time=3.0,
+                cost_per_1k_tokens=0.005,
+                accuracy_score=0.94,
+                context_limit=128000
+            ),
+            "gpt-3.5-turbo": ModelPerformanceMetrics(
+                model_name="gpt-3.5-turbo",
+                avg_response_time=1.5,
+                cost_per_1k_tokens=0.002,
+                accuracy_score=0.85,
+                context_limit=4096
+            ),
+            "claude-3-opus": ModelPerformanceMetrics(
+                model_name="claude-3-opus",
+                avg_response_time=10.0,
+                cost_per_1k_tokens=0.015,
+                accuracy_score=0.96,
+                context_limit=200000
+            ),
+            "claude-3-sonnet": ModelPerformanceMetrics(
+                model_name="claude-3-sonnet",
+                avg_response_time=3.0,
+                cost_per_1k_tokens=0.003,
+                accuracy_score=0.90,
+                context_limit=200000
+            ),
+            "claude-3-haiku": ModelPerformanceMetrics(
+                model_name="claude-3-haiku",
+                avg_response_time=0.8,
+                cost_per_1k_tokens=0.00025,
+                accuracy_score=0.82,
+                context_limit=200000
+            )
+        }
+
+    def calculate_cost_effectiveness(self,
+                                   model_name: str,
+                                   expected_tokens_per_request: int,
+                                   requests_per_day: int) -> Dict[str, float]:
+        """Calculate cost-effectiveness metrics."""
+
+        metrics = self.model_metrics[model_name]
+
+        # Daily costs
+        daily_token_cost = (expected_tokens_per_request * requests_per_day *
+                           metrics.cost_per_1k_tokens / 1000)
+
+        # Monthly costs
+        monthly_cost = daily_token_cost * 30
+
+        # Effectiveness score (accuracy per dollar)
+        effectiveness = metrics.accuracy_score / daily_token_cost if daily_token_cost > 0 else 0
+
+        return {
+            "daily_cost": daily_token_cost,
+            "monthly_cost": monthly_cost,
+            "cost_effectiveness": effectiveness,
+            "avg_response_time": metrics.avg_response_time,
+            "accuracy_score": metrics.accuracy_score
+        }
+
+    def recommend_best_model(self,
+                           expected_tokens: int,
+                           daily_requests: int,
+                           max_monthly_budget: float = None,
+                           max_response_time: float = None,
+                           min_accuracy: float = None) -> List[str]:
+        """Recommend models based on constraints."""
+
+        recommendations = []
+
+        for model_name in self.model_metrics.keys():
+            metrics = self.calculate_cost_effectiveness(
+                model_name, expected_tokens, daily_requests
+            )
+
+            # Apply constraints
+            if max_monthly_budget and metrics["monthly_cost"] > max_monthly_budget:
+                continue
+
+            if max_response_time and metrics["avg_response_time"] > max_response_time:
+                continue
+
+            if min_accuracy and metrics["accuracy_score"] < min_accuracy:
+                continue
+
+            recommendations.append({
+                "model": model_name,
+                "metrics": metrics
+            })
+
+        # Sort by cost-effectiveness
+        recommendations.sort(key=lambda x: x["metrics"]["cost_effectiveness"], reverse=True)
+
+        return [rec["model"] for rec in recommendations]
+
+# Example usage
+optimizer = ModelOptimizer()
+
+# Scenario: Customer support chatbot
+support_recommendations = optimizer.recommend_best_model(
+    expected_tokens=500,      # Average tokens per interaction
+    daily_requests=1000,      # 1000 support requests per day
+    max_monthly_budget=200,   # $200/month budget
+    max_response_time=3.0,    # Must respond within 3 seconds
+    min_accuracy=0.80         # Minimum 80% accuracy
+)
+
+print(f"Best models for customer support: {support_recommendations}")
+
+# Scenario: Complex document analysis
+analysis_recommendations = optimizer.recommend_best_model(
+    expected_tokens=2000,     # Longer analysis tasks
+    daily_requests=50,        # Lower volume
+    max_monthly_budget=500,   # Higher budget for quality
+    max_response_time=15.0,   # Can wait longer for quality
+    min_accuracy=0.90         # Need high accuracy
+)
+
+print(f"Best models for document analysis: {analysis_recommendations}")
+```
+
+## Provider-Specific Considerations
+
+### OpenAI Models
+
+```python
+def configure_openai_model(use_case: str) -> tb.ChatBot:
+    """Configure OpenAI models for different use cases."""
+
+    if use_case == "production_chatbot":
+        return (tb.ChatBot()
+            .model("gpt-4-turbo")  # Best balance for production
+            .temperature(0.7)      # Balanced creativity
+            .max_tokens(1000))     # Reasonable response length
+
+    elif use_case == "creative_assistant":
+        return (tb.ChatBot()
+            .model("gpt-4")        # Best creative capabilities
+            .temperature(0.9)      # High creativity
+            .max_tokens(2000))     # Longer creative responses
+
+    elif use_case == "high_volume_support":
+        return (tb.ChatBot()
+            .model("gpt-3.5-turbo") # Cost-effective
+            .temperature(0.3)       # Consistent responses
+            .max_tokens(500))       # Concise answers
+
+    elif use_case == "complex_analysis":
+        return (tb.ChatBot()
+            .model("gpt-4")        # Best reasoning
+            .temperature(0.2)      # Focused and analytical
+            .max_tokens(3000))     # Detailed analysis
+
+# Usage examples
+creative_bot = configure_openai_model("creative_assistant")
+support_bot = configure_openai_model("high_volume_support")
+```
+
+### Anthropic Claude Models
+
+```python
+def configure_claude_model(document_length: str, priority: str) -> tb.ChatBot:
+    """Configure Claude models based on document length and priority."""
+
+    if document_length == "long" and priority == "quality":
+        return (tb.ChatBot()
+            .model("claude-3-opus")    # Best for long documents
+            .temperature(0.4)          # Balanced
+            .max_tokens(4000))         # Comprehensive responses
+
+    elif document_length == "medium" and priority == "speed":
+        return (tb.ChatBot()
+            .model("claude-3-sonnet")  # Good balance
+            .temperature(0.5)
+            .max_tokens(2000))
+
+    elif priority == "cost":
+        return (tb.ChatBot()
+            .model("claude-3-haiku")   # Most cost-effective
+            .temperature(0.6)
+            .max_tokens(1000))
+
+    else:
+        return (tb.ChatBot()
+            .model("claude-3-sonnet")  # Default balanced choice
+            .temperature(0.5)
+            .max_tokens(2000))
+
+# Document analysis examples
+legal_doc_bot = configure_claude_model("long", "quality")
+email_bot = configure_claude_model("short", "speed")
+bulk_processing_bot = configure_claude_model("medium", "cost")
+```
+
+### Google Gemini Models
+
+```python
+def configure_gemini_model(task_type: str) -> tb.ChatBot:
+    """Configure Gemini models for different task types."""
+
+    if task_type == "multimodal":
+        return (tb.ChatBot()
+            .model("gemini-pro-vision")  # For image + text
+            .temperature(0.6)
+            .max_tokens(2000))
+
+    elif task_type == "rapid_response":
+        return (tb.ChatBot()
+            .model("gemini-flash")       # Fastest option
+            .temperature(0.4)
+            .max_tokens(1000))
+
+    else:
+        return (tb.ChatBot()
+            .model("gemini-pro")         # General purpose
+            .temperature(0.7)
+            .max_tokens(1500))
+
+# Task-specific bots
+image_analyzer = configure_gemini_model("multimodal")
+quick_qa_bot = configure_gemini_model("rapid_response")
+```
+
+## Dynamic Model Selection
+
+### Context-Aware Model Switching
+
+```python
+class AdaptiveModelSelector:
+    """Dynamically select models based on context and performance."""
+
+    def __init__(self):
+        self.performance_history = {}
+        self.fallback_models = ["gpt-3.5-turbo", "claude-3-haiku"]
+
+    def select_model(self,
+                    message_length: int,
+                    complexity_score: float,
+                    response_time_requirement: float,
+                    conversation_history: tb.Conversation = None) -> str:
+        """Select optimal model based on context."""
+
+        # Analyze conversation complexity
+        if conversation_history:
+            context_complexity = self._analyze_conversation_complexity(conversation_history)
+        else:
+            context_complexity = 0.5  # Default
+
+        # Combine factors
+        overall_complexity = (complexity_score + context_complexity) / 2
+
+        # Model selection logic
+        if overall_complexity > 0.8 and response_time_requirement > 5.0:
+            return "gpt-4"  # High complexity, can wait
+        elif overall_complexity > 0.6 and message_length > 1000:
+            return "claude-3-opus"  # Long text analysis
+        elif response_time_requirement < 2.0:
+            return "gpt-3.5-turbo"  # Speed priority
+        elif overall_complexity > 0.7:
+            return "gpt-4-turbo"  # Balanced quality/speed
+        else:
+            return "claude-3-sonnet"  # Default balanced choice
+
+    def _analyze_conversation_complexity(self, conversation: tb.Conversation) -> float:
+        """Analyze conversation complexity (simplified)."""
+        messages = conversation.get_messages()
+
+        # Factors that increase complexity
+        factors = []
+
+        # Length factor
+        avg_length = sum(len(msg.content) for msg in messages) / len(messages)
+        length_factor = min(avg_length / 500, 1.0)  # Normalize to 0-1
+        factors.append(length_factor)
+
+        # Technical terms factor (simplified)
+        technical_terms = ["algorithm", "optimize", "analyze", "complex", "detailed"]
+        total_text = " ".join(msg.content for msg in messages).lower()
+        tech_factor = sum(1 for term in technical_terms if term in total_text) / len(technical_terms)
+        factors.append(tech_factor)
+
+        # Question complexity factor
+        questions = [msg for msg in messages if "?" in msg.content]
+        question_factor = min(len(questions) / len(messages), 1.0)
+        factors.append(question_factor)
+
+        return sum(factors) / len(factors)
+
+class SmartChatBot:
+    """ChatBot with adaptive model selection."""
+
+    def __init__(self):
+        self.model_selector = AdaptiveModelSelector()
+        self.current_model = None
+        self.current_bot = None
+
+    def chat(self,
+             message: str,
+             conversation: tb.Conversation = None,
+             response_time_requirement: float = 5.0) -> tb.Conversation:
+        """Chat with adaptive model selection."""
+
+        # Analyze message complexity
+        complexity_score = self._estimate_complexity(message)
+
+        # Select optimal model
+        selected_model = self.model_selector.select_model(
+            message_length=len(message),
+            complexity_score=complexity_score,
+            response_time_requirement=response_time_requirement,
+            conversation_history=conversation
+        )
+
+        # Create or update bot if model changed
+        if selected_model != self.current_model:
+            self.current_model = selected_model
+            self.current_bot = (tb.ChatBot()
+                .model(selected_model)
+                .temperature(0.7)
+                .max_tokens(2000))
+
+            print(f"Switched to model: {selected_model}")
+
+        # Make the chat call
+        try:
+            return self.current_bot.chat(message, conversation=conversation)
+        except Exception as e:
+            # Fallback to simpler model
+            print(f"Error with {selected_model}, falling back...")
+            fallback_bot = (tb.ChatBot()
+                .model("gpt-3.5-turbo")
+                .temperature(0.7)
+                .max_tokens(2000))
+
+            return fallback_bot.chat(message, conversation=conversation)
+
+    def _estimate_complexity(self, message: str) -> float:
+        """Estimate message complexity (simplified)."""
+        factors = []
+
+        # Length factor
+        length_factor = min(len(message) / 1000, 1.0)
+        factors.append(length_factor)
+
+        # Technical terms
+        technical_indicators = [
+            "analyze", "optimize", "algorithm", "architecture", "implement",
+            "strategy", "complex", "detailed", "comprehensive", "evaluate"
+        ]
+        tech_count = sum(1 for term in technical_indicators if term.lower() in message.lower())
+        tech_factor = min(tech_count / 5, 1.0)
+        factors.append(tech_factor)
+
+        # Question complexity
+        if "how" in message.lower() or "why" in message.lower():
+            factors.append(0.7)
+        elif "what" in message.lower():
+            factors.append(0.4)
+
+        return sum(factors) / len(factors) if factors else 0.3
+
+# Usage example
+smart_bot = SmartChatBot()
+
+# Simple question - will use fast model
+simple_response = smart_bot.chat(
+    "What is Python?",
+    response_time_requirement=1.0
+)
+
+# Complex analysis - will use powerful model
+complex_response = smart_bot.chat(
+    "Analyze the architectural patterns in this large codebase and recommend optimization strategies for scalability and maintainability",
+    response_time_requirement=10.0
+)
+```
+
+## Testing and Evaluation
+
+### Model Performance Comparison
+
+```python
+import time
+from typing import List, Dict, Any
+
+class ModelComparator:
+    """Compare performance across different models."""
+
+    def __init__(self, test_cases: List[str]):
+        self.test_cases = test_cases
+        self.results = {}
+
+    def evaluate_model(self, model_name: str, persona: str = None) -> Dict[str, Any]:
+        """Evaluate a single model across test cases."""
+
+        bot = tb.ChatBot().model(model_name)
+        if persona:
+            bot = bot.persona(persona)
+
+        results = {
+            "model": model_name,
+            "response_times": [],
+            "response_lengths": [],
+            "responses": []
+        }
+
+        for test_case in self.test_cases:
+            start_time = time.time()
+
+            try:
+                response = bot.chat(test_case)
+                response_time = time.time() - start_time
+                response_content = response.get_last_message().content
+
+                results["response_times"].append(response_time)
+                results["response_lengths"].append(len(response_content))
+                results["responses"].append(response_content)
+
+            except Exception as e:
+                results["response_times"].append(None)
+                results["response_lengths"].append(None)
+                results["responses"].append(f"ERROR: {str(e)}")
+
+        # Calculate summary statistics
+        valid_times = [t for t in results["response_times"] if t is not None]
+        valid_lengths = [l for l in results["response_lengths"] if l is not None]
+
+        results["avg_response_time"] = sum(valid_times) / len(valid_times) if valid_times else None
+        results["avg_response_length"] = sum(valid_lengths) / len(valid_lengths) if valid_lengths else None
+        results["success_rate"] = len(valid_times) / len(self.test_cases)
+
+        return results
+
+    def compare_models(self, models: List[str], persona: str = None) -> Dict[str, Any]:
+        """Compare multiple models."""
+
+        comparison_results = {}
+
+        for model in models:
+            print(f"Evaluating {model}...")
+            comparison_results[model] = self.evaluate_model(model, persona)
+
+        return comparison_results
+
+    def generate_report(self, comparison_results: Dict[str, Any]) -> str:
+        """Generate a comparison report."""
+
+        report = "# Model Comparison Report\n\n"
+
+        # Summary table
+        report += "## Summary\n\n"
+        report += "| Model | Avg Response Time | Avg Length | Success Rate |\n"
+        report += "|-------|------------------|------------|---------------|\n"
+
+        for model, results in comparison_results.items():
+            avg_time = f"{results['avg_response_time']:.2f}s" if results['avg_response_time'] else "N/A"
+            avg_length = f"{results['avg_response_length']:.0f}" if results['avg_response_length'] else "N/A"
+            success_rate = f"{results['success_rate']*100:.1f}%"
+
+            report += f"| {model} | {avg_time} | {avg_length} | {success_rate} |\n"
+
+        # Detailed results
+        report += "\n## Detailed Results\n\n"
+
+        for i, test_case in enumerate(self.test_cases):
+            report += f"### Test Case {i+1}: {test_case[:50]}...\n\n"
+
+            for model, results in comparison_results.items():
+                response = results['responses'][i]
+                time_taken = results['response_times'][i]
+
+                if time_taken:
+                    report += f"**{model}** ({time_taken:.2f}s):\n"
+                    report += f"{response[:200]}...\n\n"
+                else:
+                    report += f"**{model}**: {response}\n\n"
+
+        return report
+
+# Example usage
+test_cases = [
+    "Explain the concept of machine learning in simple terms",
+    "Write a Python function to calculate fibonacci numbers",
+    "Analyze the pros and cons of microservices architecture",
+    "Create a marketing strategy for a new AI product"
+]
+
+comparator = ModelComparator(test_cases)
+
+# Compare models for code assistance
+code_models = ["gpt-4", "gpt-4-turbo", "claude-3-sonnet"]
+code_results = comparator.compare_models(code_models, persona="senior developer")
+
+# Generate report
+report = comparator.generate_report(code_results)
+print(report)
+```
+
+## Best Practices for Model Selection
+
+### 1. **Start with Balanced Models**
+
+Begin with balanced models like `gpt-4o` or `claude-3-sonnet` and optimize from there:
+
+```python
+# Good starting point for most applications
+default_bot = (tb.ChatBot()
+    .model("gpt-3.5-turbo")  # Reliable and widely available
+    .temperature(0.7)        # Balanced creativity
+    .max_tokens(2000))       # Reasonable response length
+```
+
+### 2. **Use Task-Specific Optimization**
+
+Optimize models for specific use cases:
+
+```python
+# Code review: Accuracy over speed
+code_bot = (tb.ChatBot()
+    .model("gpt-4")
+    .temperature(0.3)
+    .max_tokens(3000))
+
+# Customer support: Speed over complexity
+support_bot = (tb.ChatBot()
+    .model("gpt-3.5-turbo")
+    .temperature(0.4)
+    .max_tokens(1000))
+```
+
+### 3. **Implement Fallback Strategies**
+
+Always have fallback models for reliability:
+
+```python
+def create_resilient_bot(primary_model: str, fallback_model: str = "gpt-3.5-turbo"):
+    """Create bot with fallback strategy."""
+
+    def chat_with_fallback(message: str, **kwargs):
+        try:
+            primary_bot = tb.ChatBot().model(primary_model)
+            return primary_bot.chat(message, **kwargs)
+        except Exception as e:
+            print(f"Primary model failed: {e}, falling back to {fallback_model}")
+            fallback_bot = tb.ChatBot().model(fallback_model)
+            return fallback_bot.chat(message, **kwargs)
+
+    return chat_with_fallback
+```
+
+### 4. **Monitor and Optimize**
+
+Continuously monitor model performance:
+
+```python
+# Track model performance
+performance_tracker = {
+    "gpt-4": {"total_requests": 0, "total_time": 0, "errors": 0},
+    "gpt-3.5-turbo": {"total_requests": 0, "total_time": 0, "errors": 0}
+}
+
+def track_model_performance(model: str, response_time: float, success: bool):
+    """Track model performance metrics."""
+    performance_tracker[model]["total_requests"] += 1
+    performance_tracker[model]["total_time"] += response_time
+
+    if not success:
+        performance_tracker[model]["errors"] += 1
+```
+
+## Troubleshooting Common Issues
+
+### Rate Limiting
+
+```python
+def handle_rate_limits(bot: tb.ChatBot, message: str, max_retries: int = 3):
+    """Handle rate limiting with exponential backoff."""
+
+    for attempt in range(max_retries):
+        try:
+            return bot.chat(message)
+        except Exception as e:
+            if "rate limit" in str(e).lower() and attempt < max_retries - 1:
+                wait_time = 2 ** attempt  # Exponential backoff
+                time.sleep(wait_time)
+                continue
+            else:
+                raise e
+```
+
+### Context Length Issues
+
+```python
+def handle_context_length(message: str, conversation: tb.Conversation, max_tokens: int = 4000):
+    """Handle context length by truncating conversation history."""
+
+    if not conversation:
+        return conversation
+
+    # Estimate tokens (rough approximation)
+    total_tokens = len(message.split()) + sum(len(msg.content.split()) for msg in conversation.get_messages())
+
+    if total_tokens > max_tokens:
+        # Keep only recent messages
+        messages = conversation.get_messages()
+        truncated_conv = tb.Conversation()
+
+        # Always keep system message if present
+        if messages and messages[0].role == "system":
+            truncated_conv.add_system_message(messages[0].content)
+            messages = messages[1:]
+
+        # Add recent messages until we approach the limit
+        recent_messages = []
+        current_tokens = len(message.split())
+
+        for msg in reversed(messages):
+            msg_tokens = len(msg.content.split())
+            if current_tokens + msg_tokens < max_tokens * 0.8:  # Leave some buffer
+                recent_messages.insert(0, msg)
+                current_tokens += msg_tokens
+            else:
+                break
+
+        # Add messages to conversation
+        for msg in recent_messages:
+            if msg.role == "user":
+                truncated_conv.add_user_message(msg.content)
+            elif msg.role == "assistant":
+                truncated_conv.add_assistant_message(msg.content)
+
+        return truncated_conv
+
+    return conversation
+```
+
+---
+
+## Key Takeaways
+
+- **Match models to tasks** - Use complex models for complex tasks, simple models for simple tasks
+- **Consider the full cost** - Factor in response time, API costs, and accuracy requirements
+- **Start balanced** - Begin with models like GPT-4 Turbo or Claude-3 Sonnet
+- **Implement fallbacks** - Always have backup models for reliability
+- **Monitor performance** - Track metrics and optimize based on real usage
+- **Test thoroughly** - Compare models on your specific use cases before production
