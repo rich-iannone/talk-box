@@ -1,0 +1,426 @@
+---
+title: "Prompt Engineering Guide"
+---
+
+Traditional approaches to AI prompting often treat prompts like human instructions - but AI models process information very differently. Talk Box's prompt engineering framework is built on research from cognitive psychology and attention mechanisms to create prompts that work with how AI models actually function.
+
+## Why Structure Matters More Than Words
+
+Research shows that **how you organize information** in a prompt has more impact on AI performance than the specific words you use. This is because language models process text through attention mechanisms that:
+
+- **Prioritize information position** (primacy and recency effects)
+- **Group related concepts** together for better understanding
+- **Can lose focus** when information is scattered or unclear
+- **Respond to hierarchical structure** better than flat text
+
+## Attention-Based Prompt Engineering
+
+### The Primacy Bias
+
+AI models pay more attention to information at the beginning of prompts. Critical instructions should come first:
+
+```python
+# ❌ Poor: Critical info buried
+"""
+Please analyze this code and look at various aspects like performance,
+security, maintainability, and other factors. By the way, this is for
+a financial application handling sensitive data, so security is critical.
+"""
+
+# ✅ Good: Critical info front-loaded
+"""
+CRITICAL: This is a financial application handling sensitive customer data.
+Security vulnerabilities are the highest priority concern.
+
+Analyze this code for:
+1. Security vulnerabilities (CRITICAL)
+2. Performance issues
+3. Maintainability concerns
+"""
+```
+
+### Attention Clustering
+
+Group related instructions together so the AI can process them as coherent concepts:
+
+```python
+# ❌ Poor: Scattered instructions
+"""
+Check for SQL injection. Also look at the variable names and see if
+they're clear. Performance might be an issue too. Make sure error
+handling is good. Are there any security issues with authentication?
+Use clear headings in your response.
+"""
+
+# ✅ Good: Clustered by concern
+"""
+SECURITY ANALYSIS:
+- SQL injection vulnerabilities
+- Authentication security issues
+- Data exposure risks
+
+CODE QUALITY ANALYSIS:
+- Variable naming clarity
+- Error handling robustness
+- Performance optimization opportunities
+
+OUTPUT FORMAT:
+- Use clear headings for each section
+- Prioritize security issues first
+"""
+```
+
+### Recency Bias
+
+AI models also pay attention to the end of prompts. Use this for final emphasis:
+
+```python
+prompt = (PromptBuilder()
+    .persona("security expert", "application security review")
+    .core_analysis(["security vulnerabilities", "code quality"])
+    .output_format(["## Critical Issues", "## Improvements"])
+    # This final emphasis leverages recency bias
+    .final_emphasis("Security is paramount - err on the side of caution")
+    .build())
+```
+
+## Cognitive Load Optimization
+
+### Chunk Information Appropriately
+
+Human working memory handles 7±2 items effectively. AI attention works similarly:
+
+```python
+# ❌ Too many items (cognitive overload)
+analysis_points = [
+    "Security", "Performance", "Maintainability", "Readability",
+    "Testing", "Documentation", "Error handling", "Logging",
+    "Memory usage", "CPU efficiency", "Network optimization",
+    "Database queries", "Caching", "Authentication", "Authorization"
+]
+
+# ✅ Grouped into digestible chunks
+security_analysis = ["Authentication", "Authorization", "Data protection"]
+performance_analysis = ["Memory usage", "CPU efficiency", "Database optimization"]
+quality_analysis = ["Readability", "Testing", "Documentation", "Error handling"]
+```
+
+### Hierarchical Structure
+
+Present information in clear hierarchies that AI can follow:
+
+```python
+architecture_prompt = (PromptBuilder()
+    .persona("senior architect", "system design and scalability")
+    .task_context("Design microservices architecture")
+
+    # Level 1: Core requirements
+    .core_analysis([
+        "Service decomposition strategy",
+        "Data consistency patterns",
+        "Communication protocols"
+    ])
+
+    # Level 2: Implementation details
+    .structured_section("Scalability Requirements", [
+        "Handle 10K concurrent users",
+        "Sub-200ms response times",
+        "Auto-scaling capabilities"
+    ])
+
+    # Level 3: Output structure
+    .output_format([
+        "# System Overview",
+        "## Core Services",
+        "## Data Architecture",
+        "## Deployment Strategy"
+    ])
+    .build())
+```
+
+## Advanced Prompt Patterns
+
+### Context Priming
+
+Prime the AI with relevant context before asking for analysis:
+
+```python
+context_primed = (PromptBuilder()
+    .persona("senior DevOps engineer", "cloud infrastructure")
+
+    # Prime with context first
+    .task_context("""
+    You're reviewing infrastructure for a fast-growing SaaS company.
+    Current: 50K users, growing 20% monthly
+    Stack: Python/Django, PostgreSQL, Redis
+    Current issues: Slow database queries, occasional downtime
+    """)
+
+    # Then ask for analysis
+    .core_analysis([
+        "Immediate performance bottlenecks",
+        "Scaling strategy for next 12 months",
+        "Infrastructure reliability improvements"
+    ])
+    .build())
+```
+
+### Constraint-Driven Prompting
+
+Use constraints to focus AI attention on what matters:
+
+```python
+constrained_design = (PromptBuilder()
+    .persona("software architect", "API design")
+    .task_context("Design REST API for mobile app")
+
+    # Hard constraints (cannot be violated)
+    .critical_constraint("Must handle 1000 requests/second")
+    .critical_constraint("Response time under 100ms")
+
+    # Soft constraints (preferences)
+    .constraint("Prefer established patterns over custom solutions")
+    .constraint("Minimize bandwidth usage for mobile clients")
+
+    # Things to avoid
+    .avoid_topics(["experimental frameworks", "bleeding-edge features"])
+    .build())
+```
+
+### Example-Driven Learning
+
+Show the AI exactly what you want:
+
+```python
+documentation_writer = (PromptBuilder()
+    .persona("technical writer", "API documentation")
+    .task_context("Write developer-friendly API documentation")
+
+    # Show the format you want
+    .example("""
+## POST /api/users
+
+Creates a new user account.
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "secure123",
+  "name": "John Doe"
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": 123,
+  "email": "user@example.com",
+  "name": "John Doe",
+  "created_at": "2024-01-01T10:00:00Z"
+}
+```
+
+**Errors:**
+- 400: Invalid email format
+- 409: Email already exists
+""")
+
+    .output_format([
+        "Clear endpoint description",
+        "Request/response examples with real data",
+        "All possible error codes with explanations"
+    ])
+    .build())
+```
+
+## Testing and Optimization
+
+### A/B Testing Prompts
+
+Compare different prompt structures:
+
+```python
+# Version A: Simple instruction
+simple_prompt = "Analyze this code for security issues and performance problems."
+
+# Version B: Structured approach
+structured_prompt = (PromptBuilder()
+    .persona("security expert", "code analysis")
+    .core_analysis(["security vulnerabilities", "performance bottlenecks"])
+    .output_format(["🚨 Security Issues", "⚡ Performance Issues"])
+    .build())
+
+# Test both and compare results
+bot_a = tb.ChatBot().system_prompt(simple_prompt)
+bot_b = tb.ChatBot().system_prompt(structured_prompt)
+
+# Compare outputs...
+```
+
+### Prompt Debugging
+
+Use `preview_structure()` to understand your prompt:
+
+```python
+builder = (PromptBuilder()
+    .persona("data scientist", "ML model optimization")
+    .core_analysis(["model accuracy", "training efficiency"]))
+
+# Debug the structure
+structure = builder.preview_structure()
+print(f"Token estimate: {structure['estimated_tokens']}")
+print(f"Sections: {structure['structured_sections']}")
+
+# Adjust if needed
+if structure['estimated_tokens'] > 1000:
+    # Simplify the prompt
+    builder = builder.focus_on("model accuracy only")
+```
+
+### Iterative Refinement
+
+Improve prompts based on results:
+
+```python
+# Start with basic prompt
+v1 = (PromptBuilder()
+    .persona("code reviewer")
+    .core_analysis(["code quality"])
+    .build())
+
+# Add specificity based on results
+v2 = (PromptBuilder()
+    .persona("senior Python developer", "code review and best practices")
+    .core_analysis(["PEP 8 compliance", "performance optimization", "security issues"])
+    .output_format(["Critical Issues", "Improvements", "Strengths"])
+    .build())
+
+# Add examples if output format isn't consistent
+v3 = (PromptBuilder()
+    .persona("senior Python developer", "code review and best practices")
+    .core_analysis(["PEP 8 compliance", "performance optimization", "security issues"])
+    .example("Critical Issues:\n- Line 42: SQL injection vulnerability\n- Line 67: Inefficient loop")
+    .output_format(["Critical Issues", "Improvements", "Strengths"])
+    .build())
+```
+
+## Common Prompt Engineering Mistakes
+
+### ❌ Burying Important Information
+
+```python
+# Poor: Critical requirement buried in the middle
+"""
+Please analyze this code and look at various aspects. The code handles
+user authentication and password storage, so security is really important.
+Also check performance and readability.
+"""
+```
+
+### ❌ Conflicting Instructions
+
+```python
+# Poor: Contradictory requirements
+"""
+Be comprehensive and detailed in your analysis.
+Keep your response brief and concise.
+Include all possible issues you can find.
+Focus only on the most critical problems.
+"""
+```
+
+### ❌ Vague Expectations
+
+```python
+# Poor: Unclear what constitutes good output
+"""
+Review this code and tell me what you think.
+Make it better.
+"""
+```
+
+### ✅ Clear, Structured Alternatives
+
+```python
+# Good: Clear hierarchy and expectations
+security_focused = (PromptBuilder()
+    .persona("security engineer", "application security")
+    .task_context("Security-focused code review for authentication system")
+    .critical_constraint("Security vulnerabilities are highest priority")
+    .core_analysis([
+        "Authentication security (password handling, session management)",
+        "Input validation and sanitization",
+        "Access control implementation"
+    ])
+    .output_format([
+        "🚨 Critical Security Issues: Immediate attention required",
+        "⚠️ Security Improvements: Important but not urgent",
+        "✅ Security Strengths: What's working well"
+    ])
+    .final_emphasis("When in doubt about security, flag it as a concern")
+    .build())
+```
+
+## Measuring Prompt Effectiveness
+
+### Consistency Testing
+
+```python
+def test_prompt_consistency(prompt, test_inputs, iterations=5):
+    """Test if a prompt produces consistent outputs."""
+    bot = tb.ChatBot().system_prompt(prompt)
+
+    results = {}
+    for test_input in test_inputs:
+        outputs = []
+        for _ in range(iterations):
+            response = bot.chat(test_input)
+            outputs.append(response.get_last_message().content)
+        results[test_input] = outputs
+
+    return results
+
+# Test your prompts
+test_cases = [
+    "Review this Python function for security issues",
+    "Analyze this database query for performance",
+    "Check this API endpoint for best practices"
+]
+
+consistency_results = test_prompt_consistency(my_prompt, test_cases)
+```
+
+### Quality Metrics
+
+Track prompt performance over time:
+
+```python
+class PromptMetrics:
+    def __init__(self):
+        self.response_times = []
+        self.user_satisfaction = []
+        self.task_completion_rates = []
+
+    def log_interaction(self, response_time, satisfaction_score, task_completed):
+        self.response_times.append(response_time)
+        self.user_satisfaction.append(satisfaction_score)
+        self.task_completion_rates.append(task_completed)
+
+    def get_metrics(self):
+        return {
+            "avg_response_time": sum(self.response_times) / len(self.response_times),
+            "avg_satisfaction": sum(self.user_satisfaction) / len(self.user_satisfaction),
+            "completion_rate": sum(self.task_completion_rates) / len(self.task_completion_rates)
+        }
+```
+
+---
+
+## Key Takeaways
+
+- **Structure matters more than words** - organize information hierarchically
+- **Front-load critical information** - leverage primacy bias
+- **Cluster related concepts** - help AI process coherent groups
+- **Use final emphasis** - leverage recency bias for key points
+- **Test and iterate** - measure consistency and effectiveness
