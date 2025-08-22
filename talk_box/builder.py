@@ -2590,7 +2590,9 @@ class ChatBot:
             # Import here to avoid circular imports
             from talk_box._utils_chatlas import ChatlasAdapter
 
-            return ChatlasAdapter().create_chat_session(self._config)
+            return ChatlasAdapter(
+                provider=self._config.get("provider"), model=self._config.get("model")
+            ).create_chat_session(self._config)
         except ImportError:
             # Return a simple session that just shows configuration
             return SimpleChatSession(self)
