@@ -311,7 +311,9 @@ By participating in this project you agree to abide by its terms.
 
 ## License
 
-MIT License. See [LICENSE](./LICENSE) for details.
+Talk Box is licensed under the MIT license.
+
+© Richard Iannone
 
 ## 🏛️ Governance
 
