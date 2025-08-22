@@ -1,0 +1,83 @@
+/*-- scss:defaults --*/
+
+// Custom Talk Box theme colors
+$primary: #2E86AB !default;
+$secondary: #A23B72 !default;
+$success: #F18F01 !default;
+$info: #C73E1D !default;
+$warning: #FFD23F !default;
+$danger: #EE6352 !default;
+$light: #F8F9FA !default;
+$dark: #212529 !default;
+
+// Typography
+$font-family-sans-serif: "Inter", system-ui, -apple-system, sans-serif !default;
+$font-family-monospace: "JetBrains Mono", "SF Mono", Monaco, Consolas, monospace !default;
+
+// Custom brand colors for Talk Box
+$talk-box-blue: #2E86AB;
+$talk-box-purple: #A23B72;
+$talk-box-orange: #F18F01;
+
+/*-- scss:rules --*/
+
+// Custom navbar styling
+.navbar {
+  border-bottom: 3px solid $talk-box-blue;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+
+// Hero section styling
+.hero-section {
+  background: linear-gradient(135deg, $talk-box-blue 0%, $talk-box-purple 100%);
+  color: white;
+  padding: 4rem 0;
+  margin-bottom: 2rem;
+}
+
+// Code block improvements
+.sourceCode {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+pre.sourceCode {
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-left: 4px solid $talk-box-blue;
+}
+
+// Enhanced buttons and links
+.btn-primary {
+  background-color: $talk-box-blue;
+  border-color: $talk-box-blue;
+  
+  &:hover {
+    background-color: darken($talk-box-blue, 10%);
+    border-color: darken($talk-box-blue, 10%);
+  }
+}
+
+// Table of contents styling
+.toc-active {
+  border-left: 3px solid $talk-box-orange;
+  background-color: rgba($talk-box-orange, 0.1);
+}
+
+// Sidebar enhancements
+.sidebar nav {
+  border-right: 1px solid #dee2e6;
+}
+
+// Footer improvements
+.page-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  margin-top: 3rem;
+  padding: 2rem 0;
+}
