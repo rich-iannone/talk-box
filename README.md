@@ -313,6 +313,6 @@ By participating in this project you agree to abide by its terms.
 
 MIT License. See [LICENSE](./LICENSE) for details.
 
-🏛️ Governance
+## 🏛️ Governance
 
 This project is primarily maintained by [Rich Iannone](https://bsky.app/profile/richmeister.bsky.social). Other authors may occasionally assist with some of these duties.
