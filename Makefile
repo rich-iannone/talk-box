@@ -53,5 +53,10 @@ docs:
 	  && QUARTO_PYTHON=../.venv/bin/python ../.venv/bin/python -m quartodoc build \
 	  && QUARTO_PYTHON=../.venv/bin/python quarto render
 
+docs-build:
+	cd docs \
+	  && quartodoc build --verbose \
+	  && quarto render
+
 install: dist ## install the package to the active Python's site-packages
 	python3 -m pip install --force-reinstall dist/talk_box*.whl
