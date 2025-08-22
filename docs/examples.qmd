@@ -1,0 +1,255 @@
+---
+title: "Examples and Use Cases"
+jupyter: python3
+---
+
+## Preset Usage Patterns
+
+Talk Box provides two ways to specify presets using strings or type-safe constants:
+
+```{python}
+# | eval: false
+import talk_box as tb
+
+# Method 1: Using string values (traditional)
+bot1 = tb.ChatBot().preset("customer_support")
+
+# Method 2: Using PresetNames constants (recommended for autocomplete and type safety)
+bot2 = tb.ChatBot().preset(tb.PresetNames.CUSTOMER_SUPPORT)
+
+# Available preset constants:
+# tb.PresetNames.CUSTOMER_SUPPORT
+# tb.PresetNames.TECHNICAL_ADVISOR
+# tb.PresetNames.DATA_ANALYST
+# tb.PresetNames.CREATIVE_WRITER
+# tb.PresetNames.LEGAL_ADVISOR
+```
+
+## Customer Support Bot
+
+Here's an example that demonstrates building a comprehensive customer support bot with preset configuration, custom persona, and testing multiple scenarios:
+
+```{python}
+# | eval: false
+import talk_box as tb
+
+# Create customer support bot
+support_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-3-5-sonnet-20241022")
+    .preset(tb.PresetNames.CUSTOMER_SUPPORT)  # Using PresetNames constant
+    .persona("Senior Technical Support Specialist")
+    .tools(["knowledge_base", "ticket_system"])
+    .avoid(["billing_issues", "account_management"])
+    .temperature(0.3)
+    .max_tokens(500)
+)
+
+# Test with common support scenarios
+scenarios = [
+    "I'm getting a 404 error when trying to access my dashboard",
+    "How do I reset my password?",
+    "The API is returning unexpected results for my query",
+]
+
+for scenario in scenarios:
+    response = support_bot.chat(scenario)
+    print(f"Customer: {scenario}")
+    print(f"Support Bot: {response.get_last_message().content}")
+    print("-" * 50)
+```
+
+## Data Analysis Assistant
+
+Create a specialized bot for data science workflows:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# Create data analyst bot
+analyst_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-3-5-sonnet-20241022")
+    .preset(tb.PresetNames.DATA_ANALYST)  # Using PresetNames constant
+    .persona("Senior data scientist with expertise in machine learning")
+    .temperature(0.3)  # Lower temperature for analytical tasks
+    .max_tokens(600)
+)
+
+# Ask complex data science questions
+questions = [
+    "What's the best approach for handling missing data in time series?",
+    "How should I evaluate a classification model with imbalanced classes?",
+    "What visualization would best show the relationship between these variables?"
+]
+
+for question in questions:
+    response = analyst_bot.chat(question)
+    print(f"Question: {question}")
+    print(f"Analyst: {response.get_last_message().content}\n")
+```
+
+## Creative Writing Assistant
+
+Build a creative writing companion:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# Create creative writing bot
+writer_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-3-5-sonnet-20241022")
+    .preset("creative_writer")
+    .persona("Award-winning novelist and creative writing instructor")
+    .temperature(0.8)  # Higher temperature for more creativity
+    .max_tokens(800)
+)
+
+# Creative writing prompts
+prompts = [
+    "Help me develop a character who's a time-traveling librarian",
+    "What's an interesting plot twist for a mystery set in a small town?",
+    "Suggest some dialogue that reveals character through subtext"
+]
+
+for prompt in prompts:
+    response = writer_bot.chat(prompt)
+    print(f"Prompt: {prompt}")
+    print(f"Writer: {response.get_last_message().content}\n")
+```
+
+## Custom Preset Example
+
+Create your own specialized behavior preset:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# Define a financial advisor preset
+financial_preset = tb.Preset(
+    name="financial_advisor",
+    tone="professional",
+    expertise="finance,investment,risk_management",
+    verbosity="detailed",
+    constraints=["no_guarantees", "include_disclaimers", "cite_sources"],
+    system_prompt="""You are a certified financial advisor with expertise in
+    investment strategies and risk management. Always include appropriate disclaimers
+    and encourage users to consult with qualified professionals for personalized advice.
+
+    Key principles:
+    - Provide educational information, not personal financial advice
+    - Always mention risks alongside potential returns
+    - Cite reputable sources when possible
+    - Encourage diversification and long-term thinking
+    """
+)
+
+# Register the custom preset
+manager = tb.PresetManager()
+manager.add_preset(financial_preset)
+
+# Create bot with custom preset
+financial_bot = (
+    tb.ChatBot()
+    .provider_model("openai:gpt-4")
+    .preset("financial_advisor")
+    .temperature(0.3)
+)
+
+# Test financial questions
+response = financial_bot.chat("What should I know about index fund investing?")
+print(response.get_last_message().content)
+```
+
+## Multi-Bot Comparison
+
+Compare responses from different presets:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# Create multiple bots with different presets
+bots = {
+    "Technical": tb.ChatBot().provider_model("openai:gpt-4").preset("technical_advisor"),
+    "Support": tb.ChatBot().provider_model("anthropic:claude-3-5-sonnet-20241022").preset("customer_support"),
+    "Creative": tb.ChatBot().provider_model("openai:gpt-4").preset("creative_writer")
+}
+
+question = "How would you explain machine learning to a beginner?"
+
+print(f"Question: {question}\n")
+for name, bot in bots.items():
+    response = bot.chat(question)
+    print(f"{name} Bot:")
+    print(response.get_last_message().content)
+    print("-" * 50)
+```
+
+## Browser Interface Customization
+
+Launch customized browser interfaces:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# Create specialized bots for browser deployment
+bots_for_browser = [
+    tb.ChatBot().provider_model("anthropic:claude-3-5-sonnet-20241022").preset("customer_support"),
+    tb.ChatBot().provider_model("openai:gpt-4").preset("technical_advisor"),
+    tb.ChatBot().provider_model("anthropic:claude-3-5-sonnet-20241022").preset("creative_writer")
+]
+
+# Each bot can have its own browser interface
+for i, bot in enumerate(bots_for_browser):
+    print(f"Launching browser interface {i+1}...")
+    # bot.create_chat_session().app()  # This would open a browser window
+```
+
+
+## Testing Your Bots
+
+Example test patterns for custom chatbots:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+def test_customer_support_bot():
+    """Test customer support bot behavior"""
+    bot = tb.ChatBot().preset("customer_support")
+
+    # Test greeting behavior
+    response = bot.chat("Hello")
+    assert "help" in response.get_last_message().content.lower() or "assist" in response.get_last_message().content.lower()
+
+    # Test technical question handling
+    response = bot.chat("I'm getting an error message")
+    assert len(response.get_last_message().content) > 50  # Substantial response
+
+    # Test preset configuration
+    assert bot.preset_manager.current_preset.name == "customer_support"
+    assert "polite" in bot.preset_manager.current_preset.tone
+
+def test_technical_advisor_bot():
+    """Test technical advisor bot behavior"""
+    bot = tb.ChatBot().preset("technical_advisor")
+
+    # Test technical question
+    response = bot.chat("Explain neural networks")
+    assert len(response.get_last_message().content) > 100  # Detailed response expected
+
+    # Test preset configuration
+    assert bot.preset_manager.current_preset.name == "technical_advisor"
+    assert "authoritative" in bot.preset_manager.current_preset.tone
+
+# Run tests
+# pytest test_my_bots.py
+```
+
+These examples demonstrate the flexibility and power of Talk Box across different domains and use cases. Each pattern can be adapted for your specific requirements.
