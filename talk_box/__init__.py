@@ -11,7 +11,7 @@ __author__ = "Richard Iannone"
 __email__ = "riannone@me.com"
 
 # Core imports for easy access
-from talk_box.builder import ChatBot
+from talk_box.builder import BuilderTypes, ChatBot
 from talk_box.conversation import Conversation, Message
 from talk_box.presets import Preset, PresetManager, PresetNames
 from talk_box.prompt_builder import (
@@ -40,4 +40,6 @@ __all__ = [
     "Preset",
     "PresetManager",
     "PresetNames",
+    # Builder types
+    "BuilderTypes",
 ]
