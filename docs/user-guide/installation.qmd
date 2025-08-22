@@ -1,0 +1,168 @@
+---
+title: "Installation"
+---
+
+Get Talk Box up and running in your Python environment with these simple installation steps.
+
+## Requirements
+
+- **Python 3.8 or higher**
+- **pip** or **conda** package manager
+
+## Basic Installation
+
+### Option 1: Install from PyPI (Recommended)
+
+```bash
+pip install talk-box
+```
+
+### Option 2: Install with Conda
+
+```bash
+conda install -c conda-forge talk-box
+```
+
+### Option 3: Development Installation
+
+For the latest features or to contribute to development:
+
+```bash
+git clone https://github.com/rich-iannone/talk-box.git
+cd talk-box
+pip install -e .
+```
+
+## AI Provider Setup
+
+Talk Box integrates with multiple AI providers. You'll need to set up at least one provider to use real AI models.
+
+### OpenAI (Recommended for beginners)
+
+1. **Get an API key** from [OpenAI](https://platform.openai.com/api-keys)
+
+2. **Set your API key** (choose one method):
+
+   **Environment Variable (Recommended):**
+   ```bash
+   export OPENAI_API_KEY="your-api-key-here"
+   ```
+
+   **In Python:**
+   ```python
+   import os
+   os.environ["OPENAI_API_KEY"] = "your-api-key-here"
+   ```
+
+   **In a `.env` file:**
+   ```
+   OPENAI_API_KEY=your-api-key-here
+   ```
+
+### Anthropic (Claude)
+
+1. **Get an API key** from [Anthropic](https://console.anthropic.com/)
+
+2. **Set your API key:**
+   ```bash
+   export ANTHROPIC_API_KEY="your-api-key-here"
+   ```
+
+### Google (Gemini)
+
+1. **Get an API key** from [Google AI Studio](https://makersuite.google.com/app/apikey)
+
+2. **Set your API key:**
+   ```bash
+   export GOOGLE_API_KEY="your-api-key-here"
+   ```
+
+## Verify Installation
+
+Test your installation with this simple script:
+
+```python
+import talk_box as tb
+
+# Check if Talk Box is working
+bot = tb.ChatBot()
+print("✅ Talk Box installed successfully!")
+
+# Check AI integration (requires API key)
+try:
+    response = bot.chat("Say hello!")
+    print("✅ AI integration working!")
+    print(f"Response: {response.get_last_message().content}")
+except Exception as e:
+    print("⚠️  AI integration needs setup:")
+    print(f"   {e}")
+    print("   See the AI Provider Setup section above")
+```
+
+## Installation Troubleshooting
+
+### Common Issues
+
+**"ModuleNotFoundError: No module named 'talk_box'"**
+
+- Make sure you installed with the correct Python environment
+- Try: `python -m pip install talk-box`
+
+**"API key not found" errors**
+
+- Verify your API key is set correctly
+- Check the environment variable name matches your provider
+- Restart your Python session after setting environment variables
+
+**Permission errors on installation**
+
+- Try: `pip install --user talk-box`
+- Or use a virtual environment (recommended)
+
+### Virtual Environment Setup (Recommended)
+
+Using a virtual environment prevents package conflicts:
+
+```bash
+# Create virtual environment
+python -m venv talk-box-env
+
+# Activate it
+source talk-box-env/bin/activate  # On Windows: talk-box-env\Scripts\activate
+
+# Install Talk Box
+pip install talk-box
+
+# Set your API keys
+export OPENAI_API_KEY="your-key-here"
+```
+
+## Optional Dependencies
+
+### For Advanced Features
+
+**Jupyter Notebook support:**
+
+```bash
+pip install talk-box[jupyter]
+```
+
+**Development tools:**
+
+```bash
+pip install talk-box[dev]
+```
+
+**All optional dependencies:**
+
+```bash
+pip install talk-box[all]
+```
+
+---
+
+## Getting Help
+
+- 📚 [Full API Documentation](/reference/index.qmd)
+- 💬 [GitHub Discussions](https://github.com/rich-iannone/talk-box/discussions)
+- 🐛 [Report Issues](https://github.com/rich-iannone/talk-box/issues)
