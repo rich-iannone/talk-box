@@ -402,16 +402,16 @@ class ChatBot:
         }
 
         if not self._llm_enabled:
-            if "missing_chatlas" in status["status"]:
+            if "disabled_for_testing" in status["status"]:
                 status["help"] = {
-                    "issue": "The 'chatlas' library is required for real LLM integration",
-                    "solution": "Install with: pip install chatlas",
-                    "note": "Without chatlas, ChatBot works in demo mode with echo responses",
+                    "issue": "LLM integration is disabled during testing",
+                    "solution": "This is normal - LLM integration works in production",
+                    "note": "Tests use echo responses to avoid requiring API keys",
                 }
             else:
                 status["help"] = {
-                    "issue": f"LLM integration failed: {status['status']}",
-                    "solution": "Check chatlas installation and API keys",
+                    "issue": f"LLM integration issue: {status['status']}",
+                    "solution": "Check API keys and network connectivity",
                 }
         else:
             status["help"] = "LLM integration is working! You can use real AI models."
@@ -430,7 +430,7 @@ class ChatBot:
         llm_status = (
             "🟢 Ready for real AI chat!"
             if self._llm_enabled
-            else "🟡 Demo mode (install 'pip install chatlas' for real AI)"
+            else "🟡 Test mode (LLM disabled for testing)"
         )
 
         guide = f"""
@@ -455,12 +455,12 @@ class ChatBot:
    • Preset: {self._config["preset"] or "Custom"}
 """
 
-        if not self._llm_enabled:
+        if not self._llm_enabled and "disabled_for_testing" in getattr(self, "_llm_status", ""):
             guide += """
-💡 To enable real AI responses:
-   1. Install chatlas: pip install chatlas
-   2. Set API key: export OPENAI_API_KEY=your_key
-   3. Restart and enjoy real AI chat!
+💡 LLM Integration:
+   • Disabled during testing to avoid requiring API keys
+   • In production, set API key: export OPENAI_API_KEY=your_key
+   • Real AI responses work automatically outside of tests
 """
 
         return guide
@@ -527,7 +527,7 @@ class ChatBot:
         return self._preset_manager
 
     def _auto_enable_llm(self) -> None:
-        """Automatically enable LLM integration if chatlas is available."""
+        """Automatically enable LLM integration since chatlas is always available."""
         # Skip auto-enabling during tests to avoid requiring API keys
         import sys
 
@@ -536,26 +536,9 @@ class ChatBot:
             self._llm_status = "disabled_for_testing"
             return
 
-        try:
-            # chatlas is a direct dependency, so this should always work
-            import importlib.util
-
-            if importlib.util.find_spec("chatlas") is not None:
-                self._llm_enabled = True
-                self._llm_status = "enabled"
-            else:
-                self._llm_enabled = False
-                self._llm_status = "chatlas_not_available"
-        except ImportError:
-            # Fallback to echo mode if chatlas somehow not available
-            self._llm_enabled = False
-            self._llm_status = "chatlas_not_available"
-            self._llm_enabled = False
-            self._llm_status = "missing_chatlas"
-        except Exception as e:
-            # Other errors, continue without LLM integration
-            self._llm_enabled = False
-            self._llm_status = f"error: {str(e)}"
+        # chatlas is a direct dependency, so it should always be available
+        self._llm_enabled = True
+        self._llm_status = "enabled"
 
     def model(self, model_name: str) -> "ChatBot":
         """
