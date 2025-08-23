@@ -4,8 +4,13 @@
 
 **The best way to generate, test, and deploy LLM chatbots with attention-optimized prompt engineering**
 
+[![PyPI](https://img.shields.io/pypi/v/talk-box)](https://pypi.org/project/talk-box/#history)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+[![CI Build](https://github.com/rich-iannone/talk-box/actions/workflows/ci-tests.yaml/badge.svg)](https://github.com/rich-iannone/talk-box/actions/workflows/ci-tests.yaml)
 [![Repo Status](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Documentation](https://img.shields.io/badge/docs-project_website-blue.svg)](https://rich-iannone.github.io/talk-box/)
+
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.1%20adopted-ff69b4.svg)](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html)
 
 </div>
