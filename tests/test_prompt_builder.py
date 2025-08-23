@@ -1,7 +1,3 @@
-"""
-Unit tests for attention-based prompt engineering functionality.
-"""
-
 import pytest
 from talk_box import (
     PromptBuilder,
