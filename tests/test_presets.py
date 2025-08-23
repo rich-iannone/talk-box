@@ -1,5 +1,3 @@
-"""Tests for the preset management functionality."""
-
 import pytest
 
 from talk_box.presets import Preset, PresetManager
