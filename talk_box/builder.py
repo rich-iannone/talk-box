@@ -1,10 +1,3 @@
-"""
-ChatBot builder module for Talk Box.
-
-This module implements the chainable API for configuring and creating chatbots,
-including attention-based prompt engineering capabilities.
-"""
-
 import socket
 from typing import TYPE_CHECKING, Any, Optional, Union
 
@@ -36,40 +29,38 @@ class BuilderTypes:
     """
     Predefined builder types for autocomplete and type safety when using prompt builders.
 
-    This class provides constants for all available prompt builder types, enabling IDE
-    autocomplete support and preventing typos when calling the `prompt_builder()` method.
-    Using these constants instead of string literals improves code maintainability and
-    provides better development experience through IDE features like auto-completion
-    and type checking.
+    This class provides constants for all available prompt builder types, enabling IDE autocomplete
+    support and preventing typos when calling the `prompt_builder()` method. Using these constants
+    instead of string literals improves code maintainability and provides a better developer
+    experience through IDE features like auto-completion and type checking.
 
-    The builder types represent different pre-configured prompt engineering templates
-    optimized for specific use cases. Each type includes specialized attention patterns,
-    section structures, and formatting guidelines based on the intended domain.
+    The builder types represent different pre-configured prompt engineering templates optimized for
+    specific use cases. Each type includes specialized attention patterns, section structures, and
+    formatting guidelines based on the intended domain.
 
     Attributes
     ----------
     GENERAL:
-        Basic attention-optimized builder for general-purpose prompts. Provides
-        fundamental prompt engineering structure without domain-specific optimizations.
-        Best for: Custom prompts, exploratory use cases, general AI interactions.
+        Basic attention-optimized builder for general-purpose prompts. Provides fundamental prompt
+        engineering structure without domain-specific optimizations. Best for: Custom prompts,
+        exploratory use cases, general AI interactions.
 
     ARCHITECTURAL:
-        Pre-configured builder for software architecture analysis and documentation.
-        Includes specialized sections for system design, patterns, dependencies,
-        and architectural recommendations.
-        Best for: Code architecture reviews, system design documentation, technical debt analysis.
+        Pre-configured builder for software architecture analysis and documentation. Includes
+        specialized sections for system design, patterns, dependencies, and architectural
+        recommendations. Best for: Code architecture reviews, system design documentation, technical
+        debt analysis.
 
     CODE_REVIEW:
-        Pre-configured builder for comprehensive code review tasks. Optimized for
-        identifying issues, suggesting improvements, and providing constructive feedback
-        with proper prioritization of concerns.
-        Best for: Pull request reviews, code quality assessment, mentoring feedback.
+        Pre-configured builder for comprehensive code review tasks. Optimized for identifying
+        issues, suggesting improvements, and providing constructive feedback with proper
+        prioritization of concerns. Best for: Pull request reviews, code quality assessment,
+        mentoring feedback.
 
     DEBUGGING:
-        Pre-configured builder for debugging assistance and troubleshooting. Structured
-        to systematically identify problems, analyze root causes, and provide step-by-step
-        debugging guidance.
-        Best for: Error analysis, troubleshooting guides, debugging workflows.
+        Pre-configured builder for debugging assistance and troubleshooting. Structured to
+        systematically identify problems, analyze root causes, and provide step-by-step debugging
+        guidance. Best for: Error analysis, troubleshooting guides, debugging workflows.
 
     Examples
     --------
@@ -169,32 +160,31 @@ class BuilderTypes:
 
     Builder Type Selection Guide
     ---------------------------
-    **GENERAL**: Choose when you need maximum flexibility and plan to define
-    custom prompt structure. Provides basic attention optimization without
-    domain constraints.
+    **GENERAL**: choose when you need maximum flexibility and plan to define custom prompt
+    structure. Provides basic attention optimization without domain constraints.
 
-    **ARCHITECTURAL**: Select for system design tasks, architecture documentation,
-    technical debt analysis, and design pattern identification.
+    **ARCHITECTURAL**: select for system design tasks, architecture documentation, technical debt
+    analysis, and design pattern identification.
 
-    **CODE_REVIEW**: Use for pull request reviews, code quality assessment,
-    mentoring feedback, and development best practices guidance.
+    **CODE_REVIEW**: use for pull request reviews, code quality assessment, mentoring feedback, and
+    development best practices guidance.
 
-    **DEBUGGING**: Apply for error analysis, troubleshooting workflows,
-    systematic problem solving, and debugging assistance.
+    **DEBUGGING**: apply for error analysis, troubleshooting workflows, systematic problem solving,
+    and debugging assistance.
 
     Notes
     -----
-    **IDE Support**: Using these constants enables autocomplete, type checking,
-    and refactoring support in most modern IDEs and editors.
+    **IDE Support**: using these constants enables autocomplete, type checking, and refactoring
+    support in most modern IDEs and editors.
 
-    **Maintainability**: Constants prevent typos and make code more maintainable
-    when builder types change or new types are added.
+    **Maintainability**: constants prevent typos and make code more maintainable when builder types
+    change or new types are added.
 
-    **Consistency**: Using constants ensures consistent builder type names
-    across different parts of your application.
+    **Consistency**: using constants ensures consistent builder type names across different parts of
+    your application.
 
-    **Extensibility**: New builder types can be added to this class while
-    maintaining backward compatibility.
+    **Extensibility**: new builder types can be added to this class while maintaining backward
+    compatibility.
 
     See Also
     --------
@@ -210,13 +200,14 @@ class BuilderTypes:
 
 class ChatBot:
     """
-    Main entry point for building and managing conversational AI chatbots with integrated conversation handling.
+    Main entry point for building and managing conversational AI chatbots with integrated
+    conversation handling.
 
-    The `ChatBot` class is the primary interface for creating intelligent chatbots in Talk Box.
-    It provides a chainable API for configuration and returns `Conversation` objects that manage
-    message history and context. This design creates a natural learning path where users start
-    with `ChatBot` for configuration, receive `Conversation` objects for message management,
-    and discover `Message` objects within conversations.
+    The `ChatBot` class is the primary interface for creating intelligent chatbots in Talk Box. It
+    provides a chainable API for configuration and returns `Conversation` objects that manage
+    message history and context. This design creates a natural learning path where users start with
+    `ChatBot` for configuration, receive `Conversation` objects for message management, and discover
+    `Message` objects within conversations.
 
     **Layered API Design**:
 
@@ -579,16 +570,16 @@ class ChatBot:
 
         **OpenAI Models:**
 
-        - `"gpt-4o"`: Latest multimodal model with excellent capabilities
+        - `"gpt-4o"`: latest multimodal model with excellent capabilities
         - `"gpt-4-turbo"`: GPT-4 with improved performance and lower cost
         - `"gpt-4"`: Original GPT-4 model with excellent reasoning capabilities
-        - `"gpt-3.5-turbo"`: Fast, cost-effective model good for most tasks (default)
+        - `"gpt-3.5-turbo"`: fast, cost-effective model good for most tasks (default)
 
         **Anthropic Models:**
 
         - `"claude-3-5-sonnet-20241022"`: Claude model with excellent reasoning
-        - `"claude-3-haiku-20240307"`: Fast, efficient model for simple tasks
-        - `"claude-3-opus-20240229"`: Very capable Claude model for complex tasks
+        - `"claude-3-haiku-20240307"`: fast, efficient model for simple tasks
+        - `"claude-3-opus-20240229"`: very capable Claude model for complex tasks
 
         **Google Models:**
 
@@ -685,20 +676,20 @@ class ChatBot:
 
         Notes
         -----
-        **Provider Authentication**: Ensure appropriate API keys are set in environment
-        variables (e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY) for the chosen model provider.
+        **Provider Authentication**: ensure appropriate API keys are set in environment variables
+        (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`) for the chosen model provider.
 
-        **Model Availability**: Model availability may change over time. Check provider
+        **Model Availability**: model availability may change over time. Check provider
         documentation for current model names and deprecation schedules.
 
-        **Cost Considerations**: Different models have different pricing structures.
-        Consider cost implications for production deployments.
+        **Cost Considerations**: different models have different pricing structures. Consider cost
+        implications for production deployments.
 
-        **Rate Limits**: Each model/provider has different rate limits. Plan accordingly
-        for high-volume applications.
+        **Rate Limits**: each model/provider has different rate limits. Plan accordingly for
+        high-volume applications.
 
-        **Context Windows**: Models have different maximum context window sizes, affecting
-        how much conversation history can be included in requests.
+        **Context Windows**: models have different maximum context window sizes, affecting how much
+        conversation history can be included in requests.
 
         See Also
         --------
@@ -713,27 +704,28 @@ class ChatBot:
         """
         Set provider and model using a single string (e.g., "openai:gpt-4o").
 
-        This method provides a convenient way to configure both the AI provider
-        and model in a single call using a colon-separated format. This is especially
-        useful when you want to explicitly specify the provider or when working
-        with models from different providers that might have similar names.
+        This method provides a convenient way to configure both the AI provider and model in a
+        single call using a colon-separated format. This is especially useful when you want to
+        explicitly specify the provider or when working with models from different providers that
+        might have similar names.
 
         Parameters
         ----------
-        provider_model : str
-            String in the format "provider:model" (e.g., "openai:gpt-4o", "anthropic:claude-3-opus").
-            If only a model name is provided without a colon, defaults to OpenAI provider.
+        provider_model
+            String in the format `"provider:model"` (e.g., `"openai:gpt-4o"`,
+            `"anthropic:claude-3-opus"`). If only a model name is provided without a colon,
+            defaults to OpenAI provider.
 
         Returns
         -------
         ChatBot
-            Returns self for method chaining, allowing you to configure
-            multiple parameters in a single fluent expression.
+            Returns self for method chaining, allowing you to configure multiple parameters in a
+            single fluent expression.
 
         Raises
         ------
         ValueError
-            If the provider_model string is empty, None, or improperly formatted.
+            If the `provider_model=` string is empty, `None`, or improperly formatted.
 
         Examples
         --------
@@ -770,11 +762,11 @@ class ChatBot:
 
         Notes
         -----
-        **Provider Authentication**: ensure appropriate API keys are set in environment
-        variables for the specified provider (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`).
+        **Provider Authentication**: ensure appropriate API keys are set in environment variables
+        for the specified provider (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`).
 
-        **Provider Detection**: when only a model name is provided, the system defaults
-        to OpenAI. For other providers, always specify the provider explicitly.
+        **Provider Detection**: when only a model name is provided, the system defaults to OpenAI.
+        For other providers, always specify the provider explicitly.
 
         See Also
         --------
@@ -803,20 +795,19 @@ class ChatBot:
         """
         Apply a pre-configured behavior template to instantly specialize the chatbot.
 
-        Presets are professionally crafted behavior templates that instantly configure
-        multiple aspects of the chatbot including conversational tone, expertise areas,
-        response verbosity, operational constraints, and system prompts. This provides
-        a quick way to create specialized chatbots for specific domains without manually
-        configuring each parameter.
+        Presets are professionally crafted behavior templates that instantly configure multiple
+        aspects of the chatbot including conversational tone, expertise areas, response verbosity,
+        operational constraints, and system prompts. This provides a quick way to create specialized
+        chatbots for specific domains without manually configuring each parameter.
 
-        The preset system includes a curated library of templates covering common use
-        cases like customer support, technical advisory, creative writing, data analysis,
-        and legal information. Each preset is designed by experts to provide optimal
-        performance for its intended domain while maintaining flexibility for customization.
+        The preset system includes a curated library of templates covering common use cases like
+        customer support, technical advisory, creative writing, data analysis, and legal
+        information. Each preset is designed by experts to provide optimal performance for its
+        intended domain while maintaining flexibility for customization.
 
-        When a preset is applied, it sets default values for various configuration
-        parameters. You can still override individual settings after applying a preset,
-        allowing for both rapid deployment and fine-tuned customization.
+        When a preset is applied, it sets default values for various configuration parameters. You
+        can still override individual settings after applying a preset, allowing for both rapid
+        deployment and fine-tuned customization.
 
         Parameters
         ----------
@@ -994,31 +985,31 @@ class ChatBot:
 
         Preset Customization
         -------------------
-        **Individual Override**: All preset settings can be overridden by calling
-        the corresponding configuration methods after applying the preset.
+        **Individual Override**: all preset settings can be overridden by calling the corresponding
+        configuration methods after applying the preset.
 
-        **Custom Presets**: Organizations can create custom presets using the
-        `PresetManager` to add domain-specific behavior templates.
+        **Custom Presets**: organizations can create custom presets using the `PresetManager` to add
+        domain-specific behavior templates.
 
-        **Preset Inheritance**: Advanced implementations can create preset hierarchies
-        where specialized presets extend base presets with additional configuration.
+        **Preset Inheritance**: advanced implementations can create preset hierarchies where
+        specialized presets extend base presets with additional configuration.
 
-        **Context Awareness**: Some presets include conditional logic in their system
-        prompts that adapts behavior based on conversation context.
+        **Context Awareness**: some presets include conditional logic in their system prompts that
+        adapts behavior based on conversation context.
 
         Notes
         -----
-        **Preset Loading**: Presets are loaded from the `PresetManager` which initializes
-        with a default library and can be extended with custom presets.
+        **Preset Loading**: presets are loaded from the `PresetManager` which initializes with a
+        default library and can be extended with custom presets.
 
-        **Graceful Failure**: If a preset is not found or fails to load, the method
-        continues without error, allowing the chatbot to function with default settings.
+        **Graceful Failure**: if a preset is not found or fails to load, the method continues
+        without error, allowing the chatbot to function with default settings.
 
-        **System Prompts**: Each preset includes carefully crafted system prompts that
-        provide detailed behavioral instructions to the underlying language model.
+        **System Prompts**: each preset includes carefully crafted system prompts that provide
+        detailed behavioral instructions to the underlying language model.
 
-        **Best Practices**: Choose presets that match your intended use case, then
-        fine-tune with additional configuration methods as needed.
+        **Best Practices**: choose presets that match your intended use case, then fine-tune with
+        additional configuration methods as needed.
 
         See Also
         --------
@@ -1049,41 +1040,39 @@ class ChatBot:
         """
         Control the randomness and creativity level of chatbot responses.
 
-        Temperature is a crucial parameter that controls the balance between
-        deterministic accuracy and creative variability in language model outputs.
-        Lower temperatures produce more focused, consistent, and predictable responses,
-        while higher temperatures encourage more diverse, creative, and exploratory
-        outputs at the potential cost of accuracy.
+        Temperature is a crucial parameter that controls the balance between deterministic accuracy
+        and creative variability in language model outputs. Lower temperatures produce more focused,
+        consistent, and predictable responses, while higher temperatures encourage more diverse,
+        creative, and exploratory outputs at the potential cost of accuracy.
 
-        The temperature parameter directly affects the probability distribution over
-        possible next tokens during text generation. At temperature 0, the model
-        always selects the most likely next token, resulting in deterministic outputs.
-        Higher temperatures flatten the probability distribution, allowing less likely
-        but potentially more creative tokens to be selected.
+        The temperature parameter directly affects the probability distribution over possible next
+        tokens during text generation. At temperature `0`, the model always selects the most likely
+        next token, resulting in deterministic outputs. Higher temperatures flatten the probability
+        distribution, allowing less likely but potentially more creative tokens to be selected.
 
-        Understanding temperature is essential for fine-tuning chatbot behavior to
-        match specific use cases, from precise technical assistance to creative
-        brainstorming and content generation.
+        Understanding temperature is essential for fine-tuning chatbot behavior to match specific
+        use cases, from precise technical assistance to creative brainstorming and content
+        generation.
 
         Parameters
         ----------
         temp
-            The temperature value controlling response randomness, typically ranging
-            from `0.0` to `2.0`. Lower values produce more deterministic and consistent
-            responses, while higher values encourage creativity and variability.
-            See the "Temperature Ranges" section below for detailed guidance.
+            The temperature value controlling response randomness, typically ranging from `0.0` to
+            `2.0`. Lower values produce more deterministic and consistent responses, while higher
+            values encourage creativity and variability. See the "Temperature Ranges" section below
+            for detailed guidance.
 
         Returns
         -------
         ChatBot
-            Returns self to enable method chaining, allowing you to combine
-            temperature setting with other configuration methods.
+            Returns self to enable method chaining, allowing you to combine temperature setting with
+            other configuration methods.
 
         Raises
         ------
         ValueError
-            If temperature is negative or excessively high (typically > 2.0),
-            though exact limits depend on the underlying model provider.
+            If temperature is negative or excessively high (typically > `2.0`), though exact limits
+            depend on the underlying model provider.
 
         Temperature Ranges
         ------------------
@@ -1164,21 +1153,21 @@ class ChatBot:
         Demonstrate the impact of different temperature settings:
 
         ```python
-        # For mathematical calculations - use minimal temperature
+        # For mathematical calculations: use minimal temperature
         math_bot = (
             tb.ChatBot()
             .temperature(0.1)
             .persona("Mathematics tutor focused on step-by-step solutions")
         )
 
-        # For brainstorming - use higher temperature
+        # For brainstorming: use higher temperature
         brainstorm_bot = (
             tb.ChatBot()
             .temperature(1.1)
             .persona("Creative strategist generating innovative ideas")
         )
 
-        # For customer support - balanced approach
+        # For customer support: balanced approach
         support_bot = (
             tb.ChatBot()
             .temperature(0.4)
@@ -1192,7 +1181,7 @@ class ChatBot:
         Adjust temperature for specific professional domains:
 
         ```python
-        # Legal analysis - high precision required
+        # Legal analysis: high precision required
         legal_bot = (
             tb.ChatBot()
             .preset("legal_advisor")
@@ -1200,7 +1189,7 @@ class ChatBot:
             .model("gpt-4-turbo")
         )
 
-        # Marketing content - creative but controlled
+        # Marketing content: creative but controlled
         marketing_bot = (
             tb.ChatBot()
             .temperature(0.8)  # Creative but coherent
@@ -1208,7 +1197,7 @@ class ChatBot:
             .avoid(["generic_language", "cliches"])
         )
 
-        # Data analysis - analytical precision
+        # Data analysis: analytical precision
         analyst_bot = (
             tb.ChatBot()
             .preset("data_analyst")
@@ -1316,48 +1305,47 @@ class ChatBot:
 
         Temperature Guidelines
         ----------------------
-        **Code Generation**: Use 0.0-0.2 for precise, syntactically correct code
-        with minimal variation.
+        **Code Generation**: Use `0.0`-`0.2` for precise, syntactically correct code with minimal
+        variation.
 
-        **Technical Writing**: Use 0.2-0.4 for accurate, consistent technical
-        documentation and explanations.
+        **Technical Writing**: Use `0.2`-`0.4` for accurate, consistent technical documentation and
+        explanations.
 
-        **General Conversation**: Use 0.6-0.8 for natural, engaging dialogue
-        with appropriate variation.
+        **General Conversation**: Use `0.6`-`0.8` for natural, engaging dialogue with appropriate
+        variation.
 
-        **Creative Content**: Use 0.8-1.2 for storytelling, marketing copy,
-        and creative ideation.
+        **Creative Content**: Use `0.8`-`1.2` for storytelling, marketing copy, and creative
+        ideation.
 
-        **Brainstorming**: Use 1.0-1.5 for maximum idea diversity and
-        out-of-the-box thinking.
+        **Brainstorming**: Use `1.0`-`1.5` for maximum idea diversity and out-of-the-box thinking.
 
         Model Considerations
         --------------------
-        **Provider Differences**: Different AI providers may interpret temperature
-        values differently, so test with your specific model.
+        **Provider Differences**: different AI providers may interpret temperature values
+        differently, so test with your specific model.
 
-        **Model Size**: Larger models often handle higher temperatures better
-        while maintaining coherence.
+        **Model Size**: larger models often handle higher temperatures better while maintaining
+        coherence.
 
-        **Fine-tuned Models**: Custom fine-tuned models may have different optimal
-        temperature ranges compared to base models.
+        **Fine-tuned Models**: custom fine-tuned models may have different optimal temperature
+        ranges compared to base models.
 
-        **Context Length**: Longer conversations may benefit from slightly lower
-        temperatures to maintain consistency.
+        **Context Length**: longer conversations may benefit from slightly lower temperatures to
+        maintain consistency.
 
         Notes
         -----
-        **Reproducibility**: Use temperature 0.0 for reproducible outputs across
-        multiple runs with the same input.
+        **Reproducibility**: use temperature `0.0` for reproducible outputs across multiple runs
+        with the same input.
 
-        **Gradual Adjustment**: When uncertain, start with default (0.7) and
-        adjust incrementally based on response quality.
+        **Gradual Adjustment**: when uncertain, start with default (`0.7`) and adjust incrementally
+        based on response quality.
 
-        **Task Specificity**: Consider the specific requirements of your task
-        when choosing temperature - accuracy vs. creativity trade-offs.
+        **Task Specificity**: consider the specific requirements of your task when choosing
+        temperature (accuracy vs. creativity trade-offs).
 
-        **Monitoring**: Monitor response quality when adjusting temperature,
-        as optimal values may vary by use case and model.
+        **Monitoring**: monitor response quality when adjusting temperature, as optimal values may
+        vary by use case and model.
 
         See Also
         --------
@@ -1376,17 +1364,16 @@ class ChatBot:
         """
         Set the maximum number of tokens for chatbot responses.
 
-        The `max_tokens` parameter controls the maximum length of generated responses
-        by limiting the number of tokens (roughly equivalent to words and punctuation)
-        that the language model can produce in a single response. This is crucial for
-        managing response length, controlling costs, ensuring consistent behavior,
-        and preventing excessively long outputs that might overwhelm users or exceed
-        system limits.
+        The `max_tokens()` option controls the maximum length of generated responses by limiting the
+        number of tokens (roughly equivalent to words and punctuation) that the language model can
+        produce in a single response. This is crucial for managing response length, controlling
+        costs, ensuring consistent behavior, and preventing excessively long outputs that might
+        overwhelm users or exceed system limits.
 
-        Understanding token limits is essential for balancing response completeness
-        with practical constraints. Different models have varying token counting
-        methods and maximum context windows, making this parameter both a performance
-        optimization tool and a cost management mechanism.
+        Understanding token limits is essential for balancing response completeness with practical
+        constraints. Different models have varying token counting methods and maximum context
+        windows, making this parameter both a performance optimization tool and a cost management
+        mechanism.
 
         Token counting varies by model and provider, but generally:
 
@@ -1398,9 +1385,8 @@ class ChatBot:
         Parameters
         ----------
         tokens
-            Maximum number of tokens for response generation. Must be positive.
-            See the "Token Usage Guidelines" section below for detailed recommendations
-            and model-specific limits.
+            Maximum number of tokens for response generation. Must be positive. See the "Token Usage
+            Guidelines" section below for detailed recommendations and model-specific limits.
 
         Returns
         -------
@@ -1493,7 +1479,7 @@ class ChatBot:
         Optimize token limits for specific scenarios:
 
         ```python
-        # Code generation - precise and concise
+        # Code generation: precise and concise
         code_bot = (
             tb.ChatBot()
             .model("gpt-4-turbo")
@@ -1502,7 +1488,7 @@ class ChatBot:
             .persona("Senior software engineer providing clean, efficient code")
         )
 
-        # Documentation writing - comprehensive but structured
+        # Documentation writing: comprehensive but structured
         docs_bot = (
             tb.ChatBot()
             .model("gpt-4-turbo")
@@ -1511,7 +1497,7 @@ class ChatBot:
             .persona("Technical writer creating clear, comprehensive documentation")
         )
 
-        # Creative writing - longer form allowed
+        # Creative writing: longer form allowed
         story_bot = (
             tb.ChatBot()
             .model("claude-3-opus-20240229")
@@ -1596,7 +1582,7 @@ class ChatBot:
         Optimize based on content format requirements:
 
         ```python
-        # Email responses - professional length
+        # Email responses: professional length
         email_bot = (
             tb.ChatBot()
             .max_tokens(400)  # Professional email length
@@ -1604,7 +1590,7 @@ class ChatBot:
             .preset("customer_support")
         )
 
-        # Blog post generation - substantial content
+        # Blog post generation: substantial content
         blog_bot = (
             tb.ChatBot()
             .max_tokens(2000)  # Article-length content
@@ -1612,7 +1598,7 @@ class ChatBot:
             .persona("Engaging content writer")
         )
 
-        # Social media responses - very brief
+        # Social media responses: very brief
         social_bot = (
             tb.ChatBot()
             .max_tokens(100)  # Tweet-length responses
@@ -1620,7 +1606,7 @@ class ChatBot:
             .persona("Friendly and engaging social media manager")
         )
 
-        # Technical documentation - comprehensive
+        # Technical documentation: comprehensive
         tech_docs_bot = (
             tb.ChatBot()
             .max_tokens(1800)  # Detailed technical content
@@ -1670,48 +1656,48 @@ class ChatBot:
 
         Token Management Best Practices
         -------------------------------
-        **Start Conservative**: begin with lower token limits and increase as needed
-        to avoid unexpectedly long responses.
+        **Start Conservative**: begin with lower token limits and increase as needed to avoid
+        unexpectedly long responses.
 
-        **Content-Specific Limits**: set different limits for different types of content
-        (code, explanations, creative writing, etc.).
+        **Content-Specific Limits**: set different limits for different types of content (code,
+        explanations, creative writing, etc.).
 
-        **Cost Monitoring**: use token limits as a cost control mechanism, especially
-        for high-volume applications.
+        **Cost Monitoring**: use token limits as a cost control mechanism, especially for
+        high-volume applications.
 
-        **User Experience**: balance completeness with readability as very long responses
-        can overwhelm users.
+        **User Experience**: balance completeness with readability as very long responses can
+        overwhelm users.
 
-        **Model Considerations**: different models have different token counting methods
-        and optimal ranges.
+        **Model Considerations**: different models have different token counting methods and optimal
+        ranges.
 
         Performance Implications
         ------------------------
-        **Response Time**: higher token limits may increase response generation time,
-        especially for complex requests.
+        **Response Time**: higher token limits may increase response generation time, especially for
+        complex requests.
 
-        **Cost Scaling**: most API providers charge based on token usage, making this
-        parameter directly tied to operational costs.
+        **Cost Scaling**: most API providers charge based on token usage, making this parameter
+        directly tied to operational costs.
 
-        **Context Window**: remember that max_tokens is shared with input tokens in
-        most models' context windows.
+        **Context Window**: remember that max_tokens is shared with input tokens in most models'
+        context windows.
 
-        **Completion Quality**: very low token limits may result in incomplete responses,
-        while very high limits may lead to verbose, unfocused outputs.
+        **Completion Quality**: very low token limits may result in incomplete responses, while very
+        high limits may lead to verbose, unfocused outputs.
 
         Notes
         -----
-        **Model Variations**: different models count tokens differently and have
-        varying optimal token ranges for quality output.
+        **Model Variations**: different models count tokens differently and have varying optimal
+        token ranges for quality output.
 
-        **Shared Context**: in most models, max_tokens counts toward the total context
-        window, which includes both input and output tokens.
+        **Shared Context**: in most models, max_tokens counts toward the total context window, which
+        includes both input and output tokens.
 
-        **Truncation Behavior**: when a response reaches the max_tokens limit, it is
-        typically truncated, which may result in incomplete sentences or thoughts.
+        **Truncation Behavior**: when a response reaches the max_tokens limit, it is typically
+        truncated, which may result in incomplete sentences or thoughts.
 
-        **Dynamic Adjustment**: consider implementing dynamic token adjustment based
-        on response type, user preferences, or conversation context.
+        **Dynamic Adjustment**: consider implementing dynamic token adjustment based on response
+        type, user preferences, or conversation context.
 
         See Also
         --------
@@ -1744,9 +1730,9 @@ class ChatBot:
         """
         Set a custom system prompt, overriding any preset system prompt.
 
-        This method allows for fine-grained prompt engineering. The custom system prompt
-        will take precedence over any preset system prompt, though it will still be
-        combined with persona, constraints, and other configuration elements.
+        This method allows for fine-grained prompt engineering. The custom system prompt will take
+        precedence over any preset system prompt, though it will still be combined with persona,
+        constraints, and other configuration elements.
 
         Three Approaches to System Prompt Creation
         ------------------------------------------
@@ -1931,25 +1917,25 @@ class ChatBot:
         **Use direct strings for simple prompts**: quick, straightforward prompts work well
         with direct string assignment when you need something fast and simple.
 
-        **Use `ChatBot.prompt_builder()` for complex single-use prompts**: When creating
+        **Use `ChatBot.prompt_builder()` for complex single-use prompts**: when creating
         sophisticated system prompts for a specific ChatBot instance with multiple sections,
         constraints, and formatting requirements.
 
-        **Use `PromptBuilder` class directly for reusable templates**: When you need prompt
+        **Use `PromptBuilder` class directly for reusable templates**: when you need prompt
         templates that can be shared across multiple ChatBot instances, team standards,
         or organizational prompt libraries.
 
-        **Combine with other methods**: All three approaches work seamlessly with `.persona()`,
+        **Combine with other methods**: all three approaches work seamlessly with `.persona()`,
         `.avoid()`, and other configuration methods for additional customization.
 
-        **Template Hierarchy**: Consider creating base templates with PromptBuilder class
+        **Template Hierarchy**: consider creating base templates with PromptBuilder class
         and extending them for specific use cases to maintain consistency while allowing
         customization.
 
         Notes
         -----
-        **Attention Optimization**: both `PromptBuilder` approaches create prompts that follow modern
-        prompt engineering research on attention patterns and cognitive load optimization.
+        **Attention Optimization**: both `PromptBuilder` approaches create prompts that follow
+        modern prompt engineering research on attention patterns and cognitive load optimization.
 
         **Maintenance**: structured prompts created with `PromptBuilder` are easier to modify,
         debug, and version control in team environments.
@@ -1973,8 +1959,8 @@ class ChatBot:
         Get the final constructed system prompt that will be sent to the LLM.
 
         This combines preset system prompts, custom system prompts, persona descriptions,
-        constraints from 'avoid' settings, and other configuration elements into the
-        final prompt text.
+        constraints from 'avoid' settings, and other configuration elements into the final prompt
+        text.
 
         Returns
         -------
@@ -2023,18 +2009,19 @@ class ChatBot:
         """
         Get a comprehensive summary of the current chatbot configuration.
 
-        This includes model settings, prompt configuration, and metadata - useful
-        for debugging, logging, A/B testing, and displaying in UI components.
+        This includes model settings, prompt configuration, and metadata: useful for debugging,
+        logging, A/B testing, and displaying in UI components.
 
         Returns
         -------
         dict[str, Any]
             Complete configuration summary including:
-            - Basic info (name, description, id)
-            - Model parameters (model, temperature, max_tokens)
-            - Prompt components (preset, custom prompt, persona, constraints)
-            - System prompt (final constructed prompt)
-            - Advanced settings (tools, verbose mode, LLM status)
+
+            - basic info (name, description, id)
+            - model parameters (model, temperature, max_tokens)
+            - prompt components (preset, custom prompt, persona, constraints)
+            - system prompt (final constructed prompt)
+            - advanced settings (tools, verbose mode, LLM status)
 
         Examples
         --------
@@ -2081,10 +2068,9 @@ class ChatBot:
         """
         Create an attention-optimized prompt builder for declarative prompt composition.
 
-        This method returns a specialized prompt builder that implements attention-based
-        structuring principles from modern prompt engineering research. The builder helps
-        engineers create prompts with optimal attention patterns through a fluent,
-        declarative API.
+        This method returns a specialized prompt builder that implements attention-based structuring
+        principles from modern prompt engineering research. The builder helps engineers create
+        prompts with optimal attention patterns through a fluent, declarative API.
 
         Based on research showing that structure matters more than specific word choices,
         this builder enables you to:
@@ -2097,20 +2083,21 @@ class ChatBot:
         Parameters
         ----------
         builder_type
-            Type of prompt builder to create. You can use either a string or
-            a constant from `BuilderTypes` for better autocomplete and type safety.
+            Type of prompt builder to create. You can use either a string or a constant from
+            `BuilderTypes` for better autocomplete and type safety.
 
         Returns
         -------
         PromptBuilder
-            A prompt builder with methods for declarative prompt composition
+            A prompt builder with methods for declarative prompt composition.
 
         Available builder types
         -----------------------
         The following builder types are available:
 
         - `BuilderTypes.GENERAL` or `"general"`: basic attention-optimized builder
-        - `BuilderTypes.ARCHITECTURAL` or `"architectural"`: pre-configured for code architecture analysis
+        - `BuilderTypes.ARCHITECTURAL` or `"architectural"`: pre-configured for code architecture
+        analysis
         - `BuilderTypes.CODE_REVIEW` or `"code_review"`: pre-configured for code review tasks
         - `BuilderTypes.DEBUGGING` or `"debugging"`: pre-configured for debugging assistance
 
@@ -2326,14 +2313,13 @@ class ChatBot:
 
         Parameters
         ----------
-        *prompts : str or PromptBuilder
-            Prompt components to chain together. Can be raw strings or
-            PromptBuilder instances.
+        *prompts
+            Prompt components to chain together. Can be raw strings or `PromptBuilder` instances.
 
         Returns
         -------
         ChatBot
-            Returns self for method chaining
+            Returns self for method chaining.
 
         Examples
         --------
@@ -2439,17 +2425,17 @@ class ChatBot:
 
         Parameters
         ----------
-        message : str
+        message
             The user's message to send to the chatbot.
-        conversation : Conversation, optional
-            An existing conversation to continue. If not provided, a new conversation
-            is created automatically.
+        conversation
+            An existing conversation to continue. If not provided, a new conversation is created
+            automatically.
 
         Returns
         -------
         Conversation
-            The conversation object containing the full message history including
-            the new user message and chatbot response.
+            The conversation object containing the full message history including the new user
+            message and chatbot response.
 
         Examples
         --------
@@ -2506,9 +2492,8 @@ class ChatBot:
         """
         Start a new conversation with this chatbot.
 
-        Creates a fresh conversation instance that can be used for multi-turn
-        interactions with the chatbot. This is useful when you want to explicitly
-        manage conversation state and context.
+        Creates a fresh conversation instance that can be used for multi-turn interactions with the
+        chatbot. This is useful when you want to explicitly manage conversation state and context.
 
         Returns
         -------
@@ -2543,8 +2528,8 @@ class ChatBot:
         Continue an existing conversation with a new message.
 
         This is a convenience method that's equivalent to calling
-        `chat(message, conversation=conversation)` but makes the intent
-        of continuing a conversation more explicit.
+        `chat(message, conversation=conversation)` but makes the intent of continuing a conversation
+        more explicit.
 
         Parameters
         ----------
@@ -2586,10 +2571,9 @@ class ChatBot:
 
     def _repr_html_(self) -> str:
         """
-        Rich HTML representation for Jupyter notebooks with enhanced diagnostics.
+        Rich HTML representation for notebooks with enhanced diagnostics.
 
-        Shows comprehensive configuration information and provides easy access
-        to the enhanced diagnostic chat interface.
+        Shows comprehensive configuration information.
         """
         try:
             config = self.get_config_summary()
@@ -2695,21 +2679,21 @@ class ChatBot:
         """
         Display diagnostic information or launch chat interfaces.
 
-        This method provides explicit control over displaying diagnostic
-        information and launching chat interfaces, complementing the
-        automatic display when the ChatBot object is shown.
+        This method provides explicit control over displaying diagnostic information and launching
+        chat interfaces, complementing the automatic display when the ChatBot object is shown.
 
         Parameters
         ----------
-        mode : str, default "help"
+        mode
             The type of interface to show:
-            - "browser": Launch browser chat interface (formerly "basic")
-            - "console": Launch interactive console/terminal chat
-            - "config": Display configuration summary in notebook
-            - "prompt": Display the final system prompt
-            - "help": Show quick-start guide for using this ChatBot
-            - "status": Check LLM integration status and troubleshooting
-            - "install": Show step-by-step chatlas installation guide
+
+            - `"browser"`: launch browser chat interface
+            - `"console"`: launch interactive console/terminal chat
+            - `"config"`: display configuration summary in notebook
+            - `"prompt"`: display the final system prompt
+            - `"help"`: show quick-start guide for using this ChatBot
+            - `"status"`: check LLM integration status and troubleshooting
+            - `"install"`: show step-by-step chatlas installation guide
 
         Examples
         --------
