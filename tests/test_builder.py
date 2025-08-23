@@ -1,5 +1,3 @@
-"""Tests for the ChatBot builder functionality."""
-
 import pytest
 import socket
 from unittest.mock import patch, MagicMock
