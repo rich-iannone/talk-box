@@ -1,5 +1,3 @@
-"""Test PresetNames constants functionality."""
-
 import pytest
 from talk_box import ChatBot, PresetNames
 
