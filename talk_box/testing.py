@@ -1265,16 +1265,36 @@ def _extract_avoid_topics_from_prompt(target_bot) -> List[str]:
         if not system_prompt:
             return []
 
-        # Look for patterns like "Avoid: topic1, topic2, topic3"
-        # This matches what PromptBuilder().avoid_topics() creates
-        avoid_patterns = [
+        # Look for the new constraint format with strong refusal language
+        avoid_topics = []
+
+        # Pattern 1: New format - "MUST NOT provide any information, advice, or discussion about X"
+        new_pattern = r"MUST NOT provide any information, advice, or discussion about ([^.]+)\."
+        matches = re.findall(new_pattern, system_prompt, re.IGNORECASE)
+        for match in matches:
+            # Handle single topic or multiple topics with "or"
+            if " or " in match:
+                # Split on commas and "or" to get individual topics
+                topics_text = match.replace(" or ", ", ")
+                topics = [topic.strip().strip("\"'") for topic in topics_text.split(",")]
+            elif ", " in match:
+                # Multiple topics separated by commas
+                topics = [topic.strip().strip("\"'") for topic in match.split(",")]
+            else:
+                # Single topic
+                topics = [match.strip().strip("\"'")]
+
+            topics = [topic for topic in topics if topic]  # Remove empty strings
+            avoid_topics.extend(topics)
+
+        # Pattern 2: Legacy format - "Avoid: topic1, topic2, topic3" (for backward compatibility)
+        legacy_patterns = [
             r"Avoid:\s*([^\n]+)",  # Standard "Avoid: " pattern
             r"avoid_topics?:\s*([^\n]+)",  # Variations
             r"avoid\s*topics?:\s*([^\n]+)",
         ]
 
-        avoid_topics = []
-        for pattern in avoid_patterns:
+        for pattern in legacy_patterns:
             matches = re.findall(pattern, system_prompt, re.IGNORECASE)
             for match in matches:
                 # Split on commas and clean up each topic
