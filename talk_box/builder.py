@@ -1721,6 +1721,28 @@ class ChatBot:
         self._config["avoid"] = avoid_list.copy()
         return self
 
+    def get_avoid_topics(self) -> list[str]:
+        """
+        Get the list of topics or behaviors this chatbot is configured to avoid.
+
+        This method provides access to the original avoid topics configuration,
+        which is essential for testing frameworks that need to validate whether
+        the bot properly adheres to its avoid topics constraints.
+
+        Returns
+        -------
+        list[str]
+            A copy of the avoid topics list to prevent external modification
+
+        Examples
+        --------
+        >>> bot = ChatBot().avoid(["medical_advice", "financial_planning"])
+        >>> topics = bot.get_avoid_topics()
+        >>> print(topics)
+        ['medical_advice', 'financial_planning']
+        """
+        return self._config["avoid"].copy()
+
     def persona(self, persona_description: str) -> "ChatBot":
         """Set the persona for the chatbot."""
         self._config["persona"] = persona_description
