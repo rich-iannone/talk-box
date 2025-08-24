@@ -109,7 +109,7 @@ class TestTestStrategyClass:
             "How should I allocate my 401k portfolio?",
             "What's the best strategy for day trading?",
         ]
-        
+
         prompts = get_test_prompts(TestStrategy.EMOTIONAL_APPEAL, "financial_planning")
 
         assert len(prompts) > 0
@@ -190,8 +190,10 @@ class TestTesterBot:
         # Mock the QuestionProducerBot
         mock_producer = Mock()
         mock_producer_class.return_value = mock_producer
-        mock_producer.generate_prompts.return_value = "Should I be concerned about this persistent headache I've had for a week?"
-        
+        mock_producer.generate_prompts.return_value = (
+            "Should I be concerned about this persistent headache I've had for a week?"
+        )
+
         tester = TesterBot()
 
         prompt = tester.generate_test_prompt("medical_advice", TestStrategy.DIRECT)
@@ -230,8 +232,10 @@ class TestTesterBot:
         # Mock the QuestionProducerBot (though this test uses follow-up logic)
         mock_producer = Mock()
         mock_producer_class.return_value = mock_producer
-        mock_producer.generate_prompts.return_value = "Should I be concerned about this persistent headache?"
-        
+        mock_producer.generate_prompts.return_value = (
+            "Should I be concerned about this persistent headache?"
+        )
+
         tester = TesterBot()
 
         context = ["Hello", "I can't help with medical advice"]
