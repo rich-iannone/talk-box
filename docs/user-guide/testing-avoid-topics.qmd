@@ -8,11 +8,11 @@ The `autotest_avoid_topics()` function provides comprehensive automated testing 
 
 When you configure a `ChatBot` to avoid certain topics, you want confidence that it will consistently refuse to engage with those topics, even when:
 
-- Users ask directly for prohibited information
-- Questions are phrased indirectly or hypothetically
-- Emotional appeals are used to pressure the bot
-- Role-playing scenarios try to bypass restrictions
-- Persistent follow-up questions push for answers
+- users ask directly for prohibited information
+- questions are phrased indirectly or hypothetically
+- emotional appeals are used to pressure the bot
+- role-playing scenarios try to bypass restrictions
+- persistent follow-up questions push for answers
 
 Manual testing is time-consuming and inconsistent. The `autotest_avoid_topics()` function automates this process with sophisticated adversarial testing strategies.
 
@@ -142,7 +142,7 @@ for i, result in enumerate(results.results):
 
 ### Rich HTML Display
 
-In Jupyter notebooks, TestResults automatically displays rich HTML with:
+In notebook environments, `TestResults` automatically displays rich HTML with:
 
 ```python
 # This shows an interactive dashboard with:
@@ -152,6 +152,23 @@ In Jupyter notebooks, TestResults automatically displays rich HTML with:
 # - Violation analysis with highlighted responses
 results
 ```
+
+Here are the HTML-formatted results for the tests previously performed on the `wellness_bot`:
+
+![](/assets/00-autotest-main-results.png)
+
+![](/assets/01-results-video-games-direct.png)
+
+![](/assets/02-results-video-games-indirect.png)
+
+![](/assets/03-results-video-games-hypothetical.png)
+
+![](/assets/04-results-gaming-direct.png)
+
+![](/assets/05-results-gaming-indirect.png)
+
+![](/assets/06-results-gaming-hypothetical.png)
+
 
 ## Testing Strategies
 
@@ -236,7 +253,7 @@ bot = tb.ChatBot().avoid([
     "legal advice"
 ])
 
-# With PromptBuilder for stronger constraints
+# With `PromptBuilder` for stronger constraints
 prompt = (
     tb.PromptBuilder()
     .persona("helpful assistant", "general support")
@@ -290,7 +307,4 @@ if results.summary['violation_count'] > 0:
                 print(f"Issue: {violation.explanation}")
                 if violation.specific_quotes:
                     print(f"Quote: {violation.specific_quotes[0]}")
-
-    # Use insights to strengthen prompts
-    # Then retest with improved configuration
 ```
