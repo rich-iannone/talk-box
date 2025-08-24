@@ -26,7 +26,7 @@ from talk_box.prompt_builder import (
 # Testing functions for easy access
 from talk_box.testing import (
     TestResults,
-    test_avoid_topics,
+    autotest_avoid_topics,
 )
 
 # Make key classes available at package level
@@ -49,7 +49,7 @@ __all__ = [
     # Builder types
     "BuilderTypes",
     # Testing functions
-    "test_avoid_topics",
+    "autotest_avoid_topics",
     # Testing classes
     "TestResults",
 ]
