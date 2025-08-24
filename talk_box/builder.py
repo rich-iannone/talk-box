@@ -1721,6 +1721,28 @@ class ChatBot:
         self._config["avoid"] = avoid_list.copy()
         return self
 
+    def get_avoid_topics(self) -> list[str]:
+        """
+        Get the list of topics or behaviors this chatbot is configured to avoid.
+
+        This method provides access to the original avoid topics configuration,
+        which is essential for testing frameworks that need to validate whether
+        the bot properly adheres to its avoid topics constraints.
+
+        Returns
+        -------
+        list[str]
+            A copy of the avoid topics list to prevent external modification
+
+        Examples
+        --------
+        >>> bot = ChatBot().avoid(["medical_advice", "financial_planning"])
+        >>> topics = bot.get_avoid_topics()
+        >>> print(topics)
+        ['medical_advice', 'financial_planning']
+        """
+        return self._config["avoid"].copy()
+
     def persona(self, persona_description: str) -> "ChatBot":
         """Set the persona for the chatbot."""
         self._config["persona"] = persona_description
@@ -1994,10 +2016,21 @@ class ChatBot:
 
         # Add constraints from 'avoid' settings
         if self._config["avoid"]:
-            constraints = ", ".join(self._config["avoid"])
-            prompt_parts.append(
-                f"\nImportant constraints: Avoid discussing or providing {constraints}."
-            )
+            topics = self._config["avoid"]
+            if len(topics) == 1:
+                constraint_text = (
+                    f"\nIMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics[0]}. "
+                    f"If asked about {topics[0]}, politely decline and say: "
+                    f"'I'm not able to help with {topics[0]}. Is there something else I can assist you with instead?'"
+                )
+            else:
+                topics_list = ", ".join(topics[:-1]) + f", or {topics[-1]}"
+                constraint_text = (
+                    f"\nIMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics_list}. "
+                    f"If asked about any of these topics, politely decline and say: "
+                    f"'I'm not able to help with that topic. Is there something else I can assist you with instead?'"
+                )
+            prompt_parts.append(constraint_text)
 
         # Default fallback
         if not prompt_parts:

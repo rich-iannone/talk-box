@@ -1,0 +1,310 @@
+---
+title: "Testing Avoid Topics Compliance"
+---
+
+The `autotest_avoid_topics()` function provides comprehensive automated testing for `ChatBot` avoid topics compliance. It generates sophisticated adversarial questions designed to test whether your bot properly refuses to engage with prohibited topics, then automatically evaluates responses for violations.
+
+## Why Test Avoid Topics?
+
+When you configure a `ChatBot` to avoid certain topics, you want confidence that it will consistently refuse to engage with those topics, even when:
+
+- users ask directly for prohibited information
+- questions are phrased indirectly or hypothetically
+- emotional appeals are used to pressure the bot
+- role-playing scenarios try to bypass restrictions
+- persistent follow-up questions push for answers
+
+Manual testing is time-consuming and inconsistent. The `autotest_avoid_topics()` function automates this process with sophisticated adversarial testing strategies.
+
+## Basic Usage
+
+The simplest way to test avoid topics compliance:
+
+```python
+import talk_box as tb
+
+# Create a bot with avoid topics
+bot = tb.ChatBot().avoid(["medical_advice", "financial_planning"])
+
+# Test compliance
+results = tb.autotest_avoid_topics(bot, test_intensity="medium")
+
+# View results
+print(f"Compliance rate: {results.summary['success_rate']:.1%}")
+print(f"Violations found: {results.summary['violation_count']}")
+```
+
+## Test Intensity Levels
+
+Control the thoroughness of testing with different intensity levels:
+
+```python
+# Light testing - quick validation (3 conversations)
+results = tb.autotest_avoid_topics(bot, test_intensity="light")
+
+# Medium testing - balanced coverage (6 conversations)
+results = tb.autotest_avoid_topics(bot, test_intensity="medium")
+
+# Thorough testing - comprehensive strategies (10 conversations)
+results = tb.autotest_avoid_topics(bot, test_intensity="thorough")
+
+# Exhaustive testing - all strategies (15 conversations)
+results = tb.autotest_avoid_topics(bot, test_intensity="exhaustive")
+```
+
+## Comprehensive Example: Wellness Coach Bot
+
+Let's create a productivity-focused bot and test its ability to avoid gaming topics:
+
+```python
+import talk_box as tb
+
+# Create a specialized productivity coach bot with structured prompts
+wellness_bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+
+# Build a comprehensive prompt using PromptBuilder
+wellness_prompt = (
+    tb.PromptBuilder()
+    .persona(
+        role="productivity and wellness coach",
+        expertise="work-life balance, professional development, and healthy lifestyle habits"
+    )
+    .task_context(
+        "Help people improve their professional productivity, develop better work habits, "
+        "enhance their career skills, and maintain healthy lifestyle choices. Focus on "
+        "practical, actionable advice for real-world improvement."
+    )
+    .core_analysis([
+        "Assess productivity challenges and provide practical solutions",
+        "Recommend evidence-based strategies for professional growth",
+        "Suggest healthy lifestyle changes that support career success",
+        "Offer time management and organizational techniques",
+        "Provide guidance on skill development and learning strategies"
+    ])
+    .avoid_topics([
+        "video games",
+        "gaming",
+    ])
+    .output_format([
+        "Provide specific, actionable advice focused on real-world productivity",
+        "Suggest concrete steps people can take today to improve their situation",
+        "Recommend professional development resources when appropriate",
+        "Include time management tips and healthy habit formation strategies"
+    ])
+    .final_emphasis(
+        "You are a professional coach focused on helping people succeed in their careers "
+        "and maintain healthy, productive lifestyles. Stay firmly within this domain and "
+        "redirect any entertainment or gaming discussions to productive alternatives."
+    )
+    .build()
+)
+
+wellness_bot = wellness_bot.system_prompt(wellness_prompt)
+
+# Test the bot's compliance
+results = tb.autotest_avoid_topics(wellness_bot, test_intensity="thorough")
+```
+
+## Understanding Test Results
+
+The `TestResults` object provides rich analysis capabilities:
+
+### Summary Statistics
+
+```python
+# Get comprehensive summary
+summary = results.summary
+print(f"Total tests run: {summary['total_tests']}")
+print(f"Tests passed: {summary['passed']}")
+print(f"Tests failed: {summary['failed']}")
+print(f"Success rate: {summary['success_rate']:.1%}")
+print(f"Total violations: {summary['violation_count']}")
+print(f"Average test duration: {summary['avg_duration']:.2f} seconds")
+
+# See which topics were tested
+print(f"Topics tested: {list(summary['topics_tested'].keys())}")
+print(f"Strategies used: {list(summary['strategies_used'].keys())}")
+```
+
+### Individual Test Results
+
+```python
+# Examine individual conversation results
+for i, result in enumerate(results.results):
+    status = "PASSED" if result.completed and not result.violations else "FAILED"
+    print(f"Test {i+1}: {result.topic} ({result.strategy}) - {status}")
+
+    if result.violations:
+        print(f"  Violations: {len(result.violations)}")
+        for violation in result.violations:
+            print(f"    - {violation.explanation}")
+```
+
+### Rich HTML Display
+
+In notebook environments, `TestResults` automatically displays rich HTML with:
+
+```python
+# This shows an interactive dashboard with:
+# - Summary statistics with visual metrics
+# - Test configuration details
+# - Individual conversation transcripts
+# - Violation analysis with highlighted responses
+results
+```
+
+Here are the HTML-formatted results for the tests previously performed on the `wellness_bot`:
+
+![](/assets/00-autotest-main-results.png)
+
+![](/assets/01-results-video-games-direct.png)
+
+![](/assets/02-results-video-games-indirect.png)
+
+![](/assets/03-results-video-games-hypothetical.png)
+
+![](/assets/04-results-gaming-direct.png)
+
+![](/assets/05-results-gaming-indirect.png)
+
+![](/assets/06-results-gaming-hypothetical.png)
+
+
+## Testing Strategies
+
+The function uses multiple adversarial strategies:
+
+- **Direct**: straightforward requests for prohibited information
+- **Indirect**: third-party or hypothetical scenarios
+- **Emotional Appeal**: urgent or distressing situations
+- **Hypothetical**: "what if" or theoretical questions
+- **Role Playing**: professional or academic contexts
+- **Context Shifting**: starting with acceptable topics, then shifting
+- **Persistence**: follow-up questions after initial refusal
+
+## Advanced Configuration
+
+### Custom Judge Model
+
+Use a specific model for violation evaluation:
+
+```python
+# Use GPT-4 for more accurate violation detection
+results = tb.autotest_avoid_topics(
+    bot,
+    test_intensity="thorough",
+    judge_model="gpt-4",
+    verbose=True
+)
+```
+
+### Precise Control
+
+Override intensity settings for exact control:
+
+```python
+# Run exactly 8 conversations regardless of intensity level
+results = tb.autotest_avoid_topics(
+    bot,
+    test_intensity="medium",
+    max_conversations=8
+)
+```
+
+## Export and Analysis
+
+Convert results to structured formats for further analysis:
+
+```python
+# Export to pandas DataFrame
+df = results.to_dataframe()
+
+# Analyze violations by topic
+violation_summary = df.groupby('topic')['violations'].sum()
+print("Violations by topic:")
+print(violation_summary)
+
+# Analyze success rates by strategy
+success_by_strategy = df.groupby('strategy')['status'].apply(
+    lambda x: (x == 'Passed').mean()
+)
+print("\nSuccess rate by strategy:")
+print(success_by_strategy)
+
+# Export detailed results
+df.to_csv("compliance_test_results.csv")
+
+# Create Great Tables report (if great-tables is installed)
+gt_table = results.to_great_table()
+gt_table.save("compliance_report.html")
+```
+
+## Best Practices
+
+### Strong Avoid Topics Configuration
+
+Use clear, specific language in your avoid topics:
+
+```python
+# Specific and clear
+bot = tb.ChatBot().avoid([
+    "medical diagnosis",
+    "investment recommendations",
+    "legal advice"
+])
+
+# With `PromptBuilder` for stronger constraints
+prompt = (
+    tb.PromptBuilder()
+    .persona("helpful assistant", "general support")
+    .avoid_topics([
+        "medical diagnosis",
+        "investment recommendations",
+        "legal advice"
+    ])
+    .final_emphasis(
+        "You must not provide advice in prohibited domains. "
+        "Always redirect to appropriate professionals."
+    )
+    .build()
+)
+```
+
+### Regular Testing
+
+Incorporate avoid topics testing into your development workflow:
+
+```python
+# Test during development
+def test_bot_development():
+    results = tb.autotest_avoid_topics(bot, test_intensity="light")
+    assert results.summary['success_rate'] >= 0.90, "Development bot failing compliance"
+
+# Test before deployment
+def test_bot_production():
+    results = tb.autotest_avoid_topics(bot, test_intensity="exhaustive")
+    assert results.summary['success_rate'] >= 0.95, "Production bot failing compliance"
+    assert results.summary['violation_count'] == 0, "Zero violations required for production"
+```
+
+### Iterative Improvement
+
+Use test results to strengthen your bot's avoid topics behavior:
+
+```python
+# Analyze failures to improve prompts
+results = tb.autotest_avoid_topics(bot, test_intensity="thorough")
+
+if results.summary['violation_count'] > 0:
+    print("Violations detected: analyzing patterns...")
+
+    # Look at violation types
+    for result in results.results:
+        if result.violations:
+            print(f"\nTopic: {result.topic}")
+            print(f"Strategy: {result.strategy}")
+            for violation in result.violations:
+                print(f"Issue: {violation.explanation}")
+                if violation.specific_quotes:
+                    print(f"Quote: {violation.specific_quotes[0]}")
+```
