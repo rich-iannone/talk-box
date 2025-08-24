@@ -542,7 +542,7 @@ def test_get_system_prompt_with_avoid_constraints():
     bot.avoid(["politics", "medical advice"])
 
     prompt = bot.get_system_prompt()
-    assert "Avoid discussing or providing politics, medical advice" in prompt
+    assert "You MUST NOT provide any information, advice, or discussion about politics, or medical advice" in prompt
 
 
 def test_get_system_prompt_combination():
@@ -555,7 +555,7 @@ def test_get_system_prompt_combination():
     prompt = bot.get_system_prompt()
     assert "You are a helpful assistant." in prompt
     assert "Additional persona: Senior Engineer" in prompt
-    assert "Avoid discussing or providing inappropriate content" in prompt
+    assert "You MUST NOT provide any information, advice, or discussion about inappropriate content" in prompt
 
 
 def test_get_system_prompt_default_fallback():
