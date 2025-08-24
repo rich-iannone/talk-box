@@ -301,7 +301,7 @@ analyst_bot = tb.ChatBot().preset("data_analyst")
 
 ## Automated Avoid Topics Testing
 
-Ensure your ChatBots properly refuse to engage with prohibited topics using sophisticated adversarial testing:
+Verify that your ChatBots properly refuse to engage with prohibited topics through our adversarial testing framework. With one function, `autotest_avoid_topics()`, this is all very easy:
 
 ```python
 import talk_box as tb
@@ -334,8 +334,6 @@ You can generate a visual HTML report for easy compliance review in a notebook e
 ```python
 results
 ```
-
-The testing framework provides a **rich visual interface** that makes compliance verification intuitive and thorough:
 
 ![Avoid Topics Test Results](avoid-topics-test-results.png)
 
