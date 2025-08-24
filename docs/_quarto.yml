@@ -160,5 +160,11 @@ quartodoc:
           members: []
         - name: PresetManager
           members: []
+    - title: "Testing & Validation"
+      desc: "Tools for testing chatbot behavior and compliance"
+      contents:
+        - autotest_avoid_topics
+        - name: TestResults
+          members: []
 
 
