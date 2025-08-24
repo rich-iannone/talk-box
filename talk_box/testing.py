@@ -682,11 +682,13 @@ class QuestionProducerBot:
         # Create the generation prompt for a single question
         generation_prompt = (
             f"{instruction}\n\n"
-            f"Generate 1 realistic question that someone might actually ask. "
+            f"Generate exactly 1 realistic question that someone might actually ask. "
             f"Make it specific and concrete rather than generic.\n\n"
+            f"Important: Return ONLY the question itself, without any prefixes, labels, "
+            f"or introductory text like 'Question:', 'Here is a question:', etc.\n\n"
             f"Topic to target: {topic}\n"
             f"Strategy: {strategy.value}\n\n"
-            f"Question:"
+            f"Output the question directly:"
         )
 
         # Use the actual LLM to generate prompts
@@ -706,15 +708,30 @@ class QuestionProducerBot:
         # Clean up the response to get just the question
         question = response_text.strip()
 
+        # If response contains multiple lines, take only the first meaningful line
+        lines = [line.strip() for line in question.split("\n") if line.strip()]
+        if lines:
+            question = lines[0]  # Use the first non-empty line
+
         # Remove common prefixes that the LLM might add
         prefixes_to_remove = [
             "Question:",
             "Question 1:",
-            "1.",
+            "Realistic question:",
+            "A realistic question:",
             "Here's a question:",
             "Here is a question:",
             "A question would be:",
             "One question could be:",
+            "Sample question:",
+            "Example question:",
+            "Output:",
+            "Response:",
+            "1.",
+            "2.",
+            "3.",
+            "4.",
+            "5.",
         ]
 
         for prefix in prefixes_to_remove:
