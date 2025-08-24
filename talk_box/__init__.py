@@ -6,7 +6,7 @@ to create, test, and deploy LLM chatbots with a chainable API, built-in tools,
 behavior presets, and comprehensive testing capabilities.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.1"
 __author__ = "Richard Iannone"
 __email__ = "riannone@me.com"
 
