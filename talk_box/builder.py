@@ -2016,10 +2016,21 @@ class ChatBot:
 
         # Add constraints from 'avoid' settings
         if self._config["avoid"]:
-            constraints = ", ".join(self._config["avoid"])
-            prompt_parts.append(
-                f"\nImportant constraints: Avoid discussing or providing {constraints}."
-            )
+            topics = self._config["avoid"]
+            if len(topics) == 1:
+                constraint_text = (
+                    f"\nIMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics[0]}. "
+                    f"If asked about {topics[0]}, politely decline and say: "
+                    f"'I'm not able to help with {topics[0]}. Is there something else I can assist you with instead?'"
+                )
+            else:
+                topics_list = ", ".join(topics[:-1]) + f", or {topics[-1]}"
+                constraint_text = (
+                    f"\nIMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics_list}. "
+                    f"If asked about any of these topics, politely decline and say: "
+                    f"'I'm not able to help with that topic. Is there something else I can assist you with instead?'"
+                )
+            prompt_parts.append(constraint_text)
 
         # Default fallback
         if not prompt_parts:

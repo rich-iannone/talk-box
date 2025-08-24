@@ -3602,8 +3602,22 @@ pattern recognition rather than abstract instruction following.
         explicitly excluding problematic approaches or content areas that could compromise response
         quality or appropriateness.
         """
-        avoid_text = "Avoid: " + ", ".join(topics)
-        return self.constraint(avoid_text)
+        # Create strong refusal language instead of weak "avoid" guidance
+        if len(topics) == 1:
+            refusal_text = (
+                f"IMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics[0]}. "
+                f"If asked about {topics[0]}, politely decline and say: "
+                f"'I'm not able to help with {topics[0]}. Is there something else I can assist you with instead?'"
+            )
+        else:
+            topics_list = ", ".join(topics[:-1]) + f", or {topics[-1]}"
+            refusal_text = (
+                f"IMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics_list}. "
+                f"If asked about any of these topics, politely decline and say: "
+                f"'I'm not able to help with that topic. Is there something else I can assist you with instead?'"
+            )
+
+        return self.constraint(refusal_text)
 
     def focus_on(self, primary_goal: str) -> "PromptBuilder":
         """
