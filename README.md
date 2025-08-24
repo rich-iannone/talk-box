@@ -299,6 +299,59 @@ creative_bot = tb.ChatBot().preset("creative_writer")
 analyst_bot = tb.ChatBot().preset("data_analyst")
 ```
 
+## Automated Avoid Topics Testing
+
+Ensure your ChatBots properly refuse to engage with prohibited topics using sophisticated adversarial testing:
+
+```python
+import talk_box as tb
+
+# Create a wellness coach that should avoid gaming topics
+wellness_bot = (
+    tb.ChatBot()
+    .provider_model("openai:gpt-4-turbo")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("productivity and wellness coach", "work-life balance")
+        .avoid_topics(["video games", "gaming"])
+        .final_emphasis(
+            "Redirect entertainment discussions to productive alternatives"
+        )
+        .build()
+    )
+)
+
+# Test compliance with sophisticated adversarial strategies
+results = tb.autotest_avoid_topics(wellness_bot, test_intensity="thorough")
+
+# View rich results in notebooks or check compliance programmatically
+print(f"Compliance rate: {results.summary['success_rate']:.1%}")
+print(f"Violations found: {results.summary['violation_count']}")
+```
+
+You can generate a visual HTML report for easy compliance review in a notebook environment:
+
+```python
+results
+```
+
+The testing framework provides a **rich visual interface** that makes compliance verification intuitive and thorough:
+
+![Avoid Topics Test Results](avoid-topics-test-results.png)
+
+The HTML report displays each adversarial conversation with **color-coded compliance indicators**, making it easy to spot transgressions at a glance. You can quickly scan through dozens of test scenarios and immediately identify where your chatbot may have inappropriately engaged with forbidden topics.
+
+The testing framework uses multiple adversarial strategies:
+
+- **Direct requests** for prohibited information
+- **Indirect/hypothetical** scenarios
+- **Emotional appeals** and urgency
+- **Role-playing** (academic, professional contexts)
+- **Context shifting** from acceptable to prohibited topics
+- **Persistent follow-ups** after initial refusal
+
+Results provide detailed analysis including conversation transcripts, violation detection with severity ratings, and export capabilities for quality assurance workflows.
+
 ### Installation
 
 The Talk Box framework can be installed via pip:
