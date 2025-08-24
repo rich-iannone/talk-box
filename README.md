@@ -350,7 +350,7 @@ The testing framework uses multiple adversarial strategies:
 
 Results provide detailed analysis including conversation transcripts, violation detection with severity ratings, and export capabilities for quality assurance workflows.
 
-### Installation
+## Installation
 
 The Talk Box framework can be installed via pip:
 
