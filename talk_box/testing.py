@@ -1331,38 +1331,148 @@ def autotest_avoid_topics(
     This function runs adversarial testing using QuestionProducerBot prompts and
     automatically evaluates responses using the enhanced JudgeBot to detect violations.
     It combines prompt generation, conversation testing, and violation analysis
-    into a single, easy-to-use interface.
+    into a single, easy-to-use interface for comprehensive compliance validation.
+
+    **Testing Framework**: The function orchestrates a sophisticated testing pipeline that
+    generates adversarial questions targeting configured avoid topics, conducts conversations
+    with the target bot, and automatically evaluates responses for violations using structured
+    evaluation criteria. This provides automated compliance testing with detailed analysis.
+
+    **Automated Evaluation**: Uses JudgeBot with PromptBuilder to systematically analyze
+    bot responses for avoid topics violations, providing severity ratings, specific quotes,
+    and detailed explanations. The evaluation is consistent and objective, removing human
+    bias from compliance assessment.
+
+    **Rich Reporting**: Returns TestResults with comprehensive violation analysis, conversation
+    transcripts, statistical summaries, and HTML representation for Jupyter notebooks.
+    Results include export capabilities for further analysis and integration with quality
+    assurance workflows.
 
     Parameters
     ----------
-    target_bot : ChatBot
-        The bot to test for avoid topics compliance
-    test_intensity : str, optional
-        Testing intensity level: "light", "medium", "thorough", or "exhaustive"
-    max_conversations : int, optional
-        Override for maximum number of conversations to run
-    judge_model : optional
-        Model to use for automated judgment (will be set via .model() if provided)
-    verbose : bool, optional
-        Whether to show detailed output during testing (default: False)
+    target_bot
+        The ChatBot instance to test for avoid topics compliance. Must have avoid topics
+        configured via `.avoid()` method or `PromptBuilder.avoid_topics()` in system prompt.
+    test_intensity
+        Testing intensity level controlling number of conversations and strategies.
+        Available levels: `"light"` (3 conversations), `"medium"` (6 conversations),
+        `"thorough"` (10 conversations), `"exhaustive"` (15 conversations).
+        Default is `"medium"`.
+    max_conversations
+        Override for maximum number of conversations to run, superseding the intensity
+        level setting. Use when you need precise control over test scope.
+    judge_model
+        Model to use for automated judgment. If provided, will be set via `.model()`
+        on the JudgeBot. Defaults to inheriting model configuration from target_bot
+        for consistency.
+    verbose
+        Whether to show detailed output during testing including conversation progress
+        and intermediate results. Default is `False` for clean output.
 
     Returns
     -------
     TestResults
-        Enhanced results object with rich reporting capabilities, including:
-        - Individual conversation results
-        - Automated violation detection
-        - Statistical summaries and insights
-        - HTML representation for notebooks
+        Enhanced results object with rich reporting capabilities including individual
+        conversation results with violation analysis, automated violation detection with
+        severity ratings, statistical summaries and compliance metrics, HTML representation
+        for Jupyter notebooks, and export capabilities for further analysis.
 
     Examples
     --------
-    >>> import talk_box as tb
-    >>> bot = tb.ChatBot().avoid(["medical_advice", "financial_planning"])
-    >>> results = tb.test_avoid_topics(bot, test_intensity="light")
-    >>> print(f"Ran {len(results)} test conversations")
-    >>> print(f"Violations detected: {results.summary['total_violations']}")
-    >>> results  # Show rich HTML output in notebooks
+    ### Basic avoid topics testing
+
+    Test a bot with simple avoid topics configuration:
+
+    ```python
+    import talk_box as tb
+
+    # Configure bot with avoid topics
+    bot = tb.ChatBot().model("gpt-4").avoid(["medical_advice", "financial_planning"])
+
+    # Run basic compliance testing
+    results = tb.autotest_avoid_topics(bot, test_intensity="light")
+
+    # Check compliance results
+    print(f"Compliance rate: {results.summary['compliance_rate']:.1%}")
+    print(f"Violations found: {results.summary['total_violations']}")
+    ```
+
+    ### Testing with PromptBuilder configuration
+
+    Test a bot configured with PromptBuilder avoid topics:
+
+    ```python
+    import talk_box as tb
+
+    # Configure bot with PromptBuilder
+    prompt = (
+        tb.PromptBuilder()
+        .persona("helpful assistant", "general support")
+        .avoid_topics(["politics", "religion"])
+        .constraint("Always be respectful and professional")
+        .build()
+    )
+
+    bot = tb.ChatBot().model("gpt-4").structured_prompt(prompt)
+
+    # Run thorough testing
+    results = tb.autotest_avoid_topics(bot, test_intensity="thorough")
+
+    # Display detailed violation analysis
+    results.show_violations()  # Rich display in notebooks
+    ```
+
+    ### Advanced testing with custom configuration
+
+    Comprehensive testing with custom judge model and verbose output:
+
+    ```python
+    import talk_box as tb
+
+    # Configure specialized bot
+    bot = (
+        tb.ChatBot()
+        .model("gpt-4")
+        .avoid(["legal_advice", "investment_recommendations"])
+        .temperature(0.3)
+        .persona("customer service representative")
+    )
+
+    # Run comprehensive testing with custom judge
+    results = tb.autotest_avoid_topics(
+        bot,
+        test_intensity="exhaustive",
+        judge_model="gpt-4",
+        verbose=True
+    )
+
+    # Analyze results comprehensively
+    print(f"Total conversations: {len(results.conversation_results)}")
+    print(f"Compliance rate: {results.summary['compliance_rate']:.1%}")
+
+    # Export results for further analysis
+    if results.summary['total_violations'] > 0:
+        violation_details = results.get_violation_summary()
+        print("Violations requiring attention:")
+        for violation in violation_details:
+            print(f"- {violation['topic']}: {violation['severity']}")
+
+    # Rich HTML display in notebooks
+    results  # Displays interactive analysis
+    ```
+
+    Integration Notes
+    -----------------
+    - **Avoid Topics Detection**: Automatically extracts avoid topics from bot configuration or system prompt
+    - **Intensity Scaling**: Different intensity levels provide appropriate testing coverage for various use cases
+    - **Automated Evaluation**: JudgeBot provides consistent, objective violation detection with detailed analysis
+    - **Rich Reporting**: TestResults includes comprehensive analysis, visualizations, and export capabilities
+    - **Quality Assurance**: Enables systematic compliance testing as part of development and deployment workflows
+    - **Professional Integration**: Results format supports integration with quality assurance and compliance systems
+
+    The autotest_avoid_topics function provides comprehensive automated testing for avoid topics
+    compliance, enabling systematic validation of chatbot behavior with detailed analysis and
+    reporting capabilities suitable for professional development and deployment workflows.
     """
     # Get avoid topics from the target bot
     avoided_topics = target_bot.get_avoid_topics()
