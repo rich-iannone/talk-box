@@ -4,11 +4,11 @@ from unittest.mock import Mock, patch
 from talk_box import ChatBot
 from talk_box.testing import (
     ViolationSeverity,
-    TestStrategy,
-    TestConfiguration,
+    Strategy,
+    Configuration,
     ConversationResult,
     ViolationRecord,
-    TesterBot,
+    AdversarialTester,
     get_test_prompts,
     get_intensity_config,
     autotest_avoid_topics,
@@ -64,8 +64,8 @@ class TestViolationRecord:
         assert low_record.severity.value == "low"
 
 
-class TestTestStrategyClass:
-    """Test TestStrategy and related functions."""
+class TestStrategyClass:
+    """Test Strategy and related functions."""
 
     @patch("talk_box.testing.QuestionProducerBot")
     def test_get_test_prompts(self, mock_producer_class):
@@ -82,7 +82,7 @@ class TestTestStrategyClass:
             "What are the symptoms of a concussion?",
         ]
 
-        prompts = get_test_prompts(TestStrategy.DIRECT, "medical_advice")
+        prompts = get_test_prompts(Strategy.DIRECT, "medical_advice")
 
         assert len(prompts) > 0
         # Check that prompts contain realistic content, not raw topic name
@@ -110,7 +110,7 @@ class TestTestStrategyClass:
             "What's the best strategy for day trading?",
         ]
 
-        prompts = get_test_prompts(TestStrategy.EMOTIONAL_APPEAL, "financial_planning")
+        prompts = get_test_prompts(Strategy.EMOTIONAL_APPEAL, "financial_planning")
 
         assert len(prompts) > 0
         # Check that prompts contain realistic financial content
@@ -125,12 +125,12 @@ class TestTestStrategyClass:
         )
 
 
-class TestConfigurationClass:
-    """Test TestConfiguration functionality."""
+class ConfigurationClass:
+    """Test Configuration functionality."""
 
     def test_default_configuration(self):
         """Test default configuration creation."""
-        config = TestConfiguration()
+        config = Configuration()
 
         assert config.max_conversations == 10
         assert config.max_turns_per_conversation == 5
@@ -175,12 +175,12 @@ class TestChatBotEnhancements:
         assert topics == []
 
 
-class TestTesterBot:
-    """Test TesterBot functionality."""
+class TestAdversarialTester:
+    """Test AdversarialTester functionality."""
 
     def test_tester_bot_creation(self):
-        """Test TesterBot initialization."""
-        tester = TesterBot()
+        """Test AdversarialTester initialization."""
+        tester = AdversarialTester()
         assert tester is not None
         assert hasattr(tester, "conversation_history")
 
@@ -194,9 +194,9 @@ class TestTesterBot:
             "Should I be concerned about this persistent headache I've had for a week?"
         )
 
-        tester = TesterBot()
+        tester = AdversarialTester()
 
-        prompt = tester.generate_test_prompt("medical_advice", TestStrategy.DIRECT)
+        prompt = tester.generate_test_prompt("medical_advice", Strategy.DIRECT)
 
         assert isinstance(prompt, str)
         # Should contain realistic medical content, not raw topic name
@@ -236,7 +236,7 @@ class TestTesterBot:
             "Should I be concerned about this persistent headache?"
         )
 
-        tester = TesterBot()
+        tester = AdversarialTester()
 
         # Mock the _generate_followup_prompt method to avoid LLM calls
         with patch.object(tester, "_generate_followup_prompt") as mock_followup:
@@ -244,7 +244,7 @@ class TestTesterBot:
 
             context = ["Hello", "I can't help with medical advice"]
             prompt = tester.generate_test_prompt(
-                "medical_advice", TestStrategy.PERSISTENCE, context
+                "medical_advice", Strategy.PERSISTENCE, context
             )
 
             assert isinstance(prompt, str)
@@ -254,7 +254,7 @@ class TestTesterBot:
 
             # Verify the follow-up method was called
             mock_followup.assert_called_once_with(
-                "medical_advice", TestStrategy.PERSISTENCE, context
+                "medical_advice", Strategy.PERSISTENCE, context
             )
 
 
@@ -268,7 +268,7 @@ class TestSimpleAPI:
         with pytest.raises(ValueError, match="Target bot has no avoid topics configured"):
             autotest_avoid_topics(bot)
 
-    @patch("talk_box.testing.TesterBot")
+    @patch("talk_box.testing.AdversarialTester")
     def test_test_avoid_topics_basic(self, mock_tester_class):
         """Test basic avoid topics testing flow."""
         # Setup mock
@@ -303,7 +303,7 @@ class TestSimpleAPI:
         call_args = mock_tester.test_target_bot.call_args
         assert call_args[0][1] == ["medical_advice"]  # avoided_topics
         # Check that config was passed (intensity_level gets modified when creating the config)
-        assert isinstance(call_args[0][2], TestConfiguration)
+        assert isinstance(call_args[0][2], Configuration)
 
 
 class TestConversationResult:
