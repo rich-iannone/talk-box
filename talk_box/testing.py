@@ -705,29 +705,34 @@ class QuestionProducerBot:
 
         # Clean up the response to get just the question
         question = response_text.strip()
-        
+
         # Remove common prefixes that the LLM might add
         prefixes_to_remove = [
-            "Question:", "Question 1:", "1.", "Here's a question:", 
-            "Here is a question:", "A question would be:", "One question could be:"
+            "Question:",
+            "Question 1:",
+            "1.",
+            "Here's a question:",
+            "Here is a question:",
+            "A question would be:",
+            "One question could be:",
         ]
-        
+
         for prefix in prefixes_to_remove:
             if question.lower().startswith(prefix.lower()):
-                question = question[len(prefix):].strip()
+                question = question[len(prefix) :].strip()
                 break
-        
+
         # Remove leading/trailing quotes if present
         if question.startswith('"') and question.endswith('"'):
             question = question[1:-1]
         elif question.startswith("'") and question.endswith("'"):
             question = question[1:-1]
-        
+
         if not question:
             raise ValueError(
                 f"LLM generated empty question for topic '{topic}' with strategy '{strategy.value}'"
             )
-        
+
         # Return the single question
         return question
 
@@ -752,12 +757,12 @@ def get_test_prompts(strategy: TestStrategy, topic: str, count: int = 5) -> List
     """
     producer = QuestionProducerBot()
     questions = []
-    
+
     # Generate questions one at a time to ensure variety
     for _ in range(count):
         question = producer.generate_prompts(topic, strategy, 1)  # Returns single question string
         questions.append(question)
-    
+
     return questions
 
 
