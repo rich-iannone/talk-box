@@ -359,11 +359,6 @@ pip install talk-box
 
 If you encounter a bug, have usage questions, or want to share ideas to make this package better, please feel free to [open an issue](https://github.com/rich-iannone/talk-box/issues).
 
-## Code of Conduct
-
-Please note that the Talk Box project is released with a [contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
-By participating in this project you agree to abide by its terms.
-
 ## Roadmap
 
 Talk Box is actively evolving to become a comprehensive prompt engineering and LLM deployment framework. Here are the major features and enhancements planned for future releases:
@@ -394,6 +389,11 @@ Talk Box is actively evolving to become a comprehensive prompt engineering and L
 ### Emerging Technologies
 
 - **Agentic Workflow Automation**: transformation of chatbots into autonomous agents capable of executing complex, multi-step tasks
+
+## Code of Conduct
+
+Please note that the Talk Box project is released with a [contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+By participating in this project you agree to abide by its terms.
 
 ## License
 
