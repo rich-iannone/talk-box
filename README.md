@@ -23,11 +23,11 @@ mechanisms, then deploy them with powerful conversation management.
 
 - **Attention-Based Prompt Engineering**: build prompts that leverage how LLMs actually process
   information
+- **Adversarial Testing Framework**: robust evaluation of prompt performance against challenging scenarios
 - **Layered API Design**: start simple, discover advanced features as you need them
 - **Multiple Usage Patterns**: from quick structured prompts to complex modular components
 - **Integrated Conversation Management**: seamless multi-turn conversations with full history
 - **Built-in Behavior Presets**: professional templates for common engineering tasks
-- **Test-First Design**: develop and test without API keys, deploy when ready
 
 ## The Science Behind Structured Prompts
 
