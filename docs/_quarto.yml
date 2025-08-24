@@ -56,6 +56,9 @@ website:
         contents:
           - user-guide/prompt-engineering-guide.qmd
           - user-guide/prompt-builder.qmd
+      - section: "Testing & Validation"
+        contents:
+          - user-guide/testing-avoid-topics.qmd
   page-footer:
     left: |
       Talk Box is developed by [Rich Iannone](https://github.com/rich-iannone).
