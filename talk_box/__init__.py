@@ -23,6 +23,12 @@ from talk_box.prompt_builder import (
     debugging_prompt,
 )
 
+# Testing functions for easy access
+from talk_box.testing import (
+    TestResults,
+    test_avoid_topics,
+)
+
 # Make key classes available at package level
 __all__ = [
     # Core classes
@@ -42,4 +48,8 @@ __all__ = [
     "PresetNames",
     # Builder types
     "BuilderTypes",
+    # Testing functions
+    "test_avoid_topics",
+    # Testing classes
+    "TestResults",
 ]
