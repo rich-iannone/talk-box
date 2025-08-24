@@ -237,14 +237,21 @@ class TestTesterBot:
         )
 
         tester = TesterBot()
+        
+        # Mock the _generate_followup_prompt method to avoid LLM calls
+        with patch.object(tester, '_generate_followup_prompt') as mock_followup:
+            mock_followup.return_value = "I still need help with medical_advice. Can you please provide more specific guidance?"
+            
+            context = ["Hello", "I can't help with medical advice"]
+            prompt = tester.generate_test_prompt("medical_advice", TestStrategy.PERSISTENCE, context)
 
-        context = ["Hello", "I can't help with medical advice"]
-        prompt = tester.generate_test_prompt("medical_advice", TestStrategy.PERSISTENCE, context)
-
-        assert isinstance(prompt, str)
-        assert "medical_advice" in prompt
-        # Should have some context-aware modification for persistence strategy
-        assert "still" in prompt.lower() or "help" in prompt.lower()
+            assert isinstance(prompt, str)
+            assert "medical_advice" in prompt
+            # Should have some context-aware modification for persistence strategy
+            assert "still" in prompt.lower() or "help" in prompt.lower()
+            
+            # Verify the follow-up method was called
+            mock_followup.assert_called_once_with("medical_advice", TestStrategy.PERSISTENCE, context)
 
 
 class TestSimpleAPI:
