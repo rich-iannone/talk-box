@@ -282,7 +282,7 @@ Conversation has 6 messages
 
 ## Built-in Behavior Presets
 
-Choose from professionally crafted personalities:
+Choose from a few professionally-crafted personalities:
 
 - **`technical_advisor`**: authoritative, detailed, evidence-based
 - **`customer_support`**: polite, helpful, solution-focused
@@ -293,7 +293,6 @@ Choose from professionally crafted personalities:
 ```python
 import talk_box as tb
 
-# Each preset includes tone, expertise, constraints, and system prompts
 support_bot = tb.ChatBot().preset("customer_support")
 creative_bot = tb.ChatBot().preset("creative_writer")
 analyst_bot = tb.ChatBot().preset("data_analyst")
@@ -364,6 +363,37 @@ If you encounter a bug, have usage questions, or want to share ideas to make thi
 
 Please note that the Talk Box project is released with a [contributor code of conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 By participating in this project you agree to abide by its terms.
+
+## Roadmap
+
+Talk Box is actively evolving to become a comprehensive prompt engineering and LLM deployment framework. Here are the major features and enhancements planned for future releases:
+
+### Advanced Prompt Engineering
+
+- **Dynamic Prompt Adaptation**: automatically adjust prompt structure based on model capabilities and response quality metrics
+- **Catalog of Prompt Templates**: a collection of domain-specific prompt templates with performance benchmarks
+- **Multi-Modal Prompt Support**: extend structured prompting to include images, audio, and video inputs with attention optimization
+
+### Enhanced Testing & Validation
+
+- **Prompt Performance Analytics**: comprehensive metrics dashboard for prompt effectiveness, response quality, and user satisfaction
+- **A/B Testing Framework**: built-in experimentation tools for comparing prompt variations with statistical significance testing
+- **Automated Regression Testing**: continuous validation of chatbot behavior across software updates and model changes
+
+### Advanced Analytics & Insights
+
+- **Conversation Intelligence**: automatic extraction of insights, sentiment analysis, and topic modeling from chat histories
+- **ROI & Business Impact Tracking**: measure chatbot effectiveness with conversion rates, customer satisfaction, and cost savings
+- **Predictive Conversation Analytics**: AI-powered prediction of conversation outcomes and proactive intervention suggestions
+
+### Developer Experience Enhancements
+
+- **Visual Prompt Builder**: interface for creating complex prompt structures without coding
+- **Better Prompt Debugging**: visualization of attention patterns, token usage, and reasoning paths
+
+### Emerging Technologies
+
+- **Agentic Workflow Automation**: transformation of chatbots into autonomous agents capable of executing complex, multi-step tasks
 
 ## License
 
