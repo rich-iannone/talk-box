@@ -11,6 +11,7 @@ __author__ = "Richard Iannone"
 __email__ = "riannone@me.com"
 
 # Core imports for easy access
+from talk_box.attachments import AttachmentMetadata, Attachments
 from talk_box.builder import BuilderTypes, ChatBot
 from talk_box.conversation import Conversation, Message
 from talk_box.presets import Preset, PresetManager, PresetNames
@@ -35,6 +36,9 @@ __all__ = [
     "ChatBot",
     "Conversation",
     "Message",
+    # File attachments
+    "Attachments",
+    "AttachmentMetadata",
     # Prompt engineering
     "PromptBuilder",
     "Priority",
