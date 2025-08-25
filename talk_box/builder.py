@@ -2,6 +2,7 @@ import socket
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
+    from talk_box.attachments import Attachments
     from talk_box.conversation import Conversation
     from talk_box.presets import PresetNames
     from talk_box.prompt_builder import PromptBuilder
@@ -2420,14 +2421,14 @@ class ChatBot:
             self._auto_enable_llm()
         return self
 
-    def _chat_with_llm(self, message: str) -> str:
+    def _chat_with_llm(self, message: Union[str, "Attachments"]) -> str:
         """
         Send a message to a real LLM via chatlas and return the response content.
 
         Parameters
         ----------
         message
-            The message to send to the LLM
+            The message to send to the LLM. Can be a string or Attachments object.
 
         Returns
         -------
@@ -2435,6 +2436,7 @@ class ChatBot:
             The LLM's response content
         """
         from talk_box._utils_chatlas import ChatlasAdapter
+        from talk_box.attachments import Attachments
 
         # Extract provider and model from config
         provider = self._config.get("provider")
@@ -2443,11 +2445,24 @@ class ChatBot:
         # Create adapter and get response
         adapter = ChatlasAdapter(provider=provider, model=model)
         chat_session = adapter.create_chat_session(self._config)
-        response = adapter.chat_with_session(chat_session, message)
+
+        # Handle attachments or regular string messages
+        if isinstance(message, Attachments):
+            if not message.files:
+                raise ValueError("Attachments object must contain at least one file")
+
+            # Convert attachments to chat contents for chatlas
+            contents = message.to_chat_contents()
+            response = adapter.chat_with_session(chat_session, contents)
+        else:
+            # Handle regular string messages
+            response = adapter.chat_with_session(chat_session, message)
 
         return response.content
 
-    def chat(self, message: str, conversation: Optional["Conversation"] = None) -> "Conversation":
+    def chat(
+        self, message: Union[str, "Attachments"], conversation: Optional["Conversation"] = None
+    ) -> "Conversation":
         """
         Send a message to the chatbot and get a response within a conversation context.
 
@@ -2459,7 +2474,9 @@ class ChatBot:
         Parameters
         ----------
         message
-            The user's message to send to the chatbot.
+            The user's message to send to the chatbot. Can be:
+            - A string message
+            - An Attachments object containing files and an optional prompt
         conversation
             An existing conversation to continue. If not provided, a new conversation is created
             automatically.
@@ -2482,6 +2499,24 @@ class ChatBot:
         print(convo.get_last_message().content)
         ```
 
+        ### Chat with file attachments
+
+        ```python
+        from talk_box import ChatBot
+        from talk_box.attachments import Attachments
+
+        bot = ChatBot().model("gpt-4")
+
+        # Create attachments
+        attachments = Attachments().with_prompt("What's in these files?")
+        attachments.add_file("document.pdf")
+        attachments.add_file("image.png")
+
+        # Chat with attachments
+        convo = bot.chat(attachments)
+        print(convo.get_last_message().content)
+        ```
+
         ### Continuing a conversation
 
         ```python
@@ -2497,14 +2532,20 @@ class ChatBot:
         ```
         """
         # Import here to avoid circular imports
+        from talk_box.attachments import Attachments
         from talk_box.conversation import Conversation
 
         # Create new conversation if none provided
         if conversation is None:
             conversation = Conversation()
 
-        # Add user message
-        conversation.add_user_message(message)
+        # Add user message to conversation
+        if isinstance(message, Attachments):
+            # For attachments, store the prompt text (or a summary) in conversation
+            user_content = message.prompt or f"[{len(message.files)} files attached]"
+            conversation.add_user_message(user_content)
+        else:
+            conversation.add_user_message(message)
 
         # Get response based on LLM availability
         if self._llm_enabled:
@@ -2512,10 +2553,18 @@ class ChatBot:
                 response_content = self._chat_with_llm(message)
             except Exception as e:
                 # Fallback to echo mode if LLM fails
-                response_content = f"LLM Error: {e}. Echo: {message}"
+                if isinstance(message, Attachments):
+                    echo_msg = f"[{len(message.files)} files attached: {', '.join(f.name for f in message.files)}]"
+                else:
+                    echo_msg = str(message)
+                response_content = f"LLM Error: {e}. Echo: {echo_msg}"
         else:
             # Echo mode for demo/testing
-            response_content = f"Echo: {message}"
+            if isinstance(message, Attachments):
+                echo_msg = f"[{len(message.files)} files attached: {', '.join(f.name for f in message.files)}]"
+            else:
+                echo_msg = str(message)
+            response_content = f"Echo: {echo_msg}"
 
         conversation.add_assistant_message(response_content)
 
