@@ -135,20 +135,24 @@ class ChatlasAdapter:
 
         return chat
 
-    def chat_with_session(self, chat_session: chatlas.Chat, message: str) -> ChatResponse:
+    def chat_with_session(self, chat_session: chatlas.Chat, message) -> ChatResponse:
         """
         Send a message to a chatlas session and get response.
 
         Args:
             chat_session: Active chatlas.Chat session
-            message: User message to send
+            message: User message to send (str or list of content objects)
 
         Returns:
             ChatResponse with the LLM's response
         """
         try:
             # Use chatlas to get the response
-            response = chat_session.chat(message)
+            # If message is a list of content objects, unpack it as individual arguments
+            if isinstance(message, list):
+                response = chat_session.chat(*message)
+            else:
+                response = chat_session.chat(message)
 
             # Extract response content (chatlas returns a Turn object)
             content = str(response)
@@ -156,13 +160,20 @@ class ChatlasAdapter:
             # Get model info if available
             model_info = getattr(chat_session, "_model", "unknown")
 
+            # Calculate message length for metadata
+            if isinstance(message, str):
+                message_length = len(message)
+            else:
+                # For content lists, estimate total length
+                message_length = sum(len(str(item)) for item in message)
+
             return ChatResponse(
                 content=content,
                 metadata={
                     "provider": self.provider,
                     "model": model_info,
                     "success": True,
-                    "message_length": len(message),
+                    "message_length": message_length,
                     "response_length": len(content),
                 },
             )
