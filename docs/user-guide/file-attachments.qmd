@@ -1,0 +1,515 @@
+---
+title: "File Attachments"
+format: html
+---
+
+# File Attachments in Talk Box
+
+File attachments enable you to include documents, images, and other files in your AI conversations. This feature is designed for **programmatic single-turn conversations** where you want to analyze, review, or discuss file content with AI models.
+
+## When to Use File Attachments
+
+File attachments are ideal for automated workflows and batch processing scenarios:
+
+- **Code Review**: Analyze source files for bugs, best practices, and improvements
+- **Document Analysis**: Extract insights from PDFs, reports, and documentation
+- **Data Analysis**: Process CSV, JSON, or other data files for trends and patterns
+- **Content Generation**: Use reference materials for context-aware content creation
+- **Image Analysis**: Analyze charts, diagrams, photos with vision-capable models
+- **Research**: Process academic papers, articles, and research materials
+
+**Note**: For interactive multi-turn conversations with files, use the browser interface with `bot.show("browser")` instead.
+
+## Quick Start
+
+### Basic Usage
+
+```python
+import talk_box as tb
+
+# Single file analysis
+files = tb.Attachments("report.pdf").with_prompt(
+    "Summarize the key findings in this report."
+)
+
+bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+analysis = bot.chat(files)
+print(analysis)
+```
+
+### Multiple Files
+
+```python
+# Analyze multiple related files
+code_review = tb.Attachments(
+    "src/main.py",
+    "src/utils.py",
+    "tests/test_main.py"
+).with_prompt(
+    "Review this Python codebase for quality and test coverage."
+)
+
+reviewer = (tb.ChatBot()
+            .provider_model("openai:gpt-4-turbo")
+            .preset("technical_advisor"))
+
+review = reviewer.chat(code_review)
+```
+
+## File Types Supported
+
+| Type | Extensions | Use Cases |
+|------|-----------|-----------|
+| **Text** | `.py`, `.js`, `.md`, `.txt`, `.csv`, `.json`, `.xml`, `.yaml` | Code review, documentation, data analysis |
+| **Images** | `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.webp` | Chart analysis, diagram review, visual content |
+| **PDFs** | `.pdf` | Document analysis, research papers, reports |
+
+Unsupported file types are handled gracefully with informative error messages.
+
+## Common Workflows
+
+### 1. Code Review Pipeline
+
+Perfect for automated code quality checks and pull request reviews:
+
+```python
+import talk_box as tb
+from pathlib import Path
+
+def review_pull_request(file_paths, context=""):
+    """Review multiple files in a pull request."""
+
+    review_prompt = f"""
+    Review these code changes for:
+    1. Code quality and best practices
+    2. Potential bugs or security issues
+    3. Performance implications
+    4. Test coverage
+
+    Context: {context}
+
+    Provide specific, actionable feedback.
+    """
+
+    files = tb.Attachments(*file_paths).with_prompt(review_prompt)
+
+    reviewer = (tb.ChatBot()
+                .provider_model("openai:gpt-4-turbo")
+                .preset("technical_advisor")
+                .temperature(0.3))  # Lower temperature for consistent reviews
+
+    return reviewer.chat(files)
+
+# Usage
+changed_files = ["src/auth.py", "src/database.py", "tests/test_auth.py"]
+review = review_pull_request(changed_files, "Added OAuth2 authentication")
+print(review)
+```
+
+### 2. Document Analysis Workflow
+
+Ideal for processing reports, research papers, and documentation:
+
+```python
+def analyze_documents(doc_paths, analysis_type="summary"):
+    """Analyze multiple documents with different analysis types."""
+
+    prompts = {
+        "summary": "Provide a concise summary of the key points and conclusions.",
+        "insights": "Extract actionable insights and recommendations.",
+        "comparison": "Compare and contrast the main arguments and findings.",
+        "critique": "Provide a critical analysis of the methodology and conclusions."
+    }
+
+    files = tb.Attachments(*doc_paths).with_prompt(prompts[analysis_type])
+
+    analyst = (tb.ChatBot()
+               .provider_model("openai:gpt-4-turbo")
+               .temperature(0.4)
+               .max_tokens(2000))
+
+    return analyst.chat(files)
+
+# Usage
+research_papers = ["paper1.pdf", "paper2.pdf", "paper3.pdf"]
+summary = analyze_documents(research_papers, "summary")
+insights = analyze_documents(research_papers, "insights")
+```
+
+### 3. Data Analysis Pipeline
+
+Process data files with contextual information:
+
+```python
+def analyze_data_files(data_path, context_files=None, question=""):
+    """Analyze data files with additional context."""
+
+    file_list = [data_path]
+    if context_files:
+        file_list.extend(context_files)
+
+    prompt = f"""
+    Analyze the data and provide:
+    1. Key trends and patterns
+    2. Statistical insights
+    3. Anomalies or outliers
+    4. Actionable recommendations
+
+    Question: {question}
+    """
+
+    files = tb.Attachments(*file_list).with_prompt(prompt)
+
+    analyst = (tb.ChatBot()
+               .provider_model("openai:gpt-4-turbo")
+               .preset("data_analyst"))
+
+    return analyst.chat(files)
+
+# Usage
+analysis = analyze_data_files(
+    "sales_q4.csv",
+    context_files=["market_conditions.md", "product_changes.txt"],
+    question="What drove the sales increase in Q4?"
+)
+```
+
+### 4. Visual Content Analysis
+
+Analyze images, charts, and diagrams:
+
+```python
+def analyze_visual_content(image_paths, analysis_focus="general"):
+    """Analyze visual content with specific focus areas."""
+
+    focus_prompts = {
+        "general": "Describe what you see and identify key elements.",
+        "data": "Extract and analyze any data, charts, or graphs shown.",
+        "design": "Evaluate the design principles, layout, and visual hierarchy.",
+        "technical": "Analyze technical diagrams, architecture, or system designs."
+    }
+
+    files = tb.Attachments(*image_paths).with_prompt(focus_prompts[analysis_focus])
+
+    # Use vision-capable model
+    analyzer = (tb.ChatBot()
+                .provider_model("openai:gpt-4-turbo")  # Has vision capabilities
+                .temperature(0.5))
+
+    return analyzer.chat(files)
+
+# Usage
+charts = ["revenue_chart.png", "user_growth.png", "market_share.png"]
+data_analysis = analyze_visual_content(charts, "data")
+```
+
+## Batch Processing
+
+Process multiple files independently:
+
+```python
+def batch_process_files(file_list, prompt_template, output_dir="results"):
+    """Process multiple files independently."""
+
+    bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+    results = {}
+
+    for file_path in file_list:
+        # Customize prompt for each file
+        prompt = prompt_template.format(filename=Path(file_path).name)
+
+        files = tb.Attachments(file_path).with_prompt(prompt)
+        result = bot.chat(files)
+
+        # Store result
+        results[file_path] = result
+
+        # Optionally save to file
+        output_file = Path(output_dir) / f"{Path(file_path).stem}_analysis.txt"
+        output_file.parent.mkdir(exist_ok=True)
+        output_file.write_text(str(result))
+
+        print(f"Processed: {file_path}")
+
+    return results
+
+# Usage
+documents = ["doc1.pdf", "doc2.pdf", "doc3.pdf"]
+template = "Summarize the key points in {filename} and identify the main thesis."
+
+results = batch_process_files(documents, template)
+```
+
+## Performance Monitoring
+
+Track processing performance and handle errors:
+
+```python
+def process_with_monitoring(file_paths, prompt):
+    """Process files with performance monitoring."""
+
+    files = tb.Attachments(*file_paths).with_prompt(prompt)
+
+    # Process files
+    bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+    result = bot.chat(files)
+
+    # Analyze metadata
+    print(f"\n📊 Processing Report:")
+    print(f"Files processed: {len(files.metadata)}")
+
+    total_size = sum(m.size_bytes for m in files.metadata)
+    total_time = sum(m.processing_time_ms or 0 for m in files.metadata)
+
+    print(f"Total size: {total_size:,} bytes")
+    print(f"Total time: {total_time:.1f}ms")
+
+    # Check for errors
+    errors = [m for m in files.metadata if m.error]
+    if errors:
+        print(f"\n❌ Errors encountered:")
+        for meta in errors:
+            print(f"  {meta.filename}: {meta.error}")
+
+    # Performance metrics
+    if total_time > 0:
+        speed = total_size / total_time * 1000  # bytes per second
+        print(f"Processing speed: {speed:,.0f} bytes/sec")
+
+    return result
+
+# Usage
+files = ["large_doc.pdf", "code.py", "data.csv", "image.png"]
+result = process_with_monitoring(files, "Analyze these project files.")
+```
+
+## Best Practices
+
+### 1. Writing Effective Prompts
+
+**Be Specific and Clear**
+```python
+# ❌ Vague
+files = tb.Attachments("report.pdf").with_prompt("What do you think?")
+
+# ✅ Specific
+files = tb.Attachments("report.pdf").with_prompt(
+    "Extract the quarterly revenue figures and identify any significant "
+    "changes compared to the previous quarter. Highlight any risks mentioned."
+)
+```
+
+**Structure Complex Requests**
+```python
+files = tb.Attachments("codebase.py").with_prompt("""
+Review this code for:
+1. Security vulnerabilities (SQL injection, XSS, etc.)
+2. Performance bottlenecks
+3. Code maintainability issues
+4. Missing error handling
+
+Provide specific line numbers and improvement suggestions.
+""")
+```
+
+### 2. Choosing the Right Model
+
+**For Code Analysis**
+```python
+# Use precise, analytical models
+reviewer = (tb.ChatBot()
+            .provider_model("openai:gpt-4-turbo")
+            .temperature(0.2)  # Low for consistency
+            .preset("technical_advisor"))
+```
+
+**For Creative Content**
+```python
+# Use more creative models
+writer = (tb.ChatBot()
+          .provider_model("openai:gpt-4-turbo")
+          .temperature(0.7)  # Higher for creativity
+          .max_tokens(2000))
+```
+
+**For Data Analysis**
+```python
+# Use analytical, methodical approach
+analyst = (tb.ChatBot()
+           .provider_model("openai:gpt-4-turbo")
+           .preset("data_analyst")
+           .temperature(0.3))
+```
+
+### 3. Error Handling
+
+```python
+def robust_file_analysis(file_paths, prompt):
+    """Analyze files with robust error handling."""
+
+    try:
+        files = tb.Attachments(*file_paths).with_prompt(prompt)
+        bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+        result = bot.chat(files)
+
+        # Check for processing errors
+        failed_files = [m for m in files.metadata if m.error]
+        if failed_files:
+            print("⚠️ Some files couldn't be processed:")
+            for meta in failed_files:
+                print(f"  {meta.filename}: {meta.error}")
+
+        return result
+
+    except FileNotFoundError as e:
+        print(f"❌ File not found: {e}")
+        return None
+    except Exception as e:
+        print(f"❌ Processing error: {e}")
+        return None
+
+# Usage
+result = robust_file_analysis(
+    ["existing.pdf", "missing.txt"],
+    "Analyze these documents"
+)
+```
+
+### 4. File Size Considerations
+
+```python
+# Check file sizes before processing
+def check_file_sizes(file_paths, max_size_mb=10):
+    """Check if files are within size limits."""
+
+    large_files = []
+    for path in file_paths:
+        file_path = Path(path)
+        if file_path.exists():
+            size_mb = file_path.stat().st_size / (1024 * 1024)
+            if size_mb > max_size_mb:
+                large_files.append((path, size_mb))
+
+    if large_files:
+        print("⚠️ Large files detected:")
+        for path, size in large_files:
+            print(f"  {path}: {size:.1f}MB")
+        print("Consider splitting or summarizing large files first.")
+
+    return len(large_files) == 0
+
+# Usage
+if check_file_sizes(["huge_doc.pdf", "small_file.txt"]):
+    # Proceed with processing
+    files = tb.Attachments("huge_doc.pdf", "small_file.txt")
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**File Not Found**
+```
+FileNotFoundError: [Errno 2] No such file or directory: 'missing.pdf'
+```
+- Check file paths are correct and files exist
+- Use absolute paths if working directory is unclear
+
+**Unsupported File Type**
+```
+Content type 'unsupported' for file: document.docx
+```
+- Convert files to supported formats (PDF, common image formats, text)
+- Check the supported file types table above
+
+**Large File Processing**
+- Break large files into smaller chunks
+- Use text extraction tools for very large PDFs
+- Consider summarizing content first
+
+**Model Limitations**
+- Some models don't support image analysis
+- Use `gpt-4-turbo` or `gpt-4-vision-preview` for images
+- Check model capabilities for your use case
+
+### Getting Help
+
+If you encounter issues:
+
+1. Check file paths and permissions
+2. Verify file types are supported
+3. Review the metadata for error details
+4. Test with smaller files first
+5. Check model capabilities match your needs
+
+## Integration Examples
+
+### With Jupyter Notebooks
+
+File attachments provide rich HTML displays in Jupyter notebooks, making it easy to see file status, sizes, and prompts at a glance.
+
+```python
+# Cell 1: Setup
+import talk_box as tb
+
+bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+
+# Cell 2: Create and inspect attachments
+files = tb.Attachments("analysis.py", "data.csv", "report.pdf").with_prompt(
+    "Review this data analysis workflow and suggest improvements."
+)
+
+# Rich HTML display shows file summary
+files  # 📎 Attachments: 3/3 files (1.2MB): 2 text, 1 pdf
+
+# Cell 3: Process files
+result = bot.chat(files)
+
+# Cell 4: Display result with rich formatting
+result  # Rich HTML display in Jupyter
+```
+
+**HTML Display Features:**
+- **File Status**: Visual indicators for successful/failed processing
+- **File Breakdown**: Icons and sizes for each file type
+- **Prompt Preview**: Truncated display of long prompts with scrolling
+- **Error Handling**: Clear display of any processing errors
+
+### With Scripts and Automation
+
+```python
+#!/usr/bin/env python3
+"""Automated code review script."""
+
+import sys
+import talk_box as tb
+from pathlib import Path
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: review.py <file1> [file2] ...")
+        sys.exit(1)
+
+    files = tb.Attachments(*sys.argv[1:]).with_prompt(
+        "Perform a comprehensive code review focusing on "
+        "security, performance, and maintainability."
+    )
+
+    reviewer = (tb.ChatBot()
+                .provider_model("openai:gpt-4-turbo")
+                .preset("technical_advisor"))
+
+    review = reviewer.chat(files)
+
+    # Save review to file
+    output = Path("code_review.md")
+    output.write_text(str(review))
+
+    print(f"Review saved to {output}")
+    print(review)
+
+if __name__ == "__main__":
+    main()
+```
+
+File attachments in Talk Box provide a powerful foundation for building AI-powered analysis workflows. Start with simple single-file examples and gradually build more sophisticated batch processing and monitoring systems as your needs grow.
