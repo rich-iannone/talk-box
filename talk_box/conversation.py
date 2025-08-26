@@ -825,9 +825,20 @@ class Conversation:
             )
             content = content.replace("\n", "<br>")
 
-            # Truncate very long messages
-            if len(content) > 500:
-                content = content[:500] + "... <em style='color: #888;'>[truncated]</em>"
+            # Create scrollable container for long messages
+            content_style = "color: #333; line-height: 1.4;"
+            if len(content) > 1000:  # Only add scrolling for very long content
+                content_style += """
+                    max-height: 300px;
+                    overflow-y: auto;
+                    padding: 12px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 6px;
+                    background-color: #fafafa;
+                    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+                    scrollbar-width: thin;
+                    scrollbar-color: #ccc #f0f0f0;
+                """.replace("\n", " ").strip()
 
             html_parts.append(f"""
                 <div style="margin-bottom: 12px; padding: 12px; background-color: {bg_color}; border-left: 4px solid {border_color}; border-radius: 0 4px 4px 0;">
@@ -835,7 +846,7 @@ class Conversation:
                         <strong style="color: {role_color};">{role_icon} {message.role.title()}</strong>
                         <span style="float: right; font-size: 11px; color: #888;">{message.timestamp.strftime("%H:%M:%S")}</span>
                     </div>
-                    <div style="color: #333; line-height: 1.4;">{content}</div>
+                    <div style="{content_style}">{content}</div>
                 </div>
             """)
 
