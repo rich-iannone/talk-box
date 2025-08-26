@@ -280,6 +280,31 @@ print(f"Conversation has {conversation.get_message_count()} messages")
 Conversation has 6 messages
 ```
 
+## File Attachments for AI Analysis
+
+Analyze documents, images, and code files directly in your conversations. Talk Box automatically handles different file types and integrates seamlessly with your prompts:
+
+```python
+import talk_box as tb
+
+# Step 1: Create a ChatBot for analysis
+bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+
+# Step 2: Attach a file with analysis prompt
+files = tb.Attachments("report.pdf").with_prompt(
+    "Summarize the key findings in this report."
+)
+
+# Step 3: Get LLM analysis
+analysis = bot.chat(files)
+```
+
+<div align="center">
+<img src="https://rich-iannone.github.io/talk-box/assets/abraham-results.png" width="800px">
+</div>
+
+**Supported file types**: PDFs, images (PNG, JPG), text files (Python, JavaScript, Markdown, CSV, JSON), and more. Perfect for code reviews, document analysis, data insights, and visual content evaluation.
+
 ## Built-in Behavior Presets
 
 Choose from a few professionally-crafted personalities:
