@@ -44,6 +44,33 @@ def test_attachments_repr():
     assert "Test prompt" in repr_with_prompt
 
 
+def test_attachments_html_repr():
+    """Test HTML representation for Jupyter notebooks."""
+    # Test basic HTML representation
+    attachments = Attachments("README.md").with_prompt("Test prompt")
+    html = attachments._repr_html_()
+
+    # Check essential HTML elements
+    assert "Attachments" in html
+    assert "README.md" in html
+    assert "Test prompt" in html
+    assert "<div" in html
+    assert "Files:" in html
+
+    # Test multiple files
+    multi_files = Attachments("README.md", "pyproject.toml")
+    multi_html = multi_files._repr_html_()
+    assert "README.md" in multi_html
+    assert "pyproject.toml" in multi_html
+
+    # Test without prompt
+    no_prompt = Attachments("README.md")
+    no_prompt_html = no_prompt._repr_html_()
+    assert "README.md" in no_prompt_html
+    # Should not have prompt section when no prompt
+    assert no_prompt_html.count("Prompt:") == 0
+
+
 # ChatBot integration tests
 def test_chat_with_attachments():
     """Test chatbot can handle attachments."""
