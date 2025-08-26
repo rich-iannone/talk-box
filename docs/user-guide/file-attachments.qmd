@@ -22,43 +22,69 @@ File attachments are ideal for automated workflows and batch processing scenario
 
 ### Basic Usage
 
+The simplest way to use file attachments is with a single file. This example shows the complete workflow from setup to getting AI analysis results:
+
 ```python
 import talk_box as tb
 
-# Single file analysis
+# Step 1: Create a ChatBot for analysis
+bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+
+# Step 2: Attach a file with analysis prompt
 files = tb.Attachments("report.pdf").with_prompt(
     "Summarize the key findings in this report."
 )
 
-bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+# Step 3: Get LLM analysis
 analysis = bot.chat(files)
-print(analysis)
+
 ```
+
+View the results as an HTML report:
+
+```{python}
+analysis
+```
+
+![](/assets/abraham-results.png)
 
 ### Multiple Files
 
+When you need to analyze related files together, you can attach multiple files in a single operation. This is particularly useful for code reviews, document comparisons, or comprehensive project analysis:
+
 ```python
-# Analyze multiple related files
-code_review = (
-    tb.Attachments(
-        "src/main.py",
-        "src/utils.py",
-        "tests/test_main.py"
-    ).with_prompt(
-        "Review this Python codebase for quality and test coverage."
-    )
+import talk_box as tb
+
+# Step 1: Create a ChatBot for analysis
+bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+
+# Step 4: Analyze multiple related files
+code_review = tb.Attachments(
+    "talk_box/attachments.py",
+    "talk_box/conversation.py",
+    "tests/test_attachments.py"
+).with_prompt(
+    "Review this Python codebase for quality and test coverage."
 )
 
-reviewer = (
-    tb.ChatBot()
-    .provider_model("openai:gpt-4-turbo")
-    .preset("technical_advisor"))
-)
+# Step 2: Configure bot for technical review
+reviewer = bot.preset("technical_advisor")
 
+# Step 3: Get comprehensive code review
 review = reviewer.chat(code_review)
 ```
 
+View the results as an HTML report:
+
+```python
+review
+```
+
+![](/assets/code-review-results.png)
+
 ## File Types Supported
+
+Talk Box automatically detects and processes different file types, optimizing the handling based on content. Here's what's currently supported and how each type is best used:
 
 | Type | Extensions | Use Cases |
 |------|-----------|-----------|
@@ -69,6 +95,8 @@ review = reviewer.chat(code_review)
 Unsupported file types are handled gracefully with informative error messages.
 
 ## Common Workflows
+
+These real-world examples show how to structure file attachment workflows for different scenarios. Each workflow includes error handling, performance considerations, and practical tips:
 
 ### 1. Code Review Pipeline
 
@@ -107,7 +135,8 @@ def review_pull_request(file_paths, context=""):
 # Usage
 changed_files = ["src/auth.py", "src/database.py", "tests/test_auth.py"]
 review = review_pull_request(changed_files, "Added OAuth2 authentication")
-print(review)
+
+review
 ```
 
 ### 2. Document Analysis Workflow
@@ -138,8 +167,14 @@ def analyze_documents(doc_paths, analysis_type="summary"):
 
 # Usage
 research_papers = ["paper1.pdf", "paper2.pdf", "paper3.pdf"]
-summary = analyze_documents(research_papers, "summary")
-insights = analyze_documents(research_papers, "insights")
+```
+
+```python
+analyze_documents(research_papers, "summary")
+```
+
+```python
+analyze_documents(research_papers, "insights")
 ```
 
 ### 3. Data Analysis Pipeline
@@ -180,6 +215,8 @@ analysis = analyze_data_files(
     context_files=["market_conditions.md", "product_changes.txt"],
     question="What drove the sales increase in Q4?"
 )
+
+analysis
 ```
 
 ### 4. Visual Content Analysis
@@ -211,95 +248,23 @@ def analyze_visual_content(image_paths, analysis_focus="general"):
 # Usage
 charts = ["revenue_chart.png", "user_growth.png", "market_share.png"]
 data_analysis = analyze_visual_content(charts, "data")
+
+data_analysis
 ```
 
-## Batch Processing
+## Best Practices for Writing Effective Prompts
 
-Process multiple files independently:
+Follow these guidelines to get the most accurate and useful results from your file attachment workflows. These practices help ensure reliable processing, clear communication with AI models, and robust error handling:
 
-```python
-def batch_process_files(file_list, prompt_template, output_dir="results"):
-    """Process multiple files independently."""
-
-    bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
-    results = {}
-
-    for file_path in file_list:
-        # Customize prompt for each file
-        prompt = prompt_template.format(filename=Path(file_path).name)
-
-        files = tb.Attachments(file_path).with_prompt(prompt)
-        result = bot.chat(files)
-
-        # Store result
-        results[file_path] = result
-
-        # Optionally save to file
-        output_file = Path(output_dir) / f"{Path(file_path).stem}_analysis.txt"
-        output_file.parent.mkdir(exist_ok=True)
-        output_file.write_text(str(result))
-
-        print(f"Processed: {file_path}")
-
-    return results
-
-# Usage
-documents = ["doc1.pdf", "doc2.pdf", "doc3.pdf"]
-template = "Summarize the key points in {filename} and identify the main thesis."
-
-results = batch_process_files(documents, template)
-```
-
-## Performance Monitoring
-
-Track processing performance and handle errors:
-
-```python
-def process_with_monitoring(file_paths, prompt):
-    """Process files with performance monitoring."""
-
-    files = tb.Attachments(*file_paths).with_prompt(prompt)
-
-    # Process files
-    bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
-    result = bot.chat(files)
-
-    # Analyze metadata
-    print(f"\n📊 Processing Report:")
-    print(f"Files processed: {len(files.metadata)}")
-
-    total_size = sum(m.size_bytes for m in files.metadata)
-    total_time = sum(m.processing_time_ms or 0 for m in files.metadata)
-
-    print(f"Total size: {total_size:,} bytes")
-    print(f"Total time: {total_time:.1f}ms")
-
-    # Check for errors
-    errors = [m for m in files.metadata if m.error]
-    if errors:
-        print(f"\n❌ Errors encountered:")
-        for meta in errors:
-            print(f"  {meta.filename}: {meta.error}")
-
-    # Performance metrics
-    if total_time > 0:
-        speed = total_size / total_time * 1000  # bytes per second
-        print(f"Processing speed: {speed:,.0f} bytes/sec")
-
-    return result
-
-# Usage
-files = ["large_doc.pdf", "code.py", "data.csv", "image.png"]
-result = process_with_monitoring(files, "Analyze these project files.")
-```
-
-## Best Practices
-
-### 1. Writing Effective Prompts
+The quality of your prompts directly impacts the usefulness of AI analysis. Here are key strategies for writing prompts that generate actionable insights:
 
 **Be Specific and Clear**
 
+Vague prompts lead to generic responses. Instead, specify exactly what information you need and how you want it presented:
+
 ```python
+import talk_box as tb
+
 # Vague
 files = tb.Attachments("report.pdf").with_prompt("What do you think?")
 
@@ -312,7 +277,11 @@ files = tb.Attachments("report.pdf").with_prompt(
 
 **Structure Complex Requests**
 
+For multi-part analysis, use numbered lists or clear sections to guide the AI through your requirements systematically:
+
 ```python
+import talk_box as tb
+
 files = tb.Attachments("codebase.py").with_prompt("""
 Review this code for:
 1. Security vulnerabilities (SQL injection, XSS, etc.)
@@ -324,140 +293,38 @@ Provide specific line numbers and improvement suggestions.
 """)
 ```
 
-### 2. Choosing the Right Model
+Well-structured prompts not only improve response quality but also make it easier to validate and act on the AI's recommendations. The more specific your request, the more actionable the results will be.
 
-**For Code Analysis**
+## HTML Display Features
 
-```python
-# Use precise, analytical models
-reviewer = (
-    tb.ChatBot()
-    .provider_model("openai:gpt-4-turbo")
-    .temperature(0.2)  # Low for consistency
-    .preset("technical_advisor")
-)
-```
+When working with file attachments in notebook or other HTML-capable environments, Talk Box provides rich visual representations that make it easy to inspect your attachments at a glance.
 
-**For Creative Content**
+Simply display an `Attachments` object to see a comprehensive summary:
 
 ```python
-# Use more creative models
-writer = (
-    tb.ChatBot()
-    .provider_model("openai:gpt-4-turbo")
-    .temperature(0.7)  # Higher for creativity
-    .max_tokens(2000)
-)
-```
-
-**For Data Analysis**
-
-```python
-# Use analytical, methodical approach
-analyst = (
-    tb.ChatBot()
-    .provider_model("openai:gpt-4-turbo")
-    .preset("data_analyst")
-    .temperature(0.3)
-)
-```
-
-### 3. Error Handling
-
-```python
-def robust_file_analysis(file_paths, prompt):
-    """Analyze files with robust error handling."""
-
-    try:
-        files = tb.Attachments(*file_paths).with_prompt(prompt)
-        bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
-        result = bot.chat(files)
-
-        # Check for processing errors
-        failed_files = [m for m in files.metadata if m.error]
-        if failed_files:
-            print("⚠️ Some files couldn't be processed:")
-            for meta in failed_files:
-                print(f"  {meta.filename}: {meta.error}")
-
-        return result
-
-    except FileNotFoundError as e:
-        print(f"❌ File not found: {e}")
-        return None
-    except Exception as e:
-        print(f"❌ Processing error: {e}")
-        return None
-
-# Usage
-result = robust_file_analysis(
-    ["existing.pdf", "missing.txt"],
-    "Analyze these documents"
-)
-```
-
-### 4. File Size Considerations
-
-```python
-# Check file sizes before processing
-def check_file_sizes(file_paths, max_size_mb=10):
-    """Check if files are within size limits."""
-
-    large_files = []
-    for path in file_paths:
-        file_path = Path(path)
-        if file_path.exists():
-            size_mb = file_path.stat().st_size / (1024 * 1024)
-            if size_mb > max_size_mb:
-                large_files.append((path, size_mb))
-
-    if large_files:
-        print("⚠️ Large files detected:")
-        for path, size in large_files:
-            print(f"  {path}: {size:.1f}MB")
-        print("Consider splitting or summarizing large files first.")
-
-    return len(large_files) == 0
-
-# Usage
-if check_file_sizes(["huge_doc.pdf", "small_file.txt"]):
-    # Proceed with processing
-    files = tb.Attachments("huge_doc.pdf", "small_file.txt")
-```
-
-## Integration Examples
-
-### With Notebooks
-
-File attachments provide rich HTML displays in notebooks, making it easy to see file status, sizes, and prompts at a glance.
-
-```python
-# Cell 1: Setup
 import talk_box as tb
 
-bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+# Create attachments with various file types
+files = tb.Attachments(
+    "analysis.py",
+    "data.csv",
+    "chart.png",
+    "report.pdf"
+).with_prompt("Analyze this project data and provide insights.")
 
-# Cell 2: Create and inspect attachments
-files = tb.Attachments("analysis.py", "data.csv", "report.pdf").with_prompt(
-    "Review this data analysis workflow and suggest improvements."
-)
-
-# HTML display shows file summary
-files  # 📎 Attachments: 3/3 files (1.2MB): 2 text, 1 pdf
-
-# Cell 3: Process files
-result = bot.chat(files)
-
-# Cell 4: Display result with rich formatting
-result  # HTML display
+# Display the HTML representation
+files  # Shows rich HTML summary
 ```
 
-**HTML Display Features:**
+![](/assets/attachments-display.png)
 
-- **File Status**: visual indicators for successful/failed processing
-- **File Breakdown**: icons and sizes for each file type
-- **Prompt Preview**: truncated display of long prompts with scrolling
-- **Error Handling**: clear display of any processing errors
+The HTML display includes several key features that help you understand the state of your attachments:
+
+- **File Breakdown**: descriptive icons (📁, 📄, 🖼️) and file sizes help you quickly identify file types and understand processing load
+- **File Status**: a ❌ mark is shown for files that are either missing or encountered processing errors
+- **Prompt Preview**: long prompts are displayed in scrollable containers, so you can review your instructions without cluttering the interface
+
+This visual feedback is particularly valuable when debugging file processing issues or confirming that your attachments are configured correctly before sending them to an AI model.
 
 ## Conclusion
 
