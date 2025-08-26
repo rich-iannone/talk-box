@@ -16,23 +16,99 @@ class AttachmentMetadata:
     """
     Metadata for individual file attachments.
 
-    This class captures essential information about file processing results, including performance
-    metrics and error details for debugging and analytics.
+    This class captures essential information about file processing results, enabling
+    debugging, performance monitoring, and analytics for file attachment workflows.
+
+    The metadata is automatically collected during file processing and can be accessed
+    via the `Attachments.metadata` property for inspection and logging.
 
     Parameters
     ----------
-    filename
-        The name of the file (without path).
-    file_type
+    filename : str
+        The name of the fil        # Prompt section
+        if self._prompt_text:
+            # Clean up prompt text - strip leading/trailing whitespace
+            display_prompt = self._prompt_text.strip()
+
+            # Build HTML without f-string indentation issues
+            prompt_html = (
+                '<div style="margin-top: 12px;">'
+                '<strong style="color: #212529;">Prompt:</strong>'
+                '<div style="background: #e9ecef; color: #212529; padding: 8px; border-radius: 4px; margin-top: 4px; font-family: monospace; font-size: 0.9em; max-height: 120px; overflow-y: auto; white-space: pre-wrap;">'
+                f'{display_prompt}'
+                '</div>'
+                '</div>'
+            )
+            html += prompt_htmlpath).
+    file_type : str
         File extension without the dot (e.g., 'pdf', 'png', 'py').
-    size_bytes
+    size_bytes : int
         File size in bytes.
-    content_type
+    content_type : str
         Category of content: 'image', 'pdf', 'text', 'error', 'unsupported'.
-    processing_time_ms
+    processing_time_ms : float, optional
         Time taken to process the file in milliseconds.
-    error
+    error : str, optional
         Error message if processing failed.
+
+    Examples
+    --------
+    **Accessing File Metadata**
+
+    ```python
+    import talk_box as tb
+
+    files = tb.Attachments("report.pdf", "image.png", "data.csv")
+
+    # Process files (happens automatically during chat)
+    bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+    conversation = bot.chat(files.with_prompt("Analyze these files"))
+
+    # Inspect metadata
+    for meta in files.metadata:
+        print(f"File: {meta.filename}")
+        print(f"Type: {meta.content_type}")
+        print(f"Size: {meta.size_bytes:,} bytes")
+        print(f"Processing time: {meta.processing_time_ms:.1f}ms")
+        if meta.error:
+            print(f"Error: {meta.error}")
+        print("---")
+    ```
+
+    **Performance Monitoring**
+
+    ```python
+    # Monitor processing performance for optimization
+    large_files = tb.Attachments("big_report.pdf", "large_image.png")
+
+    # ... process files ...
+
+    total_time = sum(m.processing_time_ms for m in large_files.metadata)
+    total_size = sum(m.size_bytes for m in large_files.metadata)
+
+    print(f"Processed {len(large_files.metadata)} files")
+    print(f"Total size: {total_size:,} bytes")
+    print(f"Total time: {total_time:.1f}ms")
+    print(f"Avg speed: {total_size/total_time*1000:.0f} bytes/sec")
+    ```
+
+    **Error Detection and Handling**
+
+    ```python
+    files = tb.Attachments("good_file.pdf", "missing_file.txt", "corrupted.png")
+
+    # ... process files ...
+
+    # Check for errors
+    failed_files = [m for m in files.metadata if m.error]
+    successful_files = [m for m in files.metadata if not m.error]
+
+    print(f"Successfully processed: {len(successful_files)} files")
+    if failed_files:
+        print("Failed files:")
+        for meta in failed_files:
+            print(f"  {meta.filename}: {meta.error}")
+    ```
     """
 
     filename: str
@@ -54,9 +130,26 @@ class Attachments:
     """
     File attachment handler for Talk Box conversations.
 
-    Provides an interface for adding files to chat messages. The class handles multiple file types,
-    provides rich metadata for debugging and analytics, and converts files into content objects for
-    LLM integration.
+    The Attachments class enables you to include files in your AI conversations for analysis,
+    review, and discussion. It automatically handles different file types (text, images, PDFs) and
+    integrates seamlessly with ChatBot for programmatic conversations.
+
+    **Primary Use Cases:**
+
+    - **Code Review**: attach source files for automated code analysis
+    - **Document Analysis**: process PDFs, reports, and documentation
+    - **Data Analysis**: include CSV, JSON, or other data files for insights
+    - **Content Generation**: attach references for context-aware content creation
+    - **Image Analysis**: process diagrams, charts, or photos with vision models
+    - **Research Assistance**: attach papers, articles, or research materials
+
+    **Key Features:**
+
+    - multi-file support with automatic content type detection
+    - rich metadata collection for debugging and analytics
+    - seamless ChatBot integration for programmatic workflows
+    - chainable API following Talk Box design patterns
+    - error handling with graceful fallbacks
 
     Parameters
     ----------
@@ -65,33 +158,123 @@ class Attachments:
 
     Examples
     --------
-    ### Basic file attachment
-
-    ```python
-    from talk_box import Attachments
-
-    # Single file
-    files = Attachments("report.pdf")
-
-    # Multiple files
-    files = Attachments("code.py", "docs.md", "diagram.png")
-    ```
-
-    ### With prompt text
-
-    ```python
-    files = Attachments("analysis.csv").with_prompt("What trends do you see?")
-    ```
-
-    ### Integration with ChatBot
+    **Single File Analysis**
 
     ```python
     import talk_box as tb
 
-    bot = tb.ChatBot().model("gpt-4-turbo")
-    files = Attachments("codebase.py").with_prompt("Review this code")
-    conversation = bot.chat(files)
+    # Analyze a single document
+    files = tb.Attachments("quarterly_report.pdf").with_prompt(
+        "Summarize the key financial metrics and trends in this report."
+    )
+
+    bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+    analysis = bot.chat(files)
     ```
+
+    **Code Review Workflow**
+
+    ```python
+    # Review multiple source files
+    code_files = tb.Attachments(
+        "src/main.py",
+        "src/utils.py",
+        "tests/test_main.py"
+    ).with_prompt(
+        "Review this Python code for bugs, performance issues, and best practices. "
+        "Focus on the main logic and test coverage."
+    )
+
+    reviewer = (
+        tb.ChatBot()
+        .provider_model("openai:gpt-4-turbo")
+        .preset("technical_advisor")
+        .temperature(0.3)
+    )
+
+    review = reviewer.chat(code_files)
+    ```
+
+    **Data Analysis Pipeline**
+
+    ```python
+    # Analyze data files with context
+    data_analysis = tb.Attachments(
+        "sales_data.csv",
+        "customer_segments.json",
+        "analysis_notes.md"
+    ).with_prompt(
+        "Analyze the sales trends, identify top customer segments, "
+        "and suggest actionable insights based on the data and notes provided."
+    )
+
+    analyst = (
+        tb.ChatBot()
+        .provider_model("openai:gpt-4-turbo")
+        .temperature(0.4)
+        .max_tokens(2000)
+    )
+
+    insights = analyst.chat(data_analysis)
+    ```
+
+    **Image and Document Combination**
+
+    ```python
+    # Combine visual and textual content
+    presentation_review = (
+        tb.Attachments(
+            "slide_deck.pdf",
+            "speaker_notes.md",
+            "chart_image.png"
+        ).with_prompt(
+            "Review this presentation for clarity, visual impact, and alignment "
+            "between slides and speaker notes. Suggest improvements."
+        )
+    )
+
+    presentation_bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+    feedback = presentation_bot.chat(presentation_review)
+    ```
+
+    **Batch Processing Multiple Files**
+
+    ```python
+    # Process multiple documents for comparison
+    for file_path in ["doc1.pdf", "doc2.pdf", "doc3.pdf"]:
+        analysis = tb.Attachments(file_path).with_prompt(
+            "Extract the main thesis and key arguments from this document."
+        )
+        result = bot.chat(analysis)
+        print(f"Analysis of {file_path}:")
+        print(result)
+    ```
+
+    **Jupyter Notebook Integration**
+
+    ```python
+    # Rich HTML display in Jupyter notebooks
+    files = tb.Attachments("code.py", "data.csv", "report.pdf").with_prompt(
+        "Analyze these project files for insights and recommendations."
+    )
+
+    # Just display the object - shows rich HTML summary
+    files  # Displays file count, sizes, types, and prompt in formatted HTML
+
+    # Then process with ChatBot
+    bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+    result = bot.chat(files)
+    result  # Also displays with rich HTML formatting
+    ```
+
+    Notes
+    -----
+    - file attachments are designed for **single-turn programmatic conversations**
+    - for interactive multi-turn conversations, use `bot.show("browser")` instead
+    - large files are automatically chunked and processed efficiently
+    - unsupported file types are handled gracefully with informative errors
+    - all file processing includes timing and error metadata for debugging
+    - **HTML representation**: displays rich summary in Jupyter notebooks - just print the object!
     """
 
     def __init__(self, *file_paths: Union[str, Path]):
@@ -106,13 +289,15 @@ class Attachments:
         """
         Add a text prompt to accompany the file attachments.
 
-        This method enables an interface for combining prompt text with file attachments, following
-        the framework's chainable API design.
+        This method enables the fluent interface for combining prompt text with file attachments,
+        following Talk Box's chainable API design. The prompt provides context and instructions
+        for how the AI should analyze or interact with the attached files.
 
         Parameters
         ----------
-        prompt
-            The text prompt to include with the file attachments.
+        prompt : str
+            The text prompt to include with the file attachments. This should provide
+            clear instructions about what you want the AI to do with the attached files.
 
         Returns
         -------
@@ -121,10 +306,63 @@ class Attachments:
 
         Examples
         --------
+        **Specific Analysis Request**
+
         ```python
-        files = (Attachments("data.csv", "analysis.py")
-                .with_prompt("Review this data analysis code and results"))
+        files = tb.Attachments("financial_report.pdf").with_prompt(
+            "Extract the key financial metrics and identify any concerning trends "
+            "in this quarterly report. Focus on revenue, profit margins, and cash flow."
+        )
         ```
+
+        **Code Review with Specific Criteria**
+
+        ```python
+        code_review = tb.Attachments("src/main.py", "tests/test_main.py").with_prompt(
+            "Review this Python code for:\n"
+            "1. Code quality and best practices\n"
+            "2. Potential bugs or security issues\n"
+            "3. Test coverage and completeness\n"
+            "4. Performance optimization opportunities"
+        )
+        ```
+
+        **Creative Content Generation**
+
+        ```python
+        references = tb.Attachments("brand_guide.pdf", "competitor_analysis.md").with_prompt(
+            "Based on our brand guidelines and competitor analysis, create a "
+            "marketing strategy for our new product launch. Focus on differentiation "
+            "and brand consistency."
+        )
+        ```
+
+        **Data Analysis with Context**
+
+        ```python
+        data_files = tb.Attachments("sales_data.csv", "market_context.md").with_prompt(
+            "Analyze the sales data in the context of the market information provided. "
+            "Identify trends, anomalies, and actionable insights for the sales team."
+        )
+        ```
+
+        **Multi-file Comparison**
+
+        ```python
+        comparison = tb.Attachments("version1.py", "version2.py").with_prompt(
+            "Compare these two versions of the code and explain:\n"
+            "- What changed between versions\n"
+            "- Whether the changes improve or degrade the code\n"
+            "- Any potential issues introduced"
+        )
+        ```
+
+        Notes
+        -----
+        - The prompt is combined with file content when sent to the AI model
+        - Clear, specific prompts lead to better analysis results
+        - You can include formatting instructions (bullets, sections, etc.)
+        - The prompt applies to all attached files collectively
         """
         self._prompt_text = prompt
         return self
@@ -482,3 +720,97 @@ class Attachments:
         if self._prompt_text:
             return f"Attachments({', '.join(str(p) for p in self.file_paths)}).with_prompt({self._prompt_text!r})"
         return f"Attachments({', '.join(str(p) for p in self.file_paths)})"
+
+    def _repr_html_(self) -> str:
+        """Rich HTML representation for Jupyter notebooks."""
+        # Process files to get metadata
+        if not self._processed:
+            self._process_files()
+
+        # File status summary
+        total_files = len(self.metadata) if self.metadata else len(self.file_paths)
+        successful = len([m for m in self.metadata if not m.error]) if self.metadata else 0
+        failed = total_files - successful
+
+        # Calculate total size
+        total_size = sum(m.size_bytes for m in self.metadata if not m.error) if self.metadata else 0
+
+        # Format size
+        if total_size < 1024:
+            size_str = f"{total_size} bytes"
+        elif total_size < 1024 * 1024:
+            size_str = f"{total_size / 1024:.1f} KB"
+        else:
+            size_str = f"{total_size / (1024 * 1024):.1f} MB"
+
+        # Status color based on success rate
+        if failed == 0:
+            status_color = "#28a745"  # green
+            status_icon = "✅"
+        elif successful > 0:
+            status_color = "#ffc107"  # yellow
+            status_icon = "⚠️"
+        else:
+            status_color = "#dc3545"  # red
+            status_icon = "❌"
+
+        html = f"""
+        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 8px 0; background: #f8f9fa; color: #212529;">
+            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <div style="background: {status_color}; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-right: 10px;">
+                    � Attachments
+                </div>
+                <div style="color: {status_color}; font-weight: bold;">
+                    {status_icon} {successful}/{total_files} files ({size_str})
+                </div>
+            </div>
+        """
+
+        # File list
+        if self.metadata:
+            html += '<div style="margin-bottom: 12px; color: #212529;"><strong>Files:</strong></div><ul style="margin: 0; padding-left: 20px;">'
+            for meta in self.metadata:
+                if meta.error:
+                    html += f'<li style="color: #dc3545;">❌ {meta.filename} - {meta.error}</li>'
+                else:
+                    # Format file size
+                    if meta.size_bytes < 1024:
+                        file_size = f"{meta.size_bytes} bytes"
+                    elif meta.size_bytes < 1024 * 1024:
+                        file_size = f"{meta.size_bytes / 1024:.1f} KB"
+                    else:
+                        file_size = f"{meta.size_bytes / (1024 * 1024):.1f} MB"
+
+                    # Icon based on content type
+                    type_icons = {
+                        "text": "📄",
+                        "image": "🖼️",
+                        "pdf": "📕",
+                        "error": "❌",
+                        "unsupported": "❓",
+                    }
+                    icon = type_icons.get(meta.content_type, "📄")
+
+                    html += f'<li>{icon} {meta.filename} <span style="color: #495057;">({file_size})</span></li>'
+            html += "</ul>"
+        else:
+            # No metadata yet - show file paths
+            html += '<div style="margin-bottom: 12px;"><strong>Files:</strong></div><ul style="margin: 0; padding-left: 20px;">'
+            for file_path in self.file_paths:
+                html += f"<li>📄 {file_path.name}</li>"
+            html += "</ul>"
+
+        # Prompt section
+        if self._prompt_text:
+            # Clean up prompt text - strip leading/trailing whitespace
+            display_prompt = self._prompt_text.strip()
+
+            html += f"""
+            <div style="margin-top: 12px;">
+                <strong style="color: #212529;">Prompt:</strong>
+                <div style="background: #e9ecef; color: #212529; padding: 8px; border-radius: 4px; margin-top: 4px; font-family: monospace; font-size: 0.9em; max-height: 120px; overflow-y: auto; white-space: pre-wrap;">{display_prompt}</div>
+            </div>
+            """
+
+        html += "</div>"
+        return html
