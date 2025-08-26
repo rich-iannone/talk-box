@@ -44,7 +44,7 @@ class Message:
         The role of the message sender, indicating who or what generated this message.
         Standard roles include:
         - `"user"`: Messages from the human user
-        - `"assistant"`: Messages from the AI chatbot or assistant  
+        - `"assistant"`: Messages from the AI chatbot or assistant
         - `"system"`: System-level messages, instructions, or metadata
         - `"function"`: Messages from function calls or tool executions
         Custom roles can be used for specialized conversation flows.
@@ -211,7 +211,7 @@ class Message:
         }
     )
 
-    # Documentation workflow  
+    # Documentation workflow
     doc_request = Message(
         content="Please document the fibonacci function",
         role="doc_manager"
@@ -333,7 +333,7 @@ class Conversation:
     and receive `Conversation` objects that handle message history, context management, and persistence.
 
     **Integration with ChatBot**:
-    
+
     - Automatically created by [`ChatBot.chat()`](`talk_box.ChatBot.chat`)
     - Returned by [`ChatBot.start_conversation()`](`talk_box.ChatBot.start_conversation`)
     - Updated by [`ChatBot.continue_conversation()`](`talk_box.ChatBot.continue_conversation`)
@@ -506,7 +506,7 @@ class Conversation:
     # Analyze conversation patterns
     user_messages = analysis_conversation.get_messages(role="user")
     urgent_messages = [
-        msg for msg in user_messages 
+        msg for msg in user_messages
         if msg.metadata.get("urgency") == "high"
     ]
 
@@ -594,7 +594,7 @@ class Conversation:
     # Determine conversation flow based on metadata
     user_messages = support_conversation.get_messages(role="user")
     has_order_info = any(msg.metadata.get("info_provided") for msg in user_messages)
-    
+
     if has_order_info:
         support_conversation.add_assistant_message(
             "Thank you! I'm looking up order #12345 now...",
@@ -622,11 +622,11 @@ class Conversation:
     def chat_with_bot(user_input: str) -> str:
         # Add user message
         bot_conversation.add_user_message(user_input)
-        
+
         # Get bot response (simplified - real implementation would use bot.chat())
         response = f"Technical response to: {user_input}"
         bot_conversation.add_assistant_message(response)
-        
+
         return response
 
     # Use the chat function
@@ -686,9 +686,7 @@ class Conversation:
         self.messages.append(message)
         return message
 
-    def add_user_message(
-        self, content: str, metadata: Optional[dict[str, Any]] = None
-    ) -> Message:
+    def add_user_message(self, content: str, metadata: Optional[dict[str, Any]] = None) -> Message:
         """Add a user message to the conversation."""
         return self.add_message(content, "user", metadata)
 
@@ -772,3 +770,74 @@ class Conversation:
     def __str__(self) -> str:
         """String representation of the conversation."""
         return f"Conversation({self.conversation_id}, {len(self.messages)} messages)"
+
+    def _repr_html_(self) -> str:
+        """HTML representation for Jupyter notebook display."""
+        if not self.messages:
+            return """
+            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background-color: #f9f9f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+                <h3 style="margin: 0 0 10px 0; color: #666;">💬 Empty Conversation</h3>
+                <p style="margin: 0; color: #888;">No messages yet</p>
+            </div>
+            """
+
+        html_parts = [
+            """
+            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background-color: #f9f9f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+                <h3 style="margin: 0 0 15px 0; color: #333;">💬 Conversation</h3>
+            """
+        ]
+
+        # Add conversation metadata
+        html_parts.append(f"""
+            <div style="margin-bottom: 15px; padding: 8px; background-color: #f0f0f0; border-radius: 4px; font-size: 12px; color: #666;">
+                <strong>ID:</strong> {self.conversation_id[:8]}... | <strong>Messages:</strong> {len(self.messages)}
+            </div>
+        """)
+
+        # Add each message with role-based styling
+        for i, message in enumerate(self.messages):
+            # Role-based styling
+            if message.role == "user":
+                role_color = "#0066cc"
+                role_icon = "👤"
+                bg_color = "#e6f3ff"
+                border_color = "#0066cc"
+            elif message.role == "assistant":
+                role_color = "#009900"
+                role_icon = "🤖"
+                bg_color = "#e6ffe6"
+                border_color = "#009900"
+            elif message.role == "system":
+                role_color = "#cc6600"
+                role_icon = "⚙️"
+                bg_color = "#fff3e6"
+                border_color = "#cc6600"
+            else:
+                role_color = "#666666"
+                role_icon = "📝"
+                bg_color = "#f5f5f5"
+                border_color = "#999999"
+
+            # Format content with basic HTML escaping and line breaks
+            content = (
+                message.content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            )
+            content = content.replace("\n", "<br>")
+
+            # Truncate very long messages
+            if len(content) > 500:
+                content = content[:500] + "... <em style='color: #888;'>[truncated]</em>"
+
+            html_parts.append(f"""
+                <div style="margin-bottom: 12px; padding: 12px; background-color: {bg_color}; border-left: 4px solid {border_color}; border-radius: 0 4px 4px 0;">
+                    <div style="margin-bottom: 8px;">
+                        <strong style="color: {role_color};">{role_icon} {message.role.title()}</strong>
+                        <span style="float: right; font-size: 11px; color: #888;">{message.timestamp.strftime("%H:%M:%S")}</span>
+                    </div>
+                    <div style="color: #333; line-height: 1.4;">{content}</div>
+                </div>
+            """)
+
+        html_parts.append("</div>")
+        return "".join(html_parts)
