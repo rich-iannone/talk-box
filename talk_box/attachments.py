@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
+import chatlas
 
 @dataclass
 class AttachmentMetadata:
