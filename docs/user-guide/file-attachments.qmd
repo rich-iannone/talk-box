@@ -42,7 +42,7 @@ analysis = bot.chat(files)
 
 View the results as an HTML report:
 
-```{python}
+```python
 analysis
 ```
 
