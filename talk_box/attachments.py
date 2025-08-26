@@ -312,16 +312,17 @@ class Attachments:
 
     def to_chat_contents(self) -> List[Any]:
         """
-        Convert to chatlas-compatible content list for `Chat.chat()`.
+        Convert attachments to chatlas-compatible content list.
 
-        This method produces a list of content objects that can be passed directly to chatlas
-        `Chat.chat()` method, combining the prompt text (if provided) with processed file contents.
+        This method processes all attached files and converts them into the appropriate
+        chatlas content objects. Images become ContentImageInline objects, PDFs become
+        ContentPDF objects, and text files are combined into the prompt text.
 
         Returns
         -------
         List[Any]
-            List of content objects: strings for text, ContentImageInline for images,
-            ContentPDF for PDFs, etc.
+            List containing text prompt and Content objects ready to pass
+            directly to chatlas Chat.chat() method.
 
         Examples
         --------
@@ -331,14 +332,64 @@ class Attachments:
         # Result: ["Analyze these", ContentImageInline(...), ContentPDF(...)]
         ```
         """
+        # Ensure files are processed
+        self._process_files()
+
+        # Separate text content from media content
+        text_content_parts = []
+        media_contents = []
+
+        # Process each file by examining both metadata and content
+        for metadata in self.metadata:
+            # Find the corresponding content in _contents
+            # We need to process files again to get the content for each metadata
+            file_path = next((fp for fp in self.file_paths if fp.name == metadata.filename), None)
+            if file_path is None:
+                continue
+
+            # Get the content for this specific file
+            _, content = self._process_single_file(file_path)
+
+            if content is None:
+                continue
+
+            if metadata.content_type in ["text", "error"]:
+                # For text files and errors, include in the prompt text
+                if isinstance(content, str):
+                    text_content_parts.append(content)
+            else:
+                # For images, PDFs, etc., keep as Content objects
+                media_contents.append(content)
+
+        # Build the final content list
         contents = []
 
-        # Add prompt text first if provided
+        # Combine prompt text with text file contents
+        combined_text_parts = []
         if self._prompt_text:
-            contents.append(self._prompt_text)
+            combined_text_parts.append(self._prompt_text)
 
-        # Add processed file contents
-        contents.extend(self._process_files())
+        if text_content_parts:
+            combined_text_parts.extend(text_content_parts)
+
+        # Handle mixed content (text + media) vs pure text
+        if media_contents:
+            # When we have media files, convert text to Content objects for consistency
+            if combined_text_parts:
+                combined_text = "\n\n".join(combined_text_parts)
+                # Convert text to a Content object to match media content types
+                from chatlas._content import ContentText
+
+                text_content = ContentText(text=combined_text)
+                contents.append(text_content)
+
+            # Add all media content objects
+            contents.extend(media_contents)
+        else:
+            # Pure text files - return as single string (existing behavior)
+            if combined_text_parts:
+                combined_text = "\n\n".join(combined_text_parts)
+                contents.append(combined_text)
 
         return contents
 
