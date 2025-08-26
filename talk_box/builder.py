@@ -432,7 +432,7 @@ class ChatBot:
 
 📝 Basic Usage:
    • bot.chat("Hello!")                 → Start a conversation
-   • bot.show("basic")                  → Launch chat interface
+   • bot.show("browser")                → Launch chat interface
    • bot.show("help")                   → Show this guide again
 
 ⚙️ Configuration:
@@ -2705,24 +2705,8 @@ class ChatBot:
                 <div style="background: #f1f3f4; color: #212529; padding: 12px; border-radius: 6px; font-family: 'Monaco', 'Menlo', monospace; font-size: 0.85em; max-height: 120px; overflow-y: auto; white-space: pre-wrap; border-left: 4px solid #fd7e14;">{system_prompt}</div>
             </div>
 
-            <div style="background: linear-gradient(90deg, #2E86AB, #17a2b8); padding: 15px; border-radius: 6px; margin-top: 15px; color: white;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div>
-                        <strong>🚀 Ready to Chat!</strong>
-                        <div style="font-size: 0.9em; margin-top: 4px;">
-                            Launch chat interface on demand
-                        </div>
-                    </div>
-                    <div style="text-align: right; font-size: 0.85em;">
-                        <div>🔧 Quick Launch:</div>
-                        <div><code style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">bot.show("basic")</code></div>
-                        <div><code style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">bot.show("help")</code></div>
-                    </div>
-                </div>
-            </div>
-
             <div style="margin-top: 12px; font-size: 0.8em; color: #6c757d; text-align: center;">
-                💡 Use <strong>bot.show("basic")</strong> for chat • 🔍 Use <strong>bot.show("help")</strong> for guidance
+                💡 Use <strong>bot.show("browser")</strong> for chat • 🔍 Use <strong>bot.show("help")</strong> for guidance
             </div>
         </div>
         """
