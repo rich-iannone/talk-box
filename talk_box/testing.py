@@ -589,11 +589,27 @@ class TestResults:
                     if not prompt_text or prompt_text == "No system prompt found":
                         prompt_text = "No custom system prompt configured"
 
-                    # Format the prompt display
-                    if len(prompt_text) > 800:
-                        display_prompt = prompt_text[:800] + "\n... (truncated)"
-                    else:
-                        display_prompt = prompt_text
+                    # Format the prompt display with scrollable container for long content
+                    prompt_style = """
+                        background-color: white;
+                        padding: 12px;
+                        border-radius: 6px;
+                        margin-top: 8px;
+                        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                        font-size: 0.85em;
+                        white-space: pre-wrap;
+                        border: 1px solid #dee2e6;
+                        line-height: 1.4;
+                    """.replace("\n", " ").strip()
+
+                    if len(prompt_text) > 1000:  # Add scrolling for long prompts
+                        prompt_style += """
+                            max-height: 250px;
+                            overflow-y: auto;
+                            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+                            scrollbar-width: thin;
+                            scrollbar-color: #ccc #f0f0f0;
+                        """.replace("\n", " ").strip()
 
                     summary_html += f"""
                     <div style="background-color: #f1f3f4; padding: 12px; border-radius: 6px; border-left: 4px solid #28a745; color: #495057; margin-top: 12px;">
@@ -604,8 +620,8 @@ class TestResults:
                         <div style="font-size: 0.9em; margin-top: 8px;">
                             <strong>System Prompt:</strong>
                         </div>
-                        <div style="background-color: white; padding: 8px; border-radius: 4px; margin-top: 8px; font-family: monospace; font-size: 0.85em; white-space: pre-wrap; border: 1px solid #dee2e6;">
-{html.escape(display_prompt)}
+                        <div style="{prompt_style}">
+{html.escape(prompt_text)}
                         </div>
                     </div>
                     """

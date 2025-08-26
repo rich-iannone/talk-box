@@ -52,6 +52,7 @@ website:
         contents:
           - user-guide/chatbot-basics.qmd
           - user-guide/model-selection.qmd
+          - user-guide/file-attachments.qmd
       - section: "Prompt Engineering"
         contents:
           - user-guide/prompt-engineering-guide.qmd
@@ -86,6 +87,19 @@ quartodoc:
           members: []
         - name: Message
           members: []
+    - title: "File Attachments"
+      desc: "Classes for attaching and processing files in conversations"
+      contents:
+        - name: Attachments
+          members: []
+        - name: AttachmentMetadata
+          members: []
+    - title: "Attachment Methods"
+      desc: "Methods for configuring and managing file attachments"
+      contents:
+        - Attachments.with_prompt
+        - Attachments.get_metadata
+        - Attachments.summary
     - title: "Attention-Based Prompt Engineering"
       desc: "Advanced prompt building using attention mechanisms and cognitive principles"
       contents:
@@ -169,5 +183,3 @@ quartodoc:
         - autotest_avoid_topics
         - name: TestResults
           members: []
-
-

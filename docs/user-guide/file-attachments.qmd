@@ -1,0 +1,331 @@
+---
+title: "File Attachments"
+format: html
+---
+
+# File Attachments in Talk Box
+
+File attachments enable you to include documents, images, and other files in your AI conversations. This feature is designed for **programmatic single-turn conversations** where you want to analyze, review, or discuss file content with AI models.
+
+## When to Use File Attachments
+
+File attachments are ideal for automated workflows and batch processing scenarios:
+
+- **Code Review**: analyze source files for bugs, best practices, and improvements
+- **Document Analysis**: extract insights from PDFs, reports, and documentation
+- **Data Analysis**: process CSV, JSON, or other data files for trends and patterns
+- **Content Generation**: use reference materials for context-aware content creation
+- **Image Analysis**: analyze charts, diagrams, photos with vision-capable models
+- **Research**: process academic papers, articles, and research materials
+
+## Quick Start
+
+### Basic Usage
+
+The simplest way to use file attachments is with a single file. This example shows the complete workflow from setup to getting AI analysis results:
+
+```python
+import talk_box as tb
+
+# Step 1: Create a ChatBot for analysis
+bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+
+# Step 2: Attach a file with analysis prompt
+files = tb.Attachments("report.pdf").with_prompt(
+    "Summarize the key findings in this report."
+)
+
+# Step 3: Get LLM analysis
+analysis = bot.chat(files)
+
+```
+
+View the results as an HTML report:
+
+```python
+analysis
+```
+
+![](/assets/abraham-results.png)
+
+### Multiple Files
+
+When you need to analyze related files together, you can attach multiple files in a single operation. This is particularly useful for code reviews, document comparisons, or comprehensive project analysis:
+
+```python
+import talk_box as tb
+
+# Step 1: Create a ChatBot for analysis
+bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
+
+# Step 4: Analyze multiple related files
+code_review = tb.Attachments(
+    "talk_box/attachments.py",
+    "talk_box/conversation.py",
+    "tests/test_attachments.py"
+).with_prompt(
+    "Review this Python codebase for quality and test coverage."
+)
+
+# Step 2: Configure bot for technical review
+reviewer = bot.preset("technical_advisor")
+
+# Step 3: Get comprehensive code review
+review = reviewer.chat(code_review)
+```
+
+View the results as an HTML report:
+
+```python
+review
+```
+
+![](/assets/code-review-results.png)
+
+## File Types Supported
+
+Talk Box automatically detects and processes different file types, optimizing the handling based on content. Here's what's currently supported and how each type is best used:
+
+| Type | Extensions | Use Cases |
+|------|-----------|-----------|
+| **Text** | `.py`, `.js`, `.md`, `.txt`, `.csv`, `.json`, `.xml`, `.yaml` | Code review, documentation, data analysis |
+| **Images** | `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.webp` | Chart analysis, diagram review, visual content |
+| **PDFs** | `.pdf` | Document analysis, research papers, reports |
+
+Unsupported file types are handled gracefully with informative error messages.
+
+## Common Workflows
+
+These real-world examples show how to structure file attachment workflows for different scenarios. Each workflow includes error handling, performance considerations, and practical tips:
+
+### 1. Code Review Pipeline
+
+This is good for automated code quality checks and pull request reviews:
+
+```python
+import talk_box as tb
+from pathlib import Path
+
+def review_pull_request(file_paths, context=""):
+    """Review multiple files in a pull request."""
+
+    review_prompt = f"""
+    Review these code changes for:
+    1. Code quality and best practices
+    2. Potential bugs or security issues
+    3. Performance implications
+    4. Test coverage
+
+    Context: {context}
+
+    Provide specific, actionable feedback.
+    """
+
+    files = tb.Attachments(*file_paths).with_prompt(review_prompt)
+
+    reviewer = (
+        tb.ChatBot()
+        .provider_model("openai:gpt-4-turbo")
+        .preset("technical_advisor")
+        .temperature(0.3) # Lower temperature for consistent reviews
+    )
+
+    return reviewer.chat(files)
+
+# Usage
+changed_files = ["src/auth.py", "src/database.py", "tests/test_auth.py"]
+review = review_pull_request(changed_files, "Added OAuth2 authentication")
+
+review
+```
+
+### 2. Document Analysis Workflow
+
+Ideal for processing reports, research papers, and documentation:
+
+```python
+def analyze_documents(doc_paths, analysis_type="summary"):
+    """Analyze multiple documents with different analysis types."""
+
+    prompts = {
+        "summary": "Provide a concise summary of the key points and conclusions.",
+        "insights": "Extract actionable insights and recommendations.",
+        "comparison": "Compare and contrast the main arguments and findings.",
+        "critique": "Provide a critical analysis of the methodology and conclusions."
+    }
+
+    files = tb.Attachments(*doc_paths).with_prompt(prompts[analysis_type])
+
+    analyst = (
+        tb.ChatBot()
+        .provider_model("openai:gpt-4-turbo")
+        .temperature(0.4)
+        .max_tokens(2000)
+    )
+
+    return analyst.chat(files)
+
+# Usage
+research_papers = ["paper1.pdf", "paper2.pdf", "paper3.pdf"]
+```
+
+```python
+analyze_documents(research_papers, "summary")
+```
+
+```python
+analyze_documents(research_papers, "insights")
+```
+
+### 3. Data Analysis Pipeline
+
+Process data files with contextual information:
+
+```python
+def analyze_data_files(data_path, context_files=None, question=""):
+    """Analyze data files with additional context."""
+
+    file_list = [data_path]
+    if context_files:
+        file_list.extend(context_files)
+
+    prompt = f"""
+    Analyze the data and provide:
+    1. Key trends and patterns
+    2. Statistical insights
+    3. Anomalies or outliers
+    4. Actionable recommendations
+
+    Question: {question}
+    """
+
+    files = tb.Attachments(*file_list).with_prompt(prompt)
+
+    analyst = (
+        tb.ChatBot()
+        .provider_model("openai:gpt-4-turbo")
+        .preset("data_analyst")
+    )
+
+    return analyst.chat(files)
+
+# Usage
+analysis = analyze_data_files(
+    "sales_q4.csv",
+    context_files=["market_conditions.md", "product_changes.txt"],
+    question="What drove the sales increase in Q4?"
+)
+
+analysis
+```
+
+### 4. Visual Content Analysis
+
+Analyze images, charts, and diagrams:
+
+```python
+def analyze_visual_content(image_paths, analysis_focus="general"):
+    """Analyze visual content with specific focus areas."""
+
+    focus_prompts = {
+        "general": "Describe what you see and identify key elements.",
+        "data": "Extract and analyze any data, charts, or graphs shown.",
+        "design": "Evaluate the design principles, layout, and visual hierarchy.",
+        "technical": "Analyze technical diagrams, architecture, or system designs."
+    }
+
+    files = tb.Attachments(*image_paths).with_prompt(focus_prompts[analysis_focus])
+
+    # Use vision-capable model
+    analyzer = (
+        tb.ChatBot()
+        .provider_model("openai:gpt-4-turbo")
+        .temperature(0.5)
+    )
+
+    return analyzer.chat(files)
+
+# Usage
+charts = ["revenue_chart.png", "user_growth.png", "market_share.png"]
+data_analysis = analyze_visual_content(charts, "data")
+
+data_analysis
+```
+
+## Best Practices for Writing Effective Prompts
+
+Follow these guidelines to get the most accurate and useful results from your file attachment workflows. These practices help ensure reliable processing, clear communication with AI models, and robust error handling:
+
+The quality of your prompts directly impacts the usefulness of AI analysis. Here are key strategies for writing prompts that generate actionable insights:
+
+**Be Specific and Clear**
+
+Vague prompts lead to generic responses. Instead, specify exactly what information you need and how you want it presented:
+
+```python
+import talk_box as tb
+
+# Vague
+files = tb.Attachments("report.pdf").with_prompt("What do you think?")
+
+# Specific
+files = tb.Attachments("report.pdf").with_prompt(
+    "Extract the quarterly revenue figures and identify any significant "
+    "changes compared to the previous quarter. Highlight any risks mentioned."
+)
+```
+
+**Structure Complex Requests**
+
+For multi-part analysis, use numbered lists or clear sections to guide the AI through your requirements systematically:
+
+```python
+import talk_box as tb
+
+files = tb.Attachments("codebase.py").with_prompt("""
+Review this code for:
+1. Security vulnerabilities (SQL injection, XSS, etc.)
+2. Performance bottlenecks
+3. Code maintainability issues
+4. Missing error handling
+
+Provide specific line numbers and improvement suggestions.
+""")
+```
+
+Well-structured prompts not only improve response quality but also make it easier to validate and act on the AI's recommendations. The more specific your request, the more actionable the results will be.
+
+## HTML Display Features
+
+When working with file attachments in notebook or other HTML-capable environments, Talk Box provides rich visual representations that make it easy to inspect your attachments at a glance.
+
+Simply display an `Attachments` object to see a comprehensive summary:
+
+```python
+import talk_box as tb
+
+# Create attachments with various file types
+files = tb.Attachments(
+    "analysis.py",
+    "data.csv",
+    "chart.png",
+    "report.pdf"
+).with_prompt("Analyze this project data and provide insights.")
+
+# Display the HTML representation
+files  # Shows rich HTML summary
+```
+
+![](/assets/attachments-display.png)
+
+The HTML display includes several key features that help you understand the state of your attachments:
+
+- **File Breakdown**: descriptive icons (📁, 📄, 🖼️) and file sizes help you quickly identify file types and understand processing load
+- **File Status**: a ❌ mark is shown for files that are either missing or encountered processing errors
+- **Prompt Preview**: long prompts are displayed in scrollable containers, so you can review your instructions without cluttering the interface
+
+This visual feedback is particularly valuable when debugging file processing issues or confirming that your attachments are configured correctly before sending them to an AI model.
+
+## Conclusion
+
+File attachments in Talk Box provide a powerful foundation for building AI-powered analysis workflows. Start with simple single-file examples and gradually build more sophisticated batch processing and monitoring systems as your needs grow.
