@@ -3,52 +3,31 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
-try:
-    import chatlas
-except ImportError:
-    raise ImportError(
-        "chatlas is required for file attachment support. Install it with: pip install chatlas"
-    )
-
 
 @dataclass
 class AttachmentMetadata:
     """
     Metadata for individual file attachments.
 
-    This class captures essential information about file processing results, enabling
-    debugging, performance monitoring, and analytics for file attachment workflows.
+    This class captures essential information about file processing results, enabling debugging,
+    performance monitoring, and analytics for file attachment workflows.
 
-    The metadata is automatically collected during file processing and can be accessed
-    via the `Attachments.metadata` property for inspection and logging.
+    The metadata is automatically collected during file processing and can be accessed via the
+    `Attachments.metadata` property for inspection and logging.
 
     Parameters
     ----------
-    filename : str
-        The name of the fil        # Prompt section
-        if self._prompt_text:
-            # Clean up prompt text - strip leading/trailing whitespace
-            display_prompt = self._prompt_text.strip()
-
-            # Build HTML without f-string indentation issues
-            prompt_html = (
-                '<div style="margin-top: 12px;">'
-                '<strong style="color: #212529;">Prompt:</strong>'
-                '<div style="background: #e9ecef; color: #212529; padding: 8px; border-radius: 4px; margin-top: 4px; font-family: monospace; font-size: 0.9em; max-height: 120px; overflow-y: auto; white-space: pre-wrap;">'
-                f'{display_prompt}'
-                '</div>'
-                '</div>'
-            )
-            html += prompt_htmlpath).
-    file_type : str
+    filename
+        The name of the file (without path).
+    file_type
         File extension without the dot (e.g., 'pdf', 'png', 'py').
-    size_bytes : int
+    size_bytes
         File size in bytes.
-    content_type : str
+    content_type
         Category of content: 'image', 'pdf', 'text', 'error', 'unsupported'.
-    processing_time_ms : float, optional
+    processing_time_ms
         Time taken to process the file in milliseconds.
-    error : str, optional
+    error
         Error message if processing failed.
 
     Examples
@@ -132,7 +111,7 @@ class Attachments:
 
     The Attachments class enables you to include files in your AI conversations for analysis,
     review, and discussion. It automatically handles different file types (text, images, PDFs) and
-    integrates seamlessly with ChatBot for programmatic conversations.
+    integrates seamlessly with `ChatBot` for programmatic conversations.
 
     **Primary Use Cases:**
 
@@ -253,18 +232,25 @@ class Attachments:
     **Jupyter Notebook Integration**
 
     ```python
-    # Rich HTML display in Jupyter notebooks
+    # HTML display in Jupyter notebooks
     files = tb.Attachments("code.py", "data.csv", "report.pdf").with_prompt(
         "Analyze these project files for insights and recommendations."
     )
 
-    # Just display the object - shows rich HTML summary
+    # Just displaying the object shows an HTML summary
     files  # Displays file count, sizes, types, and prompt in formatted HTML
+    ```
 
+    ```python
     # Then process with ChatBot
     bot = tb.ChatBot().provider_model("openai:gpt-4-turbo")
     result = bot.chat(files)
-    result  # Also displays with rich HTML formatting
+    ```
+
+    The result here can also be displayed with HTML formatting:
+
+    ```python
+    result
     ```
 
     Notes
@@ -274,7 +260,7 @@ class Attachments:
     - large files are automatically chunked and processed efficiently
     - unsupported file types are handled gracefully with informative errors
     - all file processing includes timing and error metadata for debugging
-    - **HTML representation**: displays rich summary in Jupyter notebooks - just print the object!
+    - **HTML representation**: displays rich summary in Jupyter notebooks so just print the object!
     """
 
     def __init__(self, *file_paths: Union[str, Path]):
@@ -295,9 +281,9 @@ class Attachments:
 
         Parameters
         ----------
-        prompt : str
-            The text prompt to include with the file attachments. This should provide
-            clear instructions about what you want the AI to do with the attached files.
+        prompt
+            The text prompt to include with the file attachments. This should provide clear
+            instructions about what you want the AI to do with the attached files.
 
         Returns
         -------
@@ -309,9 +295,14 @@ class Attachments:
         **Specific Analysis Request**
 
         ```python
-        files = tb.Attachments("financial_report.pdf").with_prompt(
-            "Extract the key financial metrics and identify any concerning trends "
-            "in this quarterly report. Focus on revenue, profit margins, and cash flow."
+        import talk_box as tb
+
+        files = (
+            tb.Attachments("financial_report.pdf")
+            .with_prompt(
+                "Extract the key financial metrics and identify any concerning trends "
+                "in this quarterly report. Focus on revenue, profit margins, and cash flow."
+            )
         )
         ```
 
@@ -330,39 +321,48 @@ class Attachments:
         **Creative Content Generation**
 
         ```python
-        references = tb.Attachments("brand_guide.pdf", "competitor_analysis.md").with_prompt(
-            "Based on our brand guidelines and competitor analysis, create a "
-            "marketing strategy for our new product launch. Focus on differentiation "
-            "and brand consistency."
+        references = (
+            tb.Attachments("brand_guide.pdf", "competitor_analysis.md")
+            .with_prompt(
+                "Based on our brand guidelines and competitor analysis, create a "
+                "marketing strategy for our new product launch. Focus on differentiation "
+                "and brand consistency."
+            )
         )
         ```
 
         **Data Analysis with Context**
 
         ```python
-        data_files = tb.Attachments("sales_data.csv", "market_context.md").with_prompt(
-            "Analyze the sales data in the context of the market information provided. "
-            "Identify trends, anomalies, and actionable insights for the sales team."
+        data_files = (
+            tb.Attachments("sales_data.csv", "market_context.md")
+            .with_prompt(
+                "Analyze the sales data in the context of the market information provided. "
+                "Identify trends, anomalies, and actionable insights for the sales team."
+            )
         )
         ```
 
         **Multi-file Comparison**
 
         ```python
-        comparison = tb.Attachments("version1.py", "version2.py").with_prompt(
-            "Compare these two versions of the code and explain:\n"
-            "- What changed between versions\n"
-            "- Whether the changes improve or degrade the code\n"
-            "- Any potential issues introduced"
+        comparison = (
+            tb.Attachments("version1.py", "version2.py")
+            .with_prompt(
+                "Compare these two versions of the code and explain:\n"
+                "- What changed between versions\n"
+                "- Whether the changes improve or degrade the code\n"
+                "- Any potential issues introduced"
+            )
         )
         ```
 
         Notes
         -----
-        - The prompt is combined with file content when sent to the AI model
-        - Clear, specific prompts lead to better analysis results
-        - You can include formatting instructions (bullets, sections, etc.)
-        - The prompt applies to all attached files collectively
+        - the prompt is combined with file content when sent to the AI model
+        - clear, specific prompts lead to better analysis results
+        - you can include formatting instructions (bullets, sections, etc.)
+        - the prompt applies to all attached files collectively
         """
         self._prompt_text = prompt
         return self
@@ -552,9 +552,9 @@ class Attachments:
         """
         Convert attachments to chatlas-compatible content list.
 
-        This method processes all attached files and converts them into the appropriate
-        chatlas content objects. Images become ContentImageInline objects, PDFs become
-        ContentPDF objects, and text files are combined into the prompt text.
+        This method processes all attached files and converts them into the appropriate chatlas
+        content objects. Images become ContentImageInline objects, PDFs become ContentPDF objects,
+        and text files are combined into the prompt text.
 
         Returns
         -------
@@ -565,7 +565,9 @@ class Attachments:
         Examples
         --------
         ```python
-        files = Attachments("image.png", "doc.pdf").with_prompt("Analyze these")
+        import talk_box as tb
+
+        files = tb.Attachments("image.png", "doc.pdf").with_prompt("Analyze these")
         contents = files.to_chat_contents()
         # Result: ["Analyze these", ContentImageInline(...), ContentPDF(...)]
         ```
@@ -663,7 +665,9 @@ class Attachments:
         Examples
         --------
         ```python
-        files = Attachments("code.py", "missing.txt", "diagram.png")
+        import talk_box as tb
+
+        files = tb.Attachments("code.py", "missing.txt", "diagram.png")
         print(files.summary())
         # Output: "📎 2/3 files attached (15.2KB): 1 text, 1 image [1 failed]"
         ```
