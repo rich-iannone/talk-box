@@ -1,9 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { clsx } from 'clsx';
 import { Send, Loader2 } from 'lucide-react';
 import type { ChatInputProps } from '../../types';
-import { Button } from '../ui/Button';
-import { Textarea } from '../ui/Textarea';
 
 const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
@@ -24,7 +21,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
     try {
       await onSendMessage(message);
       setMessage('');
-      textareaRef.current?.focus();
+      // Remove auto-focus to prevent unnecessary scrolling
+      // textareaRef.current?.focus();
     } catch (error) {
       console.error('Failed to send message:', error);
     } finally {
@@ -40,32 +38,32 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className={clsx('p-4 border-t', className)}>
-      <div className="flex items-end space-x-2">
-        <div className="flex-1">
-          <Textarea
+    <form onSubmit={handleSubmit} className={`chat-input-form ${className || ''}`}>
+      <div className="chat-input-container">
+        <div className="chat-input-wrapper">
+          <textarea
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled || isLoading}
-            className="min-h-[40px] max-h-[120px] resize-none"
+            className="chat-textarea"
             rows={1}
           />
         </div>
-        <Button
+        <button
           type="submit"
           disabled={!message.trim() || disabled || isLoading}
-          className="h-10 w-10 p-0"
+          className={`chat-send-button ${(!message.trim() || disabled || isLoading) ? 'chat-send-button-disabled' : ''}`}
           aria-label="Send message"
         >
           {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="chat-send-icon spinning" />
           ) : (
-            <Send className="h-4 w-4" />
+            <Send className="chat-send-icon" />
           )}
-        </Button>
+        </button>
       </div>
     </form>
   );

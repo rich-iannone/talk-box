@@ -26,6 +26,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.1.12",
     "clsx": "^2.1.0",
     "lucide-react": "^0.263.1",
     "react": "^18.3.1",

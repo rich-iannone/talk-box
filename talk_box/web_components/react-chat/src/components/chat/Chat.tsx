@@ -82,9 +82,9 @@ const Chat: React.FC<TalkBoxChatProps> = ({
   const chatContent = (
     <div
       className={clsx(
-        'bg-white rounded-lg shadow-lg flex flex-col',
-        isExpanded ? 'w-[920px] h-[880px]' : 'w-[400px] h-[600px]',
-        float && 'fixed bottom-4 right-4 z-50',
+        'chat-wrapper',
+        isExpanded ? 'chat-expanded' : 'chat-normal',
+        float && 'chat-floating',
         classNames?.chatContainer,
         className
       )}
@@ -100,22 +100,18 @@ const Chat: React.FC<TalkBoxChatProps> = ({
       <MessageList
         messages={messages}
         isTyping={isTyping}
-        className={classNames?.messageList}
+        className={clsx('chat-messages-container', classNames?.messageList)}
       />
 
       {error && (
-        <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-sm">
-          <div className="flex items-center justify-between">
-            <span>Error: {error}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={retry}
-              className="text-red-600 hover:text-red-800"
-            >
-              Retry
-            </Button>
-          </div>
+        <div className="chat-error">
+          <span>Error: {error}</span>
+          <button
+            className="chat-error-retry"
+            onClick={retry}
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -138,12 +134,12 @@ const Chat: React.FC<TalkBoxChatProps> = ({
       <>
         {/* Popup button */}
         {!isOpen && (
-          <div className="fixed bottom-4 right-4 z-50">
+          <div className="chat-popup-button-container">
             {popupButton || (
               <Button
                 onClick={() => setIsOpen(true)}
                 className={clsx(
-                  'w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg',
+                  'chat-popup-button',
                   classNames?.popupButton
                 )}
                 aria-label="Open chat"

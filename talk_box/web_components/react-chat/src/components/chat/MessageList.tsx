@@ -18,16 +18,34 @@ const MessageList: React.FC<MessageListProps> = ({
   emptyStateMessage = "👋 Hi! I'm your Talk Box assistant. How can I help you today?",
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLengthRef = useRef(messages.length);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive (but not when just typing status changes)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+    // Only scroll if a new message was actually added
+    if (messages.length > prevMessagesLengthRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      prevMessagesLengthRef.current = messages.length;
+    }
+  }, [messages]);
+
+  // Separate effect for typing indicator - only scroll if already at bottom
+  useEffect(() => {
+    if (isTyping) {
+      const container = messagesEndRef.current?.parentElement;
+      if (container) {
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+        if (isNearBottom) {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    }
+  }, [isTyping]);
 
   return (
     <div
       className={clsx(
-        'flex-1 overflow-y-auto p-4 space-y-4',
+        'message-list',
         className
       )}
       role="log"
@@ -35,9 +53,9 @@ const MessageList: React.FC<MessageListProps> = ({
       aria-live="polite"
     >
       {messages.length === 0 ? (
-        <div className="flex items-center justify-center h-full text-center">
-          <div className="text-gray-500 max-w-sm">
-            <div className="text-lg mb-2">💬</div>
+        <div className="message-list-empty">
+          <div className="message-list-empty-content">
+            <div className="message-list-empty-icon">💬</div>
             <p>{emptyStateMessage}</p>
           </div>
         </div>
@@ -52,10 +70,10 @@ const MessageList: React.FC<MessageListProps> = ({
           ))}
 
           {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-lg px-4 py-3 flex items-center space-x-2">
-                <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
-                <span className="text-sm text-gray-500">Typing...</span>
+            <div className="typing-indicator">
+              <div className="message-bubble message-assistant">
+                <Loader2 className="typing-spinner" />
+                <span>Typing...</span>
               </div>
             </div>
           )}

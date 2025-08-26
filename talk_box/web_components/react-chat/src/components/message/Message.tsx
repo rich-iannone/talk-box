@@ -1,5 +1,4 @@
 import React from 'react';
-import { clsx } from 'clsx';
 import type { MessageProps } from '../../types';
 import MessageMarkdown from './MessageMarkdown';
 import { formatTimestamp } from '../../utils/api';
@@ -8,35 +7,17 @@ const Message: React.FC<MessageProps> = ({ message, isUser = false, className })
   const { content, timestamp } = message;
 
   return (
-    <div
-      className={clsx(
-        'flex w-full',
-        isUser ? 'justify-end' : 'justify-start',
-        className
-      )}
-    >
-      <div
-        className={clsx(
-          'max-w-[80%] rounded-lg px-4 py-2 shadow-sm',
-          isUser
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 text-gray-900'
-        )}
-      >
-        <div className="space-y-1">
+    <div className={`message-container ${isUser ? 'message-user' : 'message-assistant'} ${className || ''}`}>
+      <div className={`message-bubble ${isUser ? 'message-bubble-user' : 'message-bubble-assistant'}`}>
+        <div className="message-content">
           {isUser ? (
-            <div className="whitespace-pre-wrap break-words">
+            <div className="message-text">
               {content}
             </div>
           ) : (
             <MessageMarkdown>{content}</MessageMarkdown>
           )}
-          <div
-            className={clsx(
-              'text-xs',
-              isUser ? 'text-blue-100' : 'text-gray-500'
-            )}
-          >
+          <div className={`message-timestamp ${isUser ? 'message-timestamp-user' : 'message-timestamp-assistant'}`}>
             {formatTimestamp(timestamp)}
           </div>
         </div>

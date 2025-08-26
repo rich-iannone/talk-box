@@ -4,7 +4,7 @@ export interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant';
-  timestamp: Date;
+  timestamp: Date | string | number;
   metadata?: Record<string, unknown>;
 }
 

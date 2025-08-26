@@ -87,10 +87,22 @@ export const createUserMessage = (content: string): Message => ({
 });
 
 // Utility function to format timestamps
-export const formatTimestamp = (timestamp: Date): string => {
-  return new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  }).format(timestamp);
+export const formatTimestamp = (timestamp: Date | string | number): string => {
+  try {
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return 'Just now';
+    }
+
+    return new Intl.DateTimeFormat('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).format(date);
+  } catch (error) {
+    // If any error occurs, return a fallback
+    return 'Just now';
+  }
 };

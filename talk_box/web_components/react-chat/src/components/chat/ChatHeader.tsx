@@ -14,24 +14,24 @@ const ChatHeader: React.FC<HeaderProps> = ({
   return (
     <div
       className={clsx(
-        'flex items-center justify-between px-4 py-3 bg-blue-600 text-white rounded-t-lg',
+        'chat-header',
         className
       )}
     >
-      <div className="flex items-center space-x-3">
-        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-semibold">
+      <div className="chat-header-info">
+        <div className="chat-header-avatar">
           {botName.charAt(0).toUpperCase()}
         </div>
-        <h3 className="font-medium text-sm">{botName}</h3>
+        <h3 className="chat-header-title">{botName}</h3>
       </div>
 
-      <div className="flex items-center space-x-1">
+      <div className="chat-header-actions">
         {onToggleExpanded && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onToggleExpanded}
-            className="text-white hover:bg-blue-500 h-8 w-8 p-0"
+            className="chat-header-button"
             aria-label={isExpanded ? 'Minimize chat' : 'Expand chat'}
           >
             {isExpanded ? (
@@ -46,7 +46,7 @@ const ChatHeader: React.FC<HeaderProps> = ({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-white hover:bg-blue-500 h-8 w-8 p-0"
+            className="chat-header-button"
             aria-label="Close chat"
           >
             <X className="h-4 w-4" />

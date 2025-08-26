@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import Chat from '../components/chat/Chat';
+import ErrorBoundary from '../components/ErrorBoundary';
 import '../styles/simple.css';
 
 function App() {
@@ -35,10 +36,12 @@ function App() {
         </div>
 
         <div className="chat-interface">
-          <Chat
-            config={chatConfig}
-            apiEndpoint="http://127.0.0.1:8000"
-          />
+          <ErrorBoundary>
+            <Chat
+              config={chatConfig}
+              apiEndpoint="http://127.0.0.1:8000"
+            />
+          </ErrorBoundary>
         </div>
       </div>
 
