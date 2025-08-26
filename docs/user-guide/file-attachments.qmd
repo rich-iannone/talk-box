@@ -37,7 +37,6 @@ files = tb.Attachments("report.pdf").with_prompt(
 
 # Step 3: Get LLM analysis
 analysis = bot.chat(files)
-
 ```
 
 View the results as an HTML report:
