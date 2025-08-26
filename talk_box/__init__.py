@@ -6,7 +6,16 @@ to create, test, and deploy LLM chatbots with a chainable API, built-in tools,
 behavior presets, and comprehensive testing capabilities.
 """
 
-__version__ = "0.2.1"
+try:
+    from importlib.metadata import PackageNotFoundError, version
+except ImportError:  # pragma: no cover
+    from importlib_metadata import PackageNotFoundError, version
+
+try:  # pragma: no cover
+    __version__ = version("talk-box")
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.0.0"
+
 __author__ = "Richard Iannone"
 __email__ = "riannone@me.com"
 

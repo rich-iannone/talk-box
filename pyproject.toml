@@ -1,6 +1,11 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+
+[tool.setuptools.packages.find]
+include = ["talk_box"]
 
 [project]
 name = "talk-box"
@@ -79,12 +84,6 @@ Repository = "https://github.com/rich-iannone/talk-box"
 
 [project.scripts]
 talk-box = "talk_box.cli:main"
-
-[tool.hatch.version]
-path = "talk_box/__init__.py"
-
-[tool.hatch.build.targets.wheel]
-packages = ["talk_box"]
 
 [tool.ruff]
 line-length = 100
