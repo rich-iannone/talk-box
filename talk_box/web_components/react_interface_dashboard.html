@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talk Box</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .demo-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        .demo-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            background: white;
+        }
+        .demo-card h3 {
+            color: #1f2937;
+            margin-bottom: 15px;
+        }
+        .status-indicator {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        .status-running { background: #10b981; color: white; }
+        .status-error { background: #ef4444; color: white; }
+        .status-pending { background: #f59e0b; color: white; }
+    </style>
+</head>
+<body>
+    <div class="demo-section">
+        <h1 class="text-4xl font-bold mb-4">🚀 Talk Box React Chat Interface</h1>
+        <p class="text-xl mb-6">Modern React component with full Talk Box + Chatlas integration</p>
+        <div class="flex justify-center space-x-4">
+            <a href="http://localhost:5173" target="_blank" class="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
+                🌐 Open React Interface
+            </a>
+            <button onclick="checkServers()" class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition">
+                🔍 Check Server Status
+            </button>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="comparison-grid">
+            <div class="demo-card">
+                <h3 class="text-xl font-bold">🔧 Traditional Approach</h3>
+                <p class="text-gray-600 mb-4">The classic <code>chat.show("browser")</code> method</p>
+                <pre class="bg-gray-100 p-4 rounded text-sm"><code>import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .model("gpt-4")
+    .preset("technical_advisor")
+    .temperature(0.3)
+)
+
+# Launch traditional interface
+bot.show("browser")</code></pre>
+                <div class="mt-4">
+                    <span class="text-sm text-gray-500">✅ Quick setup</span><br>
+                    <span class="text-sm text-gray-500">❌ Limited customization</span>
+                </div>
+            </div>
+
+            <div class="demo-card">
+                <h3 class="text-xl font-bold">⚡ React Component</h3>
+                <p class="text-gray-600 mb-4">Modern React-based interface with full control</p>
+                <pre class="bg-gray-100 p-4 rounded text-sm"><code>import { TalkBoxChat } from '@talk-box/react-chat';
+
+function App() {
+  return (
+    &lt;TalkBoxChat
+      chatBot={{
+        model: "gpt-4",
+        preset: "technical_advisor",
+        temperature: 0.3
+      }}
+      theme="light"
+      apiBaseUrl="http://127.0.0.1:8000"
+    /&gt;
+  );
+}</code></pre>
+                <div class="mt-4">
+                    <span class="text-sm text-gray-500">✅ Full customization</span><br>
+                    <span class="text-sm text-gray-500">✅ Modern React ecosystem</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-card">
+            <h3 class="text-xl font-bold mb-4">🔍 Server Status</h3>
+            <div id="server-status">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <strong>FastAPI Server (Backend)</strong>
+                        <div id="fastapi-status" class="status-indicator status-pending">Checking...</div>
+                        <p class="text-sm text-gray-600">http://127.0.0.1:8000</p>
+                    </div>
+                    <div>
+                        <strong>React Dev Server (Frontend)</strong>
+                        <div id="react-status" class="status-indicator status-pending">Checking...</div>
+                        <p class="text-sm text-gray-600">http://localhost:5173</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-card">
+            <h3 class="text-xl font-bold mb-4">🚀 Quick Start Commands</h3>
+            <div class="space-y-4">
+                <div>
+                    <h4 class="font-semibold">1. Start FastAPI Server</h4>
+                    <pre class="bg-gray-900 text-green-400 p-3 rounded text-sm"><code>cd talk_box/web_components/python_server
+python3 chat_server.py</code></pre>
+                </div>
+                <div>
+                    <h4 class="font-semibold">2. Start React Dev Server</h4>
+                    <pre class="bg-gray-900 text-green-400 p-3 rounded text-sm"><code>cd talk_box/web_components/react-chat
+npm run dev</code></pre>
+                </div>
+                <div>
+                    <h4 class="font-semibold">3. Open Chat Interface</h4>
+                    <p>Visit <a href="http://localhost:5173" target="_blank" class="text-blue-600 hover:underline">http://localhost:5173</a></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-card">
+            <h3 class="text-xl font-bold mb-4">🔗 API Integration Examples</h3>
+            <div class="space-y-4">
+                <div>
+                    <h4 class="font-semibold">Health Check</h4>
+                    <button onclick="testHealthEndpoint()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Test Health Endpoint
+                    </button>
+                    <pre id="health-result" class="bg-gray-100 p-3 rounded text-sm mt-2 hidden"></pre>
+                </div>
+
+                <div>
+                    <h4 class="font-semibold">Create Conversation</h4>
+                    <button onclick="testCreateConversation()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                        Test Create Conversation
+                    </button>
+                    <pre id="conversation-result" class="bg-gray-100 p-3 rounded text-sm mt-2 hidden"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Server status checking
+        async function checkServers() {
+            // Check FastAPI
+            try {
+                const fastapiResponse = await fetch('http://127.0.0.1:8000/health');
+                if (fastapiResponse.ok) {
+                    document.getElementById('fastapi-status').className = 'status-indicator status-running';
+                    document.getElementById('fastapi-status').textContent = '✅ Running';
+                } else {
+                    throw new Error('Not responding');
+                }
+            } catch (error) {
+                document.getElementById('fastapi-status').className = 'status-indicator status-error';
+                document.getElementById('fastapi-status').textContent = '❌ Not Running';
+            }
+
+            // Check React dev server
+            try {
+                const reactResponse = await fetch('http://localhost:5173');
+                if (reactResponse.ok) {
+                    document.getElementById('react-status').className = 'status-indicator status-running';
+                    document.getElementById('react-status').textContent = '✅ Running';
+                } else {
+                    throw new Error('Not responding');
+                }
+            } catch (error) {
+                document.getElementById('react-status').className = 'status-indicator status-error';
+                document.getElementById('react-status').textContent = '❌ Not Running';
+            }
+        }
+
+        // Test health endpoint
+        async function testHealthEndpoint() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/health');
+                const data = await response.json();
+                document.getElementById('health-result').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('health-result').classList.remove('hidden');
+            } catch (error) {
+                document.getElementById('health-result').textContent = `Error: ${error.message}`;
+                document.getElementById('health-result').classList.remove('hidden');
+            }
+        }
+
+        // Test create conversation
+        async function testCreateConversation() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        config: {
+                            model: 'gpt-4',
+                            temperature: 0.7,
+                            systemPrompt: 'You are a helpful assistant'
+                        }
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('conversation-result').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('conversation-result').classList.remove('hidden');
+            } catch (error) {
+                document.getElementById('conversation-result').textContent = `Error: ${error.message}`;
+                document.getElementById('conversation-result').classList.remove('hidden');
+            }
+        }
+
+        // Auto-check servers on load
+        window.addEventListener('load', checkServers);
+    </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+# Requirements for Talk Box React Chat Server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+python-multipart>=0.0.6

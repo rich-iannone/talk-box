@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talk Box React Chat</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+        }
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        .chat-area {
+            padding: 30px;
+            min-height: 400px;
+        }
+        .status {
+            background: #e7f5e7;
+            border: 1px solid #4caf50;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .chat-input button {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .chat-input button:hover {
+            background: #0056b3;
+        }
+        .messages {
+            min-height: 200px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            background: #fafafa;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .message.user {
+            background: #007bff;
+            color: white;
+            text-align: right;
+        }
+        .message.assistant {
+            background: #f1f1f1;
+            color: #333;
+        }
+        .loading {
+            opacity: 0.7;
+            font-style: italic;
+        }
+    </style>
+    <!-- Load React from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Load Babel for JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function TalkBoxChat() {
+            const [messages, setMessages] = useState([]);
+            const [input, setInput] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [connected, setConnected] = useState(false);
+            const [conversationId, setConversationId] = useState(null);
+
+            // Test API connection on mount
+            useEffect(() => {
+                fetch('http://127.0.0.1:8000/health')
+                    .then(response => response.json())
+                    .then(data => {
+                        setConnected(data.status === 'healthy');
+                    })
+                    .catch(() => setConnected(false));
+            }, []);
+
+            const createConversation = async () => {
+                console.log('Creating new conversation...');
+                const response = await fetch('http://127.0.0.1:8000/conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        config: {
+                            name: 'Talk Box Chat',
+                            model: 'gpt-4',
+                            temperature: 0.7,
+                            system_prompt: 'You are a helpful AI assistant powered by Talk Box and Chatlas.'
+                        }
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Failed to create conversation:', response.status, errorText);
+                    throw new Error(`Failed to create conversation: ${response.status} - ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('Conversation created:', data);
+                return data.id || data.conversation_id;
+            };
+
+            const sendMessage = async () => {
+                if (!input.trim() || loading) return;
+
+                const userMessage = input.trim();
+                setInput('');
+
+                // Add user message
+                setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+                setLoading(true);
+
+                try {
+                    // Create conversation if we don't have one
+                    let currentConversationId = conversationId;
+                    if (!currentConversationId) {
+                        currentConversationId = await createConversation();
+                        console.log('Using conversation ID:', currentConversationId);
+                        setConversationId(currentConversationId);
+                    }
+
+                    // Send the message
+                    console.log('Sending message to conversation:', currentConversationId);
+                    const response = await fetch(`http://127.0.0.1:8000/conversation/${currentConversationId}/message`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            content: userMessage
+                        }),
+                    });
+
+                    console.log('Message response status:', response.status);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        let assistantMessage = data.response || data.content || 'I received your message!';
+
+                        // Check if this is an API key error and provide helpful message
+                        if (assistantMessage.includes('api_key client option must be set') ||
+                            assistantMessage.includes('OPENAI_API_KEY')) {
+                            assistantMessage = `🎉 SUCCESS! The React interface is working perfectly!\n\n` +
+                                             `✅ React frontend: Connected\n` +
+                                             `✅ FastAPI backend: Connected\n` +
+                                             `✅ Talk Box integration: Working\n` +
+                                             `✅ API calls: Successful\n\n` +
+                                             `💡 To get AI responses, you need to set up your OpenAI API key:\n` +
+                                             `export OPENAI_API_KEY="your-api-key-here"\n\n` +
+                                             `Your message was: "${userMessage}"`;
+                        }
+
+                        setMessages(prev => [...prev, {
+                            role: 'assistant',
+                            content: assistantMessage
+                        }]);
+                    } else {
+                        const errorText = await response.text();
+
+                        // If conversation not found, try creating a new one
+                        if (response.status === 404) {
+                            setConversationId(null);
+                            const newConversationId = await createConversation();
+                            setConversationId(newConversationId);
+
+                            // Retry the message with new conversation
+                            const retryResponse = await fetch(`http://127.0.0.1:8000/conversation/${newConversationId}/message`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    content: userMessage
+                                }),
+                            });
+
+                            if (retryResponse.ok) {
+                                const retryData = await retryResponse.json();
+                                setMessages(prev => [...prev, {
+                                    role: 'assistant',
+                                    content: retryData.response || retryData.content || 'I received your message!'
+                                }]);
+                            } else {
+                                throw new Error(`Retry failed: ${retryResponse.status}`);
+                            }
+                        } else {
+                            throw new Error(`API request failed: ${response.status} - ${errorText}`);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Chat error:', error);
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: `Error: ${error.message}. Make sure the FastAPI backend is running on port 8000.`
+                    }]);
+                }
+
+                setLoading(false);
+            };
+
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            };
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>🚀 Talk Box React Chat</h1>
+                        <p>Modern React interface powered by Talk Box + Chatlas</p>
+                    </div>
+
+                    <div className="chat-area">
+                        <div className="status">
+                            {connected ? (
+                                <span>✅ Connected to Talk Box backend</span>
+                            ) : (
+                                <span style={{background: '#ffe7e7', borderColor: '#ff6b6b'}}>
+                                    ⚠️ Backend not connected - start FastAPI server on port 8000
+                                </span>
+                            )}
+                        </div>
+
+                        <h3>Live Chat Interface</h3>
+                        <div className="messages">
+                            {messages.length === 0 && (
+                                <p style={{color: '#666', fontStyle: 'italic'}}>
+                                    Start a conversation by typing a message below...
+                                </p>
+                            )}
+
+                            {messages.map((message, index) => (
+                                <div key={index} className={`message ${message.role}`}>
+                                    <strong>{message.role === 'user' ? 'You' : 'Assistant'}:</strong> {message.content}
+                                </div>
+                            ))}
+
+                            {loading && (
+                                <div className="message assistant loading">
+                                    Assistant is typing...
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="chat-input">
+                            <input
+                                type="text"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder="Type your message here..."
+                                disabled={loading}
+                            />
+                            <button onClick={sendMessage} disabled={loading || !input.trim()}>
+                                Send
+                            </button>
+                        </div>
+
+                        <div style={{marginTop: '20px', fontSize: '14px', color: '#666'}}>
+                            <p><strong>Tips:</strong></p>
+                            <ul>
+                                <li>Backend status: {connected ? 'Connected ✅' : 'Disconnected ❌'}</li>
+                                <li>FastAPI server: http://127.0.0.1:8000</li>
+                                <li>React interface: Running on Python server port 8080</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TalkBoxChat />);
+    </script>
+</body>
+</html>

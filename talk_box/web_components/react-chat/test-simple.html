@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            background-color: #e7f5e7;
+            border: 1px solid #4caf50;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Talk Box React Test Page</h1>
+        <div class="success">
+            ✅ HTML and CSS are working!
+        </div>
+        <p>If you can see this, the Vite server is serving files correctly.</p>
+        <div id="react-test">Loading React...</div>
+    </div>
+
+    <script>
+        console.log('Basic JavaScript is working!');
+        document.getElementById('react-test').innerHTML = '⚠️ Basic JS works, testing React next...';
+
+        // Test if we can load React
+        try {
+            // This will help us see if the problem is with React or with the bundling
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('DOM loaded successfully');
+            });
+        } catch (error) {
+            console.error('JavaScript error:', error);
+            document.getElementById('react-test').innerHTML = '❌ JavaScript error: ' + error.message;
+        }
+    </script>
+</body>
+</html>

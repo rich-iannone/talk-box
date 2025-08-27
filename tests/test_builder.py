@@ -127,9 +127,17 @@ def test_chat_basic_functionality():
 # Utility function tests
 def test_find_available_port_success():
     """Test finding an available port successfully."""
-    port = find_available_port(start_port=9000, max_attempts=10)
-    assert isinstance(port, int)
-    assert 9000 <= port < 9010
+    # Mock socket to simulate finding a port on the second attempt
+    with patch("socket.socket") as mock_socket:
+        mock_socket_instance = MagicMock()
+        mock_socket.return_value.__enter__.return_value = mock_socket_instance
+
+        # First port (9000) fails, second port (9001) succeeds
+        mock_socket_instance.bind.side_effect = [OSError("Port in use"), None]
+
+        port = find_available_port(start_port=9000, max_attempts=10)
+        assert isinstance(port, int)
+        assert port == 9001
 
 
 def test_find_available_port_no_ports_available():

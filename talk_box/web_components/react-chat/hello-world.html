@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            background-color: #e7f5e7;
+            border: 1px solid #4caf50;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .test-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background-color: #0056b3;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Hello World - Talk Box React Test</h1>
+
+        <div class="status">
+            ✅ Basic HTML and CSS are working!
+        </div>
+
+        <p>If you can see this page, the React development server is running correctly.</p>
+
+        <h2>Server Tests:</h2>
+        <button class="test-button" onclick="testReactServer()">Test React Server</button>
+        <button class="test-button" onclick="testFastAPIServer()">Test FastAPI Server</button>
+        <button class="test-button" onclick="testBothServers()">Test Both Servers</button>
+
+        <div id="results"></div>
+
+        <h2>Next Steps:</h2>
+        <ol>
+            <li>Verify both servers respond correctly</li>
+            <li>Test React component loading</li>
+            <li>Test API communication</li>
+            <li>Launch full chat interface</li>
+        </ol>
+    </div>
+
+    <script>
+        function log(message) {
+            const results = document.getElementById('results');
+            results.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+        }
+
+        async function testReactServer() {
+            log('Testing React server...');
+            try {
+                const response = await fetch('http://localhost:5173/');
+                if (response.ok) {
+                    log('✅ React server is responding!');
+                } else {
+                    log('❌ React server responded with status: ' + response.status);
+                }
+            } catch (error) {
+                log('❌ React server error: ' + error.message);
+            }
+        }
+
+        async function testFastAPIServer() {
+            log('Testing FastAPI server...');
+            try {
+                const response = await fetch('http://127.0.0.1:8000/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ FastAPI server is healthy! Status: ' + data.status);
+                } else {
+                    log('❌ FastAPI server responded with status: ' + response.status);
+                }
+            } catch (error) {
+                log('❌ FastAPI server error: ' + error.message);
+            }
+        }
+
+        async function testBothServers() {
+            log('Testing both servers...');
+            await testReactServer();
+            await testFastAPIServer();
+            log('--- Test complete ---');
+        }
+
+        // Auto-test on page load
+        window.onload = function() {
+            log('Page loaded successfully!');
+            setTimeout(testBothServers, 1000);
+        };
+    </script>
+</body>
+</html>

@@ -5,7 +5,12 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 
 [tool.setuptools.packages.find]
-include = ["talk_box"]
+include = ["talk_box*"]
+
+[tool.setuptools.package-data]
+talk_box = [
+    "web_components/**/*",
+]
 
 [project]
 name = "talk-box"
@@ -28,7 +33,6 @@ keywords = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -42,6 +46,9 @@ dependencies = [
     "chatlas>=0.1.0",
     "typing-extensions>=4.4.0",
     "python-dotenv>=1.0.0",
+    "requests>=2.25.0", # For server health checks
+    "fastapi>=0.68.0", # For React chat server
+    "uvicorn>=0.15.0", # For running FastAPI server
 ]
 
 [project.optional-dependencies]

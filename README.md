@@ -223,6 +223,37 @@ Looking at the generated prompts, we can identify several key principles that co
 And we've implemented these principles in our prompt engineering process, ensuring that the prompts
 you create and use are effective and aligned with these best practices.
 
+## Modern Web Interface
+
+Launch a polished React-based chat interface by using `show("react")`:
+
+```python
+import talk_box as tb
+
+# Create and configure a chatbot
+bot = (
+    tb.ChatBot(
+        name="FriendlyBot",
+        description="A bot that'll talk about any topic."
+    )
+    .model("gpt-4")
+    .temperature(0.3)
+    .persona("You are a friendly conversationalist")
+)
+
+bot.show("react")
+```
+
+![Talk Box React Interface](talk-box-interface.png)
+
+The React interface provides a professional chat experience with:
+
+- **Modern Design**: clean, responsive interface that works on desktop and mobile
+- **Live Typing Indicators**: visual feedback during bot responses
+- **Code Block Highlighting**: syntax highlighting for technical conversations
+- **Conversation History**: full chat history with easy navigation
+- **Bot Configuration Display**: see your bot's settings and persona at a glance
+
 ## Pre-configured Engineering Templates
 
 Start with expert-crafted prompts for common engineering tasks:

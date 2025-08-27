@@ -1,0 +1,346 @@
+---
+title: "React Chat Interface"
+subtitle: "Modern web-based chat with Talk Box"
+format:
+  html:
+    code-fold: false
+    code-tools: true
+    toc: true
+    toc-depth: 3
+execute:
+  eval: false
+---
+
+# React Chat Interface
+
+Talk Box provides a modern, responsive React-based chat interface that offers the same simplicity as the traditional browser interface while providing a polished, professional user experience.
+
+## Quick Start
+
+The React chat interface works exactly like the traditional `bot.show("browser")` method, but with a modern React frontend:
+
+```{python}
+import talk_box as tb
+
+# Create and configure a chatbot
+bot = (
+    tb.ChatBot(
+        name="FriendlyBot",
+        description="A bot that'll talk about any topic."
+    )
+    .model("gpt-4")
+    .temperature(0.3)
+    .persona("You are a friendly conversationalist")
+)
+
+bot.show("react")
+```
+
+That's it! This single command will:
+
+- start a FastAPI backend server
+- start a React development server
+- install dependencies automatically
+- automatically load `.env` files (if present)
+- open the chat interface in your browser
+- connect to your configured LLM provider
+
+## Installation Requirements
+
+### What You Need to Install
+
+**Python Package (automatic):**
+
+```bash
+pip install talk-box
+```
+
+**Node.js (one-time manual install):**
+
+::: {.panel-tabset}
+
+## macOS
+
+```bash
+brew install node
+```
+
+## Ubuntu/Debian
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+## Windows
+
+Download and install from [nodejs.org](https://nodejs.org/)
+
+## Any Platform (nvm)
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install --lts
+```
+
+:::
+
+### What Happens Automatically
+
+Once you have Node.js installed, everything else is handled automatically:
+
+1. **React Dependencies**: automatically installed via `npm install` on first run
+2. **Server Management**: both FastAPI and React servers start automatically
+3. **Configuration**: bot settings are automatically passed to the frontend
+4. **Browser Opening**: interface opens automatically at `http://localhost:5173`
+
+## First Run Experience
+
+### With Node.js Already Installed
+
+```
+🚀 Starting React Chat Interface...
+✅ Node.js found: v18.17.0
+📦 Installing React dependencies...
+✅ React dependencies installed
+🔧 Starting backend server...
+✅ FastAPI server started
+⚛️ Starting React interface...
+✅ React server started
+🔧 Configuring bot settings...
+🌐 Opening React chat interface...
+✅ React chat interface launched!
+   📱 Interface: http://localhost:5173
+   🔧 API: http://127.0.0.1:8000
+```
+
+### Without Node.js
+
+```
+🚀 Starting React Chat Interface...
+❌ Node.js is required for the React chat interface
+📋 Installation instructions:
+   • macOS: brew install node
+   • Ubuntu/Debian: curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs
+   • Windows: Download from https://nodejs.org/
+   • Or use Node Version Manager (nvm): https://github.com/nvm-sh/nvm
+
+💡 After installing Node.js, run your script again!
+```
+
+## Complete Examples
+
+### Basic Chatbot
+
+```{python}
+import talk_box as tb
+
+# Simple chatbot with minimal configuration
+bot = tb.ChatBot().model("gpt-4")
+bot.show("react")
+```
+
+### Technical Assistant
+
+```{python}
+import talk_box as tb
+
+# Technical programming assistant
+bot = (
+    tb.ChatBot(
+        name="CodeHelper",
+        description="A programming assistant specializing in Python"
+    )
+    .model("gpt-4")
+    .preset("technical_advisor")
+    .temperature(0.2)
+    .persona("You are an expert Python developer who explains concepts clearly")
+)
+
+bot.show("react")
+```
+
+### Creative Writing Partner
+
+```{python}
+import talk_box as tb
+
+# Creative writing assistant
+bot = (
+    tb.ChatBot(
+        name="WriteBot",
+        description="A creative writing companion"
+    )
+    .model("gpt-4")
+    .temperature(0.8)
+    .persona("You are a creative writing partner who helps with storytelling, character development, and plot ideas")
+    .avoid_topics(["politics", "religion"])
+)
+
+bot.show("react")
+```
+
+### Advanced System Prompts
+
+The React interface fully supports complex system prompts built with `PromptBuilder`:
+
+```{python}
+import talk_box as tb
+
+# Advanced system prompt with PromptBuilder
+bot = (
+    tb.ChatBot()
+    .provider_model("gpt-4")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("experienced Spanish teacher", "conversational fluency and grammar")
+        .critical_constraint("Focus on practical, everyday Spanish usage")
+        .core_analysis([
+            "Grammar accuracy and common mistakes",
+            "Vocabulary building with context",
+            "Pronunciation and speaking confidence",
+        ])
+        .output_format([
+            "CORRECCIONES: Grammar fixes with explanations",
+            "VOCABULARIO: New words with example sentences",
+            "PRÁCTICA: Conversation prompts for next lesson",
+        ])
+        .final_emphasis("Encourage progress and build confidence through positive reinforcement")
+        .build()
+    )
+)
+
+bot.show("react")
+```
+
+### With Environment Variables
+
+You can configure API keys using environment variables or `.env` files:
+
+```{python}
+import os
+import talk_box as tb
+
+# Method 1: Set environment variables directly
+os.environ["OPENAI_API_KEY"] = "your-api-key-here"
+
+bot = (
+    tb.ChatBot()
+    .model("gpt-4")
+    .temperature(0.5)
+)
+
+bot.show("react")
+```
+
+### Using .env Files (Recommended)
+
+For better security and convenience, use a `.env` file. **Important**: You must explicitly load the `.env` file in your script:
+
+```{python}
+# First, create a .env file in your project directory:
+# OPENAI_API_KEY=your-actual-api-key-here
+# ANTHROPIC_API_KEY=your-anthropic-key-here
+
+from dotenv import load_dotenv
+import talk_box as tb
+
+# Load environment variables from .env file BEFORE creating the bot
+load_dotenv()
+
+bot = (
+    tb.ChatBot()
+    .provider_model("openai:gpt-4")
+    .system_prompt("You are a helpful assistant.")
+)
+
+bot.show("react")
+```
+
+::: {.callout-tip}
+**System Prompt Support**: The React interface now properly supports custom system prompts set via `.system_prompt()`. Previously, system prompts were not being passed from the ChatBot configuration to the React interface, but this has been fixed.
+:::
+
+::: {.callout-tip}
+**Security Note**: Always add `.env` to your `.gitignore` file to prevent accidentally committing API keys to version control!
+:::
+
+## Features
+
+### Modern UI/UX
+
+- **Responsive Design**: works seamlessly on desktop, tablet, and mobile
+- **Clean Interface**: modern chat bubbles with professional styling
+- **Typing Indicators**: animated typing indicator with subtle pulsing animation
+- **Code Highlighting**: syntax-highlighted code blocks with proper formatting
+- **Dark Mode Ready**: built-in support for light and dark themes
+- **Bot Information**: interactive info popover showing bot configuration
+- **System Prompt Viewer**: nested popover to view the full system prompt text
+
+### Chat Features
+
+- **Message History**: full conversation history maintained automatically
+- **Real-time Updates**: instant message delivery and responses
+- **Error Handling**: graceful error messages with retry functionality
+- **Copy Support**: easy copying of messages and code blocks
+- **Markdown Support**: full markdown rendering including lists, links, and formatting
+
+### Technical Features
+
+- **TypeScript**: full type safety and excellent developer experience
+- **Hot Reload**: instant updates during development
+- **Component Architecture**: modular, reusable React components
+- **State Management**: proper state handling with those React hooks
+- **API Integration**: RESTful API with FastAPI backend
+
+## Configuration Options
+
+All standard Talk Box configuration methods work with the React interface:
+
+### Temperature and Creativity
+
+```{python}
+bot.temperature(0.1)         # Very focused and deterministic
+bot.temperature(0.7)         # Balanced creativity
+bot.temperature(1.2)         # Highly creative and varied
+```
+
+### Presets
+
+```{python}
+bot.preset("helpful")           # General helpful assistant
+bot.preset("technical_advisor") # Technical problem solving
+bot.preset("creative_writer")   # Creative writing assistance
+bot.preset("data_analyst")      # Data analysis and insights
+```
+
+### Manual Server Management
+
+If you need more control, you can start servers manually:
+
+**Start Backend Server:**
+
+```bash
+cd talk_box/web_components/python_server
+python chat_server.py
+```
+
+**Start React Server:**
+
+```bash
+cd talk_box/web_components/react-chat
+npm run dev
+```
+
+**Then use the interface:**
+
+```{python}
+# Bot will detect running servers automatically
+bot.show("react")
+```
+
+## Conclusion
+
+The React chat interface brings Talk Box into the modern web development ecosystem while maintaining the simplicity and power you expect. With just Node.js as a prerequisite, you get a polished, professional chat interface that works well with all Talk Box features.
+
+Whether you're prototyping a new AI application, building a production chatbot, or creating interactive demos, `bot.show("react")` provides an excellent balance of simplicity and sophistication.

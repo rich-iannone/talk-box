@@ -432,7 +432,8 @@ class ChatBot:
 
 📝 Basic Usage:
    • bot.chat("Hello!")                 → Start a conversation
-   • bot.show("browser")                → Launch chat interface
+   • bot.show("browser")                → Launch browser chat interface
+   • bot.show("react")                  → Launch React chat interface
    • bot.show("help")                   → Show this guide again
 
 ⚙️ Configuration:
@@ -2008,12 +2009,20 @@ class ChatBot:
         if self._config["system_prompt"]:
             prompt_parts.append(self._config["system_prompt"])
 
-        # Add persona if specified
+        # Add persona if specified and not already included in system prompt
         if self._config["persona"]:
-            if prompt_parts:
-                prompt_parts.append(f"\nAdditional persona: {self._config['persona']}")
-            else:
-                prompt_parts.append(f"You are: {self._config['persona']}")
+            # Check if the persona is already mentioned in the existing prompt
+            existing_prompt = "\n".join(prompt_parts).lower()
+            persona_lower = self._config["persona"].lower()
+
+            # Only skip if the persona content is already present
+            if not any(
+                persona_word in existing_prompt for persona_word in persona_lower.split()[:3]
+            ):
+                if prompt_parts:
+                    prompt_parts.append(f"\nAdditional persona: {self._config['persona']}")
+                else:
+                    prompt_parts.append(f"You are: {self._config['persona']}")
 
         # Add constraints from 'avoid' settings
         if self._config["avoid"]:
@@ -2421,7 +2430,9 @@ class ChatBot:
             self._auto_enable_llm()
         return self
 
-    def _chat_with_llm(self, message: Union[str, "Attachments"]) -> str:
+    def _chat_with_llm(
+        self, message: Union[str, "Attachments"], conversation: Optional["Conversation"] = None
+    ) -> str:
         """
         Send a message to a real LLM via chatlas and return the response content.
 
@@ -2429,6 +2440,9 @@ class ChatBot:
         ----------
         message
             The message to send to the LLM. Can be a string or Attachments object.
+        conversation
+            The conversation context to maintain history. If provided, all previous
+            messages will be sent to establish context before the new message.
 
         Returns
         -------
@@ -2445,6 +2459,20 @@ class ChatBot:
         # Create adapter and get response
         adapter = ChatlasAdapter(provider=provider, model=model)
         chat_session = adapter.create_chat_session(self._config)
+
+        # If we have conversation history, replay it to establish context
+        if conversation and conversation.messages:
+            # Replay all previous conversation messages to establish context
+            for msg in conversation.messages:
+                if msg.role == "user":
+                    # Send each previous user message (but don't store the responses)
+                    try:
+                        chat_session.chat(msg.content)
+                    except Exception as e:
+                        # If replaying fails, we'll continue but with reduced context
+                        print(f"Warning: Failed to replay message for context: {e}")
+                        pass
+                # Note: assistant messages are automatically added by chatlas after each user message
 
         # Handle attachments or regular string messages
         if isinstance(message, Attachments):
@@ -2550,7 +2578,8 @@ class ChatBot:
         # Get response based on LLM availability
         if self._llm_enabled:
             try:
-                response_content = self._chat_with_llm(message)
+                # Pass the conversation context to maintain history
+                response_content = self._chat_with_llm(message, conversation)
             except Exception as e:
                 # Fallback to echo mode if LLM fails
                 if isinstance(message, Attachments):
@@ -2754,6 +2783,7 @@ class ChatBot:
             The type of interface to show:
 
             - `"browser"`: launch browser chat interface
+            - `"react"`: launch React chat interface
             - `"console"`: launch interactive console/terminal chat
             - `"config"`: display configuration summary in notebook
             - `"prompt"`: display the final system prompt
@@ -2767,6 +2797,7 @@ class ChatBot:
         >>> bot.show("help")        # Show quick-start guide (default)
         >>> bot.show("status")      # Check LLM integration status
         >>> bot.show("browser")     # Launch browser chat interface
+        >>> bot.show("react")       # Launch React chat interface
         >>> bot.show("console")     # Launch terminal chat interface
         >>> bot.show("config")      # Show configuration summary
         """
@@ -2890,11 +2921,31 @@ class ChatBot:
             # Display chatlas installation guide
             print(self.install_chatlas_help())
 
+        elif mode == "react":
+            # Try to enable React support and launch
+            try:
+                # Import and use React integration directly
+                from . import react_chat_integration
+
+                # Launch React chat interface directly
+                config = self.get_config_summary()
+                server = react_chat_integration.ReactChatServer(config)
+                server.launch()
+
+            except ImportError as e:
+                print("❌ React chat not available")
+                print("💡 To enable React chat, install React dependencies:")
+                print("   npm install (in the react-chat directory)")
+                print(f"   Error: {e}")
+            except Exception as e:
+                print(f"❌ Failed to launch React chat: {e}")
+                print("💡 Tip: Make sure React dev server is available")
+
         else:
             # Invalid mode
             print(f"❌ Invalid mode: '{mode}'")
             print(
-                "💡 Available modes: 'browser', 'console', 'config', 'prompt', 'help', 'status', 'install'"
+                "💡 Available modes: 'browser', 'console', 'config', 'prompt', 'help', 'status', 'install', 'react'"
             )
 
     def _simple_console_chat(self) -> None:
