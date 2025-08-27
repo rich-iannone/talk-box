@@ -41,6 +41,7 @@ That's it! This single command will:
 - start a FastAPI backend server
 - start a React development server
 - install dependencies automatically
+- automatically load `.env` files (if present)
 - open the chat interface in your browser
 - connect to your configured LLM provider
 
@@ -179,6 +180,39 @@ bot = (
 bot.show("react")
 ```
 
+### Advanced System Prompts
+
+The React interface fully supports complex system prompts built with `PromptBuilder`:
+
+```{python}
+import talk_box as tb
+
+# Advanced system prompt with PromptBuilder
+bot = (
+    tb.ChatBot()
+    .provider_model("gpt-4")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("experienced Spanish teacher", "conversational fluency and grammar")
+        .critical_constraint("Focus on practical, everyday Spanish usage")
+        .core_analysis([
+            "Grammar accuracy and common mistakes",
+            "Vocabulary building with context",
+            "Pronunciation and speaking confidence",
+        ])
+        .output_format([
+            "CORRECCIONES: Grammar fixes with explanations",
+            "VOCABULARIO: New words with example sentences",
+            "PRÁCTICA: Conversation prompts for next lesson",
+        ])
+        .final_emphasis("Encourage progress and build confidence through positive reinforcement")
+        .build()
+    )
+)
+
+bot.show("react")
+```
+
 ### With Environment Variables
 
 You can configure API keys using environment variables or `.env` files:
@@ -201,7 +235,7 @@ bot.show("react")
 
 ### Using .env Files (Recommended)
 
-For better security and convenience, use a `.env` file:
+For better security and convenience, use a `.env` file. **Important**: You must explicitly load the `.env` file in your script:
 
 ```{python}
 # First, create a .env file in your project directory:
@@ -211,7 +245,7 @@ For better security and convenience, use a `.env` file:
 from dotenv import load_dotenv
 import talk_box as tb
 
-# Load environment variables from .env file
+# Load environment variables from .env file BEFORE creating the bot
 load_dotenv()
 
 bot = (
@@ -222,6 +256,10 @@ bot = (
 
 bot.show("react")
 ```
+
+::: {.callout-tip}
+**System Prompt Support**: The React interface now properly supports custom system prompts set via `.system_prompt()`. Previously, system prompts were not being passed from the ChatBot configuration to the React interface, but this has been fixed.
+:::
 
 ::: {.callout-tip}
 **Security Note**: Always add `.env` to your `.gitignore` file to prevent accidentally committing API keys to version control!
@@ -236,6 +274,8 @@ bot.show("react")
 - **Typing Indicators**: animated typing indicator with subtle pulsing animation
 - **Code Highlighting**: syntax-highlighted code blocks with proper formatting
 - **Dark Mode Ready**: built-in support for light and dark themes
+- **Bot Information**: interactive info popover showing bot configuration
+- **System Prompt Viewer**: nested popover to view the full system prompt text
 
 ### Chat Features
 
@@ -256,15 +296,6 @@ bot.show("react")
 ## Configuration Options
 
 All standard Talk Box configuration methods work with the React interface:
-
-### Model Configuration
-
-```{python}
-# Different models
-bot.model("gpt-4")           # OpenAI GPT-4
-bot.model("gpt-3.5-turbo")   # OpenAI GPT-3.5
-bot.model("claude-3-opus")   # Anthropic Claude
-```
 
 ### Temperature and Creativity
 
@@ -310,6 +341,6 @@ bot.show("react")
 
 ## Conclusion
 
-The React chat interface tries to bring Talk Box into the modern web development ecosystem while maintaining the simplicity and power you expect. Sure, you need Node.js installed but you get a very nice chat interface that works well with all Talk Box features.
+The React chat interface brings Talk Box into the modern web development ecosystem while maintaining the simplicity and power you expect. With just Node.js as a prerequisite, you get a polished, professional chat interface that works well with all Talk Box features.
 
-Whether you're prototyping a new AI application or building a production chatbot, `bot.show("react")` provides a good balance of simplicity and sophistication.
+Whether you're prototyping a new AI application, building a production chatbot, or creating interactive demos, `bot.show("react")` provides an excellent balance of simplicity and sophistication.
