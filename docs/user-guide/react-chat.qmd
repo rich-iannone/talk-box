@@ -339,6 +339,86 @@ npm run dev
 bot.show("react")
 ```
 
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### "vite: command not found" Error
+
+If you see an error like:
+
+```
+❌ React server process exited unexpectedly:
+STDERR: sh: vite: command not found
+```
+
+This indicates corrupted or incomplete npm dependencies. **Solution:**
+
+```bash
+# Navigate to the React project directory
+cd talk_box/web_components/react-chat
+
+# Clean reinstall dependencies
+rm -rf node_modules package-lock.json
+npm install
+
+# Verify vite is installed
+npx vite --version
+```
+
+#### React Server Won't Start
+
+If the React development server fails to start:
+
+1. **Check Node.js version** (requires Node.js 16+):
+   ```bash
+   node --version
+   ```
+
+2. **Manually install dependencies**:
+   ```bash
+   cd talk_box/web_components/react-chat
+   npm install
+   ```
+
+3. **Test vite directly**:
+   ```bash
+   cd talk_box/web_components/react-chat
+   npx vite --version
+   npm run dev
+   ```
+
+#### Port Already in Use
+
+If you see "port already in use" errors:
+
+- **React (port 5173)**: Stop any running vite processes
+- **FastAPI (port 8000)**: Stop any running Python servers
+
+```bash
+# Kill processes using the ports
+lsof -ti:5173 | xargs kill -9
+lsof -ti:8000 | xargs kill -9
+```
+
+#### Browser Opens But Shows Blank Page
+
+1. **Check console errors** in browser developer tools
+2. **Verify both servers are running**:
+   - Frontend: http://localhost:5173
+   - Backend: http://127.0.0.1:8000/health
+3. **Clear browser cache** and reload
+
+#### Dependencies Keep Breaking
+
+If you frequently encounter dependency issues:
+
+1. **Use Node Version Manager (nvm)** for consistent Node.js versions
+2. **Consider using the traditional browser interface** as a fallback:
+   ```python
+   bot.show("browser")  # Uses simple HTML interface
+   ```
+
 ## Conclusion
 
 The React chat interface brings Talk Box into the modern web development ecosystem while maintaining the simplicity and power you expect. With just Node.js as a prerequisite, you get a polished, professional chat interface that works well with all Talk Box features.
