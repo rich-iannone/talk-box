@@ -48,6 +48,7 @@ website:
         contents:
           - user-guide/index.qmd
           - user-guide/installation.qmd
+          - user-guide/react-chat.qmd
       - section: "Core Concepts"
         contents:
           - user-guide/chatbot-basics.qmd
