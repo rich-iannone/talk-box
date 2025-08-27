@@ -10,6 +10,9 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #111827;
   min-height: 100vh;
+  line-height: 1.6; /* Improved base line-height for better readability */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -331,7 +334,7 @@ body {
 
 .message-bubble-assistant {
   background: white;
-  color: #374151;
+  color: #1f2937; /* Improved contrast from #374151 */
   border: 1px solid #e5e7eb;
   border-bottom-left-radius: 0.25rem;
 }
@@ -339,20 +342,21 @@ body {
 .message-content {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem; /* Increased from 0.5rem for better breathing room */
 }
 
 .message-text {
   white-space: pre-wrap;
   word-wrap: break-word;
-  line-height: 1.5;
-  font-size: 0.95rem;
+  line-height: 1.65; /* Improved from 1.5 for better readability */
+  font-size: 1rem; /* Increased from 0.95rem for better readability */
+  letter-spacing: 0.01em; /* Subtle letter spacing for improved readability */
 }
 
-/* List formatting within messages */
+/* Enhanced list formatting within messages for better readability */
 .message-content ol,
 .message-content ul {
-  margin: 0.5rem 0;
+  margin: 0.75rem 0; /* Increased vertical spacing */
   padding-left: 1.5rem; /* Ensure list markers are inside the content area */
   list-style-position: outside; /* Keep markers outside but within padding */
 }
@@ -366,32 +370,103 @@ body {
 }
 
 .message-content li {
-  margin: 0.25rem 0;
-  line-height: 1.5;
+  margin: 0.5rem 0; /* Increased from 0.25rem for better spacing between items */
+  line-height: 1.65; /* Consistent with message-text line-height */
   padding-left: 0.25rem; /* Small additional padding for readability */
+  font-size: 1rem; /* Consistent with message-text font-size */
 }
 
 .message-content li ol,
 .message-content li ul {
-  margin: 0.25rem 0;
+  margin: 0.4rem 0; /* Increased from 0.25rem */
   padding-left: 1.25rem; /* Nested lists with less indentation */
 }
 
 .message-content li li {
-  margin: 0.125rem 0;
+  margin: 0.25rem 0; /* Increased from 0.125rem */
 }
 
-/* Paragraphs within lists */
+/* Enhanced paragraphs within lists */
 .message-content li p {
-  margin: 0.25rem 0;
+  margin: 0.4rem 0; /* Increased from 0.25rem */
+  line-height: 1.65; /* Consistent line-height */
 }
 
-/* Code blocks within lists */
+/* Improved code styling within lists */
 .message-content li code {
-  background: rgba(0, 0, 0, 0.1);
-  padding: 0.125rem 0.25rem;
-  border-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.08); /* Slightly reduced opacity for better readability */
+  padding: 0.2rem 0.4rem; /* Increased padding */
+  border-radius: 0.3rem; /* Slightly larger border-radius */
+  font-size: 0.9rem; /* Slightly larger font-size */
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+/* Enhanced typography for rich text content in messages */
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.message-content h5,
+.message-content h6 {
+  margin: 1rem 0 0.5rem 0;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #111827;
+}
+
+.message-content h1 { font-size: 1.5rem; }
+.message-content h2 { font-size: 1.3rem; }
+.message-content h3 { font-size: 1.1rem; }
+.message-content h4 { font-size: 1rem; font-weight: 700; }
+
+.message-content p {
+  margin: 0.5rem 0;
+  line-height: 1.65;
+}
+
+.message-content strong,
+.message-content b {
+  font-weight: 600;
+  color: #111827;
+}
+
+.message-content em,
+.message-content i {
+  font-style: italic;
+  color: #374151;
+}
+
+/* Enhanced code blocks */
+.message-content pre {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.message-content code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.15rem 0.3rem;
+  border-radius: 0.25rem;
+  font-size: 0.9rem;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+/* Enhanced blockquotes */
+.message-content blockquote {
+  border-left: 4px solid #e2e8f0;
+  padding-left: 1rem;
+  margin: 0.75rem 0;
+  color: #6b7280;
+  font-style: italic;
+  background: #f9fafb;
+  padding: 0.75rem 1rem;
+  border-radius: 0.25rem;
 }
 
 .message-timestamp {
