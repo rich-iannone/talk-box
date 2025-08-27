@@ -2009,12 +2009,20 @@ class ChatBot:
         if self._config["system_prompt"]:
             prompt_parts.append(self._config["system_prompt"])
 
-        # Add persona if specified
+        # Add persona if specified and not already included in system prompt
         if self._config["persona"]:
-            if prompt_parts:
-                prompt_parts.append(f"\nAdditional persona: {self._config['persona']}")
-            else:
-                prompt_parts.append(f"You are: {self._config['persona']}")
+            # Check if the system prompt already includes persona-like content
+            existing_prompt = "\n".join(prompt_parts).lower()
+            persona_lower = self._config["persona"].lower()
+
+            # Don't add persona if it's already in the system prompt or if system prompt starts with "You are"
+            if not any(
+                persona_word in existing_prompt for persona_word in persona_lower.split()[:3]
+            ) and not existing_prompt.strip().startswith("you are"):
+                if prompt_parts:
+                    prompt_parts.append(f"\nAdditional persona: {self._config['persona']}")
+                else:
+                    prompt_parts.append(f"You are: {self._config['persona']}")
 
         # Add constraints from 'avoid' settings
         if self._config["avoid"]:
@@ -2422,7 +2430,9 @@ class ChatBot:
             self._auto_enable_llm()
         return self
 
-    def _chat_with_llm(self, message: Union[str, "Attachments"], conversation: Optional["Conversation"] = None) -> str:
+    def _chat_with_llm(
+        self, message: Union[str, "Attachments"], conversation: Optional["Conversation"] = None
+    ) -> str:
         """
         Send a message to a real LLM via chatlas and return the response content.
 
