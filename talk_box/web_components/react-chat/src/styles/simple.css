@@ -50,7 +50,7 @@ body {
 
 .centered-chat-container.expanded {
   max-width: 1200px;
-  min-height: 800px;
+  min-height: calc(100vh - 160px); /* Match the expanded chat interface height */
 }
 
 .chat-interface {
@@ -62,13 +62,13 @@ body {
   display: flex;
   flex-direction: column;
   height: 600px;
-  max-height: 80vh;
+  max-height: calc(100vh - 200px); /* Account for logo and padding */
   transition: all 0.3s ease;
 }
 
 .chat-interface.expanded {
-  height: 800px;
-  max-height: 90vh;
+  height: calc(100vh - 160px); /* Dynamically size to viewport minus logo/padding */
+  max-height: calc(100vh - 160px);
 }
 
 /* Responsive design for mobile */
@@ -88,20 +88,22 @@ body {
 
   .centered-chat-container.expanded {
     max-width: 100%;
-    min-height: 700px;
+    min-height: calc(100vh - 140px); /* Smaller offset for mobile */
   }
 
   .chat-interface {
     border-radius: 12px;
     height: 500px;
-    max-height: 70vh;
+    max-height: calc(100vh - 180px); /* Account for mobile spacing */
   }
 
   .chat-interface.expanded {
-    height: 700px;
-    max-height: 85vh;
+    height: calc(100vh - 140px); /* Fit to mobile viewport */
+    max-height: calc(100vh - 140px);
   }
-}/* Legacy styles for backwards compatibility */
+}
+
+/* Legacy styles for backwards compatibility */
 .container {
   max-width: 1200px;
   margin: 0 auto;
