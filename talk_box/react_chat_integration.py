@@ -280,34 +280,13 @@ def add_react_chat_support():
                 config = self.get_config_summary() if hasattr(self, "get_config_summary") else {}
                 server = ReactChatServer(config)
 
-                success = server.launch()
-                if success:
-                    # Keep the server running by waiting for user input
-                    try:
-                        print("\n🚀 React chat interface is running!")
-                        print("   📱 Interface: http://localhost:5173")
-                        print("   🔧 API: http://127.0.0.1:8000")
-                        print(
-                            "\n⌨️  Press Ctrl+C to stop the servers, or press Enter to continue..."
-                        )
-                        input()  # Wait for user input to keep servers alive
-                    except KeyboardInterrupt:
-                        print("\n👋 Shutting down servers...")
-                        server.cleanup()
-                    except EOFError:
-                        # Handle case where there's no interactive terminal
-                        print("\n⚠️  No interactive terminal detected.")
-                        print("   Servers will continue running in background.")
-                        print(
-                            "   Use 'pkill -f \"npm.*dev\"' and 'pkill -f \"uvicorn.*8000\"' to stop them manually."
-                        )
-                else:
-                    print(
-                        "⚠️  Failed to launch React interface. Falling back to traditional browser interface..."
-                    )
-                    original_show(self, "browser")
+                try:
+                    server.launch()
+                except Exception as e:
+                    print(f"❌ Failed to launch React chat: {e}")
+                    print("� Tip: Make sure React dev server is available")
             else:
-                # Use original show method for all other modes
+                # Fall back to original show method for other modes
                 original_show(self, mode)
 
         # Mark as enhanced to prevent re-patching
@@ -327,6 +306,5 @@ def add_react_chat_support():
     return True
 
 
-# Auto-initialize when imported (but only once)
-if __name__ != "__main__" and not _REACT_SUPPORT_ADDED:
-    add_react_chat_support()
+# Note: Auto-initialization removed to prevent circular imports
+# React support will be added when explicitly requested
