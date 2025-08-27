@@ -66,22 +66,42 @@ class ReactChatServer:
         """Check if required dependencies are available."""
         # Check Node.js
         try:
-            subprocess.run(["node", "--version"], capture_output=True, check=True)
+            result = subprocess.run(["node", "--version"], capture_output=True, check=True, text=True)
+            node_version = result.stdout.strip()
+            print(f"✅ Node.js found: {node_version}")
         except (subprocess.CalledProcessError, FileNotFoundError):
-            print("❌ Node.js required but not found. Install with: brew install node")
+            print("\n❌ Node.js is required for the React chat interface")
+            print("📋 Installation instructions:")
+            print("   • macOS: brew install node")
+            print("   • Ubuntu/Debian: curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs")
+            print("   • Windows: Download from https://nodejs.org/")
+            print("   • Or use Node Version Manager (nvm): https://github.com/nvm-sh/nvm")
+            print("\n💡 After installing Node.js, run your script again!")
             return False
 
         # Check if React dependencies are installed
         project_root = self._find_project_root()
         react_dir = project_root / "talk_box" / "web_components" / "react-chat"
 
+        if not react_dir.exists():
+            print(f"❌ React components not found at: {react_dir}")
+            print("💡 This might indicate a package installation issue.")
+            return False
+
         if not (react_dir / "node_modules").exists():
             print("📦 Installing React dependencies...")
             try:
+                # Check if package.json exists
+                if not (react_dir / "package.json").exists():
+                    print(f"❌ package.json not found at: {react_dir}")
+                    print("💡 This indicates the React components weren't properly packaged.")
+                    return False
+
                 subprocess.run(["npm", "install"], cwd=react_dir, check=True, capture_output=True)
                 print("✅ React dependencies installed")
             except subprocess.CalledProcessError as e:
                 print(f"❌ Failed to install React dependencies: {e}")
+                print("💡 Try running 'npm install' manually in the react-chat directory")
                 return False
 
         return True
