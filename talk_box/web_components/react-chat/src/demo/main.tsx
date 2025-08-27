@@ -15,9 +15,9 @@ function App() {
     maxTokens: 1000,
     preset: "helpful_assistant",
     persona: "a knowledgeable and friendly AI assistant",
-    avoid_topics: ["harmful content", "illegal activities"],
+    avoidTopics: ["harmful content", "illegal activities"],
     tools: ["web_search", "code_analysis", "file_operations"],
-    system_prompt: "You are a helpful AI assistant powered by Talk Box and Chatlas. You can help with programming, writing, analysis, and general questions."
+    systemPrompt: "You are a helpful AI assistant powered by Talk Box and Chatlas. You can help with programming, writing, analysis, and general questions."
   });
   const [configLoaded, setConfigLoaded] = useState(false);
 
@@ -36,12 +36,12 @@ function App() {
             description: config.description || "A helpful AI assistant powered by Talk Box and Chatlas",
             model: config.model || "gpt-4",
             temperature: config.temperature ?? 0.7,
-            maxTokens: config.max_tokens || 1000,
+            maxTokens: config.maxTokens || config.max_tokens || 1000,  // Support both formats
             preset: config.preset, // Don't use fallback - preserve null if no preset is set
             persona: config.persona || "a knowledgeable and friendly AI assistant",
-            avoid_topics: config.avoid_topics || ["harmful content", "illegal activities"],
+            avoidTopics: config.avoidTopics || config.avoid_topics || ["harmful content", "illegal activities"],  // Support both formats
             tools: config.tools || ["web_search", "code_analysis", "file_operations"],
-            system_prompt: config.system_prompt || "You are a helpful AI assistant powered by Talk Box and Chatlas."
+            systemPrompt: config.systemPrompt || config.system_prompt || "You are a helpful AI assistant powered by Talk Box and Chatlas."  // Support both formats
           });
         } else {
           console.warn('Failed to fetch bot config, using defaults');

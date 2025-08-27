@@ -66,14 +66,18 @@ class ReactChatServer:
         """Check if required dependencies are available."""
         # Check Node.js
         try:
-            result = subprocess.run(["node", "--version"], capture_output=True, check=True, text=True)
+            result = subprocess.run(
+                ["node", "--version"], capture_output=True, check=True, text=True
+            )
             node_version = result.stdout.strip()
             print(f"✅ Node.js found: {node_version}")
         except (subprocess.CalledProcessError, FileNotFoundError):
             print("\n❌ Node.js is required for the React chat interface")
             print("📋 Installation instructions:")
             print("   • macOS: brew install node")
-            print("   • Ubuntu/Debian: curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs")
+            print(
+                "   • Ubuntu/Debian: curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs"
+            )
             print("   • Windows: Download from https://nodejs.org/")
             print("   • Or use Node Version Manager (nvm): https://github.com/nvm-sh/nvm")
             print("\n💡 After installing Node.js, run your script again!")
@@ -235,15 +239,49 @@ class ReactChatServer:
         try:
             import requests
 
-            response = requests.post(
-                "http://127.0.0.1:8000/config",
-                json=self.chatbot_config,
-                timeout=5
-            )
+            # Map Talk Box config fields (snake_case) to server fields (camelCase)
+            server_config = self._map_config_to_server_format(self.chatbot_config)
+
+            response = requests.post("http://127.0.0.1:8000/config", json=server_config, timeout=5)
             return response.status_code == 200
         except Exception as e:
             print(f"⚠️ Warning: Could not send bot config to server: {e}")
             return False
+
+    def _map_config_to_server_format(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Map Talk Box configuration fields to server-expected format."""
+        mapped_config = {}
+
+        # Direct mappings (same field names)
+        direct_fields = [
+            "name",
+            "description",
+            "model",
+            "temperature",
+            "preset",
+            "persona",
+            "tools",
+        ]
+        for field in direct_fields:
+            if field in config:
+                mapped_config[field] = config[field]
+
+        # Field name mappings (snake_case -> camelCase)
+        field_mappings = {
+            "max_tokens": "maxTokens",
+            "avoid_topics": "avoidTopics",
+            "system_prompt": "systemPrompt",  # This is the key fix!
+        }
+
+        for snake_case, camel_case in field_mappings.items():
+            if snake_case in config:
+                mapped_config[camel_case] = config[snake_case]
+
+        # Handle special field mappings
+        if "avoid" in config:  # Talk Box uses "avoid" but server expects "avoidTopics"
+            mapped_config["avoidTopics"] = config["avoid"]
+
+        return mapped_config
 
     def launch(self) -> bool:
         """Launch the React chat interface."""
