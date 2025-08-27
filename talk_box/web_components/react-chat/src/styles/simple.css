@@ -818,12 +818,18 @@ body {
   justify-content: flex-start;
 }
 
+.typing-indicator .message-bubble {
+  display: flex;
+  align-items: center; /* Center align spinner and text vertically */
+  gap: 0.5rem; /* Space between spinner and text */
+}
+
 .typing-spinner {
   width: 1rem;
   height: 1rem;
   animation: spin 1s linear infinite;
   color: #6b7280;
-  margin-right: 0.5rem;
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 /* Chat container and layout */
