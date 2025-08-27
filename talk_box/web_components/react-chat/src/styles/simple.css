@@ -289,7 +289,7 @@ body {
 .message-bubble {
   max-width: 80%;
   border-radius: 1rem;
-  padding: 1rem 1.25rem;
+  padding: 1rem 1.5rem; /* Increased horizontal padding to better accommodate lists */
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   position: relative;
 }
@@ -318,6 +318,51 @@ body {
   word-wrap: break-word;
   line-height: 1.5;
   font-size: 0.95rem;
+}
+
+/* List formatting within messages */
+.message-content ol,
+.message-content ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem; /* Ensure list markers are inside the content area */
+  list-style-position: outside; /* Keep markers outside but within padding */
+}
+
+.message-content ol {
+  list-style-type: decimal;
+}
+
+.message-content ul {
+  list-style-type: disc;
+}
+
+.message-content li {
+  margin: 0.25rem 0;
+  line-height: 1.5;
+  padding-left: 0.25rem; /* Small additional padding for readability */
+}
+
+.message-content li ol,
+.message-content li ul {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem; /* Nested lists with less indentation */
+}
+
+.message-content li li {
+  margin: 0.125rem 0;
+}
+
+/* Paragraphs within lists */
+.message-content li p {
+  margin: 0.25rem 0;
+}
+
+/* Code blocks within lists */
+.message-content li code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
 }
 
 .message-timestamp {
