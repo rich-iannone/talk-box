@@ -19,7 +19,6 @@ from pydantic import BaseModel
 # Try to import Talk Box components
 try:
     from talk_box import ChatBot
-    from talk_box.conversation import Conversation
 
     TALK_BOX_AVAILABLE = True
 except ImportError:

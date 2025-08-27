@@ -6,17 +6,17 @@ This script starts both the FastAPI backend server and React frontend developmen
 then opens the demo interface to showcase the new React chat component.
 """
 
-import os
+import atexit
+import signal
+import subprocess
 import sys
 import time
-import subprocess
 import webbrowser
 from pathlib import Path
-import signal
-import atexit
 
 # Global process tracking for cleanup
 processes = []
+
 
 def cleanup_processes():
     """Clean up all spawned processes on exit."""
@@ -32,16 +32,19 @@ def cleanup_processes():
                 pass
     print("✅ Cleanup complete")
 
+
 def signal_handler(signum, frame):
     """Handle Ctrl+C gracefully."""
     print(f"\n⚠️  Received signal {signum}")
     cleanup_processes()
     sys.exit(0)
 
+
 # Register cleanup handlers
 atexit.register(cleanup_processes)
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
+
 
 def find_project_root():
     """Find the talk-box project root directory."""
@@ -51,6 +54,7 @@ def find_project_root():
             return current
         current = current.parent
     raise FileNotFoundError("Could not find talk-box project root")
+
 
 def check_node_installed():
     """Check if Node.js is installed."""
@@ -72,6 +76,7 @@ def check_node_installed():
         print("   brew install node")
         return False
 
+
 def setup_react_deps(react_dir):
     """Install React dependencies if needed."""
     if not (react_dir / "node_modules").exists():
@@ -86,6 +91,7 @@ def setup_react_deps(react_dir):
         print("✅ React dependencies already installed")
     return True
 
+
 def start_fastapi_server(server_dir, venv_python):
     """Start the FastAPI server."""
     print("🔧 Starting FastAPI server...")
@@ -97,7 +103,7 @@ def start_fastapi_server(server_dir, venv_python):
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
         )
         processes.append(proc)
 
@@ -109,11 +115,12 @@ def start_fastapi_server(server_dir, venv_python):
 
             try:
                 import requests
+
                 response = requests.get("http://127.0.0.1:8000/health", timeout=1)
                 if response.status_code == 200:
                     print("✅ FastAPI server running at http://127.0.0.1:8000")
                     return True
-            except:
+            except Exception:
                 pass
 
             time.sleep(1)
@@ -124,6 +131,7 @@ def start_fastapi_server(server_dir, venv_python):
     except Exception as e:
         print(f"❌ Failed to start FastAPI server: {e}")
         return False
+
 
 def start_react_server(react_dir):
     """Start the React development server."""
@@ -136,7 +144,7 @@ def start_react_server(react_dir):
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
         )
         processes.append(proc)
 
@@ -148,11 +156,12 @@ def start_react_server(react_dir):
 
             try:
                 import requests
+
                 response = requests.get("http://localhost:5173", timeout=1)
                 if response.status_code == 200:
                     print("✅ React server running at http://localhost:5173")
                     return True
-            except:
+            except Exception:
                 pass
 
             time.sleep(1)
@@ -163,6 +172,7 @@ def start_react_server(react_dir):
     except Exception as e:
         print(f"❌ Failed to start React server: {e}")
         return False
+
 
 def main():
     """Main demo launcher function."""
@@ -247,6 +257,7 @@ def main():
         return 1
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
