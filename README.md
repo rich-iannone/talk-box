@@ -188,6 +188,25 @@ bot = (
 response = bot.show("console")
 ```
 
+### Modern Web Interface
+
+Launch a polished React-based chat interface with one line:
+
+```python
+# Launch the modern web interface
+bot.show("react")
+```
+
+![Talk Box React Interface](talk-box-interface.png)
+
+The React interface provides a professional chat experience with:
+
+- **Modern Design**: clean, responsive interface that works on desktop and mobile
+- **Live Typing Indicators**: visual feedback during bot responses
+- **Code Block Highlighting**: syntax highlighting for technical conversations
+- **Conversation History**: full chat history with easy navigation
+- **Bot Configuration Display**: see your bot's settings and persona at a glance
+
 <details>
 <summary>🔍 View Generated Prompt</summary>
 
