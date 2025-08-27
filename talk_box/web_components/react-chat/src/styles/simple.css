@@ -972,6 +972,12 @@ body {
   color: #6b7280;
   font-size: 0.875rem;
   font-style: italic;
+  animation: typingPulse 2s ease-in-out infinite;
+}
+
+.typing-indicator .message-bubble {
+  animation: typingBubblePulse 2s ease-in-out infinite;
+  transform-origin: center;
 }
 
 .typing-dots {
@@ -999,6 +1005,26 @@ body {
   40% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes typingPulse {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes typingBubblePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   }
 }
 
