@@ -229,31 +229,47 @@ async def send_message(conversation_id: str, request: MessageRequest):
     conversation_data = conversations[conversation_id]
     chatbot = conversation_data.get("chatbot")
 
-    # Create user message
+    # Create user message (we'll add it after getting the response)
     user_message = create_message_response(
         content=request.content,
         role="user"
     )
-    conversation_data["messages"].append(user_message)
 
     # Generate assistant response
     if TALK_BOX_AVAILABLE and chatbot:
         try:
-            # Use Talk Box to generate response
-            response = chatbot.chat(request.content)
+            # Import required classes for conversation reconstruction
+            from talk_box.conversation import Conversation, Message
 
-            # Extract the assistant's message from the conversation
-            if hasattr(response, 'get_last_message'):
-                last_message = response.get_last_message()
-                assistant_content = last_message.content if hasattr(last_message, 'content') else str(response)
-            else:
-                assistant_content = str(response)
+            # Reconstruct the conversation from stored messages (excluding current message)
+            conversation = Conversation(conversation_id=conversation_id)
+
+            # Add only previous messages to maintain context
+            for msg in conversation_data["messages"]:
+                conversation.add_message(
+                    content=msg.content,
+                    role=msg.role,
+                    metadata=msg.metadata or {}
+                )
+
+            # Use Talk Box chat method with conversation history
+            # This will add the current user message and generate the assistant response
+            updated_conversation = chatbot.chat(request.content, conversation)
+
+            # Extract the assistant's message from the updated conversation
+            last_message = updated_conversation.get_last_message()
+            assistant_content = last_message.content
 
             assistant_message = create_message_response(
                 content=assistant_content,
                 role="assistant",
                 metadata={"model": conversation_data["config"].get("model", "unknown")}
             )
+
+            # Now add both messages to our stored conversation
+            conversation_data["messages"].append(user_message)
+            conversation_data["messages"].append(assistant_message)
+
         except Exception as e:
             print(f"Error generating response: {e}")
             assistant_message = create_message_response(
@@ -261,6 +277,9 @@ async def send_message(conversation_id: str, request: MessageRequest):
                 role="assistant",
                 metadata={"error": True}
             )
+            # Still add the user message even if there was an error
+            conversation_data["messages"].append(user_message)
+            conversation_data["messages"].append(assistant_message)
     else:
         # Demo mode response
         assistant_message = create_message_response(
@@ -268,8 +287,9 @@ async def send_message(conversation_id: str, request: MessageRequest):
             role="assistant",
             metadata={"demo_mode": True}
         )
-
-    conversation_data["messages"].append(assistant_message)
+        # Add both messages in demo mode too
+        conversation_data["messages"].append(user_message)
+        conversation_data["messages"].append(assistant_message)
 
     return assistant_message
 

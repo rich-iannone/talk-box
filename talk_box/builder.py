@@ -2422,7 +2422,7 @@ class ChatBot:
             self._auto_enable_llm()
         return self
 
-    def _chat_with_llm(self, message: Union[str, "Attachments"]) -> str:
+    def _chat_with_llm(self, message: Union[str, "Attachments"], conversation: Optional["Conversation"] = None) -> str:
         """
         Send a message to a real LLM via chatlas and return the response content.
 
@@ -2430,6 +2430,9 @@ class ChatBot:
         ----------
         message
             The message to send to the LLM. Can be a string or Attachments object.
+        conversation
+            The conversation context to maintain history. If provided, all previous
+            messages will be sent to establish context before the new message.
 
         Returns
         -------
@@ -2446,6 +2449,20 @@ class ChatBot:
         # Create adapter and get response
         adapter = ChatlasAdapter(provider=provider, model=model)
         chat_session = adapter.create_chat_session(self._config)
+
+        # If we have conversation history, replay it to establish context
+        if conversation and conversation.messages:
+            # Replay all previous conversation messages to establish context
+            for msg in conversation.messages:
+                if msg.role == "user":
+                    # Send each previous user message (but don't store the responses)
+                    try:
+                        chat_session.chat(msg.content)
+                    except Exception as e:
+                        # If replaying fails, we'll continue but with reduced context
+                        print(f"Warning: Failed to replay message for context: {e}")
+                        pass
+                # Note: assistant messages are automatically added by chatlas after each user message
 
         # Handle attachments or regular string messages
         if isinstance(message, Attachments):
@@ -2551,7 +2568,8 @@ class ChatBot:
         # Get response based on LLM availability
         if self._llm_enabled:
             try:
-                response_content = self._chat_with_llm(message)
+                # Pass the conversation context to maintain history
+                response_content = self._chat_with_llm(message, conversation)
             except Exception as e:
                 # Fallback to echo mode if LLM fails
                 if isinstance(message, Attachments):
