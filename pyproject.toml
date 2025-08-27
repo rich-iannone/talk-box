@@ -46,9 +46,9 @@ dependencies = [
     "chatlas>=0.1.0",
     "typing-extensions>=4.4.0",
     "python-dotenv>=1.0.0",
-    "requests>=2.25.0",  # For server health checks
-    "fastapi>=0.68.0",   # For React chat server
-    "uvicorn>=0.15.0",   # For running FastAPI server
+    "requests>=2.25.0", # For server health checks
+    "fastapi>=0.68.0", # For React chat server
+    "uvicorn>=0.15.0", # For running FastAPI server
 ]
 
 [project.optional-dependencies]
