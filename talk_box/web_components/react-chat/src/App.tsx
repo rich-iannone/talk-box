@@ -2,8 +2,8 @@ import React from 'react';
 import TalkBoxChat from './index';
 import type { ChatBotConfig } from './types';
 
-// Demo configuration
-const demoConfig: ChatBotConfig = {
+// Example configuration
+const exampleConfig: ChatBotConfig = {
   name: 'Talk Box Assistant',
   description: 'A helpful AI assistant powered by Talk Box',
   model: 'gpt-4',
@@ -18,27 +18,27 @@ const demoConfig: ChatBotConfig = {
 function App() {
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Demo page header */}
+      {/* Interface header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <h1 className="text-2xl font-bold text-gray-900">
-            Talk Box React Chat Demo
+            Talk Box React Chat Interface
           </h1>
           <p className="text-gray-600 mt-1">
-            Interactive demo of the Talk Box React chat component
+            Interactive example of the Talk Box React chat component
           </p>
         </div>
       </header>
 
-      {/* Demo content */}
+      {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Embedded chat demo */}
+          {/* Embedded chat example */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold mb-4">Embedded Chat</h2>
             <div className="h-[500px]">
               <TalkBoxChat
-                config={demoConfig}
+                config={exampleConfig}
                 onConversationStart={(conversation) => {
                   console.log('Conversation started:', conversation);
                 }}
@@ -66,19 +66,19 @@ function App() {
                 <dl className="text-sm space-y-1">
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Name:</dt>
-                    <dd className="font-medium">{demoConfig.name}</dd>
+                    <dd className="font-medium">{exampleConfig.name}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Model:</dt>
-                    <dd className="font-medium">{demoConfig.model}</dd>
+                    <dd className="font-medium">{exampleConfig.model}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Temperature:</dt>
-                    <dd className="font-medium">{demoConfig.temperature}</dd>
+                    <dd className="font-medium">{exampleConfig.temperature}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Preset:</dt>
-                    <dd className="font-medium">{demoConfig.preset}</dd>
+                    <dd className="font-medium">{exampleConfig.preset}</dd>
                   </div>
                 </dl>
               </div>
@@ -87,7 +87,7 @@ function App() {
                 <h3 className="font-medium text-sm text-gray-700 mb-2">
                   Persona
                 </h3>
-                <p className="text-sm text-gray-600">{demoConfig.persona}</p>
+                <p className="text-sm text-gray-600">{exampleConfig.persona}</p>
               </div>
 
               <div>
@@ -95,7 +95,7 @@ function App() {
                   Available Tools
                 </h3>
                 <div className="flex flex-wrap gap-1">
-                  {demoConfig.tools?.map((tool) => (
+                  {exampleConfig.tools?.map((tool) => (
                     <span
                       key={tool}
                       className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
@@ -111,7 +111,7 @@ function App() {
                   Avoid Topics
                 </h3>
                 <div className="flex flex-wrap gap-1">
-                  {demoConfig.avoidTopics?.map((topic) => (
+                  {exampleConfig.avoidTopics?.map((topic) => (
                     <span
                       key={topic}
                       className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded"
@@ -125,7 +125,7 @@ function App() {
           </div>
         </div>
 
-        {/* Floating chat demo */}
+        {/* Floating chat example */}
         <div className="mt-8 bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Floating Chat</h2>
           <p className="text-gray-600 mb-4">
@@ -149,9 +149,9 @@ function App() {
         </div>
       </main>
 
-      {/* Floating chat component (demo) */}
+      {/* Floating chat component (example) */}
       <TalkBoxChat
-        config={demoConfig}
+        config={exampleConfig}
         float={true}
         onConversationStart={(conversation) => {
           console.log('Floating chat conversation started:', conversation);

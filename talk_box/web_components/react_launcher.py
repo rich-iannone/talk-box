@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """
-Talk Box React Chat Demo Launcher
+Talk Box React Chat Interface Launcher
 
-This script starts both the FastAPI backend server and React frontend development server,
-then opens the demo interface to showcase the new React chat component.
+This script starts both the FastAPI backend server and React frontend development server
+for the Talk Box React chat interface. It handles dependency installation, server mana        print("   ❤️  Health Check: http://127.0.0.1:8000/health")
+        if dashboard_file.exists():
+            print(f"   📄 Interface Dashboard: file://{dashboard_file}")
+
+        print("\n⚡ React chat interface is running!")t,
+and automatic browser opening.
 """
 
 import atexit
@@ -175,8 +180,8 @@ def start_react_server(react_dir):
 
 
 def main():
-    """Main demo launcher function."""
-    print("🚀 Talk Box React Chat Demo Launcher")
+    """Main React chat interface launcher function."""
+    print("🚀 Talk Box React Chat Interface Launcher")
     print("=" * 50)
 
     try:
@@ -184,7 +189,9 @@ def main():
         project_root = find_project_root()
         server_dir = project_root / "talk_box" / "web_components" / "python_server"
         react_dir = project_root / "talk_box" / "web_components" / "react-chat"
-        demo_file = project_root / "talk_box" / "web_components" / "demo.html"
+        dashboard_file = (
+            project_root / "talk_box" / "web_components" / "react_interface_dashboard.html"
+        )
         venv_python = project_root / ".venv" / "bin" / "python3"
 
         print(f"📁 Project root: {project_root}")
@@ -223,26 +230,27 @@ def main():
         if not start_react_server(react_dir):
             return 1
 
-        # Open demo
-        print("\n🌐 Opening demo interface...")
+        # Open the React chat interface
+        print("\n🌐 Opening React chat interface...")
         time.sleep(2)  # Give servers a moment to fully start
 
         # Open the React interface
         webbrowser.open("http://localhost:5173")
 
-        # Also open the demo page if it exists
-        if demo_file.exists():
-            webbrowser.open(f"file://{demo_file}")
+        # Also open the dashboard page if it exists
+        if dashboard_file.exists():
+            webbrowser.open(f"file://{dashboard_file}")
 
-        print("\n✅ Demo launched successfully!")
+        print("\n✅ React Chat Interface Ready!")
         print("\n🔗 Available interfaces:")
-        print("   • React Chat: http://localhost:5173")
-        print("   • FastAPI Docs: http://127.0.0.1:8000/docs")
-        print("   • Health Check: http://127.0.0.1:8000/health")
-        if demo_file.exists():
-            print(f"   • Demo Page: file://{demo_file}")
+        print("   🌐 React Chat: http://localhost:5173")
+        print("   🔧 FastAPI Backend: http://127.0.0.1:8000")
+        print("   📚 API Documentation: http://127.0.0.1:8000/docs")
+        print("   ❤️  Health Check: http://127.0.0.1:8000/health")
+        if dashboard_file.exists():
+            print(f"   📄 Interface Dashboard: file://{dashboard_file}")
 
-        print("\n⚡ Both servers are running!")
+        print("\n⚡ React chat interface is running!")
         print("   Press Ctrl+C to stop all servers and exit")
 
         # Keep the script running

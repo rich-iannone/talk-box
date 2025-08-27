@@ -32,6 +32,6 @@
     "outDir": "./dist"
   },
   "include": ["src/**/*", "vite.config.ts"],
-  "exclude": ["node_modules", "dist", "demo-dist"],
+  "exclude": ["node_modules", "dist", "build-dist"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
       }
     } : {
       build: {
-        outDir: 'demo-dist'
+        outDir: 'build-dist'
       }
     })
   };
