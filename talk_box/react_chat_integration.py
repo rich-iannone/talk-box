@@ -210,6 +210,21 @@ class ReactChatServer:
             print(f"❌ Failed to start React server: {e}")
             return False
 
+    def _send_config_to_server(self) -> bool:
+        """Send the bot configuration to the FastAPI server."""
+        try:
+            import requests
+
+            response = requests.post(
+                "http://127.0.0.1:8000/config",
+                json=self.chatbot_config,
+                timeout=5
+            )
+            return response.status_code == 200
+        except Exception as e:
+            print(f"⚠️ Warning: Could not send bot config to server: {e}")
+            return False
+
     def launch(self) -> bool:
         """Launch the React chat interface."""
         print("🚀 Starting React Chat Interface...")
@@ -230,6 +245,10 @@ class ReactChatServer:
             if not self._start_react_server():
                 print("❌ Failed to start React server")
                 return False
+
+            # Send bot configuration to server
+            print("🔧 Configuring bot settings...")
+            self._send_config_to_server()
 
             # Open browser
             print("🌐 Opening React chat interface...")
