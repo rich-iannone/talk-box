@@ -86,6 +86,9 @@ app.add_middleware(
 # In-memory storage for conversations (use database in production)
 conversations: Dict[str, Dict[str, Any]] = {}
 
+# Global bot configuration (set by ReactChatServer)
+global_bot_config: Optional[Dict[str, Any]] = None
+
 
 def create_message_response(
     content: str,
@@ -144,6 +147,35 @@ async def health_check():
         timestamp=datetime.now(),
         talk_box_available=TALK_BOX_AVAILABLE
     )
+
+
+@app.get("/config")
+async def get_bot_config():
+    """Get the current bot configuration."""
+    if global_bot_config:
+        return global_bot_config
+    else:
+        # Return default configuration if none is set
+        return {
+            "name": "Talk Box Assistant",
+            "description": "A helpful AI assistant powered by Talk Box and Chatlas",
+            "model": "gpt-4",
+            "temperature": 0.7,
+            "max_tokens": 1000,
+            "preset": "helpful_assistant",
+            "persona": "a knowledgeable and friendly AI assistant",
+            "avoid_topics": ["harmful content", "illegal activities"],
+            "tools": ["web_search", "code_analysis", "file_operations"],
+            "system_prompt": "You are a helpful AI assistant powered by Talk Box and Chatlas."
+        }
+
+
+@app.post("/config")
+async def set_bot_config(config: Dict[str, Any]):
+    """Set the bot configuration (called by ReactChatServer)."""
+    global global_bot_config
+    global_bot_config = config
+    return {"message": "Bot configuration updated successfully"}
 
 
 @app.post("/conversation", response_model=ConversationResponse)

@@ -29,15 +29,44 @@ body {
   overflow: hidden; /* Prevent any overflow */
 }
 
+/* Logo container */
 .logo-container {
-  margin-bottom: 2rem;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  padding-top: 20px;
 }
 
 .logo {
-  height: 80px;
+  height: 60px;
   width: auto;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+}
+
+.logo:hover {
+  opacity: 1;
+}
+
+/* Loading state */
+.app-container.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: var(--bg-color);
+}
+
+.app-container.loading .logo-container {
+  margin-bottom: 20px;
+  padding-top: 0;
+}
+
+.loading-message {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .centered-chat-container {
@@ -52,7 +81,7 @@ body {
 
 .centered-chat-container.expanded {
   max-width: 1200px;
-  min-height: calc(100vh - 200px); /* Match the expanded chat interface height */
+  min-height: calc(100vh - 170px); /* Optimized: app padding (64px) + logo area (100px) + buffer (6px) */
 }
 
 .chat-interface {
@@ -64,13 +93,13 @@ body {
   display: flex;
   flex-direction: column;
   height: 600px;
-  max-height: calc(100vh - 200px); /* Account for app padding + logo + margins */
+  max-height: calc(100vh - 170px); /* Optimized to match container */
   transition: all 0.3s ease;
 }
 
 .chat-interface.expanded {
-  height: calc(100vh - 200px); /* Use all available space minus app container overhead */
-  max-height: calc(100vh - 200px);
+  height: calc(100vh - 170px); /* Use more available space - only 170px overhead instead of 200px */
+  max-height: calc(100vh - 170px);
 }
 
 /* Responsive design for mobile */
@@ -551,6 +580,133 @@ body {
 
 .chat-header-button:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Info icon and popover styles */
+.chat-header-avatar-container {
+  position: relative;
+}
+
+.chat-header-avatar.info-icon {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-header-avatar.info-icon:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+/* Popover component */
+.popover-container {
+  position: relative;
+  display: inline-block;
+}
+
+.popover-trigger {
+  cursor: pointer;
+}
+
+.popover-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  margin-top: 0.5rem;
+  min-width: 320px;
+  max-width: 400px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  animation: popover-slide-in 0.2s ease-out;
+}
+
+@keyframes popover-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Bot info popover content */
+.bot-info-popover {
+  padding: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.bot-info-section {
+  margin-bottom: 1rem;
+}
+
+.bot-info-section:last-child {
+  margin-bottom: 0;
+}
+
+.bot-info-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 0.25rem;
+}
+
+.bot-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.375rem;
+  gap: 0.5rem;
+}
+
+.bot-info-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  min-width: fit-content;
+}
+
+.bot-info-value {
+  font-size: 0.75rem;
+  color: #374151;
+  text-align: right;
+  word-break: break-word;
+}
+
+.bot-info-text {
+  font-size: 0.75rem;
+  color: #374151;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.bot-info-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.bot-info-tag {
+  font-size: 0.625rem;
+  padding: 0.125rem 0.375rem;
+  background: #f3f4f6;
+  color: #374151;
+  border-radius: 0.375rem;
+  font-weight: 500;
+}
+
+.bot-info-tag.avoid-topic {
+  background: #fef2f2;
+  color: #dc2626;
 }
 
 /* Message list */

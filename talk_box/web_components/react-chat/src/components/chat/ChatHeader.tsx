@@ -1,8 +1,9 @@
 import React from 'react';
 import { clsx } from 'clsx';
-import { X, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Maximize2, Minimize2, Info } from 'lucide-react';
 import type { HeaderProps } from '../../types';
 import { Button } from '../ui/Button';
+import { Popover } from '../ui/Popover';
 
 const ChatHeader: React.FC<HeaderProps> = ({
   botName = 'Talk Box Assistant',
@@ -10,7 +11,92 @@ const ChatHeader: React.FC<HeaderProps> = ({
   onToggleExpanded,
   onClose,
   className,
+  botConfig,
+  showBotInfo = true,
 }) => {
+  const renderBotInfo = () => {
+    if (!botConfig) return null;
+
+    return (
+      <div className="bot-info-popover">
+        <div className="bot-info-section">
+          <h4 className="bot-info-title">Bot Configuration</h4>
+
+          {botConfig.name && (
+            <div className="bot-info-item">
+              <span className="bot-info-label">Name:</span>
+              <span className="bot-info-value">{botConfig.name}</span>
+            </div>
+          )}
+
+          {botConfig.description && (
+            <div className="bot-info-item">
+              <span className="bot-info-label">Description:</span>
+              <span className="bot-info-value">{botConfig.description}</span>
+            </div>
+          )}
+
+          {botConfig.model && (
+            <div className="bot-info-item">
+              <span className="bot-info-label">Model:</span>
+              <span className="bot-info-value">{botConfig.model}</span>
+            </div>
+          )}
+
+          {botConfig.temperature !== undefined && (
+            <div className="bot-info-item">
+              <span className="bot-info-label">Temperature:</span>
+              <span className="bot-info-value">{botConfig.temperature}</span>
+            </div>
+          )}
+
+          {botConfig.maxTokens && (
+            <div className="bot-info-item">
+              <span className="bot-info-label">Max Tokens:</span>
+              <span className="bot-info-value">{botConfig.maxTokens}</span>
+            </div>
+          )}
+
+          {botConfig.preset && (
+            <div className="bot-info-item">
+              <span className="bot-info-label">Preset:</span>
+              <span className="bot-info-value">{botConfig.preset}</span>
+            </div>
+          )}
+        </div>
+
+        {botConfig.persona && (
+          <div className="bot-info-section">
+            <h4 className="bot-info-title">Persona</h4>
+            <p className="bot-info-text">{botConfig.persona}</p>
+          </div>
+        )}
+
+        {botConfig.tools && botConfig.tools.length > 0 && (
+          <div className="bot-info-section">
+            <h4 className="bot-info-title">Available Tools</h4>
+            <div className="bot-info-tags">
+              {botConfig.tools.map((tool) => (
+                <span key={tool} className="bot-info-tag">{tool}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {botConfig.avoidTopics && botConfig.avoidTopics.length > 0 && (
+          <div className="bot-info-section">
+            <h4 className="bot-info-title">Avoid Topics</h4>
+            <div className="bot-info-tags">
+              {botConfig.avoidTopics.map((topic) => (
+                <span key={topic} className="bot-info-tag avoid-topic">{topic}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div
       className={clsx(
@@ -19,9 +105,21 @@ const ChatHeader: React.FC<HeaderProps> = ({
       )}
     >
       <div className="chat-header-info">
-        <div className="chat-header-avatar">
-          {botName.charAt(0).toUpperCase()}
-        </div>
+        {showBotInfo && botConfig ? (
+          <Popover
+            content={renderBotInfo()}
+            className="chat-header-avatar-container"
+            contentClassName="bot-info-popover-content"
+          >
+            <div className="chat-header-avatar info-icon">
+              <Info className="h-4 w-4" />
+            </div>
+          </Popover>
+        ) : (
+          <div className="chat-header-avatar">
+            {botName.charAt(0).toUpperCase()}
+          </div>
+        )}
         <h3 className="chat-header-title">{botName}</h3>
       </div>
 

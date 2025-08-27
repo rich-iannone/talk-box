@@ -40,6 +40,9 @@ export interface TalkBoxChatProps {
   /** Custom popup button component */
   popupButton?: React.ReactNode;
 
+  /** Whether to show bot info icon with configuration details */
+  showBotInfo?: boolean;
+
   /** Chat container className */
   className?: string;
 
@@ -77,6 +80,10 @@ export interface HeaderProps {
   onToggleExpanded?: () => void;
   onClose?: () => void;
   className?: string;
+  /** Bot configuration to display in info popover */
+  botConfig?: ChatBotConfig;
+  /** Whether to show the info icon with bot details */
+  showBotInfo?: boolean;
 }
 
 export interface MessageProps {

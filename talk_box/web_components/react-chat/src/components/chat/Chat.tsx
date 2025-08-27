@@ -14,6 +14,7 @@ const Chat: React.FC<TalkBoxChatProps> = ({
   apiEndpoint,
   float = false,
   popupButton,
+  showBotInfo = true,
   className,
   classNames,
   components,
@@ -95,6 +96,8 @@ const Chat: React.FC<TalkBoxChatProps> = ({
         onToggleExpanded={() => setIsExpanded(!isExpanded)}
         onClose={float ? () => setIsOpen(false) : undefined}
         className={classNames?.header}
+        botConfig={config}
+        showBotInfo={showBotInfo}
       />
 
       <MessageList
