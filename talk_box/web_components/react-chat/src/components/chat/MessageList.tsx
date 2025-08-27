@@ -55,7 +55,6 @@ const MessageList: React.FC<MessageListProps> = ({
       {messages.length === 0 ? (
         <div className="message-list-empty">
           <div className="message-list-empty-content">
-            <div className="message-list-empty-icon">💬</div>
             <p>{emptyStateMessage}</p>
           </div>
         </div>
