@@ -449,6 +449,14 @@ body {
   line-height: 1.5;
 }
 
+/* Remove background for code inside pre blocks to avoid double-background effect */
+.message-content pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
 .message-content code {
   background: rgba(0, 0, 0, 0.06);
   padding: 0.15rem 0.3rem;

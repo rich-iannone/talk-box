@@ -19,16 +19,9 @@ const MessageMarkdown: React.FC<MessageMarkdownProps> = ({ children, className }
           rehypePlugins={[rehypeHighlight]}
           components={{
             // Customize how different elements are rendered
-            code: ({ node, inline, className, children, ...props }) => {
-              const match = /language-(\w+)/.exec(className || '');
-              return !inline && match ? (
-                <pre className="bg-gray-100 p-3 rounded-md overflow-x-auto">
-                  <code className={className} {...props}>
-                    {children}
-                  </code>
-                </pre>
-              ) : (
-                <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props}>
+            code: ({ className, children, ...props }) => {
+              return (
+                <code className={className} {...props}>
                   {children}
                 </code>
               );
