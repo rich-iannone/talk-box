@@ -37,11 +37,11 @@ body {
   display: flex;
   justify-content: center;
   margin-bottom: 20px;
-  padding-top: 20px;
+  padding-top: 12px;
 }
 
 .logo {
-  height: 60px;
+  height: 75px;
   width: auto;
   opacity: 0.9;
   transition: opacity 0.3s ease;
@@ -112,7 +112,7 @@ body {
   }
 
   .logo {
-    height: 60px;
+    height: 70px;
   }
 
   .centered-chat-container {
