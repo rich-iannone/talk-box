@@ -2011,14 +2011,14 @@ class ChatBot:
 
         # Add persona if specified and not already included in system prompt
         if self._config["persona"]:
-            # Check if the system prompt already includes persona-like content
+            # Check if the persona is already mentioned in the existing prompt
             existing_prompt = "\n".join(prompt_parts).lower()
             persona_lower = self._config["persona"].lower()
 
-            # Don't add persona if it's already in the system prompt or if system prompt starts with "You are"
+            # Only skip if the persona content is already present
             if not any(
                 persona_word in existing_prompt for persona_word in persona_lower.split()[:3]
-            ) and not existing_prompt.strip().startswith("you are"):
+            ):
                 if prompt_parts:
                     prompt_parts.append(f"\nAdditional persona: {self._config['persona']}")
                 else:
