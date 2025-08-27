@@ -162,7 +162,7 @@ async def get_bot_config():
             "model": "gpt-4",
             "temperature": 0.7,
             "max_tokens": 1000,
-            "preset": "helpful_assistant",
+            "preset": None,  # Changed from "helpful_assistant" to None to reflect no preset set
             "persona": "a knowledgeable and friendly AI assistant",
             "avoid_topics": ["harmful content", "illegal activities"],
             "tools": ["web_search", "code_analysis", "file_operations"],

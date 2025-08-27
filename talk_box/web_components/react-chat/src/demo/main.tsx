@@ -37,7 +37,7 @@ function App() {
             model: config.model || "gpt-4",
             temperature: config.temperature ?? 0.7,
             maxTokens: config.max_tokens || 1000,
-            preset: config.preset || "helpful_assistant",
+            preset: config.preset, // Don't use fallback - preserve null if no preset is set
             persona: config.persona || "a knowledgeable and friendly AI assistant",
             avoid_topics: config.avoid_topics || ["harmful content", "illegal activities"],
             tools: config.tools || ["web_search", "code_analysis", "file_operations"],
