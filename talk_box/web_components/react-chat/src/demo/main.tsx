@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import Chat from '../components/chat/Chat';
+import ChatHeader from '../components/chat/ChatHeader';
 import ErrorBoundary from '../components/ErrorBoundary';
 import '../styles/simple.css';
 
 function App() {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const chatConfig = {
     model: "gpt-4",
     temperature: 0.7,
@@ -12,7 +15,7 @@ function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isExpanded ? 'expanded' : ''}`}>
       <div className="logo-container">
         <img
           src="/talk-box-logo.png"
@@ -21,21 +24,28 @@ function App() {
         />
       </div>
 
-      <div className="centered-chat-container">
-        <div className="chat-interface">
+      <div className={`centered-chat-container ${isExpanded ? 'expanded' : ''}`}>
+        <div className={`chat-interface ${isExpanded ? 'expanded' : ''}`}>
           <ErrorBoundary>
             <Chat
               config={chatConfig}
               apiEndpoint="http://127.0.0.1:8000"
+              components={{
+                header: (props) => (
+                  <ChatHeader
+                    {...props}
+                    isExpanded={isExpanded}
+                    onToggleExpanded={() => setIsExpanded(!isExpanded)}
+                  />
+                )
+              }}
             />
           </ErrorBoundary>
         </div>
       </div>
     </div>
   );
-}
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
+}ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>

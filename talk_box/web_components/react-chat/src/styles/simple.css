@@ -45,6 +45,12 @@ body {
   justify-content: center;
   flex: 1;
   min-height: 600px;
+  transition: all 0.3s ease;
+}
+
+.centered-chat-container.expanded {
+  max-width: 1200px;
+  min-height: 800px;
 }
 
 .chat-interface {
@@ -57,6 +63,12 @@ body {
   flex-direction: column;
   height: 600px;
   max-height: 80vh;
+  transition: all 0.3s ease;
+}
+
+.chat-interface.expanded {
+  height: 800px;
+  max-height: 90vh;
 }
 
 /* Responsive design for mobile */
@@ -74,14 +86,22 @@ body {
     min-height: 500px;
   }
 
+  .centered-chat-container.expanded {
+    max-width: 100%;
+    min-height: 700px;
+  }
+
   .chat-interface {
     border-radius: 12px;
     height: 500px;
     max-height: 70vh;
   }
-}
 
-/* Legacy styles for backwards compatibility */
+  .chat-interface.expanded {
+    height: 700px;
+    max-height: 85vh;
+  }
+}/* Legacy styles for backwards compatibility */
 .container {
   max-width: 1200px;
   margin: 0 auto;
