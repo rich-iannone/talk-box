@@ -1,6 +1,6 @@
 import React from 'react';
 import { clsx } from 'clsx';
-import { X, Maximize2, Minimize2, Info } from 'lucide-react';
+import { X, Maximize2, Minimize2, Info, MessageSquare } from 'lucide-react';
 import type { HeaderProps } from '../../types';
 import { Button } from '../ui/Button';
 import { Popover } from '../ui/Popover';
@@ -90,6 +90,35 @@ const ChatHeader: React.FC<HeaderProps> = ({
               {botConfig.avoidTopics.map((topic) => (
                 <span key={topic} className="bot-info-tag avoid-topic">{topic}</span>
               ))}
+            </div>
+          </div>
+        )}
+
+        {botConfig.systemPrompt && (
+          <div className="bot-info-section">
+            <h4 className="bot-info-title">System Prompt</h4>
+            <div className="bot-info-item" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+              <Popover
+                content={
+                  <div className="system-prompt-popover">
+                    <h5 className="system-prompt-title">Full System Prompt</h5>
+                    <div className="system-prompt-content">
+                      <pre className="system-prompt-text">{botConfig.systemPrompt}</pre>
+                    </div>
+                  </div>
+                }
+                contentClassName="system-prompt-popover-content"
+              >
+                <button className="system-prompt-trigger">
+                  <MessageSquare className="h-3 w-3" />
+                  <span>View full prompt</span>
+                </button>
+              </Popover>
+              <p className="bot-info-text system-prompt-preview">
+                {botConfig.systemPrompt.length > 100
+                  ? `${botConfig.systemPrompt.substring(0, 100)}...`
+                  : botConfig.systemPrompt}
+              </p>
             </div>
           </div>
         )}
