@@ -129,7 +129,7 @@ class TestPromptBuilder:
             .core_analysis(["Security", "Performance"])
             .output_format(["Use bullet points"])
             .final_emphasis("Prioritize by impact")
-            .build()
+            .preview()
         )
 
         assert isinstance(prompt, str)
@@ -178,7 +178,7 @@ class TestPreConfiguredBuilders:
         assert "architect" in structure["persona"].lower()
         assert len(structure["structured_sections"]) >= 2
 
-        prompt = builder.build()
+        prompt = builder.preview()
         assert "architect" in prompt.lower()
         assert "architectural" in prompt.lower()
 
@@ -192,7 +192,7 @@ class TestPreConfiguredBuilders:
         assert "engineer" in structure["persona"].lower()
         assert len(structure["output_format"]) > 0
 
-        prompt = builder.build()
+        prompt = builder.preview()
         assert "engineer" in prompt.lower()
         assert "critical issues" in prompt.lower() or "improvements" in prompt.lower()
 
@@ -206,7 +206,7 @@ class TestPreConfiguredBuilders:
         assert "debugger" in structure["persona"].lower()
         assert "root cause" in structure["final_emphasis"].lower()
 
-        prompt = builder.build()
+        prompt = builder.preview()
         assert "debugger" in prompt.lower()
         assert "root cause" in prompt.lower()
 
@@ -258,7 +258,7 @@ class TestChatBotIntegration:
         bot = ChatBot()
 
         prompt1 = "You are an expert engineer."
-        prompt2 = PromptBuilder().core_analysis(["Security"]).build()
+        prompt2 = PromptBuilder().core_analysis(["Security"]).preview()
         prompt3 = "Focus on critical issues."
 
         result = bot.chain_prompts(prompt1, prompt2, prompt3)

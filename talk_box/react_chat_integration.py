@@ -1,10 +1,3 @@
-"""
-React Chat Interface Integration for Talk Box
-
-This module provides seamless integration between Talk Box ChatBot and the React chat interface.
-It adds a new show() mode that automatically starts the required servers and opens the React interface.
-"""
-
 import atexit
 import signal
 import subprocess

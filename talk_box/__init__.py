@@ -1,11 +1,3 @@
-"""
-Talk Box - The best way to generate, test, and deploy LLM chatbots.
-
-A Python framework designed for simplicity and extensibility, enabling developers
-to create, test, and deploy LLM chatbots with a chainable API, built-in tools,
-behavior presets, and comprehensive testing capabilities.
-"""
-
 try:
     from importlib.metadata import PackageNotFoundError, version
 except ImportError:  # pragma: no cover
@@ -23,6 +15,7 @@ __email__ = "riannone@me.com"
 from talk_box.attachments import AttachmentMetadata, Attachments
 from talk_box.builder import BuilderTypes, ChatBot
 from talk_box.conversation import Conversation, Message
+from talk_box.pathways import Pathways
 from talk_box.presets import Preset, PresetManager, PresetNames
 from talk_box.prompt_builder import (
     Priority,
@@ -35,8 +28,10 @@ from talk_box.prompt_builder import (
 
 # Testing functions for easy access
 from talk_box.testing import (
+    PathwayTestResults,
     TestResults,
     autotest_avoid_topics,
+    autotest_pathways,
 )
 
 # Make key classes available at package level
@@ -48,6 +43,8 @@ __all__ = [
     # File attachments
     "Attachments",
     "AttachmentMetadata",
+    # Conversational pathways
+    "Pathways",
     # Prompt engineering
     "PromptBuilder",
     "Priority",
@@ -63,6 +60,8 @@ __all__ = [
     "BuilderTypes",
     # Testing functions
     "autotest_avoid_topics",
+    "autotest_pathways",
     # Testing classes
     "TestResults",
+    "PathwayTestResults",
 ]

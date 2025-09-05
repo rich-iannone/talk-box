@@ -1,9 +1,3 @@
-"""
-Preset management module for Talk Box.
-
-This module handles behavior templates and preset configurations for chatbots.
-"""
-
 from dataclasses import dataclass
 from typing import Any, Optional
 

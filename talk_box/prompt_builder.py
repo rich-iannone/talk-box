@@ -3619,6 +3619,204 @@ pattern recognition rather than abstract instruction following.
 
         return self.constraint(refusal_text)
 
+    def pathways(self, pathway_spec) -> "PromptBuilder":
+        """
+        Add conversational pathway guidance to structure and guide conversation flow.
+
+        Pathways provide flexible conversation flow guidance that helps AI assistants navigate
+        complex interactions while maintaining natural conversation patterns. Unlike rigid state
+        machines, pathways serve as intelligent guardrails that adapt to user behavior while
+        ensuring important steps and information gathering requirements are addressed.
+
+        **Flexible Structure**: Pathways provide conversation guidance without enforcing rigid
+        adherence, allowing the AI to adapt to natural conversation patterns while ensuring key
+        objectives are met. This balances structure with conversational flexibility.
+
+        **Attention Optimization**: Pathway specifications are integrated into the prompt structure
+        at an optimal position for AI attention, providing clear guidance without overwhelming
+        other prompt components.
+
+        **Information Management**: Pathways help ensure systematic information gathering and
+        step completion while maintaining user-friendly interactions. This is particularly
+        valuable for complex processes like bookings, troubleshooting, or guided workflows.
+
+        Parameters
+        ----------
+        pathway_spec
+            A Pathways object created using the chainable Pathways API, or a dictionary
+            specification containing pathway definition. The specification includes states,
+            transitions, information requirements, and flow control logic.
+
+        Returns
+        -------
+        PromptBuilder
+            Self for method chaining, allowing combination with other prompt building
+            methods to create comprehensive, structured prompts.
+
+        Examples
+        --------
+        ### Customer support pathway
+
+        Create a structured support flow:
+
+        ```python
+        import talk_box as tb
+
+        # Define support pathway
+        support_pathway = (
+            tb.Pathways("Technical Support")
+            .description("Systematic technical problem resolution")
+            .activation_conditions([
+                "User reports technical issues",
+                "User needs troubleshooting help"
+            ])
+            .start_with("problem_identification")
+                .chat_state("problem_identification")
+                .description("Understand the technical problem")
+                .collect(["issue_description", "error_messages", "recent_changes"])
+                .next_state("basic_diagnostics")
+            .then("basic_diagnostics")
+                .decision_state("basic_diagnostics")
+                .description("Determine if basic fixes might work")
+                .branch_on("Simple configuration issue", "quick_fix")
+                .branch_on("Complex system problem", "advanced_diagnostics")
+            .then("quick_fix")
+                .chat_state("quick_fix")
+                .description("Provide immediate solution steps")
+                .success_condition("Problem is resolved")
+                .fallback("Problem persists", "advanced_diagnostics")
+            .build()
+        )
+
+        # Use in prompt
+        prompt = (
+            tb.PromptBuilder()
+            .persona("technical support specialist", "troubleshooting")
+            .pathways(support_pathway)
+            .final_emphasis("Follow pathway while adapting to user needs")
+            .build()
+        )
+        ```
+
+        ### Booking flow pathway
+
+        Guide users through complex booking process:
+
+        ```python
+        # Flight booking pathway
+        booking_pathway = (
+            tb.Pathways("Flight Booking")
+            .description("Guide users through booking a flight")
+            .activation_conditions([
+                "User wants to book a flight",
+                "User asks about flight reservations"
+            ])
+            .start_with("greeting")
+                .chat_state("greeting")
+                .description("Welcome user and understand their travel needs")
+                .collect(["departure city", "destination", "travel dates"])
+                .next_state("search_flights")
+            .then("search_flights")
+                .tool_state("search_flights")
+                .description("Search available flights")
+                .tools(["flight_search_api"])
+                .next_state("present_options")
+            .then("present_options")
+                .chat_state("present_options")
+                .description("Show flight options to user")
+                .success_condition("User selects a flight option")
+                .next_state("booking_confirmation")
+            .build()
+        )
+
+        # Integration with bot
+        bot = (
+            tb.ChatBot()
+            .provider_model("openai:gpt-4-turbo")
+            .system_prompt(
+                tb.PromptBuilder()
+                .persona("travel agent", "flight booking specialist")
+                .pathways(booking_pathway)
+                .output_format([
+                    "Be clear about next steps",
+                    "Confirm information before proceeding",
+                    "Provide helpful alternatives when needed"
+                ])
+                .build()
+            )
+        )
+        ```
+
+        Integration Notes
+        -----------------
+        - **Flexible Guidance**: Pathways provide structure without rigidity, allowing natural conversation flow
+        - **Information Gathering**: Systematic collection of required information while maintaining user experience
+        - **Adaptive Branching**: Support for conditional flows based on user responses and circumstances
+        - **Tool Integration**: Clear guidance on when and how to use external tools within the conversation flow
+        - **Completion Tracking**: Built-in success conditions and completion criteria for complex processes
+
+        The pathways method enables sophisticated conversation flow management while preserving the
+        natural, adaptive qualities that make AI conversations engaging and user-friendly.
+        """
+        # Handle both Pathways objects and dictionary specifications
+        if hasattr(pathway_spec, "to_prompt_text"):
+            pathway_text = pathway_spec.to_prompt_text()
+        elif hasattr(pathway_spec, "build"):
+            # If it has a build method but no to_prompt_text, it might be a built spec
+            built_spec = pathway_spec._build()
+            pathway_text = self._format_pathway_spec(built_spec)
+        elif isinstance(pathway_spec, dict):
+            pathway_text = self._format_pathway_spec(pathway_spec)
+        else:
+            raise ValueError("pathway_spec must be a Pathways object or dictionary specification")
+
+        # Add as a high-priority structured section
+        return self.structured_section(
+            title="Conversational Pathway",
+            content=pathway_text,
+            priority=Priority.HIGH,
+            required=True,
+        )
+
+    def _format_pathway_spec(self, spec: dict) -> str:
+        """Format a pathway specification dictionary into prompt text."""
+        lines = []
+
+        # Title and description
+        lines.append(f"**{spec.get('title', 'Conversation Flow')}**")
+        if spec.get("description"):
+            lines.append(f"Purpose: {spec['description']}")
+
+        # Activation conditions
+        if spec.get("activation_conditions"):
+            lines.append("Activate when:")
+            for condition in spec["activation_conditions"]:
+                lines.append(f"- {condition}")
+
+        # States and flow
+        if spec.get("states"):
+            lines.append("Flow guidance:")
+            for state_name, state in spec["states"].items():
+                lines.append(
+                    f"- {state_name.upper()} ({state.get('type', 'chat')}): {state.get('description', '')}"
+                )
+
+                if state.get("required_info"):
+                    lines.append(f"  Required: {', '.join(state['required_info'])}")
+
+                if state.get("tools"):
+                    lines.append(f"  Tools: {', '.join(state['tools'])}")
+
+        # Completion and guidance
+        if spec.get("completion_criteria"):
+            lines.append(f"Complete when: {'; '.join(spec['completion_criteria'])}")
+
+        lines.append(
+            "Follow as flexible guidance, adapting to user conversation patterns while ensuring key objectives are addressed."
+        )
+
+        return "\n".join(lines)
+
     def focus_on(self, primary_goal: str) -> "PromptBuilder":
         """
         Set the primary focus that leverages both front-loading and recency bias for maximum attention impact.
@@ -3960,7 +4158,13 @@ pattern recognition rather than abstract instruction following.
         self._final_emphasis = f"Focus your entire response on: {primary_goal}"
         return self
 
-    def build(self) -> str:
+    def _build(self) -> str:
+        """
+        Internal method to construct the final prompt using attention-optimized structure.
+
+        This method is used internally by ChatBot to create the system prompt while preserving
+        the structured data for testing and analysis.
+        """
         # fmt: off
         """
         Construct the final prompt using attention-optimized structure based on cognitive psychology principles.
@@ -4464,6 +4668,80 @@ pattern recognition rather than abstract instruction following.
 
         return "\n".join(prompt_parts)
 
+    def preview(self) -> str:
+        """
+        Build and return the final prompt text for preview purposes.
+
+        This method is intended for development, debugging, and standalone prompt creation.
+        When using with ChatBot, prefer passing the PromptBuilder object directly rather
+        than calling .preview() first, as this preserves the structured data for testing
+        and analysis.
+
+        Returns
+        -------
+        str
+            The complete, attention-optimized prompt text.
+
+        Note
+        ----
+        If you're using this with ChatBot, consider passing the PromptBuilder object
+        directly instead:
+
+        # Preferred - preserves structure for testing
+        bot.system_prompt(prompt_builder)
+
+        # Works but loses structured data benefits
+        bot.system_prompt(prompt_builder.preview())
+        """
+        return self._build()
+
+    def __str__(self) -> str:
+        """Return the built prompt when the object is converted to string."""
+        return self._build()
+
+    def __repr__(self) -> str:
+        """Return a developer-friendly representation of the PromptBuilder configuration."""
+        components = []
+
+        # Add persona if present
+        if self._persona:
+            persona_short = self._persona.replace("You are a ", "").replace("You are an ", "")
+            if len(persona_short) > 50:
+                persona_short = persona_short[:47] + "..."
+            components.append(f"persona='{persona_short}'")
+
+        # Add task context if present
+        if self._task_context:
+            context_short = self._task_context
+            if len(context_short) > 40:
+                context_short = context_short[:37] + "..."
+            components.append(f"task='{context_short}'")
+
+        # Add constraints count
+        if self._constraints:
+            components.append(f"constraints={len(self._constraints)}")
+
+        # Add sections count
+        if self._sections:
+            components.append(f"sections={len(self._sections)}")
+
+        # Add output format count
+        if self._output_format:
+            components.append(f"output_format={len(self._output_format)}")
+
+        # Add final emphasis indicator
+        if self._final_emphasis:
+            emphasis_short = self._final_emphasis
+            if len(emphasis_short) > 30:
+                emphasis_short = emphasis_short[:27] + "..."
+            components.append(f"emphasis='{emphasis_short}'")
+
+        # Build the representation
+        if components:
+            return f"PromptBuilder({', '.join(components)})"
+        else:
+            return "PromptBuilder(empty)"
+
     def preview_structure(self) -> Dict[str, Any]:
         """
         Preview the prompt structure without building the full text for debugging and optimization.
@@ -4637,7 +4915,7 @@ pattern recognition rather than abstract instruction following.
             "output_format": self._output_format,
             "examples_count": len(self._examples),
             "final_emphasis": self._final_emphasis,
-            "estimated_tokens": len(self.build().split()) * 1.3,  # Rough estimate
+            "estimated_tokens": len(self._build().split()) * 1.3,  # Rough estimate
         }
 
 
