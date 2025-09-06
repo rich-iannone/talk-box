@@ -79,6 +79,38 @@ class Pathways:
         .start_with("initial_state")                # Required: Where to begin
     ```
 
+    ### Recommended Style: Compact State Headers
+
+    For optimal readability and formatter compatibility, use the **compact convention**:
+
+    ```python
+    pathway = (
+        tb.Pathways("Support Flow")
+        .description("Customer support pathway")
+        .activation_conditions(["User needs help"])
+        # === STATE: intake ===
+        .start_with("intake").collect_state()      # Compact state header
+        .description("Gather customer information")
+        .required(["issue description", "contact info"])
+        .next_state("triage")
+        # === STATE: triage ===
+        .then("triage").decision_state()           # Compact transition + type
+        .description("Route to appropriate support")
+        .branch_on("Technical issue", "tech_support")
+        .branch_on("Billing question", "billing")
+        # === STATE: tech_support ===
+        .then("tech_support").chat_state()        # Configuration follows normal indentation
+        .description("Resolve technical problems")
+        .success_condition("Issue resolved")
+    )
+    ```
+
+    This approach combines:
+    - **Visual state boundaries** with `# === STATE: name ===` comments
+    - **Compact headers** with `.then("state").state_type()` on same line
+    - **Normal indentation** for state configuration methods
+    - **Formatter compatibility** that preserves structure
+
     ### 2. State Definition Pattern (repeat for each state):
 
     ```python
@@ -156,16 +188,16 @@ class Pathways:
         tb.Pathways("Password Reset")
         .description("Help users reset their forgotten passwords")
         .activation_conditions(["User can't log in", "User forgot password"])
-        .start_with("verification")
-            .collect_state()
-            .description("Verify user identity")
-            .required(["email_address", "account_verification"])
-            .next_state("password_update")
-        .then("password_update")
-            .chat_state()
-            .description("Guide user through creating new password")
-            .required(["new_password_created", "password_requirements_met"])
-            .success_condition("User successfully logs in with new password")
+        # === STATE: verification ===
+        .start_with("verification").collect_state()
+        .description("Verify user identity")
+        .required(["email_address", "account_verification"])
+        .next_state("password_update")
+        # === STATE: password_update ===
+        .then("password_update").chat_state()
+        .description("Guide user through creating new password")
+        .required(["new_password_created", "password_requirements_met"])
+        .success_condition("User successfully logs in with new password")
     )
     ```
 
@@ -183,28 +215,28 @@ class Pathways:
         tb.Pathways("Customer Support")
         .description("Route and resolve customer inquiries")
         .activation_conditions(["User needs help", "User reports problem"])
-        .start_with("triage")
-            .decision_state()
-            .description("Determine the type of support needed")
-            .branch_on("Technical problem reported", "technical_support")
-            .branch_on("Billing question asked", "billing_support")
-            .branch_on("General inquiry made", "general_help")
-        .then("technical_support")
-            .tool_state()
-            .description("Diagnose and resolve technical issues")
-            .tools(["system_diagnostics", "troubleshooting_guide"])
-            .success_condition("Technical issue is resolved")
-            .merge_to("completion")
-        .then("billing_support")
-            .chat_state()
-            .description("Address billing and account questions")
-            .required(["billing_issue_understood", "solution_provided"])
-            .merge_to("completion")
-        .then("completion")
-            .summary_state()
-            .description("Ensure customer satisfaction and wrap up")
-            .required(["issue_resolved_confirmation", "follow_up_if_needed"])
-            .completion_actions(["log_interaction", "send_summary_email"])
+        # === STATE: triage ===
+        .start_with("triage").decision_state()
+        .description("Determine the type of support needed")
+        .branch_on("Technical problem reported", "technical_support")
+        .branch_on("Billing question asked", "billing_support")
+        .branch_on("General inquiry made", "general_help")
+        # === STATE: technical_support ===
+        .then("technical_support").tool_state()
+        .description("Diagnose and resolve technical issues")
+        .tools(["system_diagnostics", "troubleshooting_guide"])
+        .success_condition("Technical issue is resolved")
+        .merge_to("completion")
+        # === STATE: billing_support ===
+        .then("billing_support").chat_state()
+        .description("Address billing and account questions")
+        .required(["billing_issue_understood", "solution_provided"])
+        .merge_to("completion")
+        # === STATE: completion ===
+        .then("completion").summary_state()
+        .description("Ensure customer satisfaction and wrap up")
+        .required(["issue_resolved_confirmation", "follow_up_if_needed"])
+        .completion_actions(["log_interaction", "send_summary_email"])
         .completion_criteria(["Customer issue fully resolved", "Customer satisfied"])
         .fallback_strategy("If issue is complex, escalate to human support")
     )
