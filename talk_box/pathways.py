@@ -63,8 +63,8 @@ class Pathways:
     machines, helping LLMs provide consistent, thorough assistance while remaining responsive to user
     needs and conversational context.
 
-    Method Order and Relationships
-    ------------------------------
+    Building a Pathway
+    ------------------
 
     Building a pathway follows a specific sequence that ensures proper configuration and flow logic.
     Each step builds upon the previous one to create a coherent conversation structure.
@@ -76,12 +76,10 @@ class Pathways:
         tb.Pathways("Title")
         .description("Purpose and scope")           # Required: What this pathway does
         .activation_conditions([...])               # Required: When to use this pathway
-        .start_with("initial_state")                # Required: Where to begin
+        # First .state() call automatically becomes the starting state
     ```
 
-    ### Recommended Style: Compact State Headers
-
-    For optimal readability and formatter compatibility, use the **compact convention**:
+    ### 2. State Definition (using unified .state() method)
 
     ```python
     pathway = (
@@ -89,57 +87,50 @@ class Pathways:
         .description("Customer support pathway")
         .activation_conditions(["User needs help"])
         # === STATE: intake ===
-        .start_with("intake").collect_state()      # Compact state header
+        .state(id="intake", type="collect")        # First state is automatically the start
         .description("Gather customer information")
         .required(["issue description", "contact info"])
         .next_state("triage")
         # === STATE: triage ===
-        .then("triage").decision_state()           # Compact transition + type
+        .state(id="triage", type="decision")       # Simplified state definition
         .description("Route to appropriate support")
         .branch_on("Technical issue", "tech_support")
         .branch_on("Billing question", "billing")
         # === STATE: tech_support ===
-        .then("tech_support").chat_state()        # Configuration follows normal indentation
+        .state(id="tech_support")                  # Defaults to "chat" type
         .description("Resolve technical problems")
         .success_condition("Issue resolved")
     )
     ```
 
-    This approach combines:
+    This approach provides:
     - **Visual state boundaries** with `# === STATE: name ===` comments
-    - **Compact headers** with `.then("state").state_type()` on same line
-    - **Normal indentation** for state configuration methods
-    - **Formatter compatibility** that preserves structure
+    - **Unified state definition** with `.state(id="name", type="type")`
+    - **Smart defaults** where `type="chat"` is assumed if not specified
+    - **Automatic start state** where the first `.state()` becomes the starting state
 
-    ### 2. State Definition Pattern (repeat for each state):
+    ### 3. State Configuration Pattern (repeat for each state):
 
     ```python
-        # State type (choose one)
-        .chat_state()                               # For conversation/explanation
-        .decision_state()                           # For branching logic
-        .collect_state()                            # For gathering information
-        .tool_state()                               # For using tools/APIs
-        .summary_state()                            # For wrapping up
+        # Define the state
+        .state(id="state_name")                     # Defaults to type="chat"
+        .state(id="state_name", type="collect")     # For gathering information
+        .state(id="state_name", type="decision")    # For branching logic
+        .state(id="state_name", type="tool")        # For using tools/APIs
+        .state(id="state_name", type="summary")     # For wrapping up
 
-        # State configuration (in this order)
+        # Configure the state
         .description("What happens in this state")  # Required for all states
         .required([...])                            # What must be accomplished
         .optional([...])                            # What would be nice to have
-        .tools([...])                               # Available tools (tool_state only)
+        .tools([...])                               # Available tools (type="tool" only)
         .success_condition("When state succeeds")   # How to know it's complete
 
-        # State transition (choose one)
+        # Define state transitions (choose one)
         .next_state("next_state")                   # Linear progression
-        .branch_on("condition", "target_state")     # Conditional (decision_state only)
+        .branch_on("condition", "target_state")     # Conditional (type="decision" only)
         .merge_to("common_state")                   # Reconverge after branching
         .fallback("error_condition", "backup_state") # Error handling
-    ```
-
-    ### 3. Next State (continue the pattern):
-
-    ```python
-        .then("next_state_name")                    # Move to next state definition
-        # ... repeat state definition pattern
     ```
 
     ### 4. Pathway Completion (call once at end):
@@ -154,19 +145,19 @@ class Pathways:
     -----------------------------
     Each state type serves a specific role in the conversation flow:
 
-    - **`chat_state()`**: Open conversation, explanations, guidance
-    - **`decision_state()`**: Branching logic, must use `branch_on()` not `next_state()`
-    - **`collect_state()`**: Structured information gathering
-    - **`tool_state()`**: Using specific tools or APIs, requires `tools()`
-    - **`summary_state()`**: Conclusions, confirmations, completion actions
+    - **`type="chat"`**: Open conversation, explanations, guidance (default)
+    - **`type="decision"`**: Branching logic, must use `branch_on()` not `next_state()`
+    - **`type="collect"`**: Structured information gathering
+    - **`type="tool"`**: Using specific tools or APIs, requires `tools()`
+    - **`type="summary"`**: Conclusions, confirmations, completion actions
 
     Key Rules
     ---------
-    - always call `description()` immediately after state type methods
-    - `decision_state()` must use `branch_on()`, never `next_state()`
-    - `tool_state()` must include `tools()` specification
-    - state names must be unique and use `lowercase_with_underscores`
-    - target states in transitions must be defined later with `then()`
+    - Always call `description()` immediately after `.state()`
+    - `type="decision"` must use `branch_on()`, never `next_state()`
+    - `type="tool"` must include `tools()` specification
+    - State names must be unique and use `lowercase_with_underscores`
+    - Target states in transitions must be defined later with another `.state()`
 
     Examples
     --------
@@ -189,12 +180,12 @@ class Pathways:
         .description("Help users reset their forgotten passwords")
         .activation_conditions(["User can't log in", "User forgot password"])
         # === STATE: verification ===
-        .start_with("verification").collect_state()
+        .state(id="verification", type="collect")
         .description("Verify user identity")
         .required(["email_address", "account_verification"])
         .next_state("password_update")
         # === STATE: password_update ===
-        .then("password_update").chat_state()
+        .state(id="password_update")  # defaults to "chat"
         .description("Guide user through creating new password")
         .required(["new_password_created", "password_requirements_met"])
         .success_condition("User successfully logs in with new password")
@@ -206,9 +197,9 @@ class Pathways:
 
     ### Branching Flow with Decision Points
 
-    This customer support pathway demonstrates `decision_state()` branching to route users based on
-    their specific needs. Notice how different support paths merge back to a common completion state,
-    ensuring consistent wrap-up regardless of the support type provided.
+    This customer support pathway demonstrates decision state branching using the unified `.state()`
+    method. Notice how different support paths merge back to a common completion state, ensuring
+    consistent wrap-up regardless of the support type provided.
 
     ```python
     support_pathway = (
@@ -216,24 +207,24 @@ class Pathways:
         .description("Route and resolve customer inquiries")
         .activation_conditions(["User needs help", "User reports problem"])
         # === STATE: triage ===
-        .start_with("triage").decision_state()
+        .state(id="triage", type="decision")
         .description("Determine the type of support needed")
         .branch_on("Technical problem reported", "technical_support")
         .branch_on("Billing question asked", "billing_support")
         .branch_on("General inquiry made", "general_help")
         # === STATE: technical_support ===
-        .then("technical_support").tool_state()
+        .state(id="technical_support", type="tool")
         .description("Diagnose and resolve technical issues")
         .tools(["system_diagnostics", "troubleshooting_guide"])
         .success_condition("Technical issue is resolved")
         .merge_to("completion")
         # === STATE: billing_support ===
-        .then("billing_support").chat_state()
+        .state(id="billing_support")  # defaults to "chat"
         .description("Address billing and account questions")
         .required(["billing_issue_understood", "solution_provided"])
         .merge_to("completion")
         # === STATE: completion ===
-        .then("completion").summary_state()
+        .state(id="completion", type="summary")
         .description("Ensure customer satisfaction and wrap up")
         .required(["issue_resolved_confirmation", "follow_up_if_needed"])
         .completion_actions(["log_interaction", "send_summary_email"])
@@ -242,12 +233,8 @@ class Pathways:
     )
     ```
 
-    The `decision_state()` at the beginning routes users to specialized support, while `merge_to()`
-    brings all paths back to a unified conclusion. This pattern ensures comprehensive support while
-    maintaining consistency across different interaction types.
-
-    Both pathways integrate seamlessly into a `ChatBot` using the `PromptBuilder.pathways()` method,
-    which embeds the structured flow guidance into the system prompt for consistent LLM behavior.
+    This branching example shows how `.state()` creates clear decision points that route conversations
+    appropriately, then merge back together for consistent completion.
     """
 
     def __init__(self, title: str):
@@ -260,7 +247,7 @@ class Pathways:
             Short, descriptive name for the pathway
         """
         self.title = title
-        self._description: Optional[str] = None
+        self._description: str = ""
         self._activation_conditions: List[str] = []
         self._states: Dict[str, PathwayState] = {}
         self._transitions: List[PathwayTransition] = []
@@ -352,321 +339,83 @@ class Pathways:
         self._activation_conditions = conditions
         return self
 
-    def start_with(self, state_name: str) -> "Pathways":
+    def state(self, id: str, type: str = "chat") -> "Pathways":
         """
-        Define the initial state where the pathway begins.
+        Define a state with the specified type in a single method call.
 
-        Call this after `activation_conditions()` to establish the entry point for your pathway.
-        Every pathway must have exactly one starting state. After calling this method, you must
-        immediately define the state type and properties using `chat_state()`, `decision_state()`,
-        or other state type methods.
+        The first state you define becomes the starting state automatically. The `type`
+        parameter defaults to "chat" since it's the most common state type.
 
         Parameters
         ----------
-        state_name
-            Unique identifier for the starting state. Use descriptive names that clearly indicate
-            the state's purpose, like `greeting`, `problem_assessment`, or `initial_contact`.
-
-        Examples
+        id
+            Unique identifier for the state. Use descriptive names that clearly indicate
+            the state's purpose, like `greeting`, `problem_assessment`, or `verification`.
+        type
+            The type of state to create. Options are:
+            - "chat" (default): Open conversation, explanations, guidance
+            - "collect": Structured information gathering
+            - "decision": Branching logic based on conditions
+            - "tool": Using specific tools or APIs
+            - "summary": Conclusions, confirmations, wrap-up        Examples
         --------
-        The starting state sets the tone for the entire interaction. Choose names that make the
-        pathway's flow intuitive:
+        Create states directly without separate type methods:
 
         ```python
-        .start_with("greeting")
-            .chat_state("greeting")
-            .description("Welcome user and understand their needs")
-            .collect(["user_goal", "urgency_level"])
-            .next_state("assessment")
-        ```
-
-        Starting state names should be descriptive and indicate the pathway's beginning:
-
-        ```python
-        # Good - clear purpose
-        .start_with("problem_identification")
-        .start_with("user_verification")
-        .start_with("initial_assessment")
-
-        # Poor - vague or unclear
-        .start_with("state1")
-        .start_with("beginning")
-        ```
-
-        Notes
-        -----
-        - Must be followed immediately by a state type method (`chat_state()`, etc.)
-        - State names should be lowercase with underscores
-        - Choose names that clearly indicate the state's purpose
-        - The starting state name becomes the first state in your pathway flow
-        """
-        self._start_state = state_name
-        self._current_state_name = state_name
-        return self
-
-    def then(self, state_name: str) -> "Pathways":
-        """
-        Begin defining the next state in the pathway.
-
-        Use this to continue building your pathway after completing a state definition. This method
-        transitions from one state definition to the next, maintaining the logical flow of your
-        pathway. Always follow `then()` with a state type method like `chat_state()`,
-        `decision_state()`, etc.
-
-        Parameters
-        ----------
-        state_name
-            Unique identifier for the next state to define. Must be unique within the pathway
-            and should follow the same naming conventions as other states.
-
-        Examples
-        --------
-        Chain states together using `then()` to build complex pathways:
-
-        ```python
-        .then("assessment")
-            .decision_state("assessment")
-            .description("Determine the type of support needed")
+        pathway = (
+            tb.Pathways("Customer Support")
+            .description("Help resolve customer issues")
+            .state(id="greeting")  # defaults to chat
+            .description("Welcome customer and understand their needs")
+            .collect(["problem_description", "urgency_level"])
+            .next_state("triage")
+            .state(id="triage", type="decision")
+            .description("Determine support approach needed")
             .branch_on("Technical issue", "troubleshooting")
-            .branch_on("Account question", "account_help")
-        .then("troubleshooting")
-            .chat_state("troubleshooting")
-            .description("Guide user through technical problem resolution")
-            .required(["problem_details", "attempted_solutions"])
-            .next_state("verification")
-        ```
-
-        The `then()` method creates clear transitions between pathway segments, making the overall
-        flow easy to follow and understand.
-
-        Notes
-        -----
-        - must be followed immediately by a state type method
-        - state names must be unique within the pathway
-        - use after completing the previous state's configuration
-        - target states referenced in `next_state()` or `branch_on()` must be defined with `then()`
-        """
-        self._current_state_name = state_name
-        return self
-
-    def chat_state(self) -> "Pathways":
-        """
-        Define a conversational state for open dialogue.
-
-        Use `chat_state()` for states that require natural conversation, explanation, or guidance
-        where the LLM needs flexibility to respond to user questions and provide detailed
-        information. This is the most common state type for explanatory content and interactive
-        dialogue. Must be called immediately after `start_with()` or `then()`.
-
-        Examples
-        --------
-        `chat_state()` works best for explanatory and interactive portions of your pathway:
-
-        ```python
-        .then("explanation")
-            .chat_state()
-            .description("Explain the recommended solution approach")
-            .required(["solution_steps", "expected_outcome", "potential_risks"])
-            .success_condition("User understands and accepts the approach")
-            .next_state("implementation")
-        ```
-
-        This state type gives the LLM flexibility to adapt its response style while ensuring
-        key requirements are covered. It's ideal for complex explanations that may require
-        follow-up questions or clarification.
-
-        Notes
-        -----
-        - Best for: explanations, guidance, open-ended questions, interactive dialogue
-        - Always follow with `description()` to specify the state's purpose
-        - Use `required()` for must-cover topics and `optional()` for additional context
-        - Chain to `next_state()` for linear flow or `branch_on()` for conditional logic
-        """
-        state_name = self._current_state_name
-        self._states[state_name] = PathwayState(
-            name=state_name, state_type=StateType.CHAT, description=""
+            .branch_on("Billing question", "billing_help")
         )
-        return self
-
-    def tool_state(self) -> "Pathways":
-        """
-        Define a state that requires specific tools or actions.
-
-        Use `tool_state()` when the LLM needs to perform specific actions like searches,
-        calculations, or API calls. Must be called after `start_with()` or `then()`, followed by
-        `description()` and `tools()`, then transition methods.
-
-        Examples
-        --------
-        ```python
-        .then("search_flights")
-            .tool_state()
-            .description("Find available flights matching user criteria")
-            .tools(["flight_search_api", "price_comparison"])
-            .success_condition("Found relevant flight options")
-            .next_state("present_options")
         ```
 
         Notes
         -----
-        - Best for: API calls, calculations, searches, data retrieval
-        - Always follow with `description()` and `tools()`
-        - Use `success_condition()` to define completion criteria
+        - First `.state()` call automatically becomes the starting state
+        - Must be followed immediately by `.description()`
+        - State IDs must be unique within the pathway
+        - Use lowercase with underscores for state IDs
         """
-        state_name = self._current_state_name
-        self._states[state_name] = PathwayState(
-            name=state_name, state_type=StateType.TOOL, description=""
+        # Set as start state if this is the first state defined
+        if not self._start_state:
+            self._start_state = id
+
+        # Set current state for subsequent configuration
+        self._current_state_name = id
+
+        # Create the state based on type
+        state_type_map = {
+            "chat": StateType.CHAT,
+            "collect": StateType.COLLECT,
+            "decision": StateType.DECISION,
+            "tool": StateType.TOOL,
+            "summary": StateType.SUMMARY,
+        }
+
+        if type not in state_type_map:
+            raise ValueError(
+                f"Invalid state type '{type}'. Must be one of: {list(state_type_map.keys())}"
+            )
+
+        # Create the PathwayState
+        self._states[id] = PathwayState(
+            name=id,
+            state_type=state_type_map[type],
+            description="",  # Will be set by subsequent .description() call
+            required_info=[],
+            optional_info=[],
+            tools=[],
+            success_conditions=[],
+            next_states=[],
         )
-        return self
 
-    def decision_state(self) -> "Pathways":
-        """
-        Define a branching state where the conversation splits based on conditions.
-
-        Use `decision_state()` when you need to route users down different paths based on their
-        needs, responses, or detected conditions. This is essential for triage scenarios,
-        conditional logic, and creating personalized conversation flows. Unlike other state types,
-        `decision_state()` must be followed by multiple `branch_on()` calls, never `next_state()`.
-
-        Examples
-        --------
-        Use `decision_state()` to create intelligent routing based on user context:
-
-        ```python
-        .then("triage")
-            .decision_state()
-            .description("Determine the appropriate support path")
-            .branch_on("Technical problem reported", "technical_support")
-            .branch_on("Billing question asked", "billing_support")
-            .branch_on("General inquiry made", "general_help")
-        ```
-
-        Each branch condition should represent a distinct, recognizable scenario that leads to
-        different handling approaches. The LLM will evaluate the conversation context to determine
-        which branch to follow.
-
-        ```python
-        .then("complexity_assessment")
-            .decision_state()
-            .description("Assess problem complexity and user expertise")
-            .branch_on("User has technical background and complex issue", "advanced_troubleshooting")
-            .branch_on("User needs basic guidance", "simple_walkthrough")
-            .branch_on("Issue requires escalation", "expert_handoff")
-        ```
-
-        Notes
-        -----
-        - Best for: routing, triage, conditional logic, personalization
-        - Must use `branch_on()` for transitions, never `next_state()`
-        - Each branch should cover distinct, recognizable conditions
-        - Conditions should be mutually exclusive when possible
-        - Consider covering edge cases with appropriate branch conditions
-        """
-        state_name = self._current_state_name
-        self._states[state_name] = PathwayState(
-            name=state_name, state_type=StateType.DECISION, description=""
-        )
-        return self
-
-    def collect_state(self) -> "Pathways":
-        """
-        Define a state focused on gathering specific information from the user.
-
-        Use `collect_state()` when you need to systematically collect required information before
-        proceeding to the next phase. This state type provides more structure than `chat_state()`
-        for information gathering, ensuring essential data is obtained in a consistent manner.
-        Follow with `description()`, then `required()` and `optional()`, then transition methods.
-
-        Examples
-        --------
-        `collect_state()` excels at systematic information gathering:
-
-        ```python
-        .then("booking_details")
-            .collect_state()
-            .description("Gather essential booking information")
-            .required(["departure_city", "destination", "travel_date"])
-            .optional(["return_date", "preferred_time", "airline_preference"])
-            .success_condition("All required information collected")
-            .next_state("search_options")
-        ```
-
-        This state type ensures comprehensive data collection while maintaining conversation flow:
-
-        ```python
-        .then("user_registration")
-            .collect_state()
-            .description("Collect user account information")
-            .required(["full_name", "email_address", "password"])
-            .optional(["phone_number", "company_name", "marketing_preferences"])
-            .success_condition("User account can be created with provided information")
-            .next_state("account_verification")
-        ```
-
-        Notes
-        -----
-        - Best for: forms, registration, systematic data gathering, intake processes
-        - Use `required()` for essential information that must be obtained
-        - Use `optional()` for nice-to-have information that enhances the outcome
-        - More structured and focused than `chat_state()` for information gathering
-        - Consider `success_condition()` to define when collection is truly complete
-        """
-        state_name = self._current_state_name
-        self._states[state_name] = PathwayState(
-            name=state_name, state_type=StateType.COLLECT, description=""
-        )
-        return self
-
-    def summary_state(self) -> "Pathways":
-        """
-        Define a concluding state that summarizes and completes the pathway.
-
-        Use `summary_state()` for final states that wrap up the conversation, confirm outcomes, or
-        provide completion actions. This state type is often the final state in a pathway and
-        focuses on ensuring successful closure and follow-up actions. Follow with `description()`,
-        `required()` for final confirmations, and `completion_actions()` for follow-up tasks.
-
-        Examples
-        --------
-        `summary_state()` ensures proper conclusion and follow-up:
-
-        ```python
-        .then("confirmation")
-            .summary_state()
-            .description("Confirm booking details and complete reservation")
-            .required(["booking_summary", "payment_confirmation"])
-            .completion_actions(["send_confirmation_email", "update_booking_system"])
-            .success_condition("User confirms booking is complete")
-        ```
-
-        This state type can also handle complex closure scenarios:
-
-        ```python
-        .then("case_closure")
-            .summary_state()
-            .description("Wrap up support case and ensure customer satisfaction")
-            .required(["issue_resolution_confirmation", "customer_satisfaction_check"])
-            .optional(["feedback_collection", "additional_resources"])
-            .completion_actions([
-                "log_case_resolution",
-                "schedule_follow_up_if_needed",
-                "update_knowledge_base"
-            ])
-            .success_condition("Customer confirms issue is fully resolved")
-        ```
-
-        Notes
-        -----
-        - Best for: conclusions, confirmations, wrap-up processes, final actions
-        - Often the final state (no `next_state()` needed)
-        - Use `completion_actions()` for follow-up tasks and system actions
-        - Use `required()` for final confirmation items that must be addressed
-        - Consider `success_condition()` to define successful pathway completion
-        """
-        state_name = self._current_state_name
-        self._states[state_name] = PathwayState(
-            name=state_name, state_type=StateType.SUMMARY, description=""
-        )
         return self
 
     def description(self, desc: str) -> "Pathways":
@@ -674,10 +423,10 @@ class Pathways:
         Add description to the current state.
 
         This method behaves differently depending on context:
-        - At pathway level (before start_with): Sets pathway description
-        - At state level (after state type method): Sets state description
+        - At pathway level (before any state definition): Sets pathway description
+        - At state level (after state() method): Sets state description
 
-        Always call immediately after a state type method (chat_state, etc.).
+        Always call immediately after .state() method.
         Provides essential context for what happens in this state.
 
         Parameters
@@ -689,8 +438,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .then("assessment")
-            .chat_state("assessment")
+        .state("assessment")
             .description("Ask questions to understand the user's specific problem")
             # Continue with collect(), required(), etc.
         ```
@@ -711,9 +459,9 @@ class Pathways:
         """
         Specify information to collect in the current state.
 
-        Use in collect_state or chat_state to define what information the LLM
-        should gather from the user. This is an alias for required() - use
-        whichever reads better in your context.
+        Use in any state to define what information the LLM should gather from
+        the user. This is an alias for required() - use whichever reads better
+        in your context.
 
         Parameters
         ----------
@@ -723,7 +471,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .collect_state()
+        .state("user_registration", type="collect")
             .description("Gather user registration information")
             .collect(["full_name", "email_address", "preferred_contact_method"])
         ```
@@ -732,7 +480,7 @@ class Pathways:
         -----
         - Same as required() - use whichever reads better
         - Be specific: "email address" not "contact info"
-        - Use in collect_state() or chat_state()
+        - Works with any state type but most natural with type="collect"
         """
         if self._current_state_name in self._states:
             self._states[self._current_state_name].required_info.extend(info_types)
@@ -755,7 +503,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .chat_state("booking_details")
+        .state("booking_details")
             .description("Get essential travel information")
             .required(["departure_city", "destination", "travel_date"])
             .optional(["return_date", "time_preference"])
@@ -808,8 +556,8 @@ class Pathways:
         """
         Specify tools available for use in the current state.
 
-        Essential for tool_state(), but can also be used in other states where
-        specific capabilities are needed. Follow this with success_condition()
+        Essential for type="tool" states, but can also be used in other states
+        where specific capabilities are needed. Follow this with success_condition()
         to define when tool usage is complete.
 
         Parameters
@@ -821,7 +569,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .tool_state("flight_search")
+        .state("flight_search", type="tool")
             .description("Find flights matching user criteria")
             .tools(["flight_search_api", "price_comparison_tool"])
             .success_condition("Found at least 3 flight options")
@@ -830,7 +578,7 @@ class Pathways:
 
         Notes
         -----
-        - Required for tool_state(), optional for others
+        - Required for type="tool" states, optional for others
         - Tool names should match actual available capabilities
         - Use success_condition() to define completion criteria
         - Consider fallback() for when tools fail
@@ -856,7 +604,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .chat_state("explanation")
+        .state("explanation")
             .description("Explain the solution to the user")
             .required(["solution_steps", "expected_outcome"])
             .success_condition("User confirms understanding and agrees to proceed")
@@ -879,19 +627,19 @@ class Pathways:
         Define direct transition to the next state.
 
         Use for linear progression after state completion. Do not use with
-        decision_state() - use branch_on() instead. This creates unconditional
-        forward movement in the pathway.
+        type="decision" states - use branch_on() instead. This creates
+        unconditional forward movement in the pathway.
 
         Parameters
         ----------
         state_name : str
             Name of the state to transition to next. The target state must be
-            defined later in the pathway using then().
+            defined later in the pathway using state().
 
         Examples
         --------
         ```python
-        .chat_state("greeting")
+        .state("greeting")
             .description("Welcome user and understand their needs")
             .required(["user_goal", "urgency"])
             .success_condition("User has explained their situation")
@@ -901,8 +649,8 @@ class Pathways:
         Notes
         -----
         - Creates unconditional transition after state completion
-        - Cannot be used with decision_state() - use branch_on() instead
-        - Target state must be defined later with then()
+        - Cannot be used with type="decision" states - use branch_on() instead
+        - Target state must be defined later with state()
         - For conditional logic, use branch_on()
         """
         if self._current_state_name:
@@ -1348,3 +1096,16 @@ class Pathways:
         )
 
         return "\n".join(lines)
+
+    def generate_prompt(self) -> str:
+        """
+        Generate text specification for inclusion in system prompts.
+
+        This is an alias for to_prompt_text() for backwards compatibility.
+
+        Returns
+        -------
+        str
+            Formatted pathway specification for LLM consumption
+        """
+        return self.to_prompt_text()

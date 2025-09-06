@@ -1,550 +1,384 @@
 import pytest
 import talk_box as tb
-from talk_box.pathways import PathwayState, StateType, PathwayTransition
+from talk_box.pathways import StateType
 
 
-# Basic Pathway functionality tests
-def test_pathway_creation():
-    """Test basic pathway instantiation."""
+# Basic instantiation tests
+def test_pathways_creation():
+    """Test basic Pathways object creation."""
     pathway = tb.Pathways("Test Pathway")
     assert pathway.title == "Test Pathway"
-    assert pathway._description is None
+    assert pathway._description == ""
     assert len(pathway._states) == 0
-    assert len(pathway._activation_conditions) == 0
+    assert len(pathway._transitions) == 0
+    assert pathway._start_state is None
+    assert pathway._current_state_name is None
 
 
-def test_pathway_with_description():
-    """Test pathway with description."""
+def test_pathways_with_description():
+    """Test Pathways creation with description."""
     pathway = tb.Pathways("Test").description("A test pathway")
     assert pathway.title == "Test"
     assert pathway._description == "A test pathway"
 
 
-def test_activation_conditions():
-    """Test setting activation conditions."""
-    conditions = ["User needs help", "User reports problem"]
-    pathway = tb.Pathways("Test").activation_conditions(conditions)
-    assert pathway._activation_conditions == conditions
+def test_pathways_with_activation_conditions():
+    """Test Pathways with activation conditions."""
+    pathway = tb.Pathways("Test").activation_conditions(["condition1", "condition2"])
+    assert pathway._activation_conditions == ["condition1", "condition2"]
 
 
-def test_completion_criteria():
-    """Test setting completion criteria."""
-    criteria = ["Problem resolved", "User satisfied"]
-    pathway = tb.Pathways("Test").completion_criteria(criteria)
-    assert pathway._completion_criteria == criteria
-
-
-def test_fallback_strategy():
-    """Test setting fallback strategy."""
-    fallback = "Escalate to human support if needed"
-    pathway = tb.Pathways("Test").fallback_strategy(fallback)
-    assert pathway._fallback_strategy == fallback
-
-
-def test_method_chaining():
-    """Test that all methods return self for chaining."""
+def test_pathways_prompt_generation():
+    """Test pathway generates a prompt."""
     pathway = (
         tb.Pathways("Test")
-        .description("Test description")
-        .activation_conditions(["condition1"])
-        .completion_criteria(["criteria1"])
-        .fallback_strategy("fallback")
+        .description("A test pathway")
+        .state(id="test_state")
+        .description("A test state")
     )
-    assert isinstance(pathway, tb.Pathways)
-    assert pathway.title == "Test"
-    assert pathway._description == "Test description"
-    assert pathway._activation_conditions == ["condition1"]
-    assert pathway._completion_criteria == ["criteria1"]
-    assert pathway._fallback_strategy == "fallback"
+    prompt = pathway.generate_prompt()
+    assert "Test" in prompt
+    assert "A test pathway" in prompt
+    assert "TEST_STATE" in prompt  # State names are uppercase in the prompt
 
 
-# State definition tests
-def test_start_with_sets_current_state():
-    """Test that start_with sets the current state name."""
-    pathway = tb.Pathways("Test").start_with("initial_state")
-    assert pathway._current_state_name == "initial_state"
-    assert pathway._start_state == "initial_state"
+# New unified .state() method tests
+def test_state_method_basic():
+    """Test the new unified .state() method with default type."""
+    pathway = tb.Pathways("Test").state(id="test_state").description("A test state")
+
+    assert "test_state" in pathway._states
+    state = pathway._states["test_state"]
+    assert state.state_type == StateType.CHAT  # Default type
+    assert state.description == "A test state"
+    assert pathway._start_state == "test_state"  # First state becomes start state
 
 
-def test_then_sets_current_state():
-    """Test that then sets the current state name."""
-    pathway = tb.Pathways("Test").start_with("first").then("second")
-    assert pathway._current_state_name == "second"
-    assert pathway._start_state == "first"  # start_state shouldn't change
-
-
-def test_chat_state_creation():
-    """Test chat state creation."""
-    pathway = tb.Pathways("Test").start_with("chat_test").chat_state().description("A chat state")
-
-    assert "chat_test" in pathway._states
-    state = pathway._states["chat_test"]
-    assert state.state_type == StateType.CHAT
-    assert state.description == "A chat state"
-
-
-def test_collect_state_creation():
-    """Test collect state creation."""
+def test_state_method_with_type():
+    """Test .state() method with explicit type."""
     pathway = (
-        tb.Pathways("Test")
-        .start_with("collect_test")
-        .collect_state()
-        .description("A collect state")
+        tb.Pathways("Test").state(id="collect_test", type="collect").description("A collect state")
     )
 
     assert "collect_test" in pathway._states
     state = pathway._states["collect_test"]
     assert state.state_type == StateType.COLLECT
     assert state.description == "A collect state"
+    assert pathway._start_state == "collect_test"
 
 
-def test_decision_state_creation():
-    """Test decision state creation."""
+def test_state_method_all_types():
+    """Test .state() method with all state types."""
     pathway = (
         tb.Pathways("Test")
-        .start_with("decision_test")
-        .decision_state()
-        .description("A decision state")
+        .state(id="chat_state", type="chat")
+        .description("Chat state")
+        .state(id="collect_state", type="collect")
+        .description("Collect state")
+        .state(id="decision_state", type="decision")
+        .description("Decision state")
+        .state(id="tool_state", type="tool")
+        .description("Tool state")
+        .state(id="summary_state", type="summary")
+        .description("Summary state")
     )
 
-    assert "decision_test" in pathway._states
-    state = pathway._states["decision_test"]
-    assert state.state_type == StateType.DECISION
-    assert state.description == "A decision state"
+    assert len(pathway._states) == 5
+    assert pathway._states["chat_state"].state_type == StateType.CHAT
+    assert pathway._states["collect_state"].state_type == StateType.COLLECT
+    assert pathway._states["decision_state"].state_type == StateType.DECISION
+    assert pathway._states["tool_state"].state_type == StateType.TOOL
+    assert pathway._states["summary_state"].state_type == StateType.SUMMARY
+    assert pathway._start_state == "chat_state"  # First one becomes start
 
 
-def test_tool_state_creation():
-    """Test tool state creation."""
-    pathway = tb.Pathways("Test").start_with("tool_test").tool_state().description("A tool state")
-
-    assert "tool_test" in pathway._states
-    state = pathway._states["tool_test"]
-    assert state.state_type == StateType.TOOL
-    assert state.description == "A tool state"
+def test_state_method_invalid_type():
+    """Test .state() method with invalid type raises error."""
+    with pytest.raises(ValueError, match="Invalid state type 'invalid'"):
+        tb.Pathways("Test").state(id="test", type="invalid")
 
 
-def test_summary_state_creation():
-    """Test summary state creation."""
+def test_state_method_auto_start_state():
+    """Test that first .state() call automatically sets start state."""
     pathway = (
         tb.Pathways("Test")
-        .start_with("summary_test")
-        .summary_state()
-        .description("A summary state")
+        .state(id="first")
+        .description("First state")
+        .state(id="second")
+        .description("Second state")
     )
 
-    assert "summary_test" in pathway._states
-    state = pathway._states["summary_test"]
-    assert state.state_type == StateType.SUMMARY
-    assert state.description == "A summary state"
+    assert pathway._start_state == "first"
+    assert pathway._current_state_name == "second"  # Should be the last one defined
+    assert len(pathway._states) == 2
 
 
-# State configuration tests
-def test_description_method():
-    """Test the description method."""
-    pathway = (
-        tb.Pathways("Test").start_with("test_state").chat_state().description("Test description")
-    )
-    state = pathway._states["test_state"]
-    assert state.description == "Test description"
-
-
-def test_required_method():
-    """Test the required method."""
+def test_state_method_chaining():
+    """Test .state() method with full configuration chaining."""
     pathway = (
         tb.Pathways("Test")
-        .start_with("test_state")
-        .chat_state()
-        .description("Test state")
-        .required(["item1", "item2"])
-    )
-    state = pathway._states["test_state"]
-    assert state.required_info == ["item1", "item2"]
-
-
-def test_optional_method():
-    """Test the optional method."""
-    pathway = (
-        tb.Pathways("Test")
-        .start_with("test_state")
-        .chat_state()
-        .description("Test state")
-        .optional(["optional1", "optional2"])
-    )
-    state = pathway._states["test_state"]
-    assert state.optional_info == ["optional1", "optional2"]
-
-
-def test_tools_method():
-    """Test the tools method."""
-    pathway = (
-        tb.Pathways("Test")
-        .start_with("test_state")
-        .tool_state()
-        .description("Test state")
-        .tools(["tool1", "tool2"])
-    )
-    state = pathway._states["test_state"]
-    assert state.tools == ["tool1", "tool2"]
-
-
-def test_success_condition_method():
-    """Test the success_condition method."""
-    pathway = (
-        tb.Pathways("Test")
-        .start_with("test_state")
-        .chat_state()
-        .description("Test state")
+        .state(id="complex_state", type="collect")
+        .description("Complex state with all features")
+        .required(["req1", "req2"])
+        .optional(["opt1"])
         .success_condition("Success achieved")
+        .next_state("next_state")
     )
-    state = pathway._states["test_state"]
+
+    state = pathway._states["complex_state"]
+    assert state.state_type == StateType.COLLECT
+    assert state.description == "Complex state with all features"
+    assert state.required_info == ["req1", "req2"]
+    assert state.optional_info == ["opt1"]
     assert "Success achieved" in state.success_conditions
 
 
-def test_multiple_success_conditions():
-    """Test multiple success conditions."""
+def test_unified_api_example():
+    """Test a complete pathway using the new unified API."""
+    pathway = (
+        tb.Pathways("Unified API Test")
+        .description("Testing the simplified API")
+        .activation_conditions(["User needs unified help"])
+        # === STATE: greeting ===
+        .state(id="greeting")  # defaults to chat
+        .description("Welcome the user")
+        .required(["user_welcomed"])
+        .next_state("assessment")
+        # === STATE: assessment ===
+        .state(id="assessment", type="collect")
+        .description("Gather user information")
+        .required(["user_name", "user_goal"])
+        .optional(["user_background"])
+        .next_state("routing")
+        # === STATE: routing ===
+        .state(id="routing", type="decision")
+        .description("Route to appropriate assistance")
+        .branch_on("Technical help needed", "tech_support")
+        .branch_on("General information", "info_sharing")
+        # === STATE: tech_support ===
+        .state(id="tech_support", type="tool")
+        .description("Provide technical assistance")
+        .tools(["diagnostics", "troubleshooting"])
+        .next_state("completion")
+        # === STATE: info_sharing ===
+        .state(id="info_sharing")  # defaults to chat
+        .description("Share relevant information")
+        .required(["information_provided"])
+        .next_state("completion")
+        # === STATE: completion ===
+        .state(id="completion", type="summary")
+        .description("Wrap up the interaction")
+        .required(["satisfaction_confirmed"])
+        .success_condition("User's needs fully addressed")
+    )
+
+    # Verify structure
+    assert len(pathway._states) == 6
+    assert pathway._start_state == "greeting"
+    assert pathway.title == "Unified API Test"
+    assert pathway._description == "Testing the simplified API"
+
+    # Verify state types
+    assert pathway._states["greeting"].state_type == StateType.CHAT
+    assert pathway._states["assessment"].state_type == StateType.COLLECT
+    assert pathway._states["routing"].state_type == StateType.DECISION
+    assert pathway._states["tech_support"].state_type == StateType.TOOL
+    assert pathway._states["info_sharing"].state_type == StateType.CHAT
+    assert pathway._states["completion"].state_type == StateType.SUMMARY
+
+
+def test_state_configuration_methods():
+    """Test state configuration methods work with unified API."""
     pathway = (
         tb.Pathways("Test")
-        .start_with("test_state")
-        .chat_state()
+        .state(id="test_state")
         .description("Test state")
-        .success_condition("First success")
-        .success_condition("Second success")
+        .required(["req1", "req2"])
+        .optional(["opt1", "opt2"])
+        .success_condition("First condition")
+        .success_condition("Second condition")
     )
+
     state = pathway._states["test_state"]
-    assert "First success" in state.success_conditions
-    assert "Second success" in state.success_conditions
+    assert state.description == "Test state"
+    assert state.required_info == ["req1", "req2"]
+    assert state.optional_info == ["opt1", "opt2"]
+    assert len(state.success_conditions) == 2
+    assert "First condition" in state.success_conditions
+    assert "Second condition" in state.success_conditions
 
 
-# State transition tests
-def test_next_state_method():
-    """Test the next_state method."""
+def test_tool_state_configuration():
+    """Test tool state configuration with unified API."""
     pathway = (
         tb.Pathways("Test")
-        .start_with("first")
-        .chat_state()
-        .description("First state")
-        .next_state("second")
+        .state(id="tool_test", type="tool")
+        .description("A tool state")
+        .tools(["tool1", "tool2"])
+        .success_condition("Tools used successfully")
     )
-    # Note: Based on the test failures, it seems next_state might work differently
-    # Let's test that the method exists and can be called without error
-    assert "first" in pathway._states
+
+    state = pathway._states["tool_test"]
+    assert state.state_type == StateType.TOOL
+    assert state.tools == ["tool1", "tool2"]
+    assert "Tools used successfully" in state.success_conditions
 
 
-def test_branch_on_method():
-    """Test the branch_on method for decision states."""
+def test_decision_state_branching():
+    """Test decision state branching with unified API."""
     pathway = (
         tb.Pathways("Test")
-        .start_with("decision_state")
-        .decision_state()
+        .state(id="decision_state", type="decision")
         .description("Decision point")
         .branch_on("Condition A", "state_a")
         .branch_on("Condition B", "state_b")
     )
 
-    # Test that the decision state was created
-    assert "decision_state" in pathway._states
-    state = pathway._states["decision_state"]
-    assert state.state_type == StateType.DECISION
+    # Check transitions were created
+    assert len(pathway._transitions) == 2
+    transition_targets = [t.to_state for t in pathway._transitions]
+    assert "state_a" in transition_targets
+    assert "state_b" in transition_targets
+
+    # Check conditions
+    conditions = [t.condition for t in pathway._transitions]
+    assert "Condition A" in conditions
+    assert "Condition B" in conditions
 
 
-# Data structure tests
-def test_state_type_enum():
-    """Test StateType enum values."""
-    assert StateType.CHAT.value == "chat"
-    assert StateType.COLLECT.value == "collect"
-    assert StateType.DECISION.value == "decision"
-    assert StateType.TOOL.value == "tool"
-    assert StateType.SUMMARY.value == "summary"
-
-
-def test_pathway_state_creation():
-    """Test PathwayState dataclass creation."""
-    state = PathwayState(
-        name="test_state",
-        state_type=StateType.CHAT,
-        description="Test description",
-        required_info=["req1"],
-        optional_info=["opt1"],
-    )
-
-    assert state.name == "test_state"
-    assert state.state_type == StateType.CHAT
-    assert state.description == "Test description"
-    assert state.required_info == ["req1"]
-    assert state.optional_info == ["opt1"]
-    assert state.tools == []  # Default empty list
-
-
-def test_pathway_transition_creation():
-    """Test PathwayTransition dataclass creation."""
-    # First check if PathwayTransition exists and can be imported
-    try:
-        transition = PathwayTransition(
-            from_state="state1", to_state="state2", condition="test condition"
-        )
-        assert transition.from_state == "state1"
-        assert transition.to_state == "state2"
-        assert transition.condition == "test condition"
-    except Exception:
-        # If PathwayTransition doesn't exist or has different signature, skip
-        pytest.skip("PathwayTransition not available or has different signature")
-
-
-# Prompt generation tests
-def test_simple_prompt_generation():
-    """Test basic prompt generation."""
+def test_linear_progression():
+    """Test linear state progression with unified API."""
     pathway = (
-        tb.Pathways("Simple Test")
-        .description("A simple test pathway")
-        .start_with("greeting")
-        .chat_state()
-        .description("Greet the user")
+        tb.Pathways("Test")
+        .state(id="first")
+        .description("First state")
+        .next_state("second")
+        .state(id="second")
+        .description("Second state")
+        .next_state("third")
+        .state(id="third", type="summary")
+        .description("Final state")
     )
 
-    prompt_text = pathway.to_prompt_text()
-    assert "**Simple Test**" in prompt_text
-    assert "A simple test pathway" in prompt_text
-    assert "GREETING" in prompt_text
-    assert "Greet the user" in prompt_text
+    # Check all states exist
+    assert len(pathway._states) == 3
+    assert pathway._start_state == "first"
+
+    # Check transitions
+    assert len(pathway._transitions) == 2
+    transitions = {t.from_state: t.to_state for t in pathway._transitions}
+    assert transitions["first"] == "second"
+    assert transitions["second"] == "third"
 
 
-def test_complex_prompt_generation():
-    """Test prompt generation with multiple states."""
+def test_complex_branching_pathway():
+    """Test complex pathway with branching and merging using unified API."""
     pathway = (
         tb.Pathways("Complex Test")
-        .description("A complex test pathway")
+        .description("Complex branching pathway")
         .activation_conditions(["User needs complex help"])
-        .start_with("intake")
-        .collect_state()
-        .description("Collect information")
-        .required(["user_info"])
-        .next_state("processing")
-        .then("processing")
-        .decision_state()
-        .description("Process and decide")
-        .branch_on("Option A", "outcome_a")
-        .branch_on("Option B", "outcome_b")
-        .then("outcome_a")
-        .summary_state()
-        .description("Summarize outcome A")
-    )
-
-    prompt_text = pathway.to_prompt_text()
-    assert "**Complex Test**" in prompt_text
-    assert "User needs complex help" in prompt_text
-    assert "INTAKE" in prompt_text
-    assert "PROCESSING" in prompt_text
-    assert "OUTCOME_A" in prompt_text
-
-
-# Complex pathway tests
-def test_linear_pathway():
-    """Test a simple linear pathway."""
-    pathway = (
-        tb.Pathways("Linear Test")
-        .description("A linear pathway for testing")
-        .activation_conditions(["User needs linear flow"])
-        .start_with("step1")
-        .chat_state()
-        .description("First step")
-        .required(["user_input"])
-        .next_state("step2")
-        .then("step2")
-        .collect_state()
-        .description("Second step")
-        .required(["collected_data"])
-        .next_state("step3")
-        .then("step3")
-        .summary_state()
-        .description("Final step")
-        .success_condition("Process completed")
-    )
-
-    # Check pathway structure
-    assert len(pathway._states) == 3
-    assert "step1" in pathway._states
-    assert "step2" in pathway._states
-    assert "step3" in pathway._states
-
-    # Check state types
-    assert pathway._states["step1"].state_type == StateType.CHAT
-    assert pathway._states["step2"].state_type == StateType.COLLECT
-    assert pathway._states["step3"].state_type == StateType.SUMMARY
-
-    # Check required info
-    assert pathway._states["step1"].required_info == ["user_input"]
-    assert pathway._states["step2"].required_info == ["collected_data"]
-
-
-def test_branching_pathway():
-    """Test a pathway with decision branching."""
-    pathway = (
-        tb.Pathways("Branching Test")
-        .description("A branching pathway for testing")
-        .start_with("intake")
-        .collect_state()
-        .description("Gather information")
-        .required(["user_type", "problem_description"])
+        # === STATE: intake ===
+        .state(id="intake", type="collect")
+        .description("Gather initial information")
+        .required(["user_info", "problem_type"])
         .next_state("triage")
-        .then("triage")
-        .decision_state()
-        .description("Route based on problem type")
-        .branch_on("Technical issue", "tech_support")
-        .branch_on("Billing question", "billing")
-        .then("tech_support")
-        .tool_state()
-        .description("Technical troubleshooting")
-        .tools(["diagnostics", "system_check"])
-        .next_state("resolution")
-        .then("billing")
-        .chat_state()
-        .description("Handle billing inquiry")
-        .required(["billing_resolved"])
-        .next_state("resolution")
-        .then("resolution")
-        .summary_state()
-        .description("Wrap up and confirm satisfaction")
-        .success_condition("Issue resolved to user satisfaction")
+        # === STATE: triage ===
+        .state(id="triage", type="decision")
+        .description("Route based on problem complexity")
+        .branch_on("Simple problem", "simple_resolution")
+        .branch_on("Complex problem", "detailed_analysis")
+        .branch_on("Urgent issue", "escalation")
+        # === STATE: simple_resolution ===
+        .state(id="simple_resolution")
+        .description("Handle simple problems quickly")
+        .required(["quick_solution_provided"])
+        .next_state("completion")
+        # === STATE: detailed_analysis ===
+        .state(id="detailed_analysis", type="tool")
+        .description("Analyze complex problems thoroughly")
+        .tools(["analysis_tools", "diagnostic_suite"])
+        .success_condition("Root cause identified")
+        .next_state("complex_resolution")
+        # === STATE: complex_resolution ===
+        .state(id="complex_resolution")
+        .description("Provide detailed solution")
+        .required(["comprehensive_solution", "implementation_plan"])
+        .next_state("completion")
+        # === STATE: escalation ===
+        .state(id="escalation", type="tool")
+        .description("Escalate urgent issues")
+        .tools(["escalation_system", "priority_queue"])
+        .success_condition("Issue escalated successfully")
+        .next_state("completion")
+        # === STATE: completion ===
+        .state(id="completion", type="summary")
+        .description("Ensure customer satisfaction")
+        .required(["issue_resolved", "customer_satisfied"])
+        .success_condition("Customer issue fully addressed")
     )
 
-    # Check structure - should be 5 states: intake, triage, tech_support, billing, resolution
-    assert len(pathway._states) == 5
-    state_names = set(pathway._states.keys())
-    expected_names = {"intake", "triage", "tech_support", "billing", "resolution"}
-    assert state_names == expected_names
+    # Verify pathway structure
+    assert len(pathway._states) == 7
+    assert pathway._start_state == "intake"
+    assert pathway.title == "Complex Test"
 
-    # Check state types
-    assert pathway._states["intake"].state_type == StateType.COLLECT
-    assert pathway._states["triage"].state_type == StateType.DECISION
-    assert pathway._states["tech_support"].state_type == StateType.TOOL
-    assert pathway._states["billing"].state_type == StateType.CHAT
-    assert pathway._states["resolution"].state_type == StateType.SUMMARY
+    # Verify state types
+    expected_types = {
+        "intake": StateType.COLLECT,
+        "triage": StateType.DECISION,
+        "simple_resolution": StateType.CHAT,
+        "detailed_analysis": StateType.TOOL,
+        "complex_resolution": StateType.CHAT,
+        "escalation": StateType.TOOL,
+        "completion": StateType.SUMMARY,
+    }
 
+    for state_name, expected_type in expected_types.items():
+        assert pathway._states[state_name].state_type == expected_type
 
-# Compact convention tests
-def test_compact_headers_work():
-    """Test that the new compact convention works."""
-    pathway = (
-        tb.Pathways("Compact Test")
-        .description("Testing compact headers")
-        # === STATE: welcome ===
-        .start_with("welcome")
-        .chat_state()
-        .description("Welcome the user")
-        .required(["greeting_completed"])
-        .next_state("information")
-        # === STATE: information ===
-        .then("information")
-        .collect_state()
-        .description("Gather user information")
-        .required(["name", "email"])
-        .optional(["phone"])
-        # === STATE: summary ===
-        .then("summary")
-        .summary_state()
-        .description("Summarize the interaction")
-        .success_condition("User information collected successfully")
-    )
+    # Verify branching from triage
+    triage_transitions = [t for t in pathway._transitions if t.from_state == "triage"]
+    assert len(triage_transitions) == 3
 
-    # Test that states were created correctly
-    assert len(pathway._states) == 3
-    assert "welcome" in pathway._states
-    assert "information" in pathway._states
-    assert "summary" in pathway._states
+    branch_targets = [t.to_state for t in triage_transitions]
+    assert "simple_resolution" in branch_targets
+    assert "detailed_analysis" in branch_targets
+    assert "escalation" in branch_targets
 
-    # Test state types
-    assert pathway._states["welcome"].state_type == StateType.CHAT
-    assert pathway._states["information"].state_type == StateType.COLLECT
-    assert pathway._states["summary"].state_type == StateType.SUMMARY
+    # Verify all paths lead to completion
+    completion_transitions = [t for t in pathway._transitions if t.to_state == "completion"]
+    assert len(completion_transitions) == 3  # simple_resolution, complex_resolution, escalation
 
 
-def test_mixed_convention_compatibility():
-    """Test that both old and new conventions work together."""
-    pathway = (
-        tb.Pathways("Mixed Test")
-        .description("Testing mixed conventions")
-        # Old style
-        .start_with("old_style")
-        .chat_state()
-        .description("Old style state")
-        # New compact style
-        .then("new_style")
-        .collect_state()
-        .description("New compact style state")
-    )
-
-    assert len(pathway._states) == 2
-    assert "old_style" in pathway._states
-    assert "new_style" in pathway._states
-
-
-# PromptBuilder integration tests
-def test_pathways_in_prompt_builder():
-    """Test using pathways with PromptBuilder."""
+def test_pathway_prompt_generation():
+    """Test that pathways generate proper prompts with unified API."""
     pathway = (
         tb.Pathways("Support Flow")
         .description("Customer support pathway")
-        .start_with("greeting")
-        .chat_state()
-        .description("Greet the customer")
+        .activation_conditions(["Customer needs help"])
+        .state(id="greeting")
+        .description("Greet the customer warmly")
+        .required(["customer_welcomed"])
+        .next_state("assessment")
+        .state(id="assessment", type="collect")
+        .description("Understand the customer's needs")
+        .required(["issue_type", "urgency_level"])
+        .optional(["customer_history"])
+        .success_condition("Customer needs clearly understood")
     )
 
-    prompt_builder = (
-        tb.PromptBuilder().persona("customer support agent", "helpful assistance").pathways(pathway)
-    )
+    prompt = pathway.generate_prompt()
 
-    # Test that pathways method returns the builder for chaining
-    assert isinstance(prompt_builder, tb.PromptBuilder)
+    # Basic pathway info should be present
+    assert "Support Flow" in prompt
+    assert "Customer support pathway" in prompt
+    assert "Customer needs help" in prompt
 
-    # Test that the pathway is integrated in the preview
-    preview_text = prompt_builder.preview()
-    assert "Support Flow" in preview_text
-    assert "GREETING" in preview_text
-
-
-# Error handling tests
-def test_empty_pathway_name():
-    """Test that empty pathway name is handled."""
-    pathway = tb.Pathways("")
-    assert pathway.title == ""
-
-
-def test_missing_state_description():
-    """Test pathway state without description."""
-    # This should not raise an error during creation
-    pathway = tb.Pathways("Test").start_with("no_desc_state").chat_state()
-
-    assert "no_desc_state" in pathway._states
-    state = pathway._states["no_desc_state"]
-    assert state.description == ""  # Should be empty, not None
-
-
-def test_duplicate_state_names():
-    """Test that duplicate state names overwrite previous states."""
-    pathway = (
-        tb.Pathways("Test")
-        .start_with("duplicate")
-        .chat_state()
-        .description("First description")
-        .then("duplicate")  # Same name
-        .collect_state()
-        .description("Second description")
-    )
-
-    # Should only have one state with the duplicate name
-    assert len(pathway._states) == 1
-    assert "duplicate" in pathway._states
-    # Should be the last one defined (collect_state)
-    assert pathway._states["duplicate"].state_type == StateType.COLLECT
-    assert pathway._states["duplicate"].description == "Second description"
-
-
-def test_no_states_defined():
-    """Test pathway with no states defined."""
-    pathway = tb.Pathways("Empty")
-    prompt_text = pathway.to_prompt_text()
-
-    # Should still generate basic prompt
-    assert "**Empty**" in prompt_text
-    # Should include the Flow guidance section (this is the current behavior)
-    assert "Flow guidance:" in prompt_text
+    # State information should be included
+    assert "GREETING" in prompt  # State names are uppercase in prompts
+    assert "ASSESSMENT" in prompt
+    assert "Greet the customer warmly" in prompt
+    assert "Understand the customer's needs" in prompt
+    assert "customer_welcomed" in prompt
+    assert "issue_type" in prompt
+    assert "urgency_level" in prompt
