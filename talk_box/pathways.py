@@ -517,33 +517,6 @@ class Pathways:
             "fallback_strategy": self._fallback_strategy,
         }
 
-    def preview(self) -> Dict[str, Any]:
-        """
-        Build and return the complete pathway specification for preview purposes.
-
-        This method is intended for development, debugging, and standalone pathway creation.
-        When using with ChatBot or PromptBuilder, prefer passing the Pathways object directly
-        rather than calling .preview() first, as this preserves the structured data for testing
-        and analysis.
-
-        Returns
-        -------
-        Dict[str, Any]
-            The complete pathway specification.
-
-        Note
-        ----
-        If you're using this with ChatBot, consider passing the Pathways object
-        directly instead:
-
-        # Preferred - preserves structure for testing
-        bot.system_prompt(PromptBuilder().pathways(pathway))
-
-        # Works but loses structured data benefits
-        bot.system_prompt(PromptBuilder().pathways(pathway.preview()))
-        """
-        return self._build()
-
     def __getitem__(self, key: str) -> Any:
         """Allow dictionary-style access to pathway data."""
         return self._build().get(key)
@@ -622,67 +595,120 @@ class Pathways:
         lines = []
 
         # Title and description
-        lines.append(f"## CONVERSATIONAL PATHWAY: {spec['title']}")
+        lines.append(f"**{spec['title']}**")
         if spec.get("description"):
-            lines.append(f"\n**Purpose**: {spec['description']}")
+            lines.append(f"Purpose: {spec['description']}")
 
         # Activation conditions
         if spec.get("activation_conditions"):
-            lines.append("\n**Activate When**:")
+            lines.append("Activate when:")
             for condition in spec["activation_conditions"]:
                 lines.append(f"- {condition}")
 
-        # Flow overview
-        lines.append("\n**Conversation Flow**:")
-        if spec.get("start_state"):
-            lines.append(f"- START: {spec['start_state']}")
-
-        # State definitions
-        for state_name, state in spec.get("states", {}).items():
-            lines.append(f"\n**{state_name.upper()}** ({state['type']})")
-            if state.get("description"):
-                lines.append(f"  Purpose: {state['description']}")
-
-            if state.get("required_info"):
-                lines.append(f"  Required: {', '.join(state['required_info'])}")
-
-            if state.get("optional_info"):
-                lines.append(f"  Optional: {', '.join(state['optional_info'])}")
-
-            if state.get("tools"):
-                lines.append(f"  Tools: {', '.join(state['tools'])}")
-
-            if state.get("success_conditions"):
-                lines.append(f"  Success: {'; '.join(state['success_conditions'])}")
-
-        # Transitions
-        transitions_by_from = {}
+        # Build transitions map for easier lookup
+        transitions_from = {}
+        transitions_to = {}
         for transition in spec.get("transitions", []):
             from_state = transition["from"]
-            if from_state not in transitions_by_from:
-                transitions_by_from[from_state] = []
-            transitions_by_from[from_state].append(transition)
+            to_state = transition["to"]
+            if from_state not in transitions_from:
+                transitions_from[from_state] = []
+            if to_state not in transitions_to:
+                transitions_to[to_state] = []
+            transitions_from[from_state].append(transition)
+            transitions_to[to_state].append(transition)
 
-        if transitions_by_from:
-            lines.append("\n**Flow Control**:")
-            for from_state, transitions in transitions_by_from.items():
-                for transition in transitions:
-                    if transition.get("condition"):
-                        lines.append(
-                            f"- {from_state} → {transition['to']} (if {transition['condition']})"
-                        )
-                    else:
-                        lines.append(f"- {from_state} → {transition['to']}")
+        # Flow guidance - show states with clear branching structure
+        lines.append("Flow guidance:")
 
-        # Completion and fallback
+        # Helper function to format a single state
+        def format_single_state(state_name: str, indent: str = "") -> List[str]:
+            if state_name not in spec.get("states", {}):
+                return []
+
+            state = spec["states"][state_name]
+            state_lines = []
+
+            # State header with type
+            state_lines.append(
+                f"{indent}- {state_name.upper()} ({state['type']}): {state.get('description', '')}"
+            )
+
+            # Required information
+            if state.get("required_info"):
+                state_lines.append(f"{indent}  Required: {', '.join(state['required_info'])}")
+
+            # Optional information
+            if state.get("optional_info"):
+                state_lines.append(f"{indent}  Optional: {', '.join(state['optional_info'])}")
+
+            # Tools
+            if state.get("tools"):
+                state_lines.append(f"{indent}  Tools: {', '.join(state['tools'])}")
+
+            # Success conditions
+            if state.get("success_conditions"):
+                state_lines.append(f"{indent}  Success: {'; '.join(state['success_conditions'])}")
+
+            return state_lines
+
+        # Start with the start state
+        start_state = spec.get("start_state")
+        if start_state:
+            lines.extend(format_single_state(start_state))
+
+            # Follow the flow
+            current_states = [start_state]
+            processed = {start_state}
+
+            while current_states:
+                next_states = []
+
+                for current_state in current_states:
+                    if current_state not in transitions_from:
+                        continue
+
+                    transitions = transitions_from[current_state]
+
+                    # Check for branching (conditional transitions)
+                    conditional_transitions = [t for t in transitions if t.get("condition")]
+                    direct_transitions = [t for t in transitions if not t.get("condition")]
+
+                    if conditional_transitions:
+                        # Show branching options
+                        for i, transition in enumerate(conditional_transitions, 1):
+                            lines.append(
+                                f"  Branch {i}: {transition['condition']} → {transition['to'].upper()}"
+                            )
+
+                        # Add branch target states with indentation
+                        for transition in conditional_transitions:
+                            target_state = transition["to"]
+                            if target_state not in processed:
+                                lines.extend(format_single_state(target_state, "  "))
+                                processed.add(target_state)
+                                next_states.append(target_state)
+
+                    # Handle direct transitions
+                    for transition in direct_transitions:
+                        target_state = transition["to"]
+                        if target_state not in processed:
+                            lines.extend(format_single_state(target_state))
+                            processed.add(target_state)
+                            next_states.append(target_state)
+
+                current_states = next_states
+
+        # Completion criteria
         if spec.get("completion_criteria"):
-            lines.append(f"\n**Completion**: {'; '.join(spec['completion_criteria'])}")
+            lines.append(f"Complete when: {'; '.join(spec['completion_criteria'])}")
 
+        # Fallback strategy
         if spec.get("fallback_strategy"):
-            lines.append(f"\n**Fallback Strategy**: {spec['fallback_strategy']}")
+            lines.append(f"Fallback: {spec['fallback_strategy']}")
 
         lines.append(
-            "\n**Adaptive Guidance**: Follow this pathway as a flexible guide, not rigid rules. Adapt to user conversation patterns while ensuring key information is gathered and important steps are addressed."
+            "Follow as flexible guidance, adapting to user conversation patterns while ensuring key objectives are addressed."
         )
 
         return "\n".join(lines)
