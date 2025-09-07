@@ -88,23 +88,12 @@ quartodoc:
           members: []
         - name: Message
           members: []
-    - title: "File Attachments"
-      desc: "Classes for attaching and processing files in conversations"
-      contents:
-        - name: Attachments
-          members: []
-        - name: AttachmentMetadata
-          members: []
-    - title: "Attachment Methods"
-      desc: "Methods for configuring and managing file attachments"
-      contents:
-        - Attachments.with_prompt
-        - Attachments.get_metadata
-        - Attachments.summary
     - title: "Attention-Based Prompt Engineering"
       desc: "Advanced prompt building using attention mechanisms and cognitive principles"
       contents:
         - name: PromptBuilder
+          members: []
+        - name: Pathways
           members: []
         - name: Priority
           members: []
@@ -112,6 +101,17 @@ quartodoc:
           members: []
         - name: BuilderTypes
           members: []
+    - title: "ChatBot Configuration Methods"
+      desc: "Chainable methods for configuring ChatBot behavior and parameters"
+      contents:
+        - ChatBot.model
+        - ChatBot.preset
+        - ChatBot.temperature
+        - ChatBot.max_tokens
+        - ChatBot.tools
+        - ChatBot.persona
+        - ChatBot.avoid
+        - ChatBot.verbose
     - title: "PromptBuilder Methods"
       desc: "Fluent API for building attention-optimized prompts"
       contents:
@@ -126,8 +126,24 @@ quartodoc:
         - PromptBuilder.output_format
         - PromptBuilder.example
         - PromptBuilder.final_emphasis
-        - PromptBuilder.build
-        - PromptBuilder.preview_structure
+    - title: "Pathways Methods"
+      desc: "Methods for building structured conversation flows"
+      contents:
+        - Pathways.state
+        - Pathways.collect
+        - Pathways.required
+        - Pathways.optional
+        - Pathways.tools
+        - Pathways.success_condition
+        - Pathways.next_state
+        - Pathways.branch_on
+        - Pathways.merge_to
+        - Pathways.fallback
+        - Pathways.completion_actions
+        - Pathways.completion_criteria
+        - Pathways.fallback_strategy
+        - Pathways.to_prompt_text
+        - Pathways.generate_prompt
     - title: "Pre-configured Prompt Builders"
       desc: "Ready-to-use attention-based prompt templates"
       contents:
@@ -140,17 +156,19 @@ quartodoc:
         - ChatBot.prompt_builder
         - ChatBot.structured_prompt
         - ChatBot.chain_prompts
-    - title: "ChatBot Configuration Methods"
-      desc: "Chainable methods for configuring ChatBot behavior and parameters"
+    - title: "File Attachments"
+      desc: "Classes for attaching and processing files in conversations"
       contents:
-        - ChatBot.model
-        - ChatBot.preset
-        - ChatBot.temperature
-        - ChatBot.max_tokens
-        - ChatBot.tools
-        - ChatBot.persona
-        - ChatBot.avoid
-        - ChatBot.verbose
+        - name: Attachments
+          members: []
+        - name: AttachmentMetadata
+          members: []
+    - title: "Attachment Methods"
+      desc: "Methods for configuring and managing file attachments"
+      contents:
+        - Attachments.with_prompt
+        - Attachments.get_metadata
+        - Attachments.summary
     - title: "Conversation Management Methods"
       desc: "Methods for managing conversation messages and context"
       contents:
