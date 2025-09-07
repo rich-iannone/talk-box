@@ -4,6 +4,12 @@ from talk_box.pathways import StateType
 
 
 # Basic instantiation tests
+def test_state_method_invalid_type():
+    """Test .state() method with invalid type raises error."""
+    with pytest.raises(ValueError, match="Invalid state type"):
+        tb.Pathways("Test").state("Test state", id="test", type="invalid")
+
+
 def test_pathways_creation():
     """Test basic Pathways object creation."""
     pathway = tb.Pathways("Test Pathway")
@@ -30,11 +36,7 @@ def test_pathways_with_activation_conditions():
 
 def test_pathways_prompt_generation():
     """Test pathway generates a prompt."""
-    pathway = (
-        tb.Pathways("Test", desc="A test pathway")
-        .state(id="test_state")
-        .description("A test state")
-    )
+    pathway = tb.Pathways("Test", desc="A test pathway").state("A test state", id="test_state")
     prompt = pathway.generate_prompt()
     assert "Test" in prompt
     assert "A test pathway" in prompt
@@ -44,7 +46,7 @@ def test_pathways_prompt_generation():
 # New unified .state() method tests
 def test_state_method_basic():
     """Test the new unified .state() method with default type."""
-    pathway = tb.Pathways("Test").state(id="test_state").description("A test state")
+    pathway = tb.Pathways("Test").state("A test state", id="test_state")
 
     assert "test_state" in pathway._states
     state = pathway._states["test_state"]
@@ -55,9 +57,7 @@ def test_state_method_basic():
 
 def test_state_method_with_type():
     """Test .state() method with explicit type."""
-    pathway = (
-        tb.Pathways("Test").state(id="collect_test", type="collect").description("A collect state")
-    )
+    pathway = tb.Pathways("Test").state("A collect state", id="collect_test", type="collect")
 
     assert "collect_test" in pathway._states
     state = pathway._states["collect_test"]
@@ -70,16 +70,15 @@ def test_state_method_all_types():
     """Test .state() method with all state types."""
     pathway = (
         tb.Pathways("Test")
-        .state(id="chat_state", type="chat")
-        .description("Chat state")
-        .state(id="collect_state", type="collect")
-        .description("Collect state")
-        .state(id="decision_state", type="decision")
-        .description("Decision state")
-        .state(id="tool_state", type="tool")
-        .description("Tool state")
-        .state(id="summary_state", type="summary")
-        .description("Summary state")
+        .state("Chat state", id="chat_state", type="chat")
+        .next_state("collect_state")
+        .state("Collect state", id="collect_state", type="collect")
+        .next_state("decision_state")
+        .state("Decision state", id="decision_state", type="decision")
+        .branch_on("Option A", id="tool_state")
+        .state("Tool state", id="tool_state", type="tool")
+        .next_state("summary_state")
+        .state("Summary state", id="summary_state", type="summary")
     )
 
     assert len(pathway._states) == 5
@@ -94,17 +93,16 @@ def test_state_method_all_types():
 def test_state_method_invalid_type():
     """Test .state() method with invalid type raises error."""
     with pytest.raises(ValueError, match="Invalid state type 'invalid'"):
-        tb.Pathways("Test").state(id="test", type="invalid")
+        tb.Pathways("Test").state("test state", id="test", type="invalid")
 
 
 def test_state_method_auto_start_state():
     """Test that first .state() call automatically sets start state."""
     pathway = (
         tb.Pathways("Test")
-        .state(id="first")
-        .description("First state")
-        .state(id="second")
-        .description("Second state")
+        .state("First state", id="first")
+        .next_state("second")
+        .state("Second state", id="second")
     )
 
     assert pathway._start_state == "first"
@@ -116,20 +114,19 @@ def test_state_method_chaining():
     """Test .state() method with full configuration chaining."""
     pathway = (
         tb.Pathways("Test")
-        .state(id="complex_state", type="collect")
-        .description("Complex state with all features")
-        .required(["req1", "req2"])
-        .optional(["opt1"])
-        .success_condition("Success achieved")
+        .state("Complex state with all features", id="complex_state", type="collect")
+        .required(["name", "email"])
+        .optional(["phone"])
+        .success_condition("User provided information")
         .next_state("next_state")
     )
 
     state = pathway._states["complex_state"]
     assert state.state_type == StateType.COLLECT
     assert state.description == "Complex state with all features"
-    assert state.required_info == ["req1", "req2"]
-    assert state.optional_info == ["opt1"]
-    assert "Success achieved" in state.success_conditions
+    assert state.required_info == ["name", "email"]
+    assert state.optional_info == ["phone"]
+    assert "User provided information" in state.success_conditions
 
 
 def test_unified_api_example():
@@ -141,34 +138,28 @@ def test_unified_api_example():
             activation=["User needs unified help"],
         )
         # === STATE: greeting ===
-        .state(id="greeting")  # defaults to chat
-        .description("Welcome the user")
+        .state("Welcome the user", id="greeting")  # defaults to chat
         .required(["user_welcomed"])
         .next_state("assessment")
         # === STATE: assessment ===
-        .state(id="assessment", type="collect")
-        .description("Gather user information")
+        .state("Gather user information", id="assessment", type="collect")
         .required(["user_name", "user_goal"])
         .optional(["user_background"])
         .next_state("routing")
         # === STATE: routing ===
-        .state(id="routing", type="decision")
-        .description("Route to appropriate assistance")
-        .branch_on("Technical help needed", "tech_support")
-        .branch_on("General information", "info_sharing")
+        .state("Route to appropriate assistance", id="routing", type="decision")
+        .branch_on("Technical help needed", id="tech_support")
+        .branch_on("General information", id="info_sharing")
         # === STATE: tech_support ===
-        .state(id="tech_support", type="tool")
-        .description("Provide technical assistance")
+        .state("Provide technical assistance", id="tech_support", type="tool")
         .tools(["diagnostics", "troubleshooting"])
         .next_state("completion")
         # === STATE: info_sharing ===
-        .state(id="info_sharing")  # defaults to chat
-        .description("Share relevant information")
+        .state("Share relevant information", id="info_sharing")  # defaults to chat
         .required(["information_provided"])
         .next_state("completion")
         # === STATE: completion ===
-        .state(id="completion", type="summary")
-        .description("Wrap up the interaction")
+        .state("Wrap up the interaction", id="completion", type="summary")
         .required(["satisfaction_confirmed"])
         .success_condition("User's needs fully addressed")
     )
@@ -192,8 +183,7 @@ def test_state_configuration_methods():
     """Test state configuration methods work with unified API."""
     pathway = (
         tb.Pathways("Test")
-        .state(id="test_state")
-        .description("Test state")
+        .state("Test state", id="test_state")
         .required(["req1", "req2"])
         .optional(["opt1", "opt2"])
         .success_condition("First condition")
@@ -213,8 +203,7 @@ def test_tool_state_configuration():
     """Test tool state configuration with unified API."""
     pathway = (
         tb.Pathways("Test")
-        .state(id="tool_test", type="tool")
-        .description("A tool state")
+        .state("A tool state", id="tool_test", type="tool")
         .tools(["tool1", "tool2"])
         .success_condition("Tools used successfully")
     )
@@ -229,10 +218,9 @@ def test_decision_state_branching():
     """Test decision state branching with unified API."""
     pathway = (
         tb.Pathways("Test")
-        .state(id="decision_state", type="decision")
-        .description("Decision point")
-        .branch_on("Condition A", "state_a")
-        .branch_on("Condition B", "state_b")
+        .state("decision_state state", id="decision_state", type="decision")
+        .branch_on("Condition A", id="state_a")
+        .branch_on("Condition B", id="state_b")
     )
 
     # Check transitions were created
@@ -251,14 +239,11 @@ def test_linear_progression():
     """Test linear state progression with unified API."""
     pathway = (
         tb.Pathways("Test")
-        .state(id="first")
-        .description("First state")
+        .state("first state", id="first")
         .next_state("second")
-        .state(id="second")
-        .description("Second state")
+        .state("second state", id="second")
         .next_state("third")
-        .state(id="third", type="summary")
-        .description("Final state")
+        .state("third state", id="third", type="summary")
     )
 
     # Check all states exist
@@ -281,41 +266,34 @@ def test_complex_branching_pathway():
             activation=["User needs complex help"],
         )
         # === STATE: intake ===
-        .state(id="intake", type="collect")
-        .description("Gather initial information")
+        .state("intake state", id="intake", type="collect")
         .required(["user_info", "problem_type"])
         .next_state("triage")
         # === STATE: triage ===
-        .state(id="triage", type="decision")
-        .description("Route based on problem complexity")
-        .branch_on("Simple problem", "simple_resolution")
-        .branch_on("Complex problem", "detailed_analysis")
-        .branch_on("Urgent issue", "escalation")
+        .state("triage state", id="triage", type="decision")
+        .branch_on("Simple problem", id="simple_resolution")
+        .branch_on("Complex problem", id="detailed_analysis")
+        .branch_on("Urgent issue", id="escalation")
         # === STATE: simple_resolution ===
-        .state(id="simple_resolution")
-        .description("Handle simple problems quickly")
+        .state("simple_resolution state", id="simple_resolution")
         .required(["quick_solution_provided"])
         .next_state("completion")
         # === STATE: detailed_analysis ===
-        .state(id="detailed_analysis", type="tool")
-        .description("Analyze complex problems thoroughly")
+        .state("detailed_analysis state", id="detailed_analysis", type="tool")
         .tools(["analysis_tools", "diagnostic_suite"])
         .success_condition("Root cause identified")
         .next_state("complex_resolution")
         # === STATE: complex_resolution ===
-        .state(id="complex_resolution")
-        .description("Provide detailed solution")
+        .state("complex_resolution state", id="complex_resolution")
         .required(["comprehensive_solution", "implementation_plan"])
         .next_state("completion")
         # === STATE: escalation ===
-        .state(id="escalation", type="tool")
-        .description("Escalate urgent issues")
+        .state("escalation state", id="escalation", type="tool")
         .tools(["escalation_system", "priority_queue"])
         .success_condition("Issue escalated successfully")
         .next_state("completion")
         # === STATE: completion ===
-        .state(id="completion", type="summary")
-        .description("Ensure customer satisfaction")
+        .state("completion state", id="completion", type="summary")
         .required(["issue_resolved", "customer_satisfied"])
         .success_condition("Customer issue fully addressed")
     )
@@ -361,12 +339,10 @@ def test_pathway_prompt_generation():
             desc="Customer support pathway",
             activation=["Customer needs help"],
         )
-        .state(id="greeting")
-        .description("Greet the customer warmly")
+        .state("Greet the customer warmly", id="greeting")
         .required(["customer_welcomed"])
         .next_state("assessment")
-        .state(id="assessment", type="collect")
-        .description("Understand the customer's needs")
+        .state("Assess customer needs thoroughly", id="assessment", type="collect")
         .required(["issue_type", "urgency_level"])
         .optional(["customer_history"])
         .success_condition("Customer needs clearly understood")
@@ -383,7 +359,7 @@ def test_pathway_prompt_generation():
     assert "GREETING" in prompt  # State names are uppercase in prompts
     assert "ASSESSMENT" in prompt
     assert "Greet the customer warmly" in prompt
-    assert "Understand the customer's needs" in prompt
+    assert "Assess customer needs thoroughly" in prompt
     assert "customer_welcomed" in prompt
     assert "issue_type" in prompt
     assert "urgency_level" in prompt

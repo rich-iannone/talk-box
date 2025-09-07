@@ -58,14 +58,27 @@ class Pathways:
     """
     Chainable builder for defining structured conversational pathways.
 
-    The `Pathways` class provides intelligent conversation flow guidance while maintaining flexibility
-    to adapt to natural conversation patterns. They serve as guardrails rather than rigid state
-    machines, helping LLMs provide consistent, thorough assistance while remaining responsive to user
-    needs and conversational context.
+    The `Pathways` class provides intelligent conversation flow guidance while maintaining
+    flexibility to adapt to natural conversation patterns. They serve as guardrails rather than
+    rigid state machines, helping LLMs provide consistent, thorough assistance while remaining
+    responsive to user needs and conversational context.
 
-    Building a Pathway
-    ------------------
+    Parameters
+    ----------
+    title
+        A short, descriptive name for the pathway
+    desc
+        Clear, concise explanation of the pathway's purpose and scope
+    activation
+        Specific situations or user intents that trigger pathway activation
 
+    Returns
+    -------
+    Pathways
+        The configured `Pathways` object for further chaining with `.state()` and other methods.
+
+    Building Pathways
+    -----------------
     Building a pathway follows a specific sequence that ensures proper configuration and flow logic.
     Each step builds upon the previous one to create a coherent conversation structure.
 
@@ -91,48 +104,45 @@ class Pathways:
             activation=["User needs help"]
         )
         # === STATE: intake ===
-        .state(id="intake", type="collect")        # First state is automatically the start
-        .description("Gather customer information")
-        .required(["issue description", "contact info"])
+        .state("Gather customer information", id="intake")
+        .collect(["issue description", "contact info"])
         .next_state("triage")
         # === STATE: triage ===
-        .state(id="triage", type="decision")       # Simplified state definition
-        .description("Route to appropriate support")
-        .branch_on("Technical issue", "tech_support")
-        .branch_on("Billing question", "billing")
+        .state("Route to appropriate support", id="triage")
+        .branch_on("Technical issue", id="tech_support")
+        .branch_on("Billing question", id="billing")
         # === STATE: tech_support ===
-        .state(id="tech_support")                  # Defaults to "chat" type
-        .description("Resolve technical problems")
+        .state("Resolve technical problems", id="tech_support")
         .success_condition("Issue resolved")
     )
     ```
 
     This approach provides:
-    - **Visual state boundaries** with `# === STATE: name ===` comments
-    - **Unified state definition** with `.state(id="name", type="type")`
-    - **Smart defaults** where `type="chat"` is assumed if not specified
+
+    - **Visual state boundaries** with `# === STATE: description ===` comments
+    - **Natural state definition** with description first: `.state("What happens here", id="name")`
+    - **Smart type inference** where `.tools()` → tool, `.branch_on()` → decision, `.collect()` → collect
     - **Automatic start state** where the first `.state()` becomes the starting state
 
     ### 3. State Configuration Pattern (repeat for each state):
 
     ```python
-        # Define the state
-        .state(id="state_name")                     # Defaults to type="chat"
-        .state(id="state_name", type="collect")     # For gathering information
-        .state(id="state_name", type="decision")    # For branching logic
-        .state(id="state_name", type="tool")        # For using tools/APIs
-        .state(id="state_name", type="summary")     # For wrapping up
+        # Define the state with description first
+        .state("What happens in this state", id="state_name")
+        .state("Gather information", id="state_name")  # type inferred as "collect" from .collect()
+        .state("Make decisions", id="state_name")      # type inferred as "decision" from .branch_on()
+        .state("Use tools/APIs", id="state_name")      # type inferred as "tool" from .tools()
+        .state("Wrap up")                              # Linear states don't need IDs
 
         # Configure the state
-        .description("What happens in this state")  # Required for all states
         .required([...])                            # What must be accomplished
         .optional([...])                            # What would be nice to have
-        .tools([...])                               # Available tools (type="tool" only)
+        .tools([...])                               # Available tools (infers type="tool")
         .success_condition("When state succeeds")   # How to know it's complete
 
         # Define state transitions (choose one)
         .next_state("next_state")                   # Linear progression
-        .branch_on("condition", "target_state")     # Conditional (type="decision" only)
+        .branch_on("condition", id="target_state")  # Conditional (infers type="decision")
         .merge_to("common_state")                   # Reconverge after branching
         .fallback("error_condition", "backup_state") # Error handling
     ```
@@ -157,7 +167,7 @@ class Pathways:
 
     Key Rules
     ---------
-    - Always call `description()` immediately after `.state()`
+    - escription is required and provided in `.state()` method
     - `type="decision"` must use `branch_on()`, never `next_state()`
     - `type="tool"` must include `tools()` specification
     - State names must be unique and use `lowercase_with_underscores`
@@ -186,13 +196,11 @@ class Pathways:
             activation=["User can't log in", "User forgot password"]
         )
         # === STATE: verification ===
-        .state(id="verification", type="collect")
-        .description("Verify user identity")
-        .required(["email_address", "account_verification"])
+        .state("Verify user identity", id="verification")
+        .collect(["email_address", "account_verification"])
         .next_state("password_update")
         # === STATE: password_update ===
-        .state(id="password_update")  # defaults to "chat"
-        .description("Guide user through creating new password")
+        .state("Guide user through creating new password", id="password_update")
         .required(["new_password_created", "password_requirements_met"])
         .success_condition("User successfully logs in with new password")
     )
@@ -215,25 +223,21 @@ class Pathways:
             activation=["User needs help", "User reports problem"]
         )
         # === STATE: triage ===
-        .state(id="triage", type="decision")
-        .description("Determine the type of support needed")
-        .branch_on("Technical problem reported", "technical_support")
-        .branch_on("Billing question asked", "billing_support")
-        .branch_on("General inquiry made", "general_help")
+        .state("Determine the type of support needed", id="triage")
+        .branch_on("Technical problem reported", id="technical_support")
+        .branch_on("Billing question asked", id="billing_support")
+        .branch_on("General inquiry made", id="general_help")
         # === STATE: technical_support ===
-        .state(id="technical_support", type="tool")
-        .description("Diagnose and resolve technical issues")
+        .state("Diagnose and resolve technical issues", id="technical_support")
         .tools(["system_diagnostics", "troubleshooting_guide"])
         .success_condition("Technical issue is resolved")
         .merge_to("completion")
         # === STATE: billing_support ===
-        .state(id="billing_support")  # defaults to "chat"
-        .description("Address billing and account questions")
+        .state("Address billing and account questions", id="billing_support")
         .required(["billing_issue_understood", "solution_provided"])
         .merge_to("completion")
         # === STATE: completion ===
-        .state(id="completion", type="summary")
-        .description("Ensure customer satisfaction and wrap up")
+        .state("Ensure customer satisfaction and wrap up", id="completion", type="summary")
         .required(["issue_resolved_confirmation", "follow_up_if_needed"])
         .completion_actions(["log_interaction", "send_summary_email"])
         .completion_criteria(["Customer issue fully resolved", "Customer satisfied"])
@@ -246,18 +250,6 @@ class Pathways:
     """
 
     def __init__(self, title: str, desc: str = "", activation: List[str] = None):
-        """
-        Initialize a new pathway.
-
-        Parameters
-        ----------
-        title : str
-            Short, descriptive name for the pathway
-        desc : str
-            Clear, concise explanation of the pathway's purpose and scope
-        activation : List[str]
-            Specific situations or user intents that trigger pathway activation
-        """
         self.title = title
         self._description: str = desc
         self._activation_conditions: List[str] = activation or []
@@ -268,50 +260,80 @@ class Pathways:
         self._completion_criteria: List[str] = []
         self._fallback_strategy: Optional[str] = None
 
-    def state(self, id: str, type: str = "chat") -> "Pathways":
+    def state(self, desc: str, id: str = None, type: str = None) -> "Pathways":
         """
-        Define a state with the specified type in a single method call.
+        Define a state with natural language description as the primary identifier.
 
-        The first state you define becomes the starting state automatically. The `type`
-        parameter defaults to "chat" since it's the most common state type.
+        The first state you define becomes the starting state automatically. State type is inferred
+        from subsequent method calls, making the API more intuitive and reducing the need to specify
+        types upfront.
 
         Parameters
         ----------
+        desc
+            Clear description of the state's purpose and what should happen. This is the primary
+            identifier and should be specific about the expected interaction or outcome.
         id
-            Unique identifier for the state. Use descriptive names that clearly indicate
-            the state's purpose, like `greeting`, `problem_assessment`, or `verification`.
+            Optional unique identifier for the state. Required only when other states need to
+            reference this state (via `.branch_on()`, `.next_state()`, `.merge_to()`). If not
+            provided, an ID will be auto-generated from the description.
         type
-            The type of state to create. Options are:
-            - "chat" (default): Open conversation, explanations, guidance
-            - "collect": Structured information gathering
-            - "decision": Branching logic based on conditions
-            - "tool": Using specific tools or APIs
-            - "summary": Conclusions, confirmations, wrap-up        Examples
+            Optional explicit state type. If not provided, the type will be inferred from subsequent
+            method calls
+
+        Conflict Resolution
+        -------------------
+        Based on method usage, the state type is inferred as follows:
+
+        - `.tools()` → `"tool"`
+        - `.branch_on()` → `"decision"`
+        - `.collect()`/`.required()` → `"collect"`
+        - Default → `"chat"`
+
+        If multiple methods suggest different types, the first inference takes precedence.
+
+        Examples
         --------
-        Create states directly without separate type methods:
+        Natural API with type inference:
 
         ```python
         pathway = (
-            tb.Pathways("Customer Support")
-            .description("Help resolve customer issues")
-            .state(id="greeting")  # defaults to chat
-            .description("Welcome customer and understand their needs")
+            tb.Pathways(
+                title="Customer Support",
+                desc="Help resolve customer issues"
+            )
+            .state("Welcome customer and understand their needs")
             .collect(["problem_description", "urgency_level"])
-            .next_state("triage")
-            .state(id="triage", type="decision")
-            .description("Determine support approach needed")
-            .branch_on("Technical issue", "troubleshooting")
-            .branch_on("Billing question", "billing_help")
+            .state("Determine support approach needed", id="triage")
+            .branch_on("Technical issue", id="troubleshooting")
+            .branch_on("Billing question", id="billing_help")
+            .state("Provide technical troubleshooting", id="troubleshooting")
+            .tools(["diagnostic_tool", "knowledge_base"])
         )
         ```
 
         Notes
         -----
-        - First `.state()` call automatically becomes the starting state
-        - Must be followed immediately by `.description()`
-        - State IDs must be unique within the pathway
-        - Use lowercase with underscores for state IDs
+        - description always comes first
+        - ID only needed when other states need to reference this state
+        - type inferred from usage: `.tools()` → `"tool"`, `.branch_on()` → `"decision"`
+        - first method call determines type, and conflicts generate warnings
+        - auto-generated IDs use `snake_case` from description
         """
+        # Generate ID from description if not provided
+        if id is None:
+            # Create snake_case ID from description
+            import re
+
+            id = re.sub(r"[^\w\s]", "", desc.lower())
+            id = re.sub(r"\s+", "_", id.strip())
+            # Ensure uniqueness
+            base_id = id
+            counter = 1
+            while id in self._states:
+                id = f"{base_id}_{counter}"
+                counter += 1
+
         # Set as start state if this is the first state defined
         if not self._start_state:
             self._start_state = id
@@ -319,7 +341,9 @@ class Pathways:
         # Set current state for subsequent configuration
         self._current_state_name = id
 
-        # Create the state based on type
+        # Create the state with initial type (will be refined by inference)
+        initial_type = type if type else "chat"  # Default to chat until inferred
+
         state_type_map = {
             "chat": StateType.CHAT,
             "collect": StateType.COLLECT,
@@ -328,16 +352,16 @@ class Pathways:
             "summary": StateType.SUMMARY,
         }
 
-        if type not in state_type_map:
+        if initial_type not in state_type_map:
             raise ValueError(
-                f"Invalid state type '{type}'. Must be one of: {list(state_type_map.keys())}"
+                f"Invalid state type '{initial_type}'. Must be one of: {list(state_type_map.keys())}"
             )
 
         # Create the PathwayState
         self._states[id] = PathwayState(
             name=id,
-            state_type=state_type_map[type],
-            description="",  # Will be set by subsequent .description() call
+            state_type=state_type_map[initial_type],
+            description=desc,
             required_info=[],
             optional_info=[],
             tools=[],
@@ -345,38 +369,66 @@ class Pathways:
             next_states=[],
         )
 
+        # Store whether type was explicitly set (for inference logic)
+        if not hasattr(self, "_explicit_types"):
+            self._explicit_types = {}
+        self._explicit_types[id] = type is not None
+
         return self
 
-    def description(self, desc: str) -> "Pathways":
+    def _infer_state_type(self, new_type: str) -> None:
         """
-        Add description to the current state.
-
-        Always call immediately after .state() method.
-        Provides essential context for what happens in this state.
+        Infer and update state type based on method usage.
 
         Parameters
         ----------
-        desc : str
-            Clear description of the state's purpose and what should happen.
-            Be specific about the expected interaction or outcome.
-
-        Examples
-        --------
-        ```python
-        .state("assessment")
-            .description("Ask questions to understand the user's specific problem")
-            # Continue with collect(), required(), etc.
-        ```
-
-        Notes
-        -----
-        - State descriptions guide LLM behavior within that state
-        - Be specific about what should happen, not just what the state is
-        - Use action-oriented language: "Ask...", "Explain...", "Gather..."
+        new_type : str
+            The type being inferred from method usage
         """
-        if self._current_state_name and self._current_state_name in self._states:
-            self._states[self._current_state_name].description = desc
-        return self
+        if not self._current_state_name or self._current_state_name not in self._states:
+            return
+
+        current_state = self._states[self._current_state_name]
+        was_explicit = self._explicit_types.get(self._current_state_name, False)
+
+        # If type was explicitly set, warn about conflicts but don't change
+        if was_explicit and current_state.state_type.value != new_type:
+            import warnings
+
+            warnings.warn(
+                f"State '{self._current_state_name}' was explicitly set to "
+                f"'{current_state.state_type.value}' but method suggests '{new_type}'. "
+                f"Keeping explicit type '{current_state.state_type.value}'.",
+                UserWarning,
+            )
+            return
+
+        # If already inferred a different type, warn but keep first inference
+        if (
+            not was_explicit
+            and current_state.state_type.value != "chat"
+            and current_state.state_type.value != new_type
+        ):
+            import warnings
+
+            warnings.warn(
+                f"State '{self._current_state_name}' was inferred as "
+                f"'{current_state.state_type.value}' but method suggests '{new_type}'. "
+                f"Keeping first inference '{current_state.state_type.value}'.",
+                UserWarning,
+            )
+            return
+
+        # Update state type if it's still default "chat" or matches
+        if current_state.state_type.value in ["chat", new_type]:
+            state_type_map = {
+                "chat": StateType.CHAT,
+                "collect": StateType.COLLECT,
+                "decision": StateType.DECISION,
+                "tool": StateType.TOOL,
+                "summary": StateType.SUMMARY,
+            }
+            current_state.state_type = state_type_map[new_type]
 
     def collect(self, info_types: List[str]) -> "Pathways":
         """
@@ -394,8 +446,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .state("user_registration", type="collect")
-            .description("Gather user registration information")
+        .state("Gather user registration information")
             .collect(["full_name", "email_address", "preferred_contact_method"])
         ```
 
@@ -404,7 +455,11 @@ class Pathways:
         - Same as required() - use whichever reads better
         - Be specific: "email address" not "contact info"
         - Works with any state type but most natural with type="collect"
+        - Infers state type as "collect" if not explicitly set
         """
+        # Infer state type as "collect"
+        self._infer_state_type("collect")
+
         if self._current_state_name in self._states:
             self._states[self._current_state_name].required_info.extend(info_types)
         return self
@@ -426,8 +481,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .state("booking_details")
-            .description("Get essential travel information")
+        .state("booking_details", desc="Get essential travel information")
             .required(["departure_city", "destination", "travel_date"])
             .optional(["return_date", "time_preference"])
             .next_state("search_flights")
@@ -492,8 +546,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .state("flight_search", type="tool")
-            .description("Find flights matching user criteria")
+        .state("Find flights matching user criteria")
             .tools(["flight_search_api", "price_comparison_tool"])
             .success_condition("Found at least 3 flight options")
             .next_state("present_options")
@@ -501,11 +554,14 @@ class Pathways:
 
         Notes
         -----
-        - Required for type="tool" states, optional for others
+        - Infers state type as "tool" if not explicitly set
         - Tool names should match actual available capabilities
         - Use success_condition() to define completion criteria
         - Consider fallback() for when tools fail
         """
+        # Infer state type as "tool"
+        self._infer_state_type("tool")
+
         if self._current_state_name in self._states:
             self._states[self._current_state_name].tools.extend(tool_names)
         return self
@@ -527,8 +583,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .state("explanation")
-            .description("Explain the solution to the user")
+        .state("explanation", desc="Explain the solution to the user")
             .required(["solution_steps", "expected_outcome"])
             .success_condition("User confirms understanding and agrees to proceed")
             .next_state("implementation")
@@ -562,8 +617,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .state("greeting")
-            .description("Welcome user and understand their needs")
+        .state("greeting", desc="Welcome user and understand their needs")
             .required(["user_goal", "urgency"])
             .success_condition("User has explained their situation")
             .next_state("assessment")  # Linear progression
@@ -582,11 +636,11 @@ class Pathways:
             )
         return self
 
-    def branch_on(self, condition: str, state_name: str) -> "Pathways":
+    def branch_on(self, condition: str, id: str) -> "Pathways":
         """
         Define conditional branch to another state based on specific conditions.
 
-        Use with decision_state() to create multiple possible transitions based
+        Use with decision states to create multiple possible transitions based
         on user responses, detected conditions, or conversation context. Each
         branch should represent a distinct path through the workflow.
 
@@ -595,30 +649,33 @@ class Pathways:
         condition : str
             Specific, recognizable condition that triggers this branch.
             Be concrete and observable in conversation.
-        state_name : str
-            Target state name for this branch condition.
+        id : str
+            Target state ID for this branch condition. The target state
+            must be defined later with .state().
 
         Examples
         --------
         ```python
-        .decision_state("triage")
-            .description("Determine support type needed")
-            .branch_on("User reports technical error", "technical_support")
-            .branch_on("User has billing question", "billing_support")
-            .branch_on("User needs general help", "general_assistance")
+        .state("Determine support type needed", id="triage")
+            .branch_on("User reports technical error", id="technical_support")
+            .branch_on("User has billing question", id="billing_support")
+            .branch_on("User needs general help", id="general_assistance")
         ```
 
         Notes
         -----
-        - Use only with decision_state(), not with other state types
+        - Infers current state type as "decision" if not explicitly set
         - Conditions should be mutually exclusive when possible
-        - Each branch must lead to a state defined with then()
+        - Each branch must lead to a state defined later with .state()
         - Be specific: "User mentions password issues" not "User has problems"
         """
+        # Infer state type as "decision"
+        self._infer_state_type("decision")
+
         if self._current_state_name:
             self._transitions.append(
                 PathwayTransition(
-                    from_state=self._current_state_name, to_state=state_name, condition=condition
+                    from_state=self._current_state_name, to_state=id, condition=condition
                 )
             )
         return self
