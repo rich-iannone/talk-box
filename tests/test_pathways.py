@@ -34,6 +34,18 @@ def test_pathways_with_activation_conditions():
     assert pathway._activation_conditions == ["condition1", "condition2"]
 
 
+def test_pathways_with_single_string_activation():
+    """Test Pathways with single string activation (promoted to list)."""
+    pathway = tb.Pathways("Test", activation="single condition")
+    assert pathway._activation_conditions == ["single condition"]
+
+
+def test_pathways_with_none_activation():
+    """Test Pathways with no activation conditions."""
+    pathway = tb.Pathways("Test", activation=None)
+    assert pathway._activation_conditions == []
+
+
 def test_pathways_prompt_generation():
     """Test pathway generates a prompt."""
     pathway = tb.Pathways("Test", desc="A test pathway").state("A test state", id="test_state")

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 class StateType(Enum):
@@ -60,17 +60,18 @@ class Pathways:
 
     The `Pathways` class provides intelligent conversation flow guidance while maintaining
     flexibility to adapt to natural conversation patterns. They serve as guardrails rather than
-    rigid state machines, helping LLMs provide consistent, thorough assistance while remaining
+    rigid state machines, helping LLMs provide consistent and thorough assistance while remaining
     responsive to user needs and conversational context.
 
     Parameters
     ----------
     title
-        A short, descriptive name for the pathway
+        A short, descriptive name for the pathway.
     desc
-        Clear, concise explanation of the pathway's purpose and scope
+        Clear, concise explanation of the pathway's purpose and scope.
     activation
-        Specific situations or user intents that trigger pathway activation
+        Specific situations or user intents that trigger pathway activation. Can be a single string
+        or a list of strings.
 
     Returns
     -------
@@ -94,14 +95,14 @@ class Pathways:
         # First .state() call automatically becomes the starting state
     ```
 
-    ### 2. State Definition (using unified .state() method)
+    ### 2. State Definition (using unified `.state()`method)
 
     ```python
     pathway = (
         tb.Pathways(
             title="Support Flow",
             desc="Customer support pathway",
-            activation=["User needs help"]
+            activation="User needs help"
         )
         # === STATE: intake ===
         .state("Gather customer information", id="intake")
@@ -186,7 +187,7 @@ class Pathways:
     sequentially, and specify what information each state needs to collect. Notice how each state
     builds naturally toward the goal of helping the user regain access to their account.
 
-    ```python
+    ```{python}
     import talk_box as tb
 
     simple_pathway = (
@@ -215,7 +216,7 @@ class Pathways:
     method. Notice how different support paths merge back to a common completion state, ensuring
     consistent wrap-up regardless of the support type provided.
 
-    ```python
+    ```{python}
     support_pathway = (
         tb.Pathways(
             title="Customer Support",
@@ -247,12 +248,60 @@ class Pathways:
 
     This branching example shows how `.state()` creates clear decision points that route conversations
     appropriately, then merge back together for consistent completion.
+
+    Inspecting Pathways
+    -------------------
+    Once you've built a pathway, you can inspect it using different string representations:
+
+    ```{python}
+    import talk_box as tb
+
+    # Create a simple pathway
+    pathway = (
+        tb.Pathways(
+            title="Quick Help",
+            desc="Provide rapid assistance",
+            activation="User needs help"
+        )
+        # === STATE: intake ===
+        .state("Understand the problem", id="intake")
+        .collect(["issue_description"])
+        .next_state("solution")
+        # === STATE: solution ===
+        .state("Provide solution", id="solution")
+        .success_condition("User's problem is resolved")
+    )
+    ```
+
+    We can view the pathway in two ways, either as a brief summary by examining the object itself:
+
+    ```{python}
+    pathway
+    ```
+
+    Or with `print()` for a more detailed view:
+
+    ```{python}
+    print(pathway)
+    ```
+
+    The summary view gives you a quick overview, while the detailed view shows the state types,
+    description, and other configuration details. This is especially useful when debugging complex
+    pathways or understanding existing pathway configurations.
     """
 
-    def __init__(self, title: str, desc: str = "", activation: List[str] = None):
+    def __init__(self, title: str, desc: str = "", activation: Union[str, List[str], None] = None):
         self.title = title
         self._description: str = desc
-        self._activation_conditions: List[str] = activation or []
+
+        # Convert activation to list if it's a single string
+        if activation is None:
+            self._activation_conditions: List[str] = []
+        elif isinstance(activation, str):
+            self._activation_conditions: List[str] = [activation]
+        else:
+            self._activation_conditions: List[str] = activation
+
         self._states: Dict[str, PathwayState] = {}
         self._transitions: List[PathwayTransition] = []
         self._current_state_name: Optional[str] = None
@@ -312,6 +361,33 @@ class Pathways:
         )
         ```
 
+        Explicit type specification (useful for complex workflows):
+
+        ```python
+        pathway = (
+            tb.Pathways(
+                title="Data Analysis Pipeline",
+                desc="Guide user through structured data analysis"
+            )
+            .state("Gather analysis requirements", id="requirements", type="collect")
+            .collect(["dataset_info", "analysis_goals"])
+            .state("Choose analysis approach", id="method_selection", type="decision")
+            .branch_on("Statistical analysis needed", id="stats")
+            .branch_on("Machine learning required", id="ml_pipeline")
+            .state("Run statistical tests", id="stats", type="tool")
+            .tools(["scipy_stats", "hypothesis_testing"])
+            .state("Summarize findings", id="summary", type="summary")
+        )
+        ```
+
+        **When to use explicit types:**
+
+        - **Complex workflows** where type inference might be ambiguous
+        - **Documentation clarity** when the state's purpose isn't obvious from methods
+        - **Team development** to make intentions explicit for other developers
+        - **Mixed functionality** when a state serves multiple purposes (e.g., both collecting info and using tools)
+        - **Error prevention** to avoid unintended type inference conflicts
+
         Notes
         -----
         - description always comes first
@@ -319,6 +395,7 @@ class Pathways:
         - type inferred from usage: `.tools()` → `"tool"`, `.branch_on()` → `"decision"`
         - first method call determines type, and conflicts generate warnings
         - auto-generated IDs use `snake_case` from description
+        - use `# === STATE: name ===` comments for visual state separation in complex pathways
         """
         # Generate ID from description if not provided
         if id is None:
