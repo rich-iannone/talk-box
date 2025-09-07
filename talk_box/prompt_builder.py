@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 
 class Priority(Enum):
@@ -327,7 +327,7 @@ class PromptSection:
     builder.sections.append(custom_section)
 
     # Build final prompt (sections are automatically ordered and assembled)
-    final_prompt = builder.build()
+    final_prompt = builder
     print("Final assembled prompt:")
     print(final_prompt)
     ```
@@ -502,7 +502,7 @@ class PromptBuilder:
         .persona("data scientist", "machine learning")
         .task_context("Analyze customer churn patterns")
         .focus_on("identifying the top 3 risk factors")
-        .build()
+
     )
     ```
 
@@ -542,7 +542,7 @@ class PromptBuilder:
             "Prioritized recommendations"
         ])
         .final_emphasis("Provide actionable next steps")
-        .build()
+
     )
     ```
 
@@ -577,7 +577,7 @@ class PromptBuilder:
         ])
         .avoid_topics(["personal coding style preferences"])
         .focus_on("providing constructive, actionable feedback")
-        .build()
+
     )
     ```
 
@@ -593,13 +593,13 @@ class PromptBuilder:
 
     ```{python}
     # Use pre-configured architectural analysis
-    arch_prompt = tb.architectural_analysis_prompt().build()
+    arch_prompt = tb.architectural_analysis_prompt()
     print(arch_prompt)
     ```
 
     ```{python}
     # Use pre-configured code review
-    review_prompt = tb.code_review_prompt().build()
+    review_prompt = tb.code_review_prompt()
     print(review_prompt)
     ```
     """
@@ -677,7 +677,7 @@ class PromptBuilder:
             .task_context("Analyze customer satisfaction survey results")
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### Role with domain expertise
@@ -697,7 +697,7 @@ class PromptBuilder:
             ])
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### Senior-level expertise
@@ -903,7 +903,7 @@ class PromptBuilder:
             .task_context("Analyze the customer churn data to identify key patterns")
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### Task with custom priority
@@ -1017,7 +1017,7 @@ class PromptBuilder:
             ])
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### Output format critical constraint
@@ -1275,7 +1275,7 @@ class PromptBuilder:
             ])
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### Technical preference constraints
@@ -1588,7 +1588,7 @@ class PromptBuilder:
             )
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### List-based structured section
@@ -1976,7 +1976,7 @@ class PromptBuilder:
             ])
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### Security audit analysis
@@ -2283,7 +2283,7 @@ class PromptBuilder:
             ])
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### Executive reporting format
@@ -2667,7 +2667,7 @@ def authenticate_user(username, password):
     ])
 )
 
-print(builder.build())
+print(builder)
 ````
 
 ### API documentation example
@@ -3054,7 +3054,7 @@ pattern recognition rather than abstract instruction following.
             .final_emphasis("Security vulnerabilities must be identified and addressed before any performance or UX considerations")
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### Cost-conscious recommendations
@@ -3393,7 +3393,7 @@ pattern recognition rather than abstract instruction following.
             ])
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### Business strategy consultation
@@ -3685,7 +3685,7 @@ pattern recognition rather than abstract instruction following.
                 .description("Provide immediate solution steps")
                 .success_condition("Problem is resolved")
                 .fallback("Problem persists", "advanced_diagnostics")
-            .build()
+
         )
 
         # Use in prompt
@@ -3694,7 +3694,7 @@ pattern recognition rather than abstract instruction following.
             .persona("technical support specialist", "troubleshooting")
             .pathways(support_pathway)
             .final_emphasis("Follow pathway while adapting to user needs")
-            .build()
+
         )
         ```
 
@@ -3726,7 +3726,7 @@ pattern recognition rather than abstract instruction following.
                 .description("Show flight options to user")
                 .success_condition("User selects a flight option")
                 .next_state("booking_confirmation")
-            .build()
+
         )
 
         # Integration with bot
@@ -3742,7 +3742,7 @@ pattern recognition rather than abstract instruction following.
                     "Confirm information before proceeding",
                     "Provide helpful alternatives when needed"
                 ])
-                .build()
+
             )
         )
         ```
@@ -3892,7 +3892,7 @@ pattern recognition rather than abstract instruction following.
             ])
         )
 
-        print(builder.build())
+        print(builder)
         ```
 
         ### Cost-effectiveness priority
@@ -4238,7 +4238,7 @@ pattern recognition rather than abstract instruction following.
             ])
         )
 
-        prompt = builder.build()
+        prompt = builder
         print(prompt)
         ```
 
@@ -4302,7 +4302,7 @@ pattern recognition rather than abstract instruction following.
             )
         )
 
-        prompt = builder.build()
+        prompt = builder
         print(prompt)
         ```
 
@@ -4372,7 +4372,7 @@ pattern recognition rather than abstract instruction following.
             .final_emphasis("Prioritize strategies with fastest path to sustainable revenue")
         )
 
-        prompt = builder.build()
+        prompt = builder
         ```
 
         ### Educational content development
@@ -4412,7 +4412,7 @@ pattern recognition rather than abstract instruction following.
             )
         )
 
-        prompt = builder.build()
+        prompt = builder
         ```
 
         ### Technical code review prompt
@@ -4446,7 +4446,7 @@ pattern recognition rather than abstract instruction following.
             .focus_on("Ensure code quality meets production standards while providing educational feedback")
         )
 
-        prompt = builder.build()
+        prompt = builder
         ```
 
         ### Medical analysis prompt with safety emphasis
@@ -4484,7 +4484,7 @@ pattern recognition rather than abstract instruction following.
             .final_emphasis("Every recommendation must enhance or maintain patient safety as the primary objective")
         )
 
-        prompt = builder.build()
+        prompt = builder
         ```
 
         ### Research methodology prompt
@@ -4525,7 +4525,7 @@ pattern recognition rather than abstract instruction following.
             )
         )
 
-        prompt = builder.build()
+        prompt = builder
         ```
 
         ### Financial analysis prompt with risk management
@@ -4563,7 +4563,7 @@ pattern recognition rather than abstract instruction following.
             .focus_on("Optimize risk-adjusted returns while maintaining portfolio stability")
         )
 
-        prompt = builder.build()
+        prompt = builder
         ```
 
         ### Content strategy prompt with audience focus
@@ -4600,7 +4600,7 @@ pattern recognition rather than abstract instruction following.
             .final_emphasis("Every piece of content must solve a specific problem for the target audience")
         )
 
-        prompt = builder.build()
+        prompt = builder
         ```
 
         Integration Notes
@@ -4668,36 +4668,13 @@ pattern recognition rather than abstract instruction following.
 
         return "\n".join(prompt_parts)
 
-    def preview(self) -> str:
-        """
-        Build and return the final prompt text for preview purposes.
-
-        This method is intended for development, debugging, and standalone prompt creation.
-        When using with ChatBot, prefer passing the PromptBuilder object directly rather
-        than calling .preview() first, as this preserves the structured data for testing
-        and analysis.
-
-        Returns
-        -------
-        str
-            The complete, attention-optimized prompt text.
-
-        Note
-        ----
-        If you're using this with ChatBot, consider passing the PromptBuilder object
-        directly instead:
-
-        # Preferred - preserves structure for testing
-        bot.system_prompt(prompt_builder)
-
-        # Works but loses structured data benefits
-        bot.system_prompt(prompt_builder.preview())
-        """
-        return self._build()
-
     def __str__(self) -> str:
-        """Return the built prompt when the object is converted to string."""
+        """Return the complete built prompt text."""
         return self._build()
+
+    def print(self) -> None:
+        """Print the complete built prompt text."""
+        print(self._build())
 
     def __repr__(self) -> str:
         """Return a developer-friendly representation of the PromptBuilder configuration."""
@@ -4731,192 +4708,13 @@ pattern recognition rather than abstract instruction following.
 
         # Add final emphasis indicator
         if self._final_emphasis:
-            emphasis_short = self._final_emphasis
-            if len(emphasis_short) > 30:
-                emphasis_short = emphasis_short[:27] + "..."
-            components.append(f"emphasis='{emphasis_short}'")
+            components.append("final_emphasis=True")
 
         # Build the representation
         if components:
             return f"PromptBuilder({', '.join(components)})"
         else:
             return "PromptBuilder(empty)"
-
-    def preview_structure(self) -> Dict[str, Any]:
-        """
-        Preview the prompt structure without building the full text for debugging and optimization.
-
-        The preview_structure method provides a comprehensive overview of the prompt's organizational
-        architecture, allowing developers to inspect attention patterns, priority distributions, and
-        structural completeness before generating the final prompt. This introspection capability is
-        essential for optimizing prompt effectiveness, debugging complex prompts, and understanding
-        how components will be arranged in the final output.
-
-        **Attention Pattern Analysis**: the preview reveals how attention will be distributed across
-        different prompt sections, showing the hierarchical organization that maximizes AI focus on
-        critical requirements. This visibility helps identify potential attention conflicts or
-        suboptimal priority arrangements before prompt execution.
-
-        **Structure Validation**: by examining the preview, developers can verify that all intended
-        components are present and properly prioritized. This is particularly valuable for complex
-        prompts with multiple sections, constraints, and emphasis points that need careful coordination.
-
-        **Optimization Guidance**: the preview provides metrics like estimated token count and section
-        distribution that help optimize prompt length and complexity. This information enables
-        developers to balance comprehensiveness with efficiency for specific AI model capabilities.
-
-        **Debugging Support**: when prompts don't produce expected results, the preview helps identify
-        structural issues such as missing sections, incorrect priorities, or attention imbalances
-        that might be affecting AI response quality.
-
-        **Development Workflow**: the preview supports iterative prompt development by allowing
-        developers to inspect and refine prompt structure without generating full text until the
-        architecture is optimized. This speeds development and reduces API costs during testing.
-
-        Returns
-        -------
-        Dict
-            Comprehensive dictionary containing prompt structure analysis with the following keys:
-
-            - **persona** (str | None): the behavioral context and expertise specification
-            - **critical_constraints** (List[str]): front-loaded requirements with maximum priority
-            - **task_context** (str | None): the primary objective and context description
-            - **task_priority** (str | None): priority level of the main task ("CRITICAL", "HIGH", "MEDIUM", "LOW")
-            - **structured_sections** (List[Dict]): ordered list of sections with content preview, priority, and type
-            - **standard_constraints** (List[str]): additional requirements and limitations
-            - **output_format** (List[str] | None): response structure and formatting specifications
-            - **examples_count** (int): number of input/output examples included
-            - **final_emphasis** (str | None): recency-positioned ultimate priority statement
-            - **estimated_tokens** (float): approximate token count for the complete prompt
-
-        Examples
-        --------
-        ### Basic structure preview
-
-        Inspect a simple prompt's organization:
-
-        ```python
-        import talk_box as tb
-
-        # Build a basic prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("data analyst", "statistical analysis")
-            .task_context("Analyze customer churn patterns")
-            .core_analysis([
-                "Customer demographics and behavior",
-                "Churn timing and trigger analysis",
-                "Retention strategy recommendations"
-            ])
-            .output_format([
-                "Executive summary with key findings",
-                "Statistical analysis with visualizations",
-                "Actionable retention recommendations"
-            ])
-        )
-
-        # Preview the structure
-        structure = builder.preview_structure()
-        print(f"Persona: {structure['persona']}")
-        print(f"Task Priority: {structure['task_priority']}")
-        print(f"Sections: {len(structure['structured_sections'])}")
-        print(f"Estimated tokens: {structure['estimated_tokens']:.0f}")
-        ```
-
-        Output:
-        ```
-        Persona: You are a data analyst specializing in statistical analysis.
-        Task Priority: MEDIUM
-        Sections: 1
-        Estimated tokens: 127
-        ```
-
-        ### Complex prompt structure analysis
-
-        Examine a comprehensive prompt with all features:
-
-        ```python
-        # Build a complex security audit prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("security engineer", "application security")
-            .focus_on("Identify critical vulnerabilities requiring immediate attention")
-            .task_context("Audit web application for production deployment", priority=tb.Priority.HIGH)
-            .core_analysis([
-                "Authentication and authorization mechanisms",
-                "Input validation and data sanitization",
-                "Infrastructure security configuration"
-            ], priority=tb.Priority.CRITICAL)
-            .structured_section(
-                "Risk Assessment",
-                "Evaluate findings using CVSS methodology",
-                priority=tb.Priority.HIGH
-            )
-            .constraint("Include remediation effort estimates")
-            .avoid_topics(["Security through obscurity"])
-            .output_format([
-                "Executive summary with critical issues",
-                "Detailed findings with CVSS scores",
-                "Prioritized remediation roadmap"
-            ])
-            .example(
-                "SQL injection in login form",
-                "Critical: SQL injection (CVSS 9.8) - implement parameterized queries"
-            )
-        )
-
-        # Analyze structure
-        structure = builder.preview_structure()
-
-        # Display comprehensive analysis
-        print("=== PROMPT STRUCTURE ANALYSIS ===")
-        print(f"Persona: {structure['persona']}")
-        print(f"Task Priority: {structure['task_priority']}")
-        print(f"Critical Constraints: {len(structure['critical_constraints'])}")
-        print(f"Standard Constraints: {len(structure['standard_constraints'])}")
-        print(f"Structured Sections: {len(structure['structured_sections'])}")
-        print(f"Examples: {structure['examples_count']}")
-        print(f"Final Emphasis: {'Yes' if structure['final_emphasis'] else 'No'}")
-        print(f"Estimated Tokens: {structure['estimated_tokens']:.0f}")
-
-        print("\n=== SECTION PRIORITIES ===")
-        for section in structure['structured_sections']:
-            print(f"Priority {section['priority']}: {section['content']}")
-        ```
-
-        Integration Notes
-        -----------------
-        - **Development Support**: enables iterative prompt optimization without full text generation
-        - **Attention Analysis**: reveals priority distribution and attention allocation patterns
-        - **Structure Validation**: identifies missing components and structural issues before execution
-        - **Performance Planning**: provides token estimates for model capacity planning
-        - **Quality Assurance**: supports systematic validation of prompt completeness and effectiveness
-        - **Debugging Tool**: helps identify why prompts may not be producing expected results
-
-        The preview_structure method serves as an essential development and debugging tool that provides
-        comprehensive insight into prompt architecture, enabling developers to optimize attention patterns,
-        validate structural completeness, and ensure production readiness before deploying prompts to
-        language models.
-        """
-        return {
-            "persona": self._persona,
-            "critical_constraints": self._constraints[:1] if self._constraints else [],
-            "task_context": self._task_context,
-            "task_priority": self._task_priority.value if self._task_context else None,
-            "structured_sections": [
-                {
-                    "content": s.content[:100] + "..." if len(s.content) > 100 else s.content,
-                    "priority": s.priority.value,
-                    "type": s.section_type,
-                }
-                for s in sorted(self._sections, key=lambda s: (s.priority.value, s.order_hint))
-            ],
-            "standard_constraints": self._constraints[1:] if len(self._constraints) > 1 else [],
-            "output_format": self._output_format,
-            "examples_count": len(self._examples),
-            "final_emphasis": self._final_emphasis,
-            "estimated_tokens": len(self._build().split()) * 1.3,  # Rough estimate
-        }
 
 
 # Convenience functions for common patterns
