@@ -17,22 +17,21 @@ def test_pathways_creation():
 
 def test_pathways_with_description():
     """Test Pathways creation with description."""
-    pathway = tb.Pathways("Test").description("A test pathway")
+    pathway = tb.Pathways("Test", desc="A test pathway")
     assert pathway.title == "Test"
     assert pathway._description == "A test pathway"
 
 
 def test_pathways_with_activation_conditions():
     """Test Pathways with activation conditions."""
-    pathway = tb.Pathways("Test").activation_conditions(["condition1", "condition2"])
+    pathway = tb.Pathways("Test", activation=["condition1", "condition2"])
     assert pathway._activation_conditions == ["condition1", "condition2"]
 
 
 def test_pathways_prompt_generation():
     """Test pathway generates a prompt."""
     pathway = (
-        tb.Pathways("Test")
-        .description("A test pathway")
+        tb.Pathways("Test", desc="A test pathway")
         .state(id="test_state")
         .description("A test state")
     )
@@ -136,9 +135,11 @@ def test_state_method_chaining():
 def test_unified_api_example():
     """Test a complete pathway using the new unified API."""
     pathway = (
-        tb.Pathways("Unified API Test")
-        .description("Testing the simplified API")
-        .activation_conditions(["User needs unified help"])
+        tb.Pathways(
+            title="Unified API Test",
+            desc="Testing the simplified API",
+            activation=["User needs unified help"],
+        )
         # === STATE: greeting ===
         .state(id="greeting")  # defaults to chat
         .description("Welcome the user")
@@ -274,9 +275,11 @@ def test_linear_progression():
 def test_complex_branching_pathway():
     """Test complex pathway with branching and merging using unified API."""
     pathway = (
-        tb.Pathways("Complex Test")
-        .description("Complex branching pathway")
-        .activation_conditions(["User needs complex help"])
+        tb.Pathways(
+            title="Complex Test",
+            desc="Complex branching pathway",
+            activation=["User needs complex help"],
+        )
         # === STATE: intake ===
         .state(id="intake", type="collect")
         .description("Gather initial information")
@@ -353,9 +356,11 @@ def test_complex_branching_pathway():
 def test_pathway_prompt_generation():
     """Test that pathways generate proper prompts with unified API."""
     pathway = (
-        tb.Pathways("Support Flow")
-        .description("Customer support pathway")
-        .activation_conditions(["Customer needs help"])
+        tb.Pathways(
+            title="Support Flow",
+            desc="Customer support pathway",
+            activation=["Customer needs help"],
+        )
         .state(id="greeting")
         .description("Greet the customer warmly")
         .required(["customer_welcomed"])

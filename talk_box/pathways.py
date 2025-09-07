@@ -73,9 +73,11 @@ class Pathways:
 
     ```python
     pathway = (
-        tb.Pathways("Title")
-        .description("Purpose and scope")           # Required: What this pathway does
-        .activation_conditions([...])               # Required: When to use this pathway
+        tb.Pathways(
+            title="Title",
+            desc="Purpose and scope",               # What this pathway does
+            activation=[...]                        # When to use this pathway
+        )
         # First .state() call automatically becomes the starting state
     ```
 
@@ -83,9 +85,11 @@ class Pathways:
 
     ```python
     pathway = (
-        tb.Pathways("Support Flow")
-        .description("Customer support pathway")
-        .activation_conditions(["User needs help"])
+        tb.Pathways(
+            title="Support Flow",
+            desc="Customer support pathway",
+            activation=["User needs help"]
+        )
         # === STATE: intake ===
         .state(id="intake", type="collect")        # First state is automatically the start
         .description("Gather customer information")
@@ -176,9 +180,11 @@ class Pathways:
     import talk_box as tb
 
     simple_pathway = (
-        tb.Pathways("Password Reset")
-        .description("Help users reset their forgotten passwords")
-        .activation_conditions(["User can't log in", "User forgot password"])
+        tb.Pathways(
+            title="Password Reset",
+            desc="Help users reset their forgotten passwords",
+            activation=["User can't log in", "User forgot password"]
+        )
         # === STATE: verification ===
         .state(id="verification", type="collect")
         .description("Verify user identity")
@@ -203,9 +209,11 @@ class Pathways:
 
     ```python
     support_pathway = (
-        tb.Pathways("Customer Support")
-        .description("Route and resolve customer inquiries")
-        .activation_conditions(["User needs help", "User reports problem"])
+        tb.Pathways(
+            title="Customer Support",
+            desc="Route and resolve customer inquiries",
+            activation=["User needs help", "User reports problem"]
+        )
         # === STATE: triage ===
         .state(id="triage", type="decision")
         .description("Determine the type of support needed")
@@ -237,7 +245,7 @@ class Pathways:
     appropriately, then merge back together for consistent completion.
     """
 
-    def __init__(self, title: str):
+    def __init__(self, title: str, desc: str = "", activation: List[str] = None):
         """
         Initialize a new pathway.
 
@@ -245,99 +253,20 @@ class Pathways:
         ----------
         title : str
             Short, descriptive name for the pathway
+        desc : str
+            Clear, concise explanation of the pathway's purpose and scope
+        activation : List[str]
+            Specific situations or user intents that trigger pathway activation
         """
         self.title = title
-        self._description: str = ""
-        self._activation_conditions: List[str] = []
+        self._description: str = desc
+        self._activation_conditions: List[str] = activation or []
         self._states: Dict[str, PathwayState] = {}
         self._transitions: List[PathwayTransition] = []
         self._current_state_name: Optional[str] = None
         self._start_state: Optional[str] = None
         self._completion_criteria: List[str] = []
         self._fallback_strategy: Optional[str] = None
-
-    def description(self, desc: str) -> "Pathways":
-        """
-        Set the pathway description.
-
-        Call this early in your pathway definition, typically right after initialization. This
-        provides essential context for when and why this pathway should be used, helping both
-        developers and LLMs understand the pathway's purpose and scope.
-
-        Parameters
-        ----------
-        desc : str
-            Clear, concise explanation of the pathway's purpose and scope. Focus on what problems
-            this pathway solves and what outcomes it achieves.
-
-        Examples
-        --------
-        Begin every pathway with a clear description that explains its purpose:
-
-        ```python
-        pathway = (
-            tb.Pathways("Customer Support")
-            .description("Handle customer inquiries with systematic troubleshooting")
-            # Continue with activation_conditions() and start_with()...
-        )
-        ```
-
-        Notes
-        -----
-        Must be called at the pathway level, before defining any states. This description becomes
-        part of the system prompt to help the LLM understand when and how to use the pathway.
-        """
-        self._description = desc
-        return self
-
-    def activation_conditions(self, conditions: List[str]) -> "Pathways":
-        """
-        Define when this pathway should be activated in conversation.
-
-        Call this after `description()` and before `start_with()`. These conditions help the LLM
-        determine when to follow this structured flow versus free conversation. Well-defined
-        activation conditions ensure the pathway triggers at appropriate times without being too
-        restrictive or too broad.
-
-        Parameters
-        ----------
-        conditions
-            Specific situations or user intents that trigger pathway activation. Use concrete,
-            observable conditions rather than vague descriptions. Each condition should represent
-            a clear scenario where this pathway would be helpful.
-
-        Examples
-        --------
-        Be specific about when the pathway should activate. These conditions guide the LLM's
-        decision-making:
-
-        ```python
-        .activation_conditions([
-            "User reports a technical problem",
-            "User asks for help troubleshooting",
-            "User mentions error messages or system failures"
-        ])
-        ```
-
-        Good conditions are observable and specific, while poor conditions are vague or too broad:
-
-        ```python
-        # Good (specific and actionable)
-        "User wants to book a flight for specific dates"
-
-        # Poor (too vague)
-        "User needs help"
-        ```
-
-        Notes
-        -----
-        - Be specific: "User wants to book a flight" not "User needs help"
-        - Use present tense and active voice for clarity
-        - 3-5 conditions typically provide good coverage without complexity
-        - Conditions should be mutually exclusive with other pathways when possible
-        """
-        self._activation_conditions = conditions
-        return self
 
     def state(self, id: str, type: str = "chat") -> "Pathways":
         """
@@ -422,10 +351,6 @@ class Pathways:
         """
         Add description to the current state.
 
-        This method behaves differently depending on context:
-        - At pathway level (before any state definition): Sets pathway description
-        - At state level (after state() method): Sets state description
-
         Always call immediately after .state() method.
         Provides essential context for what happens in this state.
 
@@ -451,8 +376,6 @@ class Pathways:
         """
         if self._current_state_name and self._current_state_name in self._states:
             self._states[self._current_state_name].description = desc
-        else:
-            self._description = desc
         return self
 
     def collect(self, info_types: List[str]) -> "Pathways":
