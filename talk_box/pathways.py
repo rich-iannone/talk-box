@@ -554,15 +554,14 @@ class Pathways:
         """
         Specify required information for the current state to be considered complete.
 
-        Use after `.description()` to define what must be obtained before the state
-        can transition to the next step. The LLM will focus on gathering this
-        information before proceeding.
+        Use after `.description()` to define what must be obtained before the state can transition
+        to the next step. The LLM will focus on gathering this information before proceeding.
 
         Parameters
         ----------
         info_types
-            Essential information that must be collected or established. Can be a single string
-            or a list of strings. Be specific and measurable.
+            Essential information that must be collected or established. Can be a single string or a
+            list of strings. Be specific and measurable.
 
         Examples
         --------
@@ -579,10 +578,10 @@ class Pathways:
 
         Notes
         -----
-        - State cannot progress until required items are addressed
-        - Be specific and concrete
-        - Pair with optional() for nice-to-have information
-        - Use success_condition() to define when requirements are truly met
+        - state cannot progress until required items are addressed
+        - be specific and concrete
+        - pair with `.optional()` for nice-to-have information
+        - use `.success_condition()` to define when requirements are truly met
         """
         # Convert string to list if needed
         if isinstance(info_types, str):
@@ -596,9 +595,9 @@ class Pathways:
         """
         Specify optional information that would be helpful but not required.
 
-        Use with required() to define nice-to-have information that can improve
-        the outcome but isn't essential for state completion. The LLM will
-        attempt to gather this if the conversation allows.
+        Use with required() to define nice-to-have information that can improve the outcome but
+        isn't essential for state completion. The LLM will attempt to gather this if the
+        conversation allows.
 
         Parameters
         ----------
@@ -619,10 +618,10 @@ class Pathways:
 
         Notes
         -----
-        - State can progress without optional items
-        - Helps create more comprehensive outcomes when available
-        - Use sparingly - too many optionals can slow the flow
-        - Best used in collect_state() or structured chat_state()
+        - state can progress without optional items
+        - helps create more comprehensive outcomes when available
+        - use sparingly as too many optionals can slow the flow
+        - best used in `.collect_state()` or in a structured `.chat_state()`
         """
         # Convert string to list if needed
         if isinstance(info_types, str):
@@ -636,15 +635,15 @@ class Pathways:
         """
         Specify tools available for use in the current state.
 
-        Essential for type="tool" states, but can also be used in other states
-        where specific capabilities are needed. Follow this with success_condition()
-        to define when tool usage is complete.
+        Essential for `type="tool"` states, but can also be used in other states where specific
+        capabilities are needed. Follow this with `.success_condition()` to define when tool usage
+        is complete.
 
         Parameters
         ----------
         tool_names
-            Names of specific tools or capabilities the LLM should use. Can be a single string
-            or a list of strings. These should match actual available tools.
+            Names of specific tools or capabilities the LLM should use. Can be a single string or a
+            list of strings. These should match actual available tools.
 
         Examples
         --------
@@ -661,10 +660,10 @@ class Pathways:
 
         Notes
         -----
-        - Infers state type as "tool" if not explicitly set
-        - Tool names should match actual available capabilities
-        - Use success_condition() to define completion criteria
-        - Consider fallback() for when tools fail
+        - infers state type as `"tool"` if not explicitly set
+        - tool names should match actual available capabilities
+        - Use `.success_condition()` to define completion criteria
+        - Consider `.fallback()` for when tools fail
         """
         # Infer state type as "tool"
         self._infer_state_type("tool")
@@ -681,15 +680,14 @@ class Pathways:
         """
         Define what indicates successful completion of the current state.
 
-        Use after configuring state requirements to specify when the state's
-        objectives are met and it's ready to transition. More specific than
-        just completing required() items.
+        Use after configuring state requirements to specify when the state's objectives are met and
+        it's ready to transition. More specific than just completing required() items.
 
         Parameters
         ----------
         condition : str
-            Specific, observable condition indicating the state succeeded.
-            Use action-oriented language that the LLM can recognize.
+            Specific, observable condition indicating the state succeeded. Use action-oriented
+            language that the LLM can recognize.
 
         Examples
         --------
@@ -702,10 +700,10 @@ class Pathways:
 
         Notes
         -----
-        - More specific than just completing required() items
-        - Should be observable/confirmable in conversation
-        - Use active voice: "User confirms..." not "User understanding confirmed"
-        - Can have multiple success conditions for complex states
+        - more specific than just completing required() items
+        - should be observable/confirmable in conversation
+        - use active voice: `"User confirms..."` not `"User understanding confirmed"`
+        - can have multiple success conditions for complex states
         """
         if self._current_state_name in self._states:
             self._states[self._current_state_name].success_conditions.append(condition)
@@ -721,9 +719,9 @@ class Pathways:
 
         Parameters
         ----------
-        state_name : str
-            Name of the state to transition to next. The target state must be
-            defined later in the pathway using state().
+        state_name
+            Name of the state to transition to next. The target state must be defined later in the
+            pathway using `.state()`.
 
         Examples
         --------
@@ -736,10 +734,10 @@ class Pathways:
 
         Notes
         -----
-        - Creates unconditional transition after state completion
-        - Cannot be used with type="decision" states - use branch_on() instead
-        - Target state must be defined later with state()
-        - For conditional logic, use branch_on()
+        - creates unconditional transition after state completion
+        - cannot be used with `type="decision"` states; use `.branch_on()` instead
+        - target state must be defined later with `.state()`
+        - for conditional logic, use `.branch_on()`
         """
         if self._current_state_name:
             self._transitions.append(
@@ -751,18 +749,18 @@ class Pathways:
         """
         Define conditional branch to another state based on specific conditions.
 
-        Use with decision states to create multiple possible transitions based
-        on user responses, detected conditions, or conversation context. Each
-        branch should represent a distinct path through the workflow.
+        Use with decision states to create multiple possible transitions based on user responses,
+        detected conditions, or conversation context. Each branch should represent a distinct path
+        through the workflow.
 
         Parameters
         ----------
-        condition : str
-            Specific, recognizable condition that triggers this branch.
-            Be concrete and observable in conversation.
-        id : str
-            Target state ID for this branch condition. The target state
-            must be defined later with .state().
+        condition
+            Specific, recognizable condition that triggers this branch. Be concrete and observable
+            in conversation.
+        id
+            Target state ID for this branch condition. The target state must be defined later with
+            `.state()`.
 
         Examples
         --------
@@ -775,10 +773,10 @@ class Pathways:
 
         Notes
         -----
-        - Infers current state type as "decision" if not explicitly set
-        - Conditions should be mutually exclusive when possible
-        - Each branch must lead to a state defined later with .state()
-        - Be specific: "User mentions password issues" not "User has problems"
+        - infers current state type as `"decision"` if not explicitly set
+        - conditions should be mutually exclusive when possible
+        - each branch must lead to a state defined later with `.state()`
+        - be specific: `"User mentions password issues"` not `"User has problems"`
         """
         # Infer state type as "decision"
         self._infer_state_type("decision")
@@ -795,13 +793,13 @@ class Pathways:
         """
         Merge current state path back to a common state.
 
-        Use when multiple branches need to converge back to a single workflow
-        state. This is essentially an alias for next_state() but makes the
-        intent clearer in branching scenarios.
+        Use when multiple branches need to converge back to a single workflow state. This is
+        essentially an alias for `.next_state()` but makes the intent clearer in branching
+        scenarios.
 
         Parameters
         ----------
-        state_name : str
+        state_name
             Common state where multiple paths converge.
 
         Examples
@@ -819,9 +817,9 @@ class Pathways:
 
         Notes
         -----
-        - Functionally identical to next_state() but clearer for branching
-        - Use after branch paths to show convergence
-        - Target state should typically be defined later
+        - functionally identical to `.next_state()` but clearer for branching
+        - use after branch paths to show convergence
+        - target state should typically be defined later
         """
         return self.next_state(state_name)
 
@@ -829,16 +827,15 @@ class Pathways:
         """
         Define fallback transition when normal state progression fails.
 
-        Use when you need to handle error conditions, user confusion, or when
-        expected outcomes don't occur. Provides graceful recovery paths instead
-        of getting stuck in a state.
+        Use when you need to handle error conditions, user confusion, or when expected outcomes
+        don't occur. Provides graceful recovery paths instead of getting stuck in a state.
 
         Parameters
         ----------
-        condition : str
-            Specific condition that triggers the fallback. Usually describes
-            a failure or unexpected situation.
-        state_name : str
+        condition
+            Specific condition that triggers the fallback. Usually describes a failure or unexpected
+            situation.
+        state_name
             State to transition to when fallback condition occurs.
 
         Examples
@@ -853,10 +850,10 @@ class Pathways:
 
         Notes
         -----
-        - Use for error handling and recovery
-        - Condition should describe failure scenarios
-        - Provides graceful degradation instead of getting stuck
-        - Can be used alongside next_state() or branch_on()
+        - use for error handling and recovery
+        - condition should describe failure scenarios
+        - provides graceful degradation instead of getting stuck
+        - can be used alongside `.next_state()` or `.branch_on()`
         """
         if self._current_state_name in self._states:
             self._states[self._current_state_name].fallback_actions.append(
@@ -868,15 +865,14 @@ class Pathways:
         """
         Define actions to take when the state completes successfully.
 
-        Use in summary_state() or final states to specify follow-up actions
-        that should occur after successful completion. These might be system
-        actions, notifications, or next steps.
+        Use in summary_state() or final states to specify follow-up actions that should occur after
+        successful completion. These might be systemactions, notifications, or next steps.
 
         Parameters
         ----------
         actions
-            Specific actions to perform upon successful state completion. Can be a single string
-            or a list of strings. Use action-oriented language.
+            Specific actions to perform upon successful state completion. Can be a single string or
+            a list of strings. Use action-oriented language.
 
         Examples
         --------
@@ -896,10 +892,10 @@ class Pathways:
 
         Notes
         -----
-        - Best used in summary_state() or final states
-        - Describes what happens after successful completion
-        - Use specific action verbs: "send", "update", "schedule"
-        - Can represent both system actions and user guidance
+        - best used in `.summary_state()` or final states
+        - describes what happens after successful completion
+        - use specific action verbs: `"send"`, `"update"`, `"schedule"`
+        - can represent both system actions and user guidance
         """
         # Convert string to list if needed
         if isinstance(actions, str):
@@ -913,9 +909,9 @@ class Pathways:
         """
         Define overall criteria for considering the entire pathway complete.
 
-        Use at the pathway level (after all states defined) to specify what
-        constitutes successful completion of the entire conversation flow.
-        These are higher-level than individual state success conditions.
+        Use at the pathway level (after all states defined) to specify what constitutes successful
+        completion of the entire conversation flow. These are higher-level than individual state
+        success conditions.
 
         Parameters
         ----------
@@ -938,10 +934,10 @@ class Pathways:
 
         Notes
         -----
-        - Use at pathway level, not state level
-        - Higher-level than individual state success conditions
-        - Describes overall pathway success
-        - Usually called near the end of pathway definition
+        - use at pathway level, not state level
+        - higher-level than individual state success conditions
+        - describes overall pathway success
+        - usually called near the end of pathway definition
         """
         # Convert string to list if needed
         if isinstance(criteria, str):
@@ -954,15 +950,15 @@ class Pathways:
         """
         Define the overall strategy for handling unexpected situations.
 
-        Use at the pathway level to provide general guidance for when the
-        structured flow doesn't fit the conversation or when users go off-script.
-        This is the meta-level fallback for the entire pathway.
+        Use at the pathway level to provide general guidance for when the structured flow doesn't
+        fit the conversation or when users go off-script. This is the meta-level fallback for the
+        entire pathway.
 
         Parameters
         ----------
-        strategy : str
-            General approach for handling situations where the pathway
-            doesn't apply or users need different support.
+        strategy
+            General approach for handling situations where the pathway doesn't apply or users need
+            different support.
 
         Examples
         --------
@@ -975,10 +971,10 @@ class Pathways:
 
         Notes
         -----
-        - Use at pathway level, not state level
-        - Provides meta-guidance for when pathway doesn't apply
-        - Should encourage helpful, adaptive responses
-        - Usually the last method called in pathway definition
+        - use at pathway level, not state level
+        - provides meta-guidance for when pathway doesn't apply
+        - should encourage helpful, adaptive responses
+        - usually the last method called in pathway definition
         """
         self._fallback_strategy = strategy
         return self
