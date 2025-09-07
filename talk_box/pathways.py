@@ -380,12 +380,13 @@ class Pathways:
         )
         ```
 
-        **When to use explicit types:**
+        When to use explicit types:
 
         - **Complex workflows** where type inference might be ambiguous
         - **Documentation clarity** when the state's purpose isn't obvious from methods
         - **Team development** to make intentions explicit for other developers
-        - **Mixed functionality** when a state serves multiple purposes (e.g., both collecting info and using tools)
+        - **Mixed functionality** when a state serves multiple purposes (e.g., both collecting info
+        and using tools)
         - **Error prevention** to avoid unintended type inference conflicts
 
         Notes
@@ -459,8 +460,8 @@ class Pathways:
 
         Parameters
         ----------
-        new_type : str
-            The type being inferred from method usage
+        new_type
+            The type being inferred from method usage.
         """
         if not self._current_state_name or self._current_state_name not in self._states:
             return
@@ -507,53 +508,61 @@ class Pathways:
             }
             current_state.state_type = state_type_map[new_type]
 
-    def collect(self, info_types: List[str]) -> "Pathways":
+    def collect(self, info_types: Union[str, List[str]]) -> "Pathways":
         """
         Specify information to collect in the current state.
 
-        Use in any state to define what information the LLM should gather from
-        the user. This is an alias for required() - use whichever reads better
-        in your context.
+        Use in any state to define what information the LLM should gather from the user. This is an
+        alias for `.required()`. Use whichever reads better in your context.
 
         Parameters
         ----------
-        info_types : List[str]
-            Specific types of information to gather. Be concrete and actionable.
+        info_types
+            Specific types of information to gather. Can be a single string or a list of strings.
+            Be concrete and actionable.
 
         Examples
         --------
         ```python
         .state("Gather user registration information")
             .collect(["full_name", "email_address", "preferred_contact_method"])
+
+        # Or for a single item
+        .state("Get user's email")
+            .collect("email_address")
         ```
 
         Notes
         -----
-        - Same as required() - use whichever reads better
-        - Be specific: "email address" not "contact info"
-        - Works with any state type but most natural with type="collect"
-        - Infers state type as "collect" if not explicitly set
+        - same as `.required()` so use whichever reads better
+        - be specific: `"email address"` not `"contact info"`
+        - works with any state type but most natural with `type="collect"`
+        - infers state type as `"collect"` if not explicitly set
         """
         # Infer state type as "collect"
         self._infer_state_type("collect")
+
+        # Convert string to list if needed
+        if isinstance(info_types, str):
+            info_types = [info_types]
 
         if self._current_state_name in self._states:
             self._states[self._current_state_name].required_info.extend(info_types)
         return self
 
-    def required(self, info_types: List[str]) -> "Pathways":
+    def required(self, info_types: Union[str, List[str]]) -> "Pathways":
         """
         Specify required information for the current state to be considered complete.
 
-        Use after description() to define what must be obtained before the state
+        Use after `.description()` to define what must be obtained before the state
         can transition to the next step. The LLM will focus on gathering this
         information before proceeding.
 
         Parameters
         ----------
-        info_types : List[str]
-            Essential information that must be collected or established.
-            Be specific and measurable.
+        info_types
+            Essential information that must be collected or established. Can be a single string
+            or a list of strings. Be specific and measurable.
 
         Examples
         --------
@@ -562,6 +571,10 @@ class Pathways:
             .required(["departure_city", "destination", "travel_date"])
             .optional(["return_date", "time_preference"])
             .next_state("search_flights")
+
+        # Or for a single item
+        .state("get_email", desc="Collect user email")
+            .required("email_address")
         ```
 
         Notes
@@ -571,11 +584,15 @@ class Pathways:
         - Pair with optional() for nice-to-have information
         - Use success_condition() to define when requirements are truly met
         """
+        # Convert string to list if needed
+        if isinstance(info_types, str):
+            info_types = [info_types]
+
         if self._current_state_name in self._states:
             self._states[self._current_state_name].required_info.extend(info_types)
         return self
 
-    def optional(self, info_types: List[str]) -> "Pathways":
+    def optional(self, info_types: Union[str, List[str]]) -> "Pathways":
         """
         Specify optional information that would be helpful but not required.
 
@@ -585,14 +602,19 @@ class Pathways:
 
         Parameters
         ----------
-        info_types : List[str]
-            Additional information that would be beneficial but not essential.
+        info_types
+            Additional information that would be beneficial but not essential. Can be a single
+            string or a list of strings.
 
         Examples
         --------
         ```python
         .required(["departure_city", "destination", "travel_date"])
         .optional(["airline_preference", "seat_preference", "meal_requirements"])
+
+        # Or for a single optional item
+        .required("user_email")
+        .optional("phone_number")
         ```
 
         Notes
@@ -602,11 +624,15 @@ class Pathways:
         - Use sparingly - too many optionals can slow the flow
         - Best used in collect_state() or structured chat_state()
         """
+        # Convert string to list if needed
+        if isinstance(info_types, str):
+            info_types = [info_types]
+
         if self._current_state_name in self._states:
             self._states[self._current_state_name].optional_info.extend(info_types)
         return self
 
-    def tools(self, tool_names: List[str]) -> "Pathways":
+    def tools(self, tool_names: Union[str, List[str]]) -> "Pathways":
         """
         Specify tools available for use in the current state.
 
@@ -616,9 +642,9 @@ class Pathways:
 
         Parameters
         ----------
-        tool_names : List[str]
-            Names of specific tools or capabilities the LLM should use.
-            These should match actual available tools.
+        tool_names
+            Names of specific tools or capabilities the LLM should use. Can be a single string
+            or a list of strings. These should match actual available tools.
 
         Examples
         --------
@@ -627,6 +653,10 @@ class Pathways:
             .tools(["flight_search_api", "price_comparison_tool"])
             .success_condition("Found at least 3 flight options")
             .next_state("present_options")
+
+        # Or for a single tool
+        .state("Search database")
+            .tools("database_search")
         ```
 
         Notes
@@ -638,6 +668,10 @@ class Pathways:
         """
         # Infer state type as "tool"
         self._infer_state_type("tool")
+
+        # Convert string to list if needed
+        if isinstance(tool_names, str):
+            tool_names = [tool_names]
 
         if self._current_state_name in self._states:
             self._states[self._current_state_name].tools.extend(tool_names)
@@ -830,7 +864,7 @@ class Pathways:
             )
         return self
 
-    def completion_actions(self, actions: List[str]) -> "Pathways":
+    def completion_actions(self, actions: Union[str, List[str]]) -> "Pathways":
         """
         Define actions to take when the state completes successfully.
 
@@ -840,9 +874,9 @@ class Pathways:
 
         Parameters
         ----------
-        actions : List[str]
-            Specific actions to perform upon successful state completion.
-            Use action-oriented language.
+        actions
+            Specific actions to perform upon successful state completion. Can be a single string
+            or a list of strings. Use action-oriented language.
 
         Examples
         --------
@@ -855,6 +889,9 @@ class Pathways:
                 "update_booking_system",
                 "schedule_reminder_notifications"
             ])
+
+        # Or for a single action
+        .completion_actions("send_confirmation_email")
         ```
 
         Notes
@@ -864,11 +901,15 @@ class Pathways:
         - Use specific action verbs: "send", "update", "schedule"
         - Can represent both system actions and user guidance
         """
+        # Convert string to list if needed
+        if isinstance(actions, str):
+            actions = [actions]
+
         if self._current_state_name in self._states:
             self._states[self._current_state_name].fallback_actions.extend(actions)
         return self
 
-    def completion_criteria(self, criteria: List[str]) -> "Pathways":
+    def completion_criteria(self, criteria: Union[str, List[str]]) -> "Pathways":
         """
         Define overall criteria for considering the entire pathway complete.
 
@@ -878,9 +919,9 @@ class Pathways:
 
         Parameters
         ----------
-        criteria : List[str]
-            High-level conditions that indicate the pathway's objectives
-            have been fully achieved.
+        criteria
+            High-level conditions that indicate the pathway's objectives have been fully achieved.
+            Can be a single string or a list of strings.
 
         Examples
         --------
@@ -890,6 +931,9 @@ class Pathways:
             "User knows how to prevent similar problems",
             "User is satisfied with the support experience"
         ])
+
+        # Or for a single criterion
+        .completion_criteria("User's issue has been fully resolved")
         ```
 
         Notes
@@ -899,6 +943,10 @@ class Pathways:
         - Describes overall pathway success
         - Usually called near the end of pathway definition
         """
+        # Convert string to list if needed
+        if isinstance(criteria, str):
+            criteria = [criteria]
+
         self._completion_criteria.extend(criteria)
         return self
 
