@@ -19,15 +19,32 @@ Talk Box is a Python framework that transforms prompt engineering from an art in
 engineering discipline. Create effective, maintainable prompts using research-backed attention
 mechanisms, then deploy them with powerful conversation management.
 
-## Why Talk Box?
+## Key Features
 
-- **Attention-Based Prompt Engineering**: build prompts that leverage how LLMs actually process
-  information
-- **Adversarial Testing Framework**: robust evaluation of prompt performance against challenging scenarios
-- **Layered API Design**: start simple, discover advanced features as you need them
-- **Multiple Usage Patterns**: from quick structured prompts to complex modular components
-- **Integrated Conversation Management**: seamless multi-turn conversations with full history
-- **Built-in Behavior Presets**: professional templates for common engineering tasks
+Attention-Based Prompt Engineering
+
+- Research-backed attention optimization that works with how LLMs actually process information
+- Structured templates for consistent, high-quality outputs across different use cases
+
+Conversation Pathways
+
+- Guide users through complex multi-step processes with intelligent flow management
+- Flexible state-based conversations that adapt to natural dialogue patterns
+
+Professional Development Tools
+
+- Modern React-based chat interface for polished user experiences
+- File attachment support for analyzing documents, images, and code directly in conversations
+
+Built-in Quality Assurance
+
+- Automated testing framework to verify chatbot behavior and topic compliance
+- Adversarial testing with sophisticated scenarios to ensure robust performance
+
+Developer-Friendly Design
+
+- Chainable API that scales from simple prompts to complex conversation systems
+- Pre-configured behavior presets for common use cases like customer support and technical assistance
 
 ## The Science Behind Structured Prompts
 
@@ -254,6 +271,73 @@ The React interface provides a professional chat experience with:
 - **Conversation History**: full chat history with easy navigation
 - **Bot Configuration Display**: see your bot's settings and persona at a glance
 
+## Intelligent Conversation Pathways
+
+Guide users through complex, multi-step processes with structured conversation flows that adapt to natural dialogue patterns. Pathways serve as intelligent guardrails, ensuring thorough coverage while maintaining conversational flexibility.
+
+```python
+import talk_box as tb
+
+# Create a customer onboarding pathway
+onboarding_pathway = (
+    tb.Pathways(
+        title="Customer Onboarding",
+        desc="Welcome new customers and set up their accounts",
+        activation="User is a new customer or mentions account setup",
+        completion_criteria="Customer account is fully configured and ready to use"
+    )
+    # === STATE: welcome ===
+    .state("Welcome customer and collect basic information", id="welcome")
+    .required([
+        "customer's full name",
+        "email address",
+        "company or organization name"
+    ])
+    .success_condition("Customer feels welcomed and basic info is collected")
+    .next_state("setup")
+
+    # === STATE: setup ===
+    .state("Configure account preferences", id="setup")
+    .required([
+        "password created and confirmed",
+        "notification preferences selected",
+        "timezone configured"
+    ])
+    .optional(["profile photo uploaded", "team member invitations"])
+    .success_condition("Account is fully configured")
+    .next_state("tour")
+
+    # === STATE: tour ===
+    .state("Provide guided tour of key features", id="tour")
+    .required(["main features demonstrated", "first task completed"])
+    .success_condition("Customer understands how to use core functionality")
+)
+
+# Integrate pathway into a chatbot
+support_bot = (
+    tb.ChatBot()
+    .provider_model("openai:gpt-4-turbo")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("helpful customer success specialist")
+        .pathways(onboarding_pathway)
+        .output_format([
+            "Ask one focused question at a time",
+            "Provide clear, step-by-step guidance",
+            "Confirm understanding before moving forward"
+        ])
+    )
+)
+```
+
+**Key Benefits of Pathways:**
+
+- **Consistency**: Ensure important steps aren't skipped in complex processes
+- **Thoroughness**: Systematically gather all necessary information
+- **Flexibility**: Adapt to natural conversation patterns and user needs
+- **Error Recovery**: Handle unexpected situations with defined fallback strategies
+- **Scalability**: Manage complex multi-step processes that would be overwhelming without structure
+
 ## Pre-configured Engineering Templates
 
 Start with expert-crafted prompts for common engineering tasks:
@@ -405,6 +489,8 @@ The testing framework uses multiple adversarial strategies:
 
 Results provide detailed analysis including conversation transcripts, violation detection with severity ratings, and export capabilities for quality assurance workflows.
 
+**Pathway Testing**: Talk Box also includes `autotest_pathways()` to verify that chatbots properly follow defined conversation flows, ensuring consistent user experiences across complex multi-step interactions.
+
 ## Installation
 
 The Talk Box framework can be installed via pip:
@@ -422,8 +508,8 @@ Talk Box is actively evolving to become a comprehensive prompt engineering and L
 ### Advanced Prompt Engineering
 
 - **Dynamic Prompt Adaptation**: automatically adjust prompt structure based on model capabilities and response quality metrics
-- **Catalog of Prompt Templates**: a collection of domain-specific prompt templates with performance benchmarks
 - **Multi-Modal Prompt Support**: extend structured prompting to include images, audio, and video inputs with attention optimization
+- **Advanced Pathway Patterns**: additional conversation flow patterns for complex scenarios like negotiations, troubleshooting, and collaborative planning
 
 ### Enhanced Testing & Validation
 
