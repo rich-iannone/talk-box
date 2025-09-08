@@ -140,8 +140,6 @@ quartodoc:
         - Pathways.merge_to
         - Pathways.fallback
         - Pathways.completion_actions
-        - Pathways.completion_criteria
-        - Pathways.fallback_strategy
     - title: "Pre-configured Prompt Builders"
       desc: "Ready-to-use attention-based prompt templates"
       contents:

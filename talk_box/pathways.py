@@ -72,6 +72,12 @@ class Pathways:
     activation
         Specific situations or user intents that trigger pathway activation. Can be a single string
         or a list of strings.
+    completion_criteria
+        High-level conditions that indicate the pathway's objectives have been fully achieved. Can
+        be a single string or a list of strings. Optional.
+    fallback_strategy
+        General approach for handling situations where the pathway doesn't apply or users need
+        different support. Optional.
 
     Returns
     -------
@@ -90,7 +96,9 @@ class Pathways:
         tb.Pathways(
             title="Title",
             desc="Purpose and scope",               # What this pathway does
-            activation=[...]                        # When to use this pathway
+            activation=[...],                       # When to use this pathway
+            completion_criteria=[...],              # What makes pathway successful
+            fallback_strategy="..."                 # Handle unexpected situations
         )
         # First .state() call automatically becomes the starting state
     ```
@@ -151,9 +159,16 @@ class Pathways:
     ### 4. Pathway Completion (call once at end):
 
     ```python
-        .completion_criteria([...])                 # What makes pathway successful
-        .fallback_strategy("...")                   # Handle unexpected situations
-    )
+                ### 4. Pathway Completion (now in constructor):
+
+        ```python
+        tb.Pathways(
+            title="Support Flow",
+            desc="Customer support pathway",
+            activation="User needs help",
+            completion_criteria=[...],                 # What makes pathway successful
+            fallback_strategy="..."                    # Handle unexpected situations
+        )
     ```
 
     State Types and Their Purpose
@@ -194,7 +209,9 @@ class Pathways:
         tb.Pathways(
             title="Password Reset",
             desc="Help users reset their forgotten passwords",
-            activation=["User can't log in", "User forgot password"]
+            activation=["User can't log in", "User forgot password"],
+            completion_criteria="User successfully logs in with new password",
+            fallback_strategy="If user lacks access to recovery methods, escalate to manual verification"
         )
         # === STATE: verification ===
         .state("Verify user identity", id="verification")
@@ -221,7 +238,9 @@ class Pathways:
         tb.Pathways(
             title="Customer Support",
             desc="Route and resolve customer inquiries",
-            activation=["User needs help", "User reports problem"]
+            activation=["User needs help", "User reports problem"],
+            completion_criteria=["Customer issue fully resolved", "Customer satisfied"],
+            fallback_strategy="If issue is complex, escalate to human support"
         )
         # === STATE: triage ===
         .state("Determine the type of support needed", id="triage")
@@ -241,8 +260,6 @@ class Pathways:
         .state("Ensure customer satisfaction and wrap up", id="completion", type="summary")
         .required(["issue_resolved_confirmation", "follow_up_if_needed"])
         .completion_actions(["log_interaction", "send_summary_email"])
-        .completion_criteria(["Customer issue fully resolved", "Customer satisfied"])
-        .fallback_strategy("If issue is complex, escalate to human support")
     )
     ```
 
@@ -261,7 +278,9 @@ class Pathways:
         tb.Pathways(
             title="Quick Help",
             desc="Provide rapid assistance",
-            activation="User needs help"
+            activation="User needs help",
+            completion_criteria="User's problem is resolved",
+            fallback_strategy="If problem is complex, escalate to specialized support"
         )
         # === STATE: intake ===
         .state("Understand the problem", id="intake")
@@ -290,7 +309,14 @@ class Pathways:
     pathways or understanding existing pathway configurations.
     """
 
-    def __init__(self, title: str, desc: str = "", activation: Union[str, List[str], None] = None):
+    def __init__(
+        self,
+        title: str,
+        desc: str = "",
+        activation: Union[str, List[str], None] = None,
+        completion_criteria: Union[str, List[str], None] = None,
+        fallback_strategy: str = None,
+    ):
         self.title = title
         self._description: str = desc
 
@@ -302,12 +328,20 @@ class Pathways:
         else:
             self._activation_conditions: List[str] = activation
 
+        # Convert completion_criteria to list if needed
+        if completion_criteria is None:
+            self._completion_criteria: List[str] = []
+        elif isinstance(completion_criteria, str):
+            self._completion_criteria: List[str] = [completion_criteria]
+        else:
+            self._completion_criteria: List[str] = completion_criteria
+
+        self._fallback_strategy: Optional[str] = fallback_strategy
+
         self._states: Dict[str, PathwayState] = {}
         self._transitions: List[PathwayTransition] = []
         self._current_state_name: Optional[str] = None
         self._start_state: Optional[str] = None
-        self._completion_criteria: List[str] = []
-        self._fallback_strategy: Optional[str] = None
 
     def state(self, desc: str, id: str = None, type: str = None) -> "Pathways":
         """
@@ -900,80 +934,6 @@ class Pathways:
 
         if self._current_state_name in self._states:
             self._states[self._current_state_name].fallback_actions.extend(actions)
-        return self
-
-    def completion_criteria(self, criteria: Union[str, List[str]]) -> "Pathways":
-        """
-        Define overall criteria for considering the entire pathway complete.
-
-        Use at the pathway level (after all states defined) to specify what constitutes successful
-        completion of the entire conversation flow. These are higher-level than individual state
-        success conditions.
-
-        Parameters
-        ----------
-        criteria
-            High-level conditions that indicate the pathway's objectives have been fully achieved.
-            Can be a single string or a list of strings.
-
-        Examples
-        --------
-        ```python
-        .completion_criteria([
-            "User's technical issue has been resolved",
-            "User knows how to prevent similar problems",
-            "User is satisfied with the support experience"
-        ])
-
-        # Or for a single criterion
-        .completion_criteria("User's issue has been fully resolved")
-        ```
-
-        Notes
-        -----
-        - use at pathway level, not state level
-        - higher-level than individual state success conditions
-        - describes overall pathway success
-        - usually called near the end of pathway definition
-        """
-        # Convert string to list if needed
-        if isinstance(criteria, str):
-            criteria = [criteria]
-
-        self._completion_criteria.extend(criteria)
-        return self
-
-    def fallback_strategy(self, strategy: str) -> "Pathways":
-        """
-        Define the overall strategy for handling unexpected situations.
-
-        Use at the pathway level to provide general guidance for when the structured flow doesn't
-        fit the conversation or when users go off-script. This is the meta-level fallback for the
-        entire pathway.
-
-        Parameters
-        ----------
-        strategy
-            General approach for handling situations where the pathway doesn't apply or users need
-            different support.
-
-        Examples
-        --------
-        ```python
-        .fallback_strategy(
-            "If user's needs don't fit this pathway, acknowledge their specific "
-            "situation and provide direct assistance while noting pathway limitations"
-        )
-        ```
-
-        Notes
-        -----
-        - use at pathway level, not state level
-        - provides meta-guidance for when pathway doesn't apply
-        - should encourage helpful, adaptive responses
-        - usually the last method called in pathway definition
-        """
-        self._fallback_strategy = strategy
         return self
 
     def _build(self) -> Dict[str, Any]:
