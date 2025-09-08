@@ -142,8 +142,6 @@ quartodoc:
         - Pathways.completion_actions
         - Pathways.completion_criteria
         - Pathways.fallback_strategy
-        - Pathways.to_prompt_text
-        - Pathways.generate_prompt
     - title: "Pre-configured Prompt Builders"
       desc: "Ready-to-use attention-based prompt templates"
       contents:
