@@ -1015,7 +1015,7 @@ class PromptBuilder:
 
         Prioritize security considerations above all else:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
         # Security-first code review
@@ -1038,7 +1038,7 @@ class PromptBuilder:
 
         Enforce strict output formatting requirements:
 
-        ```python
+        ```{python}
         # Structured response requirement
         builder = (
             tb.PromptBuilder()
@@ -1051,13 +1051,15 @@ class PromptBuilder:
                 "Finding 3: [Insight] - [Supporting metric]"
             ])
         )
+
+        print(builder)
         ```
 
         ### Behavioral boundary critical constraint
 
         Set clear behavioral boundaries for sensitive topics:
 
-        ```python
+        ```{python}
         # Medical advice boundary
         builder = (
             tb.PromptBuilder()
@@ -1069,13 +1071,15 @@ class PromptBuilder:
                 "explain general wellness concepts and direct to healthcare professionals"
             )
         )
+
+        print(builder)
         ```
 
         ### Quality threshold critical constraint
 
         Define minimum quality standards for responses:
 
-        ```python
+        ```{python}
         # Production-ready focus
         builder = (
             tb.PromptBuilder()
@@ -1088,13 +1092,15 @@ class PromptBuilder:
                 "performance optimization strategies"
             ])
         )
+
+        print(builder)
         ```
 
         ### Multiple critical constraints with hierarchy
 
         Layer multiple critical requirements in order of importance:
 
-        ```python
+        ```{python}
         # Hierarchical critical constraints
         builder = (
             tb.PromptBuilder()
@@ -1111,13 +1117,15 @@ class PromptBuilder:
 
             .task_context("architect payment processing system for online banking")
         )
+
+        print(builder)
         ```
 
         ### Time-sensitive critical constraint
 
         Handle urgent or time-critical requirements:
 
-        ```python
+        ```{python}
         # Emergency response scenario
         builder = (
             tb.PromptBuilder()
@@ -1130,49 +1138,38 @@ class PromptBuilder:
                 "long-term prevention (next sprint)"
             ])
         )
+
+        print(builder)
         ```
 
         ### Domain-specific critical constraint
 
-        Apply domain-specific requirements that cannot be compromised:
+        Apply domain-specific requirements that cannot be compromised. In this example, we focus on
+        healthcare data privacy:
 
-        ```python
-        # Healthcare data processing
-        healthcare_builder = (
+        ```{python}
+        builder = (
             tb.PromptBuilder()
             .persona("healthcare data engineer", "HIPAA compliance")
             .critical_constraint("ensure all recommendations maintain patient data privacy")
             .task_context("design data pipeline for clinical research")
         )
 
-        # Educational content creation
-        education_builder = (
-            tb.PromptBuilder()
-            .persona("curriculum designer", "K-12 education")
-            .critical_constraint("ensure content is age-appropriate for target grade level")
-            .task_context("create interactive science lesson plan")
-        )
-
-        # Financial analysis
-        finance_builder = (
-            tb.PromptBuilder()
-            .persona("risk analyst", "portfolio management")
-            .critical_constraint("include risk disclaimers for all investment recommendations")
-            .task_context("analyze emerging market investment opportunities")
-        )
+        print(builder)
         ```
 
         ### Combining with other constraint types
 
-        Use critical constraints alongside standard constraints:
+        You can use critical constraints alongside standard constraints. Here, we combine two
+        `.constraint()` calls with a front-loaded critical constraint:
 
-        ```python
+        ```{python}
         # Comprehensive constraint strategy
         builder = (
             tb.PromptBuilder()
             .persona("technical lead", "code quality")
-            .critical_constraint("identify blocking issues that prevent deployment") # Critical
             .task_context("review pull request for production release")
+            .critical_constraint("identify blocking issues that prevent deployment") # Critical
             .constraint("consider coding style consistency")                         # Standard
             .constraint("suggest performance improvements")                          # Standard
             .core_analysis([
@@ -1181,28 +1178,8 @@ class PromptBuilder:
                 "integration and compatibility issues"
             ])
         )
-        ```
 
-        ### Constraint measurement and validation
-
-        Create measurable constraints for objective evaluation:
-
-        ```python
-        # Measurable performance constraint
-        builder = (
-            tb.PromptBuilder()
-            .persona("performance engineer", "web optimization")
-            .critical_constraint("all recommendations must target sub-100ms response times")
-            .task_context("optimize API endpoint performance")
-        )
-
-        # Quantitative analysis constraint
-        analysis_builder = (
-            tb.PromptBuilder()
-            .persona("data scientist", "statistical analysis")
-            .critical_constraint("include confidence intervals and statistical significance for all findings")
-            .task_context("analyze A/B test results for conversion optimization")
-        )
+        print(builder)
         ```
 
         Integration Notes
