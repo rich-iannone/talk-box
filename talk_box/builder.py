@@ -77,15 +77,15 @@ class BuilderTypes:
 
     # Architectural analysis builder
     arch_builder = bot.prompt_builder(tb.BuilderTypes.ARCHITECTURAL)
-    arch_prompt = arch_builder.focus_on("identifying design patterns").build()
+    arch_prompt = arch_builder.focus_on("identifying design patterns")._build()
 
     # Code review builder
     review_builder = bot.prompt_builder(tb.BuilderTypes.CODE_REVIEW)
-    review_prompt = review_builder.avoid_topics(["personal criticism"]).build()
+    review_prompt = review_builder.avoid_topics(["personal criticism"])._build()
 
     # Debugging builder
     debug_builder = bot.prompt_builder(tb.BuilderTypes.DEBUGGING)
-    debug_prompt = debug_builder.focus_on("systematic problem solving").build()
+    debug_prompt = debug_builder.focus_on("systematic problem solving")._build()
     ```
 
     ### Comparing with string literals
@@ -123,7 +123,7 @@ class BuilderTypes:
         else:
             builder_type = tb.BuilderTypes.GENERAL
 
-        prompt = bot.prompt_builder(builder_type).build()
+        prompt = bot.prompt_builder(builder_type)._build()
         return bot.system_prompt(prompt)
 
     # Usage
@@ -155,7 +155,7 @@ class BuilderTypes:
     def create_team_bot(role: str) -> tb.ChatBot:
         config = TEAM_BOT_CONFIGS[role]
         bot = tb.ChatBot().model(config["model"]).temperature(config["temperature"])
-        prompt = bot.prompt_builder(config["builder_type"]).build()
+        prompt = bot.prompt_builder(config["builder_type"])._build()
         return bot.system_prompt(prompt)
     ```
 
@@ -370,6 +370,7 @@ class ChatBot:
             "avoid": [],
             "verbose": False,
             "system_prompt": None,  # Custom system prompt override
+            "system_prompt_builder": None,  # PromptBuilder object for testing
         }
         # Initialize preset manager
         self._preset_manager = None
@@ -1750,7 +1751,7 @@ class ChatBot:
         self._config["persona"] = persona_description
         return self
 
-    def system_prompt(self, prompt: str) -> "ChatBot":
+    def system_prompt(self, prompt: Union[str, "PromptBuilder"]) -> "ChatBot":
         """
         Set a custom system prompt, overriding any preset system prompt.
 
@@ -1819,7 +1820,7 @@ class ChatBot:
             .persona("helpful Python tutor", "educational programming assistance")
             .core_analysis(["Provide working code examples", "Explain reasoning behind solutions"])
             .output_format(["Clear step-by-step explanations", "Commented code examples"])
-            .build()
+            ._build()
         )
 
         # Apply the structured prompt
@@ -1837,7 +1838,7 @@ class ChatBot:
             .persona("helpful Python tutor", "educational programming assistance")
             .core_analysis(["Provide working code examples", "Explain reasoning behind solutions"])
             .output_format(["Clear step-by-step explanations", "Commented code examples"])
-            .build()
+            ._build()
         )
 
         # Use the same template across multiple bots
@@ -1873,7 +1874,7 @@ class ChatBot:
                 "📈 IMPROVEMENTS: Performance and maintainability suggestions"
             ])
             .final_emphasis("Professional, constructive tone with educational explanations")
-            .build()
+            ._build()
         )
 
         bot.system_prompt(security_prompt)
@@ -1912,7 +1913,7 @@ class ChatBot:
                 "## Strengths: What the code does well"
             ])
             .final_emphasis("Constructive feedback that helps developers improve")
-            .build()
+            ._build()
         )
 
         # Use the same template across different team contexts
@@ -1924,7 +1925,7 @@ class ChatBot:
             tb.PromptBuilder()
             .from_template(code_review_template)  # Inherit base structure
             .add_constraint("Focus on Pythonic idioms and PEP 8 compliance")
-            .build()
+            ._build()
         )
 
         python_reviewer = tb.ChatBot().model("gpt-4-turbo").system_prompt(python_template)
@@ -1975,7 +1976,30 @@ class ChatBot:
         preset : Use pre-configured system prompts for common use cases
         avoid : Add constraints that work with any system prompt approach
         """
-        self._config["system_prompt"] = prompt
+        import warnings
+
+        from talk_box.prompt_builder import PromptBuilder
+
+        if isinstance(prompt, PromptBuilder):
+            # Store the structured PromptBuilder for testing and analysis
+            self._config["system_prompt_builder"] = prompt
+            # Also store the built prompt for immediate use
+            self._config["system_prompt"] = prompt._build()
+        elif isinstance(prompt, str):
+            # Check if this looks like a PromptBuilder-generated prompt
+            if "## CORE PERSONA & EXPERTISE" in prompt and "## OUTPUT FORMAT & STRUCTURE" in prompt:
+                warnings.warn(
+                    "This appears to be a PromptBuilder-generated prompt. "
+                    "Consider passing the PromptBuilder object directly instead of "
+                    "calling .preview() first, to preserve structured data for testing.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            self._config["system_prompt"] = prompt
+            self._config["system_prompt_builder"] = None
+        else:
+            raise TypeError(f"prompt must be str or PromptBuilder, got {type(prompt)}")
+
         return self
 
     def get_system_prompt(self) -> str:
@@ -2203,7 +2227,7 @@ class ChatBot:
         print(f"Priority sections: {len(structure['structured_sections'])}")
 
         # Build when satisfied with structure
-        prompt = builder.build()
+        prompt = builder._build()
         ```
 
         Notes
@@ -2341,7 +2365,7 @@ class ChatBot:
             builder.final_emphasis(sections["focus"])
 
         # Set the built prompt as system prompt
-        structured_prompt = builder.build()
+        structured_prompt = builder._build()
         self._config["system_prompt"] = structured_prompt
 
         return self
@@ -2395,8 +2419,11 @@ class ChatBot:
         combined_content = []
 
         for prompt in prompts:
-            if hasattr(prompt, "build"):
-                # It's a prompt builder
+            if hasattr(prompt, "preview"):
+                # It's a prompt builder - use preview for public API
+                combined_content.append(prompt.preview())
+            elif hasattr(prompt, "build"):
+                # Legacy support for .build() method
                 combined_content.append(prompt.build())
             else:
                 # It's a string

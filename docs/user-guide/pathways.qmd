@@ -1,0 +1,420 @@
+---
+title: "Building Conversation Pathways"
+---
+
+Pathways provide intelligent conversation flow guidance while maintaining the flexibility to adapt to natural conversation patterns. Think of them as guardrails rather than rigid state machines—they help LLMs provide consistent and thorough assistance while remaining responsive to user needs.
+
+## What Are Pathways?
+
+A Pathway defines a structured flow through a conversation, breaking complex interactions into clear states with specific objectives. Each state represents a step in achieving the overall goal, with defined information requirements, success conditions, and transition logic.
+
+Some of the key benefits of Pathways are:
+
+- **Consistency**: ensure important steps aren't skipped
+- **Thoroughness**: gather all necessary information systematically
+- **Flexibility**: adapt to natural conversation patterns
+- **Error Recovery**: handle unexpected situations gracefully
+- **Scalability**: manage complex multi-step processes
+
+## Basic Pathway Structure
+
+Every pathway follows this pattern:
+
+```python
+import talk_box as tb
+
+pathway = (
+    tb.Pathways(
+        title="Process Name",
+        desc="clear description of what this pathway accomplishes",
+        activation="when to use this pathway",
+        completion_criteria="what indicates success",
+        fallback_strategy="how to handle edge cases"
+    )
+    # === STATE: state_name ===
+    .state("description of what happens", id="state_name")
+    .required(["essential information needed"])
+    .optional(["helpful but not required info"])
+    .success_condition("How to know this state is complete")
+    .next_state("next_state_name")
+)
+```
+
+## Creating Your First Pathway
+
+Let's build a customer onboarding pathway step by step:
+
+```{python}
+import talk_box as tb
+
+# Start with pathway setup
+onboarding = (
+    tb.Pathways(
+        title="Customer Onboarding",
+        desc="welcome new customers and set up their accounts",
+        activation="new customer signs up",
+        completion_criteria="customer is ready to use the platform",
+        fallback_strategy="if customer needs help, provide direct support contact"
+    )
+
+    # === STATE: welcome ===
+    .state("welcome customer and collect basic information", id="welcome")
+    .required([
+        "customer's full name",
+        "email address",
+        "company or organization name"
+    ])
+    .success_condition("customer feels welcomed and basic info is collected")
+    .next_state("setup")
+
+    # === STATE: setup ===
+    .state("configure account preferences", id="setup")
+    .required([
+        "password created and confirmed",
+        "notification preferences selected",
+        "timezone configured"
+    ])
+    .optional(["profile photo uploaded", "team member invitations"])
+    .success_condition("Account is fully configured")
+    .next_state("tour")
+
+    # === STATE: tour ===
+    .state("provide guided tour of key features", id="tour")
+    .required(["main features demonstrated", "first task completed"])
+    .success_condition("customer understands how to use core functionality")
+)
+
+# See how it looks
+print(onboarding)
+```
+
+This example demonstrates how pathways create structured yet flexible conversation flows. Notice how each state builds logically on the previous one—we collect basic information first, then configure account preferences, and finally provide training. This progressive approach helps users feel guided through what could otherwise be an overwhelming process.
+
+The pathway uses clear, specific requirements at each step (like `"password created and confirmed"` rather than just `"password"`), which helps the AI understand exactly what to accomplish. Optional items in the setup state show how pathways can accommodate different user needs while maintaining the core flow structure.
+
+## State Types and Inference
+
+Pathways automatically infer state types based on the methods you use:
+
+### Collection States (`type="collect"`)
+
+Automatically inferred when using `.required()` or `.optional()`:
+
+```python
+.state("Gather project requirements", id="requirements")
+.required(["project goals", "timeline", "budget range"])
+.optional(["preferred technologies", "team size"])
+# Type automatically inferred as "collect"
+```
+
+Collection states are perfect for systematic information gathering. When you specify what information is required or optional, the AI knows to ask questions and collect responses before moving forward.
+
+### Decision States (`type="decision"`)
+
+Automatically inferred when using `.branch_on()`:
+
+```python
+.state("determine support type needed", id="triage")
+.branch_on("technical issue reported", id="tech_support")
+.branch_on("billing question asked", id="billing")
+.branch_on("general inquiry", id="general_help")
+# Type automatically inferred as "decision"
+```
+
+Decision states create conditional pathways based on user responses or circumstances. The AI evaluates which branch condition matches the situation and routes the conversation accordingly.
+
+### Tool States (`type="tool"`)
+
+Automatically inferred when using `.tools()`:
+
+```python
+.state("analyze system performance", id="diagnostics")
+.tools(["system_monitor", "log_analyzer", "performance_profiler"])
+.success_condition("performance issues identified")
+# Type automatically inferred as "tool"
+```
+
+Tool states enable external capabilities and automated processes. When you specify tools, the AI understands it needs to use those resources to accomplish the state's objectives.
+
+### Chat States (`type="chat"`)
+
+The default for open conversation, explanations, and guidance:
+
+```python
+.state("explain the recommended solution", id="explanation")
+.success_condition("customer understands the approach")
+# Remains as default "chat" type
+```
+
+Chat states handle open-ended conversation, explanations, and guidance where no specific tools or branching logic are needed. This is the default state type when you don't use collection, decision, or tool methods.
+
+## Branching and Decision Logic
+
+Use `.branch_on()` to create conditional flows:
+
+```{python}
+support_pathway = (
+    tb.Pathways(
+        title="Customer Support Triage",
+        desc="route customers to appropriate support channels",
+        activation="customer needs assistance"
+    )
+
+    # === STATE: assessment ===
+    .state("assess customer needs", id="assessment")
+    .required(["issue description", "urgency level", "customer type"])
+    .next_state("triage")
+
+    # === STATE: triage ===
+    .state("route to appropriate support", id="triage")
+    .branch_on("critical system outage", id="emergency")
+    .branch_on("technical issue needing expert help", id="technical")
+    .branch_on("billing or account question", id="billing")
+    .branch_on("general question or guidance needed", id="general")
+
+    # === STATE: emergency ===
+    .state("handle critical emergency", id="emergency")
+    .required(["incident escalated", "immediate response initiated"])
+    .success_condition("emergency team engaged")
+    .next_state("follow_up")
+
+    # === STATE: technical ===
+    .state("provide technical support", id="technical")
+    .tools(["diagnostic_tools", "knowledge_base", "screen_sharing"])
+    .success_condition("technical issue resolved or escalated appropriately")
+    .next_state("follow_up")
+
+    # === STATE: follow_up ===
+    .state("ensure customer satisfaction", id="follow_up")
+    .required(["resolution confirmed", "satisfaction rating collected"])
+    .success_condition("customer issue fully resolved")
+)
+```
+
+## Error Handling with Fallbacks
+
+Use `.fallback()` to handle situations where normal flow doesn't work:
+
+```{python}
+problem_solving = (
+    tb.Pathways(
+        title="Technical Problem Resolution",
+        desc="systematically resolve technical issues",
+        activation="user reports technical problem"
+    )
+
+    # === STATE: analysis ===
+    .state("analyze the reported problem", id="analysis")
+    .required(["problem details", "error messages", "system context"])
+    .success_condition("problem is clearly understood")
+    .next_state("standard_solution")
+
+    # === STATE: standard_solution ===
+    .state("apply standard troubleshooting steps", id="standard_solution")
+    .required(["troubleshooting steps completed", "results documented"])
+    .success_condition("problem is resolved")
+
+    # If standard approach fails, try advanced diagnostics
+    .fallback("standard solution doesn't work", "advanced_diagnostics")
+    .next_state("completion")
+
+    # === STATE: advanced_diagnostics ===
+    .state("perform detailed system analysis", id="advanced_diagnostics")
+    .tools(["system_diagnostics", "log_analyzer", "network_tracer"])
+    .success_condition("root cause identified and resolved")
+
+    # If even advanced methods fail, escalate
+    .fallback("issue remains unresolved", "escalation")
+    .next_state("completion")
+
+    # === STATE: escalation ===
+    .state("escalate to specialist support", id="escalation")
+    .required(["detailed case summary", "specialist contacted"])
+    .success_condition("case transferred successfully")
+    .next_state("completion")
+
+    # === STATE: completion ===
+    .state("document resolution and close case", id="completion")
+    .required(["resolution documented", "customer notified"])
+    .success_condition("case fully resolved and documented")
+)
+```
+
+## Using Pathways with ChatBots
+
+Integrate pathways into your chatbot for structured conversations:
+
+```{python}
+import talk_box as tb
+
+# Create your pathway
+support_pathway = (
+    tb.Pathways(
+        title="Customer Support",
+        desc="comprehensive customer assistance",
+        activation="Customer needs help",
+    )
+    .state("understand customer needs", id="intake")
+    .required(["problem description", "contact information"])
+    .next_state("resolution")
+    .state("provide solution", id="resolution")
+    .success_condition("customer problem is resolved")
+)
+
+# Use with ChatBot via PromptBuilder
+bot = (
+    tb.ChatBot()
+    .model("gpt-4")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("helpful customer support agent")
+        .pathways(support_pathway)
+    )
+)
+```
+
+Now configured with the Pathways directives, the bot will now follow the structure you defined.
+
+```python
+response = bot.chat("I'm having trouble with my account")
+```
+
+## Best Practices
+
+### 1. Clear State Descriptions
+
+```python
+# Good: Specific and actionable
+.state("collect shipping address and delivery preferences", id="shipping")
+
+# Avoid: Vague or unclear
+.state("Get info", id="info")
+```
+
+Clear, descriptive state names help both AI models and human developers understand the purpose and scope of each step. When state descriptions are specific, the AI can better guide conversations toward the intended outcomes and provide appropriate responses to user questions.
+
+### 2. Specific Information Requirements
+
+```python
+# Good: Concrete and measurable
+.required([
+    "complete shipping address with postal code",
+    "preferred delivery time window",
+    "special delivery instructions if any"
+])
+
+# Avoid: Generic or ambiguous
+.required(["address", "preferences"])
+```
+
+Detailed requirement specifications ensure the AI knows exactly what information to gather and how to validate completeness. This reduces back-and-forth exchanges and helps users provide the right level of detail from the start.
+
+### 3. Observable Success Conditions
+
+```python
+# Good: Clear completion criteria
+.success_condition("customer confirms shipping details are correct")
+
+# Avoid: Internal or unclear
+.success_condition("data is valid")
+```
+
+Success conditions should describe observable user behaviors or confirmations rather than internal system states. This helps the AI recognize when to move forward and gives users clear expectations about what constitutes completion.
+
+### 4. Meaningful State Names
+
+```python
+# Good: Descriptive and unique
+.state("review order details and confirm purchase", id="order_confirmation")
+
+# Avoid: Generic or confusing
+.state("process order", id="process")
+```
+
+State IDs serve as navigation waypoints and debugging references throughout your pathway logic. Descriptive names make it easier to understand pathway flow, troubleshoot issues, and maintain complex conversation structures over time.
+
+### 5. Logical Information Flow
+
+```python
+# Good: Progressive information gathering
+.state("collect basic contact info", id="contact")
+.required(["name", "email"])
+.next_state("detailed_requirements")
+
+.state("gather detailed project requirements", id="detailed_requirements")
+.required(["project scope", "timeline", "budget"])
+# Builds on previous information
+```
+
+Structure your pathway states to build naturally from simple to complex information gathering. This progressive approach feels more conversational and prevents users from feeling overwhelmed by too many questions at once.
+
+## Advanced Patterns
+
+Once you're comfortable with basic pathway construction, these advanced patterns help you handle more sophisticated conversation flows. These techniques are particularly useful for complex business processes, multi-step workflows, and scenarios where different user paths need to converge or diverge based on specific conditions.
+
+### Multi-Path Convergence
+
+Different branches can reconverge to common states:
+
+```{python}
+pathway = (
+    tb.Pathways(title="Multi-path Process", desc="...")
+    .state("initial assessment", id="assessment")
+    .branch_on("path A condition", id="path_a")
+    .branch_on("path B condition", id="path_b")
+
+    .state("handle path A", id="path_a")
+    .required(["path A requirements"])
+    .next_state("completion")  # Converge here
+
+    .state("handle path B", id="path_b")
+    .required(["path B requirements"])
+    .next_state("completion")  # Converge here
+
+    .state("complete process", id="completion")
+    .success_condition("all paths lead to successful completion")
+)
+```
+
+This pattern demonstrates how different conversation branches can merge back into a common endpoint. The power of convergence lies in its ability to handle diverse user needs or circumstances while ensuring all paths lead to the same comprehensive completion state. For example, a customer service pathway might branch into technical support, billing assistance, or general inquiries, but all branches eventually converge at a customer satisfaction check and case closure state. This approach maintains consistency in final outcomes while allowing flexibility in the journey to get there.
+
+### Progressive Disclosure
+
+Reveal complexity gradually:
+
+```{python}
+complex_setup = (
+    tb.Pathways(title="System Configuration", desc="...")
+    .state("basic setup", id="basic")
+    .required(["essential settings configured"])
+    .next_state("intermediate")
+
+    .state("intermediate configuration", id="intermediate")
+    .required(["advanced options reviewed"])
+    .optional(["performance tuning preferences"])
+    .branch_on("user wants advanced setup", id="advanced")
+    .next_state("completion")  # Skip advanced if not needed
+
+    .state("advanced configuration", id="advanced")
+    .required(["expert settings configured"])
+    .next_state("completion")
+
+    .state("finalize setup", id="completion")
+    .success_condition("System is fully configured and tested")
+)
+```
+
+Progressive disclosure prevents cognitive overload by introducing complexity incrementally as users demonstrate readiness or express specific needs. The pathway starts with essential configuration that every user requires, then presents intermediate options that some users might want to customize. Only when users explicitly indicate they need advanced features does the pathway branch into expert-level configuration. This approach respects different user sophistication levels and prevents beginners from being overwhelmed by options they don't understand or need, while still providing power users with the advanced capabilities they seek.
+
+## Summary
+
+Pathways provide a powerful way to structure complex conversations while maintaining natural flexibility. Key takeaways:
+
+- start with clear pathway objectives and success criteria
+- use descriptive state names and specific information requirements
+- let type inference work for you—it reduces boilerplate
+- handle edge cases with the `.fallback()` method
+- test by printing `Pathways` objects and walking through the logic
+- keep states focused—break complex processes into multiple pathways if needed
+
+With Pathways, you can create sophisticated conversation flows that guide users efficiently while adapting to their natural communication patterns.

@@ -58,6 +58,7 @@ website:
         contents:
           - user-guide/prompt-engineering-guide.qmd
           - user-guide/prompt-builder.qmd
+          - user-guide/pathways.qmd
       - section: "Testing & Validation"
         contents:
           - user-guide/testing-avoid-topics.qmd
@@ -79,42 +80,24 @@ quartodoc:
     style: markdown
     table_style: description-list
   sections:
-    - title: "Core Classes"
-      desc: "Main classes for building and managing chatbots"
+    - title: "Getting Started"
+      desc: "Core classes and basic chatbot setup"
       contents:
         - name: ChatBot
           members: []
-        - name: Conversation
-          members: []
-        - name: Message
-          members: []
-    - title: "File Attachments"
-      desc: "Classes for attaching and processing files in conversations"
-      contents:
-        - name: Attachments
-          members: []
-        - name: AttachmentMetadata
-          members: []
-    - title: "Attachment Methods"
-      desc: "Methods for configuring and managing file attachments"
-      contents:
-        - Attachments.with_prompt
-        - Attachments.get_metadata
-        - Attachments.summary
-    - title: "Attention-Based Prompt Engineering"
-      desc: "Advanced prompt building using attention mechanisms and cognitive principles"
+        - ChatBot.model
+        - ChatBot.preset
+        - ChatBot.temperature
+        - ChatBot.max_tokens
+        - ChatBot.tools
+        - ChatBot.persona
+        - ChatBot.avoid
+        - ChatBot.verbose
+    - title: "Prompt Engineering"
+      desc: "Advanced prompt building and conversation pathways"
       contents:
         - name: PromptBuilder
           members: []
-        - name: Priority
-          members: []
-        - name: PromptSection
-          members: []
-        - name: BuilderTypes
-          members: []
-    - title: "PromptBuilder Methods"
-      desc: "Fluent API for building attention-optimized prompts"
-      contents:
         - PromptBuilder.persona
         - PromptBuilder.task_context
         - PromptBuilder.focus_on
@@ -126,34 +109,27 @@ quartodoc:
         - PromptBuilder.output_format
         - PromptBuilder.example
         - PromptBuilder.final_emphasis
-        - PromptBuilder.build
-        - PromptBuilder.preview_structure
-    - title: "Pre-configured Prompt Builders"
-      desc: "Ready-to-use attention-based prompt templates"
-      contents:
-        - architectural_analysis_prompt
-        - code_review_prompt
-        - debugging_prompt
-    - title: "ChatBot Prompt Engineering Methods"
-      desc: "Integration methods for attention-based prompting"
-      contents:
+        - name: Pathways
+          members: []
+        - Pathways.state
+        - Pathways.required
+        - Pathways.optional
+        - Pathways.tools
+        - Pathways.success_condition
+        - Pathways.next_state
+        - Pathways.branch_on
+        - Pathways.fallback
         - ChatBot.prompt_builder
         - ChatBot.structured_prompt
         - ChatBot.chain_prompts
-    - title: "ChatBot Configuration Methods"
-      desc: "Chainable methods for configuring ChatBot behavior and parameters"
+        - architectural_analysis_prompt
+        - code_review_prompt
+        - debugging_prompt
+    - title: "Conversations & Messages"
+      desc: "Managing conversations, messages, and context"
       contents:
-        - ChatBot.model
-        - ChatBot.preset
-        - ChatBot.temperature
-        - ChatBot.max_tokens
-        - ChatBot.tools
-        - ChatBot.persona
-        - ChatBot.avoid
-        - ChatBot.verbose
-    - title: "Conversation Management Methods"
-      desc: "Methods for managing conversation messages and context"
-      contents:
+        - name: Conversation
+          members: []
         - Conversation.add_message
         - Conversation.add_user_message
         - Conversation.add_assistant_message
@@ -166,12 +142,21 @@ quartodoc:
         - Conversation.set_context_window
         - Conversation.to_dict
         - Conversation.from_dict
-    - title: "Message Serialization Methods"
-      desc: "Methods for converting messages to/from dictionary format"
-      contents:
+        - name: Message
+          members: []
         - Message.to_dict
         - Message.from_dict
-    - title: "Presets"
+    - title: "File Attachments"
+      desc: "Attaching and processing files in conversations"
+      contents:
+        - name: Attachments
+          members: []
+        - Attachments.with_prompt
+        - Attachments.get_metadata
+        - Attachments.summary
+        - name: AttachmentMetadata
+          members: []
+    - title: "Presets & Templates"
       desc: "Behavior templates and preset management"
       contents:
         - name: Preset
@@ -183,4 +168,13 @@ quartodoc:
       contents:
         - autotest_avoid_topics
         - name: TestResults
+          members: []
+    - title: "Supporting Types"
+      desc: "Internal types and enums for advanced usage"
+      contents:
+        - name: Priority
+          members: []
+        - name: PromptSection
+          members: []
+        - name: BuilderTypes
           members: []

@@ -1,9 +1,3 @@
-"""
-Conversation management module for Talk Box.
-
-This module handles message structures and conversation history management.
-"""
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Optional

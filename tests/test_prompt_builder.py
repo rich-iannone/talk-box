@@ -121,7 +121,7 @@ class TestPromptBuilder:
 
     def test_build_method(self):
         """Test the build method creates a properly structured prompt."""
-        prompt = (
+        prompt = str(
             PromptBuilder()
             .persona("senior engineer")
             .critical_constraint("Focus on critical issues")
@@ -129,7 +129,6 @@ class TestPromptBuilder:
             .core_analysis(["Security", "Performance"])
             .output_format(["Use bullet points"])
             .final_emphasis("Prioritize by impact")
-            .build()
         )
 
         assert isinstance(prompt, str)
@@ -140,8 +139,8 @@ class TestPromptBuilder:
         assert "Security" in prompt
         assert "Prioritize by impact" in prompt
 
-    def test_preview_structure_method(self):
-        """Test the preview_structure method."""
+    def test_structure_inspection(self):
+        """Test the builder's internal structure can be inspected."""
         builder = (
             PromptBuilder()
             .persona("test engineer")
@@ -150,19 +149,20 @@ class TestPromptBuilder:
             .output_format(["test format"])
         )
 
-        structure = builder.preview_structure()
+        # Test internal structure access
+        assert builder._persona is not None
+        assert "test engineer" in builder._persona
+        assert len(builder._constraints) == 1
+        assert "test constraint" in builder._constraints[0]
+        assert len(builder._sections) == 1
+        assert len(builder._output_format) == 1
+        assert "test format" in builder._output_format[0]
 
-        assert isinstance(structure, dict)
-        assert "persona" in structure
-        assert "critical_constraints" in structure
-        assert "structured_sections" in structure
-        assert "output_format" in structure
-        assert "estimated_tokens" in structure
-
-        assert len(structure["critical_constraints"]) == 1
-        assert len(structure["structured_sections"]) == 1
-        assert len(structure["output_format"]) == 1
-        assert structure["estimated_tokens"] > 0
+        # Test string conversion works
+        prompt_text = str(builder)
+        assert isinstance(prompt_text, str)
+        assert len(prompt_text) > 0
+        assert "test engineer" in prompt_text
 
 
 class TestPreConfiguredBuilders:
@@ -174,11 +174,11 @@ class TestPreConfiguredBuilders:
 
         assert isinstance(builder, PromptBuilder)
 
-        structure = builder.preview_structure()
-        assert "architect" in structure["persona"].lower()
-        assert len(structure["structured_sections"]) >= 2
+        # Test that the builder has expected components
+        assert "architect" in builder._persona.lower()
+        assert len(builder._sections) >= 2
 
-        prompt = builder.build()
+        prompt = str(builder)
         assert "architect" in prompt.lower()
         assert "architectural" in prompt.lower()
 
@@ -188,11 +188,11 @@ class TestPreConfiguredBuilders:
 
         assert isinstance(builder, PromptBuilder)
 
-        structure = builder.preview_structure()
-        assert "engineer" in structure["persona"].lower()
-        assert len(structure["output_format"]) > 0
+        # Test that the builder has expected components
+        assert "engineer" in builder._persona.lower()
+        assert len(builder._output_format) > 0
 
-        prompt = builder.build()
+        prompt = str(builder)
         assert "engineer" in prompt.lower()
         assert "critical issues" in prompt.lower() or "improvements" in prompt.lower()
 
@@ -202,11 +202,11 @@ class TestPreConfiguredBuilders:
 
         assert isinstance(builder, PromptBuilder)
 
-        structure = builder.preview_structure()
-        assert "debugger" in structure["persona"].lower()
-        assert "root cause" in structure["final_emphasis"].lower()
+        # Test that the builder has expected components
+        assert "debugger" in builder._persona.lower()
+        assert "root cause" in builder._final_emphasis.lower()
 
-        prompt = builder.build()
+        prompt = str(builder)
         assert "debugger" in prompt.lower()
         assert "root cause" in prompt.lower()
 
@@ -258,7 +258,7 @@ class TestChatBotIntegration:
         bot = ChatBot()
 
         prompt1 = "You are an expert engineer."
-        prompt2 = PromptBuilder().core_analysis(["Security"]).build()
+        prompt2 = str(PromptBuilder().core_analysis(["Security"]))
         prompt3 = "Focus on critical issues."
 
         result = bot.chain_prompts(prompt1, prompt2, prompt3)
