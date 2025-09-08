@@ -621,7 +621,7 @@ class Pathways:
         - state can progress without optional items
         - helps create more comprehensive outcomes when available
         - use sparingly as too many optionals can slow the flow
-        - best used in `.collect_state()` or in a structured `.chat_state()`
+        - best used in states with `type="collect"` or structured chat states
         """
         # Convert string to list if needed
         if isinstance(info_types, str):
@@ -805,13 +805,11 @@ class Pathways:
         Examples
         --------
         ```python
-        .then("billing_help")
-            .chat_state("billing_help")
-            .description("Address billing-specific questions")
+        .state("Address billing-specific questions", id="billing_help")
+            .required(["billing_issue_understood", "solution_provided"])
             .merge_to("completion")  # Merge back to common end
-        .then("technical_help")
-            .chat_state("technical_help")
-            .description("Provide technical assistance")
+        .state("Provide technical assistance", id="technical_help")
+            .tools(["diagnostic_tool", "troubleshooting_guide"])
             .merge_to("completion")  # Same convergence point
         ```
 
@@ -841,8 +839,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .chat_state("solution_explanation")
-            .description("Explain the recommended solution")
+        .state("Explain the recommended solution", id="solution_explanation")
             .success_condition("User understands and accepts solution")
             .fallback("User expresses confusion or disagreement", "clarification")
             .next_state("implementation")
@@ -865,8 +862,8 @@ class Pathways:
         """
         Define actions to take when the state completes successfully.
 
-        Use in summary_state() or final states to specify follow-up actions that should occur after
-        successful completion. These might be systemactions, notifications, or next steps.
+        Use in summary states or final states to specify follow-up actions that should occur after
+        successful completion. These might be system actions, notifications, or next steps.
 
         Parameters
         ----------
@@ -877,8 +874,7 @@ class Pathways:
         Examples
         --------
         ```python
-        .summary_state()
-            .description("Finalize and confirm the booking")
+        .state("Finalize and confirm the booking", id="completion", type="summary")
             .required(["booking_details_confirmed", "payment_processed"])
             .completion_actions([
                 "send_confirmation_email",
@@ -887,12 +883,13 @@ class Pathways:
             ])
 
         # Or for a single action
-        .completion_actions("send_confirmation_email")
+        .state("Complete order processing", type="summary")
+            .completion_actions("send_confirmation_email")
         ```
 
         Notes
         -----
-        - best used in `.summary_state()` or final states
+        - best used in states with `type="summary"` or final states
         - describes what happens after successful completion
         - use specific action verbs: `"send"`, `"update"`, `"schedule"`
         - can represent both system actions and user guidance
