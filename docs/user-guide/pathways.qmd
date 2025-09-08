@@ -26,13 +26,13 @@ import talk_box as tb
 pathway = (
     tb.Pathways(
         title="Process Name",
-        desc="Clear description of what this pathway accomplishes",
-        activation="When to use this pathway",
-        completion_criteria="What indicates success",
-        fallback_strategy="How to handle edge cases"
+        desc="clear description of what this pathway accomplishes",
+        activation="when to use this pathway",
+        completion_criteria="what indicates success",
+        fallback_strategy="how to handle edge cases"
     )
     # === STATE: state_name ===
-    .state("Description of what happens", id="state_name")
+    .state("description of what happens", id="state_name")
     .required(["essential information needed"])
     .optional(["helpful but not required info"])
     .success_condition("How to know this state is complete")
@@ -51,24 +51,24 @@ import talk_box as tb
 onboarding = (
     tb.Pathways(
         title="Customer Onboarding",
-        desc="Welcome new customers and set up their accounts",
-        activation="New customer signs up",
-        completion_criteria="Customer is ready to use the platform",
-        fallback_strategy="If customer needs help, provide direct support contact"
+        desc="welcome new customers and set up their accounts",
+        activation="new customer signs up",
+        completion_criteria="customer is ready to use the platform",
+        fallback_strategy="if customer needs help, provide direct support contact"
     )
 
     # === STATE: welcome ===
-    .state("Welcome customer and collect basic information", id="welcome")
+    .state("welcome customer and collect basic information", id="welcome")
     .required([
         "customer's full name",
         "email address",
         "company or organization name"
     ])
-    .success_condition("Customer feels welcomed and basic info is collected")
+    .success_condition("customer feels welcomed and basic info is collected")
     .next_state("setup")
 
     # === STATE: setup ===
-    .state("Configure account preferences", id="setup")
+    .state("configure account preferences", id="setup")
     .required([
         "password created and confirmed",
         "notification preferences selected",
@@ -79,9 +79,9 @@ onboarding = (
     .next_state("tour")
 
     # === STATE: tour ===
-    .state("Provide guided tour of key features", id="tour")
+    .state("provide guided tour of key features", id="tour")
     .required(["main features demonstrated", "first task completed"])
-    .success_condition("Customer understands how to use core functionality")
+    .success_condition("customer understands how to use core functionality")
 )
 
 # See how it looks
@@ -114,10 +114,10 @@ Collection states are perfect for systematic information gathering. When you spe
 Automatically inferred when using `.branch_on()`:
 
 ```python
-.state("Determine support type needed", id="triage")
-.branch_on("Technical issue reported", id="tech_support")
-.branch_on("Billing question asked", id="billing")
-.branch_on("General inquiry", id="general_help")
+.state("determine support type needed", id="triage")
+.branch_on("technical issue reported", id="tech_support")
+.branch_on("billing question asked", id="billing")
+.branch_on("general inquiry", id="general_help")
 # Type automatically inferred as "decision"
 ```
 
@@ -128,9 +128,9 @@ Decision states create conditional pathways based on user responses or circumsta
 Automatically inferred when using `.tools()`:
 
 ```python
-.state("Analyze system performance", id="diagnostics")
+.state("analyze system performance", id="diagnostics")
 .tools(["system_monitor", "log_analyzer", "performance_profiler"])
-.success_condition("Performance issues identified")
+.success_condition("performance issues identified")
 # Type automatically inferred as "tool"
 ```
 
@@ -141,8 +141,8 @@ Tool states enable external capabilities and automated processes. When you speci
 The default for open conversation, explanations, and guidance:
 
 ```python
-.state("Explain the recommended solution", id="explanation")
-.success_condition("Customer understands the approach")
+.state("explain the recommended solution", id="explanation")
+.success_condition("customer understands the approach")
 # Remains as default "chat" type
 ```
 
@@ -156,38 +156,38 @@ Use `.branch_on()` to create conditional flows:
 support_pathway = (
     tb.Pathways(
         title="Customer Support Triage",
-        desc="Route customers to appropriate support channels",
-        activation="Customer needs assistance"
+        desc="route customers to appropriate support channels",
+        activation="customer needs assistance"
     )
 
     # === STATE: assessment ===
-    .state("Assess customer needs", id="assessment")
+    .state("assess customer needs", id="assessment")
     .required(["issue description", "urgency level", "customer type"])
     .next_state("triage")
 
     # === STATE: triage ===
-    .state("Route to appropriate support", id="triage")
-    .branch_on("Critical system outage", id="emergency")
-    .branch_on("Technical issue needing expert help", id="technical")
-    .branch_on("Billing or account question", id="billing")
-    .branch_on("General question or guidance needed", id="general")
+    .state("route to appropriate support", id="triage")
+    .branch_on("critical system outage", id="emergency")
+    .branch_on("technical issue needing expert help", id="technical")
+    .branch_on("billing or account question", id="billing")
+    .branch_on("general question or guidance needed", id="general")
 
     # === STATE: emergency ===
-    .state("Handle critical emergency", id="emergency")
+    .state("handle critical emergency", id="emergency")
     .required(["incident escalated", "immediate response initiated"])
-    .success_condition("Emergency team engaged")
+    .success_condition("emergency team engaged")
     .next_state("follow_up")
 
     # === STATE: technical ===
-    .state("Provide technical support", id="technical")
+    .state("provide technical support", id="technical")
     .tools(["diagnostic_tools", "knowledge_base", "screen_sharing"])
-    .success_condition("Technical issue resolved or escalated appropriately")
+    .success_condition("technical issue resolved or escalated appropriately")
     .next_state("follow_up")
 
     # === STATE: follow_up ===
-    .state("Ensure customer satisfaction", id="follow_up")
+    .state("ensure customer satisfaction", id="follow_up")
     .required(["resolution confirmed", "satisfaction rating collected"])
-    .success_condition("Customer issue fully resolved")
+    .success_condition("customer issue fully resolved")
 )
 ```
 
@@ -199,44 +199,44 @@ Use `.fallback()` to handle situations where normal flow doesn't work:
 problem_solving = (
     tb.Pathways(
         title="Technical Problem Resolution",
-        desc="Systematically resolve technical issues",
-        activation="User reports technical problem"
+        desc="systematically resolve technical issues",
+        activation="user reports technical problem"
     )
 
     # === STATE: analysis ===
-    .state("Analyze the reported problem", id="analysis")
+    .state("analyze the reported problem", id="analysis")
     .required(["problem details", "error messages", "system context"])
-    .success_condition("Problem is clearly understood")
+    .success_condition("problem is clearly understood")
     .next_state("standard_solution")
 
     # === STATE: standard_solution ===
-    .state("Apply standard troubleshooting steps", id="standard_solution")
+    .state("apply standard troubleshooting steps", id="standard_solution")
     .required(["troubleshooting steps completed", "results documented"])
-    .success_condition("Problem is resolved")
+    .success_condition("problem is resolved")
 
     # If standard approach fails, try advanced diagnostics
-    .fallback("Standard solution doesn't work", "advanced_diagnostics")
+    .fallback("standard solution doesn't work", "advanced_diagnostics")
     .next_state("completion")
 
     # === STATE: advanced_diagnostics ===
-    .state("Perform detailed system analysis", id="advanced_diagnostics")
+    .state("perform detailed system analysis", id="advanced_diagnostics")
     .tools(["system_diagnostics", "log_analyzer", "network_tracer"])
-    .success_condition("Root cause identified and resolved")
+    .success_condition("root cause identified and resolved")
 
     # If even advanced methods fail, escalate
-    .fallback("Issue remains unresolved", "escalation")
+    .fallback("issue remains unresolved", "escalation")
     .next_state("completion")
 
     # === STATE: escalation ===
-    .state("Escalate to specialist support", id="escalation")
+    .state("escalate to specialist support", id="escalation")
     .required(["detailed case summary", "specialist contacted"])
-    .success_condition("Case transferred successfully")
+    .success_condition("case transferred successfully")
     .next_state("completion")
 
     # === STATE: completion ===
-    .state("Document resolution and close case", id="completion")
+    .state("document resolution and close case", id="completion")
     .required(["resolution documented", "customer notified"])
-    .success_condition("Case fully resolved and documented")
+    .success_condition("case fully resolved and documented")
 )
 ```
 
@@ -251,14 +251,14 @@ import talk_box as tb
 support_pathway = (
     tb.Pathways(
         title="Customer Support",
-        desc="Comprehensive customer assistance",
+        desc="comprehensive customer assistance",
         activation="Customer needs help",
     )
-    .state("Understand customer needs", id="intake")
+    .state("understand customer needs", id="intake")
     .required(["problem description", "contact information"])
     .next_state("resolution")
-    .state("Provide solution", id="resolution")
-    .success_condition("Customer problem is resolved")
+    .state("provide solution", id="resolution")
+    .success_condition("customer problem is resolved")
 )
 
 # Use with ChatBot via PromptBuilder
@@ -285,7 +285,7 @@ response = bot.chat("I'm having trouble with my account")
 
 ```python
 # Good: Specific and actionable
-.state("Collect shipping address and delivery preferences", id="shipping")
+.state("collect shipping address and delivery preferences", id="shipping")
 
 # Avoid: Vague or unclear
 .state("Get info", id="info")
@@ -313,10 +313,10 @@ Detailed requirement specifications ensure the AI knows exactly what information
 
 ```python
 # Good: Clear completion criteria
-.success_condition("Customer confirms shipping details are correct")
+.success_condition("customer confirms shipping details are correct")
 
 # Avoid: Internal or unclear
-.success_condition("Data is valid")
+.success_condition("data is valid")
 ```
 
 Success conditions should describe observable user behaviors or confirmations rather than internal system states. This helps the AI recognize when to move forward and gives users clear expectations about what constitutes completion.
@@ -325,10 +325,10 @@ Success conditions should describe observable user behaviors or confirmations ra
 
 ```python
 # Good: Descriptive and unique
-.state("Review order details and confirm purchase", id="order_confirmation")
+.state("review order details and confirm purchase", id="order_confirmation")
 
 # Avoid: Generic or confusing
-.state("Process order", id="process")
+.state("process order", id="process")
 ```
 
 State IDs serve as navigation waypoints and debugging references throughout your pathway logic. Descriptive names make it easier to understand pathway flow, troubleshoot issues, and maintain complex conversation structures over time.
@@ -337,11 +337,11 @@ State IDs serve as navigation waypoints and debugging references throughout your
 
 ```python
 # Good: Progressive information gathering
-.state("Collect basic contact info", id="contact")
+.state("collect basic contact info", id="contact")
 .required(["name", "email"])
 .next_state("detailed_requirements")
 
-.state("Gather detailed project requirements", id="detailed_requirements")
+.state("gather detailed project requirements", id="detailed_requirements")
 .required(["project scope", "timeline", "budget"])
 # Builds on previous information
 ```
@@ -359,20 +359,20 @@ Different branches can reconverge to common states:
 ```{python}
 pathway = (
     tb.Pathways(title="Multi-path Process", desc="...")
-    .state("Initial assessment", id="assessment")
-    .branch_on("Path A condition", id="path_a")
-    .branch_on("Path B condition", id="path_b")
+    .state("initial assessment", id="assessment")
+    .branch_on("path A condition", id="path_a")
+    .branch_on("path B condition", id="path_b")
 
-    .state("Handle Path A", id="path_a")
+    .state("handle path A", id="path_a")
     .required(["path A requirements"])
     .next_state("completion")  # Converge here
 
-    .state("Handle Path B", id="path_b")
+    .state("handle path B", id="path_b")
     .required(["path B requirements"])
     .next_state("completion")  # Converge here
 
-    .state("Complete process", id="completion")
-    .success_condition("All paths lead to successful completion")
+    .state("complete process", id="completion")
+    .success_condition("all paths lead to successful completion")
 )
 ```
 
@@ -385,21 +385,21 @@ Reveal complexity gradually:
 ```{python}
 complex_setup = (
     tb.Pathways(title="System Configuration", desc="...")
-    .state("Basic setup", id="basic")
+    .state("basic setup", id="basic")
     .required(["essential settings configured"])
     .next_state("intermediate")
 
-    .state("Intermediate configuration", id="intermediate")
+    .state("intermediate configuration", id="intermediate")
     .required(["advanced options reviewed"])
     .optional(["performance tuning preferences"])
-    .branch_on("User wants advanced setup", id="advanced")
+    .branch_on("user wants advanced setup", id="advanced")
     .next_state("completion")  # Skip advanced if not needed
 
-    .state("Advanced configuration", id="advanced")
+    .state("advanced configuration", id="advanced")
     .required(["expert settings configured"])
     .next_state("completion")
 
-    .state("Finalize setup", id="completion")
+    .state("finalize setup", id="completion")
     .success_condition("System is fully configured and tested")
 )
 ```
@@ -414,7 +414,7 @@ Pathways provide a powerful way to structure complex conversations while maintai
 - use descriptive state names and specific information requirements
 - let type inference work for you—it reduces boilerplate
 - handle edge cases with the `.fallback()` method
-- test your pathways by printing them and walking through the logic
+- test by printing `Pathways` objects and walking through the logic
 - keep states focused—break complex processes into multiple pathways if needed
 
 With Pathways, you can create sophisticated conversation flows that guide users efficiently while adapting to their natural communication patterns.
