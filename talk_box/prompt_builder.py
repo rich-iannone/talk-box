@@ -26,7 +26,8 @@ class Priority(Enum):
 @dataclass
 class PromptSection:
     """
-    Represents a structured section of an attention-optimized prompt with priority and ordering metadata.
+    Represents a structured section of an attention-optimized prompt with priority and ordering
+    metadata.
 
     The `PromptSection` class is a fundamental building block used by `PromptBuilder` to create
     sophisticated, attention-optimized prompts. Each section encapsulates content along with
@@ -35,41 +36,40 @@ class PromptSection:
 
     **Integration with PromptBuilder**:
 
-    While users can create `PromptSection` objects directly, they are typically created automatically
-    by `PromptBuilder` methods. The sections are then assembled according to attention principles
-    to create optimized final prompts. This design provides both high-level convenience through
-    `PromptBuilder` and fine-grained control through direct `PromptSection` manipulation.
+    While users can create `PromptSection` objects directly, they are typically created
+    automatically by `PromptBuilder` methods. The sections are then assembled according to attention
+    principles to create optimized final prompts. This design provides both high-level convenience
+    through `PromptBuilder` and fine-grained control through direct `PromptSection` manipulation.
 
     **Attention Optimization**:
 
     Each section contributes to the overall attention strategy:
-    - **Priority**: Determines relative importance and influences final ordering
-    - **Section Type**: Enables grouping and specialized handling of content types
-    - **Order Hint**: Provides fine-grained control over section positioning
-    - **Content**: The actual prompt text optimized for the section's role
 
-    The combination of these attributes allows the prompt building system to create prompts
-    that leverage attention mechanisms effectively, ensuring critical information receives
-    appropriate model focus while maintaining natural conversation flow.
+    - **Priority**: determines relative importance and influences final ordering
+    - **Section Type**: enables grouping and specialized handling of content types
+    - **Order Hint**: provides fine-grained control over section positioning
+    - **Content**: the actual prompt text optimized for the section's role
+
+    The combination of these attributes allows the prompt building system to create prompts that
+    leverage attention mechanisms effectively, ensuring critical information receives appropriate
+    model focus while maintaining natural conversation flow.
 
     Parameters
     ----------
     content
-        The text content of the prompt section. This is the actual text that will appear
-        in the final prompt. Content should be crafted to serve the section's specific
-        purpose within the overall prompt strategy.
+        The text content of the prompt section. This is the actual text that will appear in the
+        final prompt. Content should be crafted to serve the section's specific purpose within the
+        overall prompt strategy.
     priority
-        Attention priority level determining section placement order and emphasis.
-        Higher priority sections are typically placed in more prominent positions.
-        Defaults to `Priority.MEDIUM`.
+        Attention priority level determining section placement order and emphasis. Higher priority
+        sections are typically placed in more prominent positions. Defaults to `Priority.MEDIUM`.
     section_type
-        Type classification for the section enabling specialized handling and grouping.
-        This allows the prompt builder to apply type-specific optimization strategies.
-        Defaults to `"general"`.
+        Type classification for the section enabling specialized handling and grouping. This allows
+        the prompt builder to apply type-specific optimization strategies. Defaults to `"general"`.
     order_hint
-        Fine-grained ordering hint where lower numbers appear earlier in the prompt.
-        This provides precise control over section positioning beyond priority levels.
-        Sections with the same priority are ordered by this value. Defaults to `0`.
+        Fine-grained ordering hint where lower numbers appear earlier in the prompt. This provides
+        precise control over section positioning beyond priority levels. Sections with the same
+        priority are ordered by this value. Defaults to `0`.
 
     Returns
     -------
@@ -111,20 +111,20 @@ class PromptSection:
 
     Design Principles
     -----------------
-    **Attention Optimization**: sections are designed to work together to guide model
-    attention effectively, with priority and positioning controlling information hierarchy.
+    **Attention Optimization**: sections are designed to work together to guide model attention
+    effectively, with priority and positioning controlling information hierarchy.
 
-    **Modularity**: each section encapsulates a specific aspect of the prompt, enabling
-    reusable components and systematic prompt construction.
+    **Modularity**: each section encapsulates a specific aspect of the prompt, enabling reusable
+    components and systematic prompt construction.
 
-    **Flexibility**: the section system supports both structured workflows through
-    standard section types and custom applications through extensible metadata.
+    **Flexibility**: the section system supports both structured workflows through standard section
+    types and custom applications through extensible metadata.
 
-    **Composability**: sections can be combined, reordered, and manipulated to create
-    sophisticated prompt strategies for different use cases.
+    **Composability**: sections can be combined, reordered, and manipulated to create sophisticated
+    prompt strategies for different use cases.
 
-    **Cognitive Alignment**: section design aligns with cognitive psychology principles
-    like primacy/recency effects and information chunking for optimal comprehension.
+    **Cognitive Alignment**: section design aligns with cognitive psychology principles like
+    primacy/recency effects and information chunking for optimal comprehension.
 
     Integration Notes
     -----------------
@@ -437,9 +437,8 @@ class PromptBuilder:
 
     Notes
     -----
-    This implementation integrates recent research from attention mechanisms and cognitive psychology
-    to optimize prompt effectiveness. The `PromptBuilder` applies proven principles that enhance model
-    performance and response quality through strategic information placement and cognitive load management.
+    The `PromptBuilder` applies proven principles that enhance model performance and response
+    quality through strategic information placement and cognitive load management.
 
     **Attention Mechanisms Applied:**
 
@@ -457,36 +456,38 @@ class PromptBuilder:
 
     **Prompt Building Methods**
 
-    The `PromptBuilder` provides a comprehensive set of methods for creating structured, attention-optimized prompts.
-    All methods support fluent chaining for natural prompt construction:
+    The `PromptBuilder` provides a comprehensive set of methods for creating structured,
+    attention-optimized prompts. All methods support fluent chaining for natural prompt
+    construction.
 
-    **Core Foundation Methods:**
+    The core foundation methods:
 
     - `persona(role, expertise=None)`: set the AI's identity and behavioral framework
     - `task_context(context, priority=CRITICAL)`: define the primary objective and scope
     - `critical_constraint(constraint)`: add front-loaded, non-negotiable requirements
     - `constraint(constraint)`: add important but secondary requirements
 
-    **Structure and Analysis Methods:**
+    The structure and analysis methods:
 
-    - `structured_section(title, content, priority=MEDIUM, required=False)`: create organized content sections
+    - `structured_section(title, content, priority=MEDIUM, required=False)`: create organized
+    content sections
     - `core_analysis(analysis_points)`: define required analytical focus areas
     - `output_format(format_specs)`: specify response structure and formatting requirements
     - `example(input_example, output_example)`: provide concrete input/output demonstrations
 
-    **Focus and Guidance Methods:**
+    The focus and guidance methods:
 
     - `focus_on(primary_goal)`: emphasize the most important objective
     - `avoid_topics(topics)`: explicitly exclude irrelevant or problematic areas
     - `final_emphasis(emphasis)`: add closing reinforcement using recency bias
 
-    **Output Methods:**
+    Output methods:
 
     - `build()`: generate the final structured prompt string
     - `preview_structure()`: preview the prompt organization and metadata
 
-    Each method is designed to work together in the attention-optimized prompt structure,
-    with positioning and formatting automatically handled to maximize model performance.
+    Each method is designed to work together in the attention-optimized prompt structure, with
+    positioning and formatting automatically handled to maximize model performance.
 
     Examples
     --------
@@ -500,7 +501,7 @@ class PromptBuilder:
     prompt = (
         tb.PromptBuilder()
         .persona("data scientist", "machine learning")
-        .task_context("Analyze customer churn patterns")
+        .task_context("analyze customer churn patterns")
         .focus_on("identifying the top 3 risk factors")
 
     )
@@ -521,27 +522,27 @@ class PromptBuilder:
     prompt = (
         tb.PromptBuilder()
         .persona("senior software architect")
-        .critical_constraint("Focus only on production-ready solutions")
-        .task_context("Review the codebase architecture")
+        .critical_constraint("focus only on production-ready solutions")
+        .task_context("review the codebase architecture")
         .core_analysis([
-            "Identify design patterns used",
-            "Assess scalability bottlenecks",
-            "Review security implications"
+            "identify design patterns used",
+            "assess scalability bottlenecks",
+            "review security implications"
         ])
         .structured_section(
             "Performance Metrics", [
-                "Response time requirements",
-                "Throughput expectations",
-                "Memory usage constraints"
+                "response time requirements",
+                "throughput expectations",
+                "memory usage constraints"
             ],
             priority=tb.Priority.HIGH
         )
         .output_format([
-            "Executive summary (2-3 sentences)",
-            "Detailed findings with code examples",
-            "Prioritized recommendations"
+            "executive summary (2-3 sentences)",
+            "detailed findings with code examples",
+            "prioritized recommendations"
         ])
-        .final_emphasis("Provide actionable next steps")
+        .final_emphasis("provide actionable next steps")
 
     )
     ```
@@ -560,20 +561,20 @@ class PromptBuilder:
     prompt = (
         tb.PromptBuilder()
         .persona("senior developer", "code quality and best practices")
-        .task_context("Review the pull request for potential issues")
-        .critical_constraint("Flag any security vulnerabilities immediately")
+        .task_context("review the pull request for potential issues")
+        .critical_constraint("flag any security vulnerabilities immediately")
         .structured_section(
             "Review Areas", [
-                "Logic and correctness",
-                "Security considerations",
-                "Performance implications",
-                "Code readability and documentation"
+                "logic and correctness",
+                "security considerations",
+                "performance implications",
+                "code readability and documentation"
             ]
         )
         .output_format([
-            "Critical issues (must fix)",
-            "Suggestions (should consider)",
-            "Positive feedback"
+            "critical issues (must fix)",
+            "suggestions (should consider)",
+            "positive feedback"
         ])
         .avoid_topics(["personal coding style preferences"])
         .focus_on("providing constructive, actionable feedback")
@@ -581,26 +582,10 @@ class PromptBuilder:
     )
     ```
 
-    Let us look at the generated prompt:
+    We can look at the generated prompt:
 
     ```{python}
     print(prompt)
-    ```
-
-    ### Using pre-configured builders
-
-    Leverage built-in templates for common tasks:
-
-    ```{python}
-    # Use pre-configured architectural analysis
-    arch_prompt = tb.architectural_analysis_prompt()
-    print(arch_prompt)
-    ```
-
-    ```{python}
-    # Use pre-configured code review
-    review_prompt = tb.code_review_prompt()
-    print(review_prompt)
     ```
     """
 
@@ -645,21 +630,21 @@ class PromptBuilder:
         Parameters
         ----------
         role
-            The primary professional role or identity the AI should adopt. This should be
-            specific and professional (e.g., "senior software architect", "data scientist",
-            "technical writer"). The role influences response style, terminology, and the
+            The primary professional role or identity the AI should adopt. This should be specific
+            and professional (e.g., `"senior software architect"`, `"data scientist"`,
+            `"technical writer"`, etc.). The role influences response style, terminology, and the
             level of technical depth provided.
         expertise
-            Specific area of expertise or specialization within the role. This narrows
-            the focus and enhances domain-specific knowledge application (e.g.,
-            "distributed systems", "machine learning", "API documentation").
-            If not provided, the persona will be general within the specified role.
+            Specific area of expertise or specialization within the role. This narrows the focus and
+            enhances domain-specific knowledge application (e.g., `"distributed systems"`,
+            `"machine learning"`, `"API documentation"`, etc.). If not provided, the persona will be
+            general within the specified role.
 
         Returns
         -------
         PromptBuilder
-            Self for method chaining, allowing combination with other prompt building
-            methods to create comprehensive, structured prompts.
+            Self for method chaining, allowing combination with other prompt building methods to
+            create comprehensive, structured prompts.
 
         Examples
         --------
@@ -674,7 +659,7 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("data analyst")
-            .task_context("Analyze customer satisfaction survey results")
+            .task_context("analyze customer satisfaction survey results")
         )
 
         print(builder)
@@ -689,11 +674,11 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("software engineer", "backend API development")
-            .task_context("Review the authentication service architecture")
+            .task_context("review the authentication service architecture")
             .core_analysis([
-                "Security implementation patterns",
-                "Scalability considerations",
-                "Error handling strategies"
+                "security implementation patterns",
+                "scalability considerations",
+                "error handling strategies"
             ])
         )
 
@@ -709,8 +694,8 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("senior software architect", "distributed systems")
-            .critical_constraint("Focus on production-scale considerations")
-            .task_context("Design a microservices architecture for high-traffic e-commerce")
+            .critical_constraint("focus on production-scale considerations")
+            .task_context("design a microservices architecture for high-traffic e-commerce")
         )
         ```
 
@@ -723,21 +708,21 @@ class PromptBuilder:
         healthcare_builder = (
             tb.PromptBuilder()
             .persona("healthcare data analyst", "clinical research")
-            .task_context("Analyze patient outcome data for treatment effectiveness")
+            .task_context("analyze patient outcome data for treatment effectiveness")
         )
 
         # Financial services expertise
         finance_builder = (
             tb.PromptBuilder()
             .persona("quantitative analyst", "risk management")
-            .task_context("Evaluate portfolio risk exposure across asset classes")
+            .task_context("evaluate portfolio risk exposure across asset classes")
         )
 
         # Educational technology expertise
         edtech_builder = (
             tb.PromptBuilder()
             .persona("educational technologist", "learning analytics")
-            .task_context("Design metrics for measuring student engagement")
+            .task_context("design metrics for measuring student engagement")
         )
         ```
 
@@ -750,21 +735,21 @@ class PromptBuilder:
         review_prompt = (
             tb.PromptBuilder()
             .persona("senior code reviewer", "security and performance")
-            .critical_constraint("Prioritize security vulnerabilities over style issues")
-            .task_context("Review this Python Flask application for production readiness")
+            .critical_constraint("prioritize security vulnerabilities over style issues")
+            .task_context("review this Python Flask application for production readiness")
             .core_analysis([
-                "Authentication and authorization implementation",
-                "Input validation and sanitization",
-                "Database query optimization",
-                "Error handling and logging"
+                "authentication and authorization implementation",
+                "input validation and sanitization",
+                "database query optimization",
+                "error handling and logging"
             ])
             .output_format([
-                "Critical security issues (immediate attention)",
-                "Performance bottlenecks (optimization opportunities)",
-                "Code quality improvements (maintainability)",
-                "Positive patterns (reinforcement)"
+                "critical security issues (immediate attention)",
+                "performance bottlenecks (optimization opportunities)",
+                "code quality improvements (maintainability)",
+                "positive patterns (reinforcement)"
             ])
-            .final_emphasis("Focus on issues that could impact production security or performance")
+            .final_emphasis("focus on issues that could impact production security or performance")
         )
         ```
 
@@ -777,19 +762,19 @@ class PromptBuilder:
         beginner_persona = (
             tb.PromptBuilder()
             .persona("junior developer")
-            .task_context("Explain RESTful API design principles")
+            .task_context("explain RESTful API design principles")
         )
 
         expert_persona = (
             tb.PromptBuilder()
             .persona("principal engineer", "API architecture")
-            .task_context("Explain RESTful API design principles")
+            .task_context("explain RESTful API design principles")
         )
 
-        # The expert persona will provide more sophisticated insights,
-        # advanced patterns, and industry best practices compared to
-        # the junior developer persona's more fundamental explanations
         ```
+
+        The expert persona will provide more sophisticated insights, advanced patterns, and industry
+        best practices compared to the junior developer persona's more fundamental explanations.
 
         ### Multiple expertise areas
 
@@ -800,14 +785,14 @@ class PromptBuilder:
         fullstack_persona = (
             tb.PromptBuilder()
             .persona("full-stack architect", "web applications and cloud infrastructure")
-            .task_context("Design end-to-end solution for real-time collaboration platform")
+            .task_context("design end-to-end solution for real-time collaboration platform")
         )
 
         # Research-focused persona with interdisciplinary expertise
         research_persona = (
             tb.PromptBuilder()
             .persona("research scientist", "machine learning and cognitive psychology")
-            .task_context("Evaluate AI model bias in human-computer interaction contexts")
+            .task_context("evaluate AI model bias in human-computer interaction contexts")
         )
         ```
 
@@ -820,25 +805,22 @@ class PromptBuilder:
         technical_writer = (
             tb.PromptBuilder()
             .persona("technical documentation specialist", "developer tools")
-            .task_context("Create user guide for API integration")
+            .task_context("create user guide for API integration")
         )
-
-        # The persona will consistently use:
-        # - clear, user-focused language
-        # - structured, step-by-step explanations
-        # - practical examples and code snippets
-        # - troubleshooting and best practice guidance
         ```
 
         Integration Notes
         -----------------
-        - **Behavioral Anchoring**: the persona establishes cognitive framework before task instructions
-        - **Response Consistency**: maintains consistent voice and expertise level throughout interaction
+        - **Behavioral Anchoring**: the persona establishes cognitive framework before task
+        instructions
+        - **Response Consistency**: maintains consistent voice and expertise level throughout
+        interaction
         - **Domain Knowledge**: activates relevant knowledge domains and professional terminology
         - **Communication Style**: influences formality, technical depth, and explanatory approach
-        - **Quality Indicators**: expert personas tend to provide more nuanced, comprehensive responses
+        - **Quality Indicators**: expert personas tend to provide more nuanced, comprehensive
+        responses
 
-        The persona method provides the foundational identity that guides all subsequent AI
+        The `.persona()` method provides the foundational identity that guides all subsequent AI
         behavior, ensuring responses align with professional expectations and domain expertise
         requirements.
         """
@@ -856,12 +838,12 @@ class PromptBuilder:
 
         The task context serves as the central objective that guides the entire prompt. It appears
         prominently in the final prompt structure and provides clear direction for the AI model.
-        This method is essential for creating focused, goal-oriented prompts that produce
-        relevant and actionable responses.
+        This method is essential for creating focused, goal-oriented prompts that produce relevant
+        and actionable responses.
 
         **Positioning and Attention**: Task context is typically placed early in the prompt
-        structure (after persona and critical constraints) to establish clear expectations.
-        The default CRITICAL priority ensures the task receives prominent attention placement.
+        structure (after persona and critical constraints) to establish clear expectations. The
+        default `CRITICAL` priority ensures the task receives prominent attention placement.
 
         **Best Practices**:
 
@@ -877,15 +859,14 @@ class PromptBuilder:
             action-oriented and provide sufficient detail for the AI to understand
             the expected scope and deliverables.
         priority
-            Attention priority level for task placement in the final prompt.
-            Defaults to `Priority.CRITICAL` to ensure the main task receives
-            prominent positioning and maximum attention.
+            Attention priority level for task placement in the final prompt. Defaults to
+            `Priority.CRITICAL` to ensure the main task receives prominent positioning and maximum
+            attention.
 
         Returns
         -------
         PromptBuilder
-            Self for method chaining, allowing combination with other prompt
-            building methods.
+            Self for method chaining, allowing combination with other prompt building methods.
 
         Examples
         --------
@@ -900,7 +881,7 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("data analyst")
-            .task_context("Analyze the customer churn data to identify key patterns")
+            .task_context("analyze the customer churn data to identify key patterns")
         )
 
         print(builder)
@@ -915,9 +896,9 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("software architect")
-            .critical_constraint("Focus only on security vulnerabilities")
+            .critical_constraint("focus only on security vulnerabilities")
             .task_context(
-                "Review the authentication system architecture",
+                "review the authentication system architecture",
                 priority=tb.Priority.HIGH
             )
         )
@@ -933,14 +914,14 @@ class PromptBuilder:
             tb.PromptBuilder()
             .persona("technical writer", "API documentation")
             .task_context(
-                "Create comprehensive API documentation for the user management endpoints, "
+                "create comprehensive API documentation for the user management endpoints, "
                 "including authentication requirements, request/response examples, "
                 "and error handling procedures"
             )
             .core_analysis([
-                "Document each endpoint's purpose and functionality",
-                "Provide complete request/response schemas",
-                "Include practical usage examples"
+                "document each endpoint's purpose and functionality",
+                "provide complete request/response schemas",
+                "include practical usage examples"
             ])
         )
         ```
@@ -954,10 +935,10 @@ class PromptBuilder:
         Add a critical constraint that will be front-loaded for maximum attention and impact.
 
         Critical constraints are the highest-priority requirements that must be prominently
-        positioned in the final prompt to ensure maximum model attention and compliance.
-        These constraints are automatically placed in the "CRITICAL REQUIREMENTS" section
-        immediately after the persona and before the main task, leveraging the primacy effect
-        to maximize their influence on response generation.
+        positioned in the final prompt to ensure maximum model attention and compliance. These
+        constraints are automatically placed in the "CRITICAL REQUIREMENTS" section immediately
+        after the persona and before the main task, leveraging the primacy effect to maximize their
+        influence on response generation.
 
         **Research Foundation**: based on findings demonstrating that early-positioned instructions
         have the greatest impact on task accuracy and model compliance. The front-loading strategy
@@ -986,8 +967,9 @@ class PromptBuilder:
         constraint
             Specific constraint or requirement that must receive maximum attention. Should be clear,
             actionable, and measurable when possible. Use imperative language for direct instruction
-            (e.g., `"Focus only on security vulnerabilities"`, `"Provide exactly 3
-            recommendations"`, `"Avoid discussing implementation details"`).
+            (e.g., `"Focus only on security vulnerabilities"`,
+            `"Provide exactly 3 recommendations"`,
+            `"Avoid discussing implementation details"`, etc.).
 
         Returns
         -------
@@ -1008,12 +990,12 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("senior security engineer", "application security")
-            .critical_constraint("Flag any security vulnerabilities immediately")
-            .task_context("Review this authentication implementation")
+            .critical_constraint("flag any security vulnerabilities immediately")
+            .task_context("review this authentication implementation")
             .core_analysis([
-                "Input validation and sanitization",
-                "Authentication mechanisms",
-                "Authorization controls"
+                "input validation and sanitization",
+                "authentication mechanisms",
+                "authorization controls"
             ])
         )
 
@@ -1029,8 +1011,8 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("data analyst", "business intelligence")
-            .critical_constraint("Provide exactly 3 key findings with supporting data")
-            .task_context("Analyze quarterly sales performance")
+            .critical_constraint("provide exactly 3 key findings with supporting data")
+            .task_context("analyze quarterly sales performance")
             .output_format([
                 "Finding 1: [Insight] - [Supporting metric]",
                 "Finding 2: [Insight] - [Supporting metric]",
@@ -1049,10 +1031,10 @@ class PromptBuilder:
             tb.PromptBuilder()
             .persona("health information specialist")
             .critical_constraint(
-                "Do not provide specific medical diagnoses or treatment recommendations"
+                "do not provide specific medical diagnoses or treatment recommendations"
             )
             .task_context(
-                "Explain general wellness concepts and direct to healthcare professionals"
+                "explain general wellness concepts and direct to healthcare professionals"
             )
         )
         ```
@@ -1066,12 +1048,12 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("senior software architect", "enterprise systems")
-            .critical_constraint("Focus only on production-ready, scalable solutions")
-            .task_context("Design microservices architecture for high-traffic application")
+            .critical_constraint("focus only on production-ready, scalable solutions")
+            .task_context("design microservices architecture for high-traffic application")
             .core_analysis([
-                "Scalability patterns",
-                "Fault tolerance mechanisms",
-                "Performance optimization strategies"
+                "scalability patterns",
+                "fault tolerance mechanisms",
+                "performance optimization strategies"
             ])
         )
         ```
@@ -1087,15 +1069,15 @@ class PromptBuilder:
             .persona("principal engineer", "financial systems")
 
             # First priority -- Regulatory compliance
-            .critical_constraint("Ensure all recommendations comply with financial regulations")
+            .critical_constraint("ensure all recommendations comply with financial regulations")
 
             # Second priority -- Proven solutions
-            .critical_constraint("Focus on solutions with proven track records in banking")
+            .critical_constraint("focus on solutions with proven track records in banking")
 
             # Third priority -- Security prioritization
-            .critical_constraint("Prioritize security over performance optimizations")
+            .critical_constraint("prioritize security over performance optimizations")
 
-            .task_context("Architect payment processing system for online banking")
+            .task_context("architect payment processing system for online banking")
         )
         ```
 
@@ -1108,12 +1090,12 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("incident response specialist", "system outages")
-            .critical_constraint("Provide immediate actionable steps for system recovery")
-            .task_context("Diagnose and resolve database connection failures")
+            .critical_constraint("provide immediate actionable steps for system recovery")
+            .task_context("diagnose and resolve database connection failures")
             .output_format([
-                "Immediate actions (next 5 minutes)",
-                "Short-term fixes (next hour)",
-                "Long-term prevention (next sprint)"
+                "immediate actions (next 5 minutes)",
+                "short-term fixes (next hour)",
+                "long-term prevention (next sprint)"
             ])
         )
         ```
@@ -1127,24 +1109,24 @@ class PromptBuilder:
         healthcare_builder = (
             tb.PromptBuilder()
             .persona("healthcare data engineer", "HIPAA compliance")
-            .critical_constraint("Ensure all recommendations maintain patient data privacy")
-            .task_context("Design data pipeline for clinical research")
+            .critical_constraint("ensure all recommendations maintain patient data privacy")
+            .task_context("design data pipeline for clinical research")
         )
 
         # Educational content creation
         education_builder = (
             tb.PromptBuilder()
             .persona("curriculum designer", "K-12 education")
-            .critical_constraint("Ensure content is age-appropriate for target grade level")
-            .task_context("Create interactive science lesson plan")
+            .critical_constraint("ensure content is age-appropriate for target grade level")
+            .task_context("create interactive science lesson plan")
         )
 
         # Financial analysis
         finance_builder = (
             tb.PromptBuilder()
             .persona("risk analyst", "portfolio management")
-            .critical_constraint("Include risk disclaimers for all investment recommendations")
-            .task_context("Analyze emerging market investment opportunities")
+            .critical_constraint("include risk disclaimers for all investment recommendations")
+            .task_context("analyze emerging market investment opportunities")
         )
         ```
 
@@ -1157,14 +1139,14 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("technical lead", "code quality")
-            .critical_constraint("Identify blocking issues that prevent deployment") # Critical
-            .task_context("Review pull request for production release")
-            .constraint("Consider coding style consistency")                         # Standard
-            .constraint("Suggest performance improvements")                          # Standard
+            .critical_constraint("identify blocking issues that prevent deployment") # Critical
+            .task_context("review pull request for production release")
+            .constraint("consider coding style consistency")                         # Standard
+            .constraint("suggest performance improvements")                          # Standard
             .core_analysis([
-                "Security vulnerabilities",
-                "Logic errors and edge cases",
-                "Integration and compatibility issues"
+                "security vulnerabilities",
+                "logic errors and edge cases",
+                "integration and compatibility issues"
             ])
         )
         ```
@@ -1178,30 +1160,33 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("performance engineer", "web optimization")
-            .critical_constraint("All recommendations must target sub-100ms response times")
-            .task_context("Optimize API endpoint performance")
+            .critical_constraint("all recommendations must target sub-100ms response times")
+            .task_context("optimize API endpoint performance")
         )
 
         # Quantitative analysis constraint
         analysis_builder = (
             tb.PromptBuilder()
             .persona("data scientist", "statistical analysis")
-            .critical_constraint("Include confidence intervals and statistical significance for all findings")
-            .task_context("Analyze A/B test results for conversion optimization")
+            .critical_constraint("include confidence intervals and statistical significance for all findings")
+            .task_context("analyze A/B test results for conversion optimization")
         )
         ```
 
         Integration Notes
         -----------------
-        - **Primacy Effect**: Critical constraints appear early in the prompt for maximum impact
-        - **Attention Allocation**: Front-loading ensures these requirements receive priority processing
-        - **Constraint Ordering**: Multiple critical constraints maintain insertion order for hierarchical importance
-        - **Quality Assurance**: Critical constraints serve as quality gates for response evaluation
-        - **Behavioral Anchoring**: Works with persona to establish both identity and non-negotiable requirements
+        - **Primacy Effect**: critical constraints appear early in the prompt for maximum impact
+        - **Attention Allocation**: front-loading ensures these requirements receive priority
+        processing
+        - **Constraint Ordering**: multiple critical constraints maintain insertion order for
+        hierarchical importance
+        - **Quality Assurance**: critical constraints serve as quality gates for response evaluation
+        - **Behavioral Anchoring**: works with persona to establish both identity and non-negotiable
+        requirements
 
-        The critical_constraint method ensures that the most important requirements are positioned
-        for maximum attention and compliance, creating a foundation of non-negotiable standards
-        that guide all subsequent reasoning and response generation.
+        The `.critical_constraint()` method ensures that the most important requirements are
+        positioned for maximum attention and compliance, creating a foundation of non-negotiable
+        standards that guide all subsequent reasoning and response generation.
         """
         self._constraints.insert(0, constraint)
         return self
@@ -1241,9 +1226,9 @@ class PromptBuilder:
         ----------
         constraint
             Specific constraint, requirement, or guideline that should influence the AI's response.
-            Should be clear and actionable, using directive language when appropriate (e.g., `"Use
-            clear, concise language"`, `"Include practical examples"`, `"Avoid overly technical
-            jargon"`).
+            Should be clear and actionable, using directive language when appropriate (e.g.,
+            `"Use clear, concise language"`, `"Include practical examples"`,
+            `"Avoid overly technical jargon"`, etc.).
 
         Returns
         -------
@@ -1264,14 +1249,14 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("technical writer", "API documentation")
-            .task_context("Create user guide for authentication API")
-            .constraint("Use clear, concise language appropriate for developers")
-            .constraint("Include practical code examples for each endpoint")
-            .constraint("Provide troubleshooting guidance for common issues")
+            .task_context("create user guide for authentication API")
+            .constraint("use clear, concise language appropriate for developers")
+            .constraint("include practical code examples for each endpoint")
+            .constraint("provide troubleshooting guidance for common issues")
             .core_analysis([
-                "Authentication flow and requirements",
-                "Error handling and status codes",
-                "Rate limiting and best practices"
+                "authentication flow and requirements",
+                "error handling and status codes",
+                "rate limiting and best practices"
             ])
         )
 
@@ -1287,15 +1272,15 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("senior software architect", "microservices")
-            .critical_constraint("Focus only on production-ready patterns")
-            .task_context("Review microservices architecture design")
-            .constraint("Prefer established patterns over novel approaches")
-            .constraint("Consider scalability implications for each recommendation")
-            .constraint("Include performance trade-offs in analysis")
+            .critical_constraint("focus only on production-ready patterns")
+            .task_context("review microservices architecture design")
+            .constraint("prefer established patterns over novel approaches")
+            .constraint("consider scalability implications for each recommendation")
+            .constraint("include performance trade-offs in analysis")
             .core_analysis([
-                "Service decomposition strategy",
-                "Inter-service communication patterns",
-                "Data consistency approaches"
+                "service decomposition strategy",
+                "inter-service communication patterns",
+                "data consistency approaches"
             ])
         )
         ```
@@ -1309,15 +1294,15 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code quality")
-            .task_context("Review pull request for junior developer")
-            .constraint("Provide constructive, encouraging feedback")
-            .constraint("Explain the reasoning behind each suggestion")
-            .constraint("Include positive reinforcement for good practices")
-            .constraint("Suggest learning resources for improvement areas")
+            .task_context("review pull request for junior developer")
+            .constraint("provide constructive, encouraging feedback")
+            .constraint("explain the reasoning behind each suggestion")
+            .constraint("include positive reinforcement for good practices")
+            .constraint("suggest learning resources for improvement areas")
             .core_analysis([
-                "Code correctness and logic",
-                "Security considerations",
-                "Maintainability and readability"
+                "code correctness and logic",
+                "security considerations",
+                "maintainability and readability"
             ])
         )
         ```
@@ -1331,22 +1316,22 @@ class PromptBuilder:
         healthcare_builder = (
             tb.PromptBuilder()
             .persona("healthcare software architect", "HIPAA compliance")
-            .critical_constraint("All recommendations must maintain patient privacy")
-            .task_context("Design patient data management system")
-            .constraint("Consider healthcare industry regulations")
-            .constraint("Prioritize data security over performance optimizations")
-            .constraint("Include audit trail requirements in recommendations")
+            .critical_constraint("all recommendations must maintain patient privacy")
+            .task_context("design patient data management system")
+            .constraint("consider healthcare industry regulations")
+            .constraint("prioritize data security over performance optimizations")
+            .constraint("include audit trail requirements in recommendations")
         )
 
         # Educational content constraints
         education_builder = (
             tb.PromptBuilder()
             .persona("curriculum designer", "computer science education")
-            .task_context("Create programming exercises for beginners")
-            .constraint("Use relatable, real-world examples")
-            .constraint("Progress from simple to complex concepts gradually")
-            .constraint("Include common mistake explanations")
-            .constraint("Provide both guided and independent practice opportunities")
+            .task_context("create programming exercises for beginners")
+            .constraint("use relatable, real-world examples")
+            .constraint("progress from simple to complex concepts gradually")
+            .constraint("include common mistake explanations")
+            .constraint("provide both guided and independent practice opportunities")
         )
         ```
 
@@ -1359,16 +1344,16 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("data scientist", "business analytics")
-            .task_context("Analyze customer behavior patterns")
-            .constraint("Support findings with statistical evidence")
-            .constraint("Use clear visualizations to illustrate trends")
-            .constraint("Explain methodology and assumptions clearly")
-            .constraint("Provide actionable business recommendations")
-            .constraint("Include confidence levels for predictions")
+            .task_context("analyze customer behavior patterns")
+            .constraint("support findings with statistical evidence")
+            .constraint("use clear visualizations to illustrate trends")
+            .constraint("explain methodology and assumptions clearly")
+            .constraint("provide actionable business recommendations")
+            .constraint("include confidence levels for predictions")
             .core_analysis([
-                "Customer segmentation patterns",
-                "Behavioral trend analysis",
-                "Predictive modeling opportunities"
+                "customer segmentation patterns",
+                "behavioral trend analysis",
+                "predictive modeling opportunities"
             ])
         )
         ```
@@ -1383,15 +1368,15 @@ class PromptBuilder:
             tb.PromptBuilder()
             .persona("security engineer", "application security")
             .critical_constraint("Identify blocking security vulnerabilities immediately")
-            .task_context("Security audit of web application")
-            .constraint("Consider OWASP Top 10 guidelines")                    # Standard
-            .constraint("Evaluate both code and infrastructure security")     # Standard
-            .constraint("Provide remediation priority levels")                # Standard
-            .constraint("Include compliance implications where relevant")      # Standard
+            .task_context("security audit of web application")
+            .constraint("consider OWASP Top 10 guidelines")                    # Standard
+            .constraint("evaluate both code and infrastructure security")      # Standard
+            .constraint("provide remediation priority levels")                 # Standard
+            .constraint("include compliance implications where relevant")      # Standard
             .core_analysis([
-                "Authentication and authorization",
-                "Input validation and sanitization",
-                "Data protection and encryption"
+                "authentication and authorization",
+                "input validation and sanitization",
+                "data protection and encryption"
             ])
         )
         ```
@@ -1405,16 +1390,16 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("technical documentation specialist")
-            .task_context("Create troubleshooting guide for deployment issues")
-            .constraint("Organize information from most common to least common issues")
-            .constraint("Include step-by-step resolution procedures")
-            .constraint("Provide prevention strategies for each issue type")
-            .constraint("Use consistent formatting and terminology throughout")
+            .task_context("create troubleshooting guide for deployment issues")
+            .constraint("organize information from most common to least common issues")
+            .constraint("include step-by-step resolution procedures")
+            .constraint("provide prevention strategies for each issue type")
+            .constraint("use consistent formatting and terminology throughout")
             .output_format([
-                "Issue description and symptoms",
-                "Root cause analysis",
-                "Step-by-step resolution",
-                "Prevention recommendations"
+                "issue description and symptoms",
+                "root cause analysis",
+                "step-by-step resolution",
+                "prevention recommendations"
             ])
         )
         ```
@@ -1428,22 +1413,22 @@ class PromptBuilder:
         finance_builder = (
             tb.PromptBuilder()
             .persona("quantitative analyst", "risk modeling")
-            .task_context("Build portfolio risk assessment model")
-            .constraint("Follow industry standard risk metrics (VaR, CVaR)")
-            .constraint("Include stress testing scenarios")
-            .constraint("Provide model validation approaches")
-            .constraint("Consider regulatory compliance requirements")
+            .task_context("build portfolio risk assessment model")
+            .constraint("follow industry standard risk metrics (VaR, CVaR)")
+            .constraint("include stress testing scenarios")
+            .constraint("provide model validation approaches")
+            .constraint("consider regulatory compliance requirements")
         )
 
         # Machine learning with best practice constraints
         ml_builder = (
             tb.PromptBuilder()
             .persona("machine learning engineer", "model deployment")
-            .task_context("Design ML pipeline for production deployment")
-            .constraint("Include data drift monitoring strategies")
-            .constraint("Address model explainability requirements")
-            .constraint("Consider computational efficiency constraints")
-            .constraint("Plan for model versioning and rollback capabilities")
+            .task_context("design ML pipeline for production deployment")
+            .constraint("include data drift monitoring strategies")
+            .constraint("address model explainability requirements")
+            .constraint("consider computational efficiency constraints")
+            .constraint("plan for model versioning and rollback capabilities")
         )
         ```
 
@@ -1456,15 +1441,15 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("performance engineer", "web applications")
-            .task_context("Optimize application response times")
-            .constraint("Target specific performance metrics (load time, throughput)")
-            .constraint("Include before/after measurement strategies")
-            .constraint("Consider mobile and desktop performance separately")
-            .constraint("Provide implementation effort estimates")
+            .task_context("optimize application response times")
+            .constraint("target specific performance metrics (load time, throughput)")
+            .constraint("include before/after measurement strategies")
+            .constraint("consider mobile and desktop performance separately")
+            .constraint("provide implementation effort estimates")
             .core_analysis([
-                "Frontend optimization opportunities",
-                "Backend performance bottlenecks",
-                "Database query optimization"
+                "frontend optimization opportunities",
+                "backend performance bottlenecks",
+                "database query optimization"
             ])
         )
         ```
@@ -1478,29 +1463,33 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("tech lead", "team mentorship")
-            .task_context("Review code changes for team learning")
-            .constraint("Explain best practices for team knowledge sharing")
-            .constraint("Suggest pair programming opportunities")
-            .constraint("Identify patterns that could be standardized")
-            .constraint("Recommend documentation improvements")
+            .task_context("review code changes for team learning")
+            .constraint("explain best practices for team knowledge sharing")
+            .constraint("suggest pair programming opportunities")
+            .constraint("identify patterns that could be standardized")
+            .constraint("recommend documentation improvements")
             .core_analysis([
-                "Code quality and maintainability",
-                "Team collaboration opportunities",
-                "Knowledge transfer potential"
+                "code quality and maintainability",
+                "team collaboration opportunities",
+                "knowledge transfer potential"
             ])
         )
         ```
 
         Integration Notes
         -----------------
+        - **Attention Hierarchy**: standard constraints appear after critical content to maintain
+        focus
+        - **Quality Enhancement**: these constraints refine and improve response quality without
+        overriding priorities
+        - **Flexibility**: supports diverse requirement types from technical to behavioral to
+        domain specific
+        - **Systematic Organization**: constraints are grouped logically in the final prompt
+        structure
+        - **Complementary Function**: works alongside critical constraints to create comprehensive
+        requirement sets
 
-        - **Attention Hierarchy**: Standard constraints appear after critical content to maintain focus
-        - **Quality Enhancement**: These constraints refine and improve response quality without overriding priorities
-        - **Flexibility**: Supports diverse requirement types from technical to behavioral to domain-specific
-        - **Systematic Organization**: Constraints are grouped logically in the final prompt structure
-        - **Complementary Function**: Works alongside critical constraints to create comprehensive requirement sets
-
-        The constraint method provides flexible, systematic way to communicate important
+        The `.constraint()` method provides flexible, systematic way to communicate important
         requirements and preferences that enhance response quality while respecting the overall
         attention optimization strategy of the prompt building system.
         """
@@ -1523,19 +1512,18 @@ class PromptBuilder:
         model to process information in logical, digestible chunks while maintaining focus on
         specific aspects of the task.
 
-        **Research Foundation**: creates distinct attention clusters as recommended by Liu et al.
-        (2023) for preventing attention drift in complex prompts. The structured approach leverages
-        cognitive psychology principles of chunking and visual hierarchy to improve information
-        processing and comprehension.
+        **Research Foundation**: creates distinct attention clusters for preventing attention drift
+        in complex prompts. The structured approach leverages cognitive psychology principles of
+        chunking and visual hierarchy to improve information processing and comprehension.
 
         **Attention Clustering**: structured sections group related information together, creating
         focused attention zones that help the model process complex requirements systematically.
         This prevents attention from being scattered across disconnected information and maintains
         cognitive coherence throughout the prompt.
 
-        **Visual Hierarchy**: each section uses uppercase titles and consistent formatting to
-        create clear visual boundaries. This visual organization helps both human readers and
-        AI models navigate complex prompts more effectively.
+        **Visual Hierarchy**: each section uses uppercase titles and consistent formatting to create
+        clear visual boundaries. This visual organization helps both human readers and AI models
+        navigate complex prompts more effectively.
 
         **Priority-Based Ordering**: sections are automatically ordered by priority and insertion
         order in the final prompt, ensuring that higher-priority content receives appropriate
@@ -1544,29 +1532,29 @@ class PromptBuilder:
         Parameters
         ----------
         title
-            Section heading that will be converted to uppercase for clear visual separation.
-            Should be descriptive and specific to the content type (e.g., `"Review Areas"`,
-            `"Performance Metrics"`, `"Security Requirements"`). The title helps create mental
+            Section heading that will be converted to uppercase for clear visual separation. Should
+            be descriptive and specific to the content type (e.g., `"Review Areas"`,
+            `"Performance Metrics"`, `"Security Requirements"`, etc.). The title helps create mental
             models for information organization.
         content
-            Section content provided as either a single string or a list of items. When
-            provided as a list, each item is automatically formatted with bullet points
-            for clear visual organization. Content should be specific, actionable, and
-            relevant to the section's purpose.
+            Section content provided as either a single string or a list of items. When provided as
+            a list, each item is automatically formatted with bullet points for clear visual
+            organization. Content should be specific, actionable, and relevant to the section's
+            purpose.
         priority
-            Attention priority level for section placement in the final prompt structure.
-            Higher priority sections appear earlier in the prompt to leverage primacy
-            effects. Defaults to `Priority.MEDIUM` for balanced attention allocation.
+            Attention priority level for section placement in the final prompt structure. Higher
+            priority sections appear earlier in the prompt to leverage primacy effects. Defaults to
+            `Priority.MEDIUM` for balanced attention allocation.
         required
-            Whether to mark the section as required in the output by appending `"(Required)"`
-            to the section title. This visual indicator emphasizes critical sections that
-            must be addressed in the response. Defaults to `False`.
+            Whether to mark the section as required in the output by appending `"(Required)"` to the
+            section title. This visual indicator emphasizes critical sections that must be addressed
+            in the response. Defaults to `False`.
 
         Returns
         -------
         PromptBuilder
-            Self for method chaining, allowing combination with other prompt building
-            methods to create comprehensive, structured prompts.
+            Self for method chaining, allowing combination with other prompt building methods to
+            create comprehensive, structured prompts.
 
         Examples
         --------
@@ -1581,10 +1569,10 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("software architect", "system design")
-            .task_context("Review microservices architecture")
+            .task_context("review microservices architecture")
             .structured_section(
                 "Architecture Principles",
-                "Focus on scalability, maintainability, and fault tolerance"
+                "focus on scalability, maintainability, and fault tolerance"
             )
         )
 
@@ -1600,12 +1588,12 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security")
-            .task_context("Conduct security audit of web application")
+            .task_context("conduct security audit of web application")
             .structured_section(
                 "Security Focus Areas", [
-                    "Authentication and authorization mechanisms",
-                    "Input validation and sanitization",
-                    "Data encryption and protection",
+                    "authentication and authorization mechanisms",
+                    "input validation and sanitization",
+                    "data encryption and protection",
                     "API security and rate limiting"
                 ]
             )
@@ -1621,13 +1609,13 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("data scientist", "machine learning")
-            .task_context("Evaluate model performance and bias")
+            .task_context("evaluate model performance and bias")
             .structured_section(
                 "Model Validation", [
-                    "Accuracy metrics across demographic groups",
-                    "Bias detection and mitigation strategies",
-                    "Cross-validation and generalization testing",
-                    "Ethical considerations and fairness metrics"
+                    "accuracy metrics across demographic groups",
+                    "bias detection and mitigation strategies",
+                    "cross-validation and generalization testing",
+                    "ethical considerations and fairness metrics"
                 ],
                 priority=tb.Priority.HIGH,
                 required=True
@@ -1644,33 +1632,33 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("technical lead", "code review and mentorship")
-            .critical_constraint("Focus on production readiness and team learning")
-            .task_context("Review pull request for junior developer")
+            .critical_constraint("focus on production readiness and team learning")
+            .task_context("review pull request for junior developer")
             .structured_section(
                 "Code Quality Assessment", [
-                    "Logic correctness and edge case handling",
-                    "Security vulnerabilities and best practices",
-                    "Performance implications and optimizations",
-                    "Code readability and maintainability"
+                    "logic correctness and edge case handling",
+                    "security vulnerabilities and best practices",
+                    "performance implications and optimizations",
+                    "code readability and maintainability"
                 ],
                 priority=tb.Priority.HIGH,
                 required=True
             )
             .structured_section(
                 "Learning Opportunities", [
-                    "Design patterns that could be applied",
-                    "Best practices worth highlighting",
-                    "Areas for skill development",
-                    "Recommended learning resources"
+                    "design patterns that could be applied",
+                    "best practices worth highlighting",
+                    "areas for skill development",
+                    "recommended learning resources"
                 ],
                 priority=tb.Priority.MEDIUM
             )
             .structured_section(
                 "Team Knowledge Sharing", [
-                    "Patterns that could be standardized",
-                    "Documentation improvements needed",
-                    "Opportunities for pair programming",
-                    "Code that exemplifies good practices"
+                    "patterns that could be standardized",
+                    "documentation improvements needed",
+                    "opportunities for pair programming",
+                    "code that exemplifies good practices"
                 ],
                 priority=tb.Priority.LOW
             )
@@ -1686,13 +1674,13 @@ class PromptBuilder:
         healthcare_builder = (
             tb.PromptBuilder()
             .persona("healthcare software architect", "HIPAA compliance")
-            .task_context("Review patient data management system")
+            .task_context("review patient data management system")
             .structured_section(
                 "HIPAA Compliance Requirements", [
-                    "Patient data encryption and access controls",
-                    "Audit trail and logging mechanisms",
-                    "Data minimization and retention policies",
-                    "Breach detection and notification procedures"
+                    "patient data encryption and access controls",
+                    "audit trail and logging mechanisms",
+                    "data minimization and retention policies",
+                    "breach detection and notification procedures"
                 ],
                 priority=tb.Priority.CRITICAL,
                 required=True
@@ -1703,13 +1691,13 @@ class PromptBuilder:
         finance_builder = (
             tb.PromptBuilder()
             .persona("financial systems architect", "regulatory compliance")
-            .task_context("Design trading system architecture")
+            .task_context("design trading system architecture")
             .structured_section(
                 "Regulatory Considerations", [
-                    "Market data handling and latency requirements",
-                    "Trade reporting and compliance monitoring",
-                    "Risk management and circuit breakers",
-                    "Audit trails and regulatory reporting"
+                    "market data handling and latency requirements",
+                    "trade reporting and compliance monitoring",
+                    "risk management and circuit breakers",
+                    "audit trails and regulatory reporting"
                 ],
                 priority=tb.Priority.HIGH,
                 required=True
@@ -1726,12 +1714,12 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("performance engineer", "web application optimization")
-            .task_context("Optimize application performance for high traffic")
+            .task_context("optimize application performance for high traffic")
             .structured_section(
                 "Performance Targets", [
-                    "Page load times under 2 seconds",
+                    "page load times under 2 seconds",
                     "API response times under 100ms",
-                    "Support for 10,000 concurrent users",
+                    "support for 10,000 concurrent users",
                     "99.9% uptime availability"
                 ],
                 priority=tb.Priority.HIGH,
@@ -1739,10 +1727,10 @@ class PromptBuilder:
             )
             .structured_section(
                 "Optimization Areas", [
-                    "Frontend asset optimization and caching",
-                    "Database query performance and indexing",
+                    "frontend asset optimization and caching",
+                    "database query performance and indexing",
                     "CDN implementation and edge caching",
-                    "Server-side rendering and lazy loading"
+                    "server-side rendering and lazy loading"
                 ],
                 priority=tb.Priority.MEDIUM
             )
@@ -1758,23 +1746,23 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("curriculum designer", "computer science education")
-            .task_context("Create comprehensive Python programming course")
+            .task_context("create comprehensive Python programming course")
             .structured_section(
                 "Learning Objectives", [
-                    "Understand fundamental programming concepts",
-                    "Master Python syntax and data structures",
-                    "Apply object-oriented programming principles",
-                    "Build practical projects and applications"
+                    "understand fundamental programming concepts",
+                    "master Python syntax and data structures",
+                    "apply object-oriented programming principles",
+                    "build practical projects and applications"
                 ],
                 priority=tb.Priority.HIGH,
                 required=True
             )
             .structured_section(
                 "Pedagogical Approach", [
-                    "Start with hands-on coding exercises",
-                    "Progress from simple to complex concepts",
-                    "Include real-world project examples",
-                    "Provide immediate feedback and correction"
+                    "start with hands-on coding exercises",
+                    "progress from simple to complex concepts",
+                    "include real-world project examples",
+                    "provide immediate feedback and correction"
                 ],
                 priority=tb.Priority.MEDIUM
             )
@@ -1790,23 +1778,23 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("research analyst", "market intelligence")
-            .task_context("Analyze emerging technology adoption trends")
+            .task_context("analyze emerging technology adoption trends")
             .structured_section(
                 "Research Methodology", [
-                    "Quantitative data analysis and statistical testing",
-                    "Qualitative interviews and survey analysis",
-                    "Competitive landscape and market mapping",
-                    "Trend analysis and future projections"
+                    "quantitative data analysis and statistical testing",
+                    "qualitative interviews and survey analysis",
+                    "competitive landscape and market mapping",
+                    "trend analysis and future projections"
                 ],
                 priority=tb.Priority.HIGH,
                 required=True
             )
             .structured_section(
                 "Deliverable Requirements", [
-                    "Executive summary with key findings",
-                    "Detailed methodology and data sources",
-                    "Visual charts and trend illustrations",
-                    "Actionable recommendations and next steps"
+                    "executive summary with key findings",
+                    "detailed methodology and data sources",
+                    "visual charts and trend illustrations",
+                    "actionable recommendations and next steps"
                 ],
                 priority=tb.Priority.MEDIUM,
                 required=True
@@ -1823,23 +1811,23 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("QA engineer", "test automation and quality assurance")
-            .task_context("Develop comprehensive testing strategy")
+            .task_context("develop comprehensive testing strategy")
             .structured_section(
                 "Testing Scope", [
-                    "Unit testing for individual components",
-                    "Integration testing for system interactions",
-                    "End-to-end testing for user workflows",
-                    "Performance testing under load conditions"
+                    "unit testing for individual components",
+                    "integration testing for system interactions",
+                    "end-to-end testing for user workflows",
+                    "performance testing under load conditions"
                 ],
                 priority=tb.Priority.HIGH,
                 required=True
             )
             .structured_section(
                 "Quality Metrics", [
-                    "Code coverage targets (minimum 80%)",
-                    "Test execution time optimization",
-                    "Defect detection and resolution rates",
-                    "Automation coverage and maintenance"
+                    "code coverage targets (minimum 80%)",
+                    "test execution time optimization",
+                    "defect detection and resolution rates",
+                    "automation coverage and maintenance"
                 ],
                 priority=tb.Priority.MEDIUM
             )
@@ -1855,17 +1843,17 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("technical writer", "API documentation")
-            .task_context("Create comprehensive API documentation")
+            .task_context("create comprehensive API documentation")
             .structured_section(
-                "Documentation Standards",
-                "Follow OpenAPI 3.0 specification for consistency and completeness"
+                "documentation Standards",
+                "follow OpenAPI 3.0 specification for consistency and completeness"
             )
             .structured_section(
                 "Required Documentation Elements", [
-                    "Endpoint descriptions with purpose and usage",
-                    "Request/response schemas with examples",
-                    "Authentication and authorization details",
-                    "Error codes and troubleshooting guidance"
+                    "endpoint descriptions with purpose and usage",
+                    "request/response schemas with examples",
+                    "authentication and authorization details",
+                    "error codes and troubleshooting guidance"
                 ],
                 required=True
             )
@@ -1874,16 +1862,19 @@ class PromptBuilder:
 
         Integration Notes
         -----------------
-        - **Attention Clustering**: Creates focused information zones that prevent cognitive overload
+        - **Attention Clustering**: Creates focused information zones that prevent cognitive
+        overload
         - **Visual Organization**: Consistent formatting improves prompt readability and navigation
-        - **Priority-Based Ordering**: Sections are automatically sorted by priority for optimal attention flow
+        - **Priority-Based Ordering**: Sections are automatically sorted by priority for optimal
+        attention flow
         - **Flexible Content**: Supports both single-string and list-based content organization
         - **Requirement Emphasis**: Required sections receive visual emphasis to ensure coverage
-        - **Cognitive Chunking**: Information is organized in digestible units that align with human processing limits
+        - **Cognitive Chunking**: Information is organized in digestible units that align with human
+        processing limits
 
-        The structured_section method provides a powerful tool for organizing complex information
-        in attention-optimized ways, enabling the creation of sophisticated prompts that maintain
-        clarity and focus while addressing multiple aspects of complex tasks.
+        The `.structured_section()` method provides a powerful tool for organizing complex
+        information in attention-optimized ways, enabling the creation of sophisticated prompts that
+        maintain clarity and focus while addressing multiple aspects of complex tasks.
         """
         if isinstance(content, list):
             content_str = "\n".join(f"- {item}" for item in content)
@@ -1912,7 +1903,7 @@ class PromptBuilder:
 
         The core analysis method creates the central analytical framework that defines what specific
         aspects must be examined and addressed in the AI's response. This method automatically
-        creates a "CORE ANALYSIS (Required)" section with high priority placement, ensuring that
+        creates a `"CORE ANALYSIS (Required)"` section with high priority placement, ensuring that
         the fundamental analytical requirements receive prominent attention and are treated as
         non-negotiable deliverables.
 
@@ -1928,29 +1919,28 @@ class PromptBuilder:
         analytical objectives receive appropriate focus.
 
         **Analytical Framework**: each analysis point should represent a distinct analytical
-        dimension or investigative angle that contributes to comprehensive coverage of the task.
-        The points work together to create a systematic analytical framework that guides the AI's
+        dimension or investigative angle that contributes to comprehensive coverage of the task. The
+        points work together to create a systematic analytical framework that guides the AI's
         examination process and ensures thorough, structured analysis.
 
         **Quality Assurance**: by marking core analysis as required, this method establishes
-        analytical accountability and the AI must address each specified analysis point to provide
-        a complete response. This prevents superficial analysis and ensures comprehensive coverage
-        of critical analytical dimensions.
+        analytical accountability and the AI must address each specified analysis point to provide a
+        complete response. This prevents superficial analysis and ensures comprehensive coverage of
+        critical analytical dimensions.
 
         Parameters
         ----------
         analysis_points
-            List of specific analysis requirements that define the mandatory analytical
-            dimensions. Each point should be clear, actionable, and represent a distinct
-            aspect of the analysis. Points should be formulated as analytical objectives
-            rather than general suggestions (e.g., `"Evaluate security implementation patterns"`
-            rather than `"Look at security"`).
+            List of specific analysis requirements that define the mandatory analytical dimensions.
+            Each point should be clear, actionable, and represent a distinct aspect of the analysis.
+            Points should be formulated as analytical objectives rather than general suggestions
+            (e.g., `"evaluate security implementation patterns"` rather than `"look at security"`).
 
         Returns
         -------
         PromptBuilder
-            Self for method chaining, allowing combination with other prompt building
-            methods to create comprehensive, structured prompts.
+            Self for method chaining, allowing combination with other prompt building methods to
+            create comprehensive, structured prompts.
 
         Examples
         --------
@@ -1965,14 +1955,14 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("senior software architect", "enterprise systems")
-            .critical_constraint("Focus on production-ready, scalable solutions")
-            .task_context("Review microservices architecture for e-commerce platform")
+            .critical_constraint("focus on production-ready, scalable solutions")
+            .task_context("review microservices architecture for e-commerce platform")
             .core_analysis([
-                "Evaluate service decomposition strategy and boundaries",
-                "Assess inter-service communication patterns and protocols",
-                "Analyze data consistency and transaction management approaches",
-                "Review scalability patterns and load distribution mechanisms",
-                "Examine security implementation across service boundaries"
+                "evaluate service decomposition strategy and boundaries",
+                "assess inter-service communication patterns and protocols",
+                "analyze data consistency and transaction management approaches",
+                "review scalability patterns and load distribution mechanisms",
+                "examine security implementation across service boundaries"
             ])
         )
 
@@ -1988,14 +1978,14 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security")
-            .critical_constraint("Prioritize critical vulnerabilities that block deployment")
-            .task_context("Conduct comprehensive security audit of web application")
+            .critical_constraint("prioritize critical vulnerabilities that block deployment")
+            .task_context("conduct comprehensive security audit of web application")
             .core_analysis([
-                "Analyze authentication and authorization mechanisms",
-                "Evaluate input validation and sanitization practices",
-                "Assess data protection and encryption implementations",
-                "Review API security and rate limiting strategies",
-                "Examine logging, monitoring, and incident response capabilities"
+                "analyze authentication and authorization mechanisms",
+                "evaluate input validation and sanitization practices",
+                "assess data protection and encryption implementations",
+                "review API security and rate limiting strategies",
+                "examine logging, monitoring, and incident response capabilities"
             ])
         )
         ```
@@ -2009,16 +1999,16 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code quality and best practices")
-            .task_context("Review pull request for production deployment")
+            .task_context("review pull request for production deployment")
             .core_analysis([
-                "Evaluate logic correctness and edge case handling",
-                "Assess performance implications and optimization opportunities",
-                "Review maintainability and code organization patterns",
-                "Analyze test coverage and quality assurance approaches",
-                "Examine security considerations and vulnerability patterns"
+                "evaluate logic correctness and edge case handling",
+                "assess performance implications and optimization opportunities",
+                "review maintainability and code organization patterns",
+                "analyze test coverage and quality assurance approaches",
+                "examine security considerations and vulnerability patterns"
             ])
-            .constraint("Provide constructive feedback with learning opportunities")
-            .constraint("Include positive reinforcement for good practices")
+            .constraint("provide constructive feedback with learning opportunities")
+            .constraint("include positive reinforcement for good practices")
         )
         ```
 
@@ -2031,14 +2021,14 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("data scientist", "machine learning and model evaluation")
-            .critical_constraint("Include bias detection and fairness assessment")
-            .task_context("Evaluate machine learning model for production deployment")
+            .critical_constraint("include bias detection and fairness assessment")
+            .task_context("evaluate machine learning model for production deployment")
             .core_analysis([
-                "Assess model accuracy across different demographic groups",
-                "Evaluate feature importance and model interpretability",
-                "Analyze training data quality and representation",
-                "Review model generalization and overfitting indicators",
-                "Examine deployment considerations and monitoring requirements"
+                "assess model accuracy across different demographic groups",
+                "evaluate feature importance and model interpretability",
+                "analyze training data quality and representation",
+                "review model generalization and overfitting indicators",
+                "examine deployment considerations and monitoring requirements"
             ])
         )
         ```
@@ -2052,16 +2042,16 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("business analyst", "process optimization")
-            .task_context("Analyze customer onboarding process for efficiency improvements")
+            .task_context("analyze customer onboarding process for efficiency improvements")
             .core_analysis([
-                "Map current process flow and identify bottlenecks",
-                "Evaluate customer experience and friction points",
-                "Assess resource utilization and cost implications",
-                "Analyze compliance and risk management considerations",
-                "Identify automation opportunities and technology solutions"
+                "map current process flow and identify bottlenecks",
+                "evaluate customer experience and friction points",
+                "assess resource utilization and cost implications",
+                "analyze compliance and risk management considerations",
+                "identify automation opportunities and technology solutions"
             ])
-            .constraint("Support recommendations with quantitative analysis")
-            .constraint("Consider both short-term wins and long-term strategy")
+            .constraint("support recommendations with quantitative analysis")
+            .constraint("consider both short-term wins and long-term strategy")
         )
         ```
 
@@ -2074,136 +2064,30 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("financial analyst", "portfolio and risk management")
-            .critical_constraint("Include regulatory compliance considerations")
-            .task_context("Analyze investment portfolio performance and risk exposure")
+            .critical_constraint("include regulatory compliance considerations")
+            .task_context("analyze investment portfolio performance and risk exposure")
             .core_analysis([
-                "Evaluate return performance across asset classes and time periods",
-                "Assess risk metrics including VaR, correlation, and concentration",
-                "Analyze portfolio diversification and asset allocation effectiveness",
-                "Review stress testing results and scenario analysis",
-                "Examine liquidity management and cash flow projections"
-            ])
-        )
-        ```
-
-        ### Educational content analysis
-
-        Define analytical framework for curriculum evaluation:
-
-        ```python
-        # Educational program analysis
-        builder = (
-            tb.PromptBuilder()
-            .persona("education specialist", "curriculum design and assessment")
-            .task_context("Evaluate computer science curriculum for effectiveness")
-            .core_analysis([
-                "Assess learning objective alignment with industry needs",
-                "Evaluate pedagogical approaches and student engagement methods",
-                "Analyze student performance data and learning outcomes",
-                "Review practical application and project-based learning integration",
-                "Examine accessibility and inclusivity considerations"
-            ])
-            .constraint("Include evidence-based recommendations for improvement")
-            .constraint("Consider diverse learning styles and backgrounds")
-        )
-        ```
-
-        ### Healthcare system analysis
-
-        Structure analytical requirements for healthcare evaluation:
-
-        ```python
-        # Healthcare system analysis
-        builder = (
-            tb.PromptBuilder()
-            .persona("healthcare systems analyst", "quality improvement")
-            .critical_constraint("Ensure all recommendations maintain patient safety")
-            .task_context("Analyze patient care delivery system for quality improvements")
-            .core_analysis([
-                "Evaluate patient safety indicators and adverse event patterns",
-                "Assess care coordination and communication effectiveness",
-                "Analyze resource utilization and operational efficiency",
-                "Review patient satisfaction and experience metrics",
-                "Examine technology integration and workflow optimization"
-            ])
-        )
-        ```
-
-        ### Research methodology analysis
-
-        Define analytical framework for research evaluation:
-
-        ```python
-        # Research methodology analysis
-        builder = (
-            tb.PromptBuilder()
-            .persona("research methodologist", "quantitative and qualitative analysis")
-            .task_context("Evaluate research study design and methodology")
-            .core_analysis([
-                "Assess research design appropriateness for stated objectives",
-                "Evaluate sampling methodology and representativeness",
-                "Analyze data collection methods and measurement validity",
-                "Review statistical analysis approaches and assumptions",
-                "Examine ethical considerations and bias mitigation strategies"
-            ])
-            .constraint("Support evaluation with methodological best practices")
-            .constraint("Include recommendations for study improvement")
-        )
-        ```
-
-        ### Product development analysis
-
-        Structure analytical requirements for product evaluation:
-
-        ```python
-        # Product development analysis
-        builder = (
-            tb.PromptBuilder()
-            .persona("product manager", "user experience and market analysis")
-            .task_context("Analyze new product feature for market readiness")
-            .core_analysis([
-                "Evaluate user needs alignment and problem-solution fit",
-                "Assess market opportunity and competitive landscape",
-                "Analyze technical feasibility and implementation complexity",
-                "Review user experience design and usability considerations",
-                "Examine business model viability and revenue potential"
-            ])
-            .constraint("Include data-driven insights and user feedback")
-            .constraint("Consider both MVP and long-term roadmap implications")
-        )
-        ```
-
-        ### Infrastructure analysis
-
-        Define analytical framework for infrastructure evaluation:
-
-        ```python
-        # Infrastructure analysis
-        builder = (
-            tb.PromptBuilder()
-            .persona("infrastructure architect", "cloud and DevOps")
-            .critical_constraint("Prioritize reliability and cost optimization")
-            .task_context("Analyze cloud infrastructure for scalability and efficiency")
-            .core_analysis([
-                "Evaluate current resource utilization and capacity planning",
-                "Assess security posture and compliance requirements",
-                "Analyze cost optimization opportunities and spending patterns",
-                "Review disaster recovery and business continuity preparations",
-                "Examine monitoring, alerting, and observability capabilities"
+                "evaluate return performance across asset classes and time periods",
+                "assess risk metrics including VaR, correlation, and concentration",
+                "analyze portfolio diversification and asset allocation effectiveness",
+                "review stress testing results and scenario analysis",
+                "examine liquidity management and cash flow projections"
             ])
         )
         ```
 
         Integration Notes
         -----------------
-        - **Analytical Structure**: Creates systematic framework for comprehensive analysis
-        - **High Priority Placement**: Automatically positioned prominently in the prompt hierarchy
-        - **Required Coverage**: Marked as required to ensure all analytical dimensions are addressed
-        - **Quality Assurance**: Establishes analytical accountability and prevents superficial responses
-        - **Systematic Investigation**: Guides AI through structured, thorough examination process
-        - **Comprehensive Coverage**: Ensures critical analytical aspects are not overlooked
+        - **Analytical Structure**: creates systematic framework for comprehensive analysis
+        - **High Priority Placement**: automatically positioned prominently in the prompt hierarchy
+        - **Required Coverage**: marked as required to ensure all analytical dimensions are
+        addressed
+        - **Quality Assurance**: establishes analytical accountability and prevents superficial
+        responses
+        - **Systematic Investigation**: guides AI through structured, thorough examination process
+        - **Comprehensive Coverage**: ensures critical analytical aspects are not overlooked
 
-        The core_analysis method provides the analytical backbone for sophisticated prompts,
+        The `.core_analysis()` method provides the analytical backbone for sophisticated prompts,
         ensuring that complex tasks receive systematic, thorough examination across all critical
         dimensions while maintaining focus on the most important analytical objectives.
         """
@@ -2213,23 +2097,24 @@ class PromptBuilder:
 
     def output_format(self, format_specs: List[str]) -> "PromptBuilder":
         """
-        Specify output formatting requirements to prevent ambiguous responses and ensure structured deliverables.
+        Specify output formatting requirements to prevent ambiguous responses and ensure structured
+        deliverables.
 
-        Output formatting requirements define the structural and organizational expectations for the AI's
-        response, providing clear specifications that prevent ambiguous or inconsistently formatted outputs.
-        These requirements appear in the `"OUTPUT FORMAT"` section near the end of the prompt, ensuring
-        that formatting guidance influences response generation while maintaining the attention hierarchy
-        for more critical content.
+        Output formatting requirements define the structural and organizational expectations for the
+        AI's response, providing clear specifications that prevent ambiguous or inconsistently
+        formatted outputs. These requirements appear in the `"OUTPUT FORMAT"` section near the end
+        of the prompt, ensuring that formatting guidance influences response generation while
+        maintaining the attention hierarchy for more critical content.
 
-        **Research Foundation**: addresses attention drift issues by
-        providing specific, measurable formatting constraints that anchor response structure. Clear
-        formatting requirements help maintain cognitive coherence and ensure that complex responses
-        remain organized and accessible to human readers.
+        **Research Foundation**: addresses attention drift issues by providing specific, measurable
+        formatting constraints that anchor response structure. Clear formatting requirements help
+        maintain cognitive coherence and ensure that complex responses remain organized and
+        accessible to human readers.
 
         **Structural Guidance**: output format specifications serve as response templates that guide
-        the AI's information organization and presentation. Unlike content-focused constraints, these
-        requirements focus on how information should be structured, ordered, and presented to maximize
-        clarity and usability.
+        the AI's information organization and presentation. Unlike content-focused constraints,
+        these requirements focus on how information should be structured, ordered, and presented to
+        maximize clarity and usability.
 
         **Response Quality**: well-defined formatting requirements significantly improve response
         quality by preventing stream-of-consciousness outputs and ensuring systematic information
@@ -2244,17 +2129,17 @@ class PromptBuilder:
         ----------
         format_specs
             List of specific formatting requirements that define how the response should be
-            structured and organized. Each specification should be clear, actionable, and
-            measurable when possible. Specifications can address organization, headings,
-            lists, examples, priorities, or any structural aspects of the response
-            (e.g., `"Start with executive summary"`, `"Use bullet points for key findings"`,
+            structured and organized. Each specification should be clear, actionable, and measurable
+            when possible. Specifications can address organization, headings, lists, examples,
+            priorities, or any structural aspects of the response (e.g.,
+            `"Start with executive summary"`, `"Use bullet points for key findings"`,
             `"Include code examples for each recommendation"`).
 
         Returns
         -------
         PromptBuilder
-            Self for method chaining, allowing combination with other prompt building
-            methods to create comprehensive, structured prompts.
+            Self for method chaining, allowing combination with other prompt building methods to
+            create comprehensive, structured prompts.
 
         Examples
         --------
@@ -2269,17 +2154,17 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code review")
-            .task_context("Review pull request for production deployment")
+            .task_context("review pull request for production deployment")
             .core_analysis([
-                "Security vulnerabilities and risks",
-                "Performance implications and optimizations",
-                "Code quality and maintainability issues"
+                "security vulnerabilities and risks",
+                "performance implications and optimizations",
+                "code quality and maintainability issues"
             ])
             .output_format([
-                "Start with overall assessment (approve/request changes)",
-                "List critical issues that must be fixed",
-                "Provide suggestions for improvements",
-                "Include positive feedback on good practices"
+                "start with overall assessment (approve/request changes)",
+                "list critical issues that must be fixed",
+                "provide suggestions for improvements",
+                "include positive feedback on good practices"
             ])
         )
 
@@ -2295,19 +2180,19 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("business analyst", "strategic planning")
-            .task_context("Analyze market expansion opportunity")
+            .task_context("analyze market expansion opportunity")
             .core_analysis([
-                "Market size and growth potential",
-                "Competitive landscape analysis",
-                "Risk assessment and mitigation strategies",
-                "Resource requirements and timeline"
+                "market size and growth potential",
+                "competitive landscape analysis",
+                "risk assessment and mitigation strategies",
+                "resource requirements and timeline"
             ])
             .output_format([
-                "Executive summary (2-3 key sentences)",
-                "Detailed findings with supporting data",
-                "Risk assessment with mitigation strategies",
-                "Recommended action items with priorities",
-                "Timeline and resource requirements"
+                "executive summary (2-3 key sentences)",
+                "detailed findings with supporting data",
+                "risk assessment with mitigation strategies",
+                "recommended action items with priorities",
+                "timeline and resource requirements"
             ])
         )
         ```
@@ -2321,18 +2206,18 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("technical writer", "API documentation")
-            .task_context("Create comprehensive API reference documentation")
+            .task_context("create comprehensive API reference documentation")
             .core_analysis([
-                "Endpoint functionality and purpose",
-                "Request/response schemas and examples",
-                "Authentication and authorization requirements",
-                "Error handling and status codes"
+                "endpoint functionality and purpose",
+                "request/response schemas and examples",
+                "authentication and authorization requirements",
+                "error handling and status codes"
             ])
             .output_format([
-                "Overview section with API purpose and scope",
-                "Authentication section with setup instructions",
-                "Endpoint documentation with examples",
-                "Error codes reference with troubleshooting",
+                "overview section with API purpose and scope",
+                "authentication section with setup instructions",
+                "endpoint documentation with examples",
+                "error codes reference with troubleshooting",
                 "SDK and integration examples"
             ])
         )
@@ -2347,216 +2232,34 @@ class PromptBuilder:
         builder = (
             tb.PromptBuilder()
             .persona("research analyst", "data science")
-            .task_context("Analyze customer behavior patterns from survey data")
+            .task_context("analyze customer behavior patterns from survey data")
             .core_analysis([
-                "Demographic segmentation and trends",
-                "Behavioral pattern identification",
-                "Statistical significance of findings",
-                "Predictive modeling opportunities"
+                "demographic segmentation and trends",
+                "behavioral pattern identification",
+                "statistical significance of findings",
+                "predictive modeling opportunities"
             ])
             .output_format([
-                "Methodology section with data sources and approach",
-                "Key findings with statistical evidence",
-                "Visual descriptions for charts and graphs",
-                "Limitations and confidence intervals",
-                "Recommendations with supporting rationale"
-            ])
-        )
-        ```
-
-        ### Prioritized troubleshooting format
-
-        Structure systematic problem-solving responses:
-
-        ```python
-        # Troubleshooting guide formatting
-        builder = (
-            tb.PromptBuilder()
-            .persona("systems engineer", "infrastructure troubleshooting")
-            .task_context("Diagnose and resolve application performance issues")
-            .core_analysis([
-                "Performance bottleneck identification",
-                "Resource utilization analysis",
-                "Configuration and optimization opportunities",
-                "Monitoring and alerting improvements"
-            ])
-            .output_format([
-                "Problem summary and impact assessment",
-                "Immediate actions (next 15 minutes)",
-                "Short-term fixes (next 2 hours)",
-                "Long-term optimizations (next sprint)",
-                "Prevention strategies and monitoring setup"
-            ])
-        )
-        ```
-
-        ### Educational content format
-
-        Structure learning-focused outputs:
-
-        ```python
-        # Educational content formatting
-        builder = (
-            tb.PromptBuilder()
-            .persona("programming instructor", "Python education")
-            .task_context("Create comprehensive lesson on object-oriented programming")
-            .core_analysis([
-                "Core OOP concepts and principles",
-                "Practical examples and use cases",
-                "Common mistakes and misconceptions",
-                "Progressive skill building exercises"
-            ])
-            .output_format([
-                "Learning objectives and prerequisites",
-                "Concept explanations with code examples",
-                "Hands-on exercises with solutions",
-                "Common pitfalls and debugging tips",
-                "Additional resources for further learning"
-            ])
-        )
-        ```
-
-        ### Security assessment format
-
-        Structure security analysis outputs:
-
-        ```python
-        # Security assessment formatting
-        builder = (
-            tb.PromptBuilder()
-            .persona("security engineer", "application security")
-            .critical_constraint("Prioritize critical vulnerabilities that block deployment")
-            .task_context("Conduct security audit of web application")
-            .core_analysis([
-                "Critical security vulnerabilities",
-                "Authentication and authorization flaws",
-                "Data protection and encryption issues",
-                "Infrastructure and configuration weaknesses"
-            ])
-            .output_format([
-                "Executive summary with risk level",
-                "Critical issues requiring immediate attention",
-                "Medium priority security improvements",
-                "Best practice recommendations",
-                "Remediation timeline and effort estimates"
-            ])
-        )
-        ```
-
-        ### Comparative analysis format
-
-        Structure side-by-side comparisons:
-
-        ```python
-        # Comparative analysis formatting
-        builder = (
-            tb.PromptBuilder()
-            .persona("technology consultant", "solution architecture")
-            .task_context("Compare cloud database solutions for enterprise application")
-            .core_analysis([
-                "Performance characteristics and benchmarks",
-                "Cost structure and pricing models",
-                "Scalability and availability features",
-                "Integration and migration considerations"
-            ])
-            .output_format([
-                "Summary comparison table with key metrics",
-                "Detailed analysis for each solution",
-                "Pros and cons for specific use cases",
-                "Recommendation with rationale",
-                "Implementation considerations and timeline"
-            ])
-        )
-        ```
-
-        ### Code review format with examples
-
-        Structure technical review with code samples:
-
-        ```python
-        # Code review with examples formatting
-        builder = (
-            tb.PromptBuilder()
-            .persona("senior software engineer", "code quality")
-            .task_context("Review Python code for performance and best practices")
-            .core_analysis([
-                "Code correctness and logic issues",
-                "Performance optimization opportunities",
-                "Security considerations and vulnerabilities",
-                "Maintainability and documentation quality"
-            ])
-            .output_format([
-                "Overall code quality assessment",
-                "Critical issues with code examples and fixes",
-                "Performance improvements with before/after examples",
-                "Style and convention recommendations",
-                "Positive patterns worth highlighting"
-            ])
-        )
-        ```
-
-        ### Financial analysis format
-
-        Structure financial reporting outputs:
-
-        ```python
-        # Financial analysis formatting
-        builder = (
-            tb.PromptBuilder()
-            .persona("financial analyst", "investment research")
-            .task_context("Analyze quarterly performance and investment recommendations")
-            .core_analysis([
-                "Revenue and profitability trends",
-                "Key performance indicator analysis",
-                "Risk factors and market conditions",
-                "Future outlook and projections"
-            ])
-            .output_format([
-                "Investment recommendation (buy/hold/sell)",
-                "Key financial metrics and trends",
-                "Risk assessment with quantified impacts",
-                "Scenario analysis and sensitivity testing",
-                "Target price and timeline projections"
-            ])
-        )
-        ```
-
-        ### Project planning format
-
-        Structure project management outputs:
-
-        ```python
-        # Project planning formatting
-        builder = (
-            tb.PromptBuilder()
-            .persona("project manager", "software development")
-            .task_context("Create implementation plan for new feature development")
-            .core_analysis([
-                "Technical requirements and dependencies",
-                "Resource allocation and team capacity",
-                "Risk factors and mitigation strategies",
-                "Timeline and milestone planning"
-            ])
-            .output_format([
-                "Project scope and objectives summary",
-                "Phase breakdown with deliverables",
-                "Resource requirements and team assignments",
-                "Timeline with key milestones and dependencies",
-                "Risk register with mitigation plans"
+                "methodology section with data sources and approach",
+                "key findings with statistical evidence",
+                "visual descriptions for charts and graphs",
+                "limitations and confidence intervals",
+                "recommendations with supporting rationale"
             ])
         )
         ```
 
         Integration Notes
         -----------------
-        - **Response Structure**: Provides clear templates for organized, professional outputs
-        - **Cognitive Clarity**: Prevents stream-of-consciousness responses through structured guidance
-        - **Quality Assurance**: Ensures consistent formatting that meets professional standards
-        - **Information Hierarchy**: Guides appropriate organization of complex information
-        - **Accessibility**: Improves readability and navigability of AI-generated content
-        - **Professional Alignment**: Enables compliance with organizational communication standards
+        - **Response Structure**: provides clear templates for organized, professional outputs
+        - **Cognitive Clarity**: prevents stream-of-consciousness responses through structured
+        guidance
+        - **Quality Assurance**: ensures consistent formatting that meets professional standards
+        - **Information Hierarchy**: guides appropriate organization of complex information
+        - **Accessibility**: improves readability and navigability of AI-generated content
+        - **Professional Alignment**: enables compliance with organizational communication standards
 
-        The output_format method ensures that AI responses are well-structured, professionally
+        The `.output_format()` method ensures that AI responses are well-structured, professionally
         formatted, and organized in ways that maximize clarity, usability, and impact for human
         readers across diverse professional contexts.
         """
@@ -2596,22 +2299,21 @@ Parameters
 ----------
 input_example
     Example input that represents a typical or representative case that the AI might
-    encounter. Should be realistic, relevant to the task context, and demonstrate
-    the type and complexity of input the AI will be processing. The input should
-    be specific enough to provide clear guidance while being generalizable to
-    similar scenarios.
+    encounter. Should be realistic, relevant to the task context, and demonstrate the type
+    and complexity of input the AI will be processing. The input should be specific enough
+    to provide clear guidance while being generalizable to similar scenarios.
 output_example
-    Expected output format and content that demonstrates the desired response style,
-    level of detail, structure, and quality. Should exemplify the formatting
-    requirements, analytical depth, and professional standards expected in the
-    actual response. The output should be comprehensive enough to serve as a
-    template while being specific to the input provided.
+    Expected output format and content that demonstrates the desired response style, level
+    of detail, structure, and quality. Should exemplify the formatting requirements,
+    analytical depth, and professional standards expected in the actual response. The
+    output should be comprehensive enough to serve as a template while being specific to
+    the input provided.
 
 Returns
 -------
 PromptBuilder
-    Self for method chaining, allowing combination with other prompt building
-    methods to create comprehensive, structured prompts.
+    Self for method chaining, allowing combination with other prompt building methods to
+    create comprehensive, structured prompts.
 
 Examples
 --------
@@ -2626,12 +2328,12 @@ import talk_box as tb
 builder = (
     tb.PromptBuilder()
     .persona("senior developer", "code quality and security")
-    .task_context("Review Python code for security and best practices")
+    .task_context("review Python code for security and best practices")
     .core_analysis([
-        "Security vulnerabilities and risks",
-        "Code quality and maintainability",
-        "Performance optimization opportunities",
-        "Best practice adherence"
+        "security vulnerabilities and risks",
+        "code quality and maintainability",
+        "performance optimization opportunities",
+        "best practice adherence"
     ])
     .example(
         input_example='''
@@ -2642,9 +2344,9 @@ def authenticate_user(username, password):
         ''',
         output_example='''
 **CRITICAL SECURITY ISSUE**: SQL Injection Vulnerability
-- **Problem**: Direct string concatenation in SQL query allows SQL injection attacks
-- **Risk Level**: High - Could lead to data breach or unauthorized access
-- **Fix**: Use parameterized queries or ORM methods
+- **Problem**: direct string concatenation in SQL query allows SQL injection attacks
+- **Risk Level**: high, and could lead to a data breach or unauthorized access
+- **Fix**: use parameterized queries or ORM methods
 - **Example Fix**:
   ```python
   query = "SELECT * FROM users WHERE username = %s AND password = %s"
@@ -2652,83 +2354,22 @@ def authenticate_user(username, password):
   ```
 
 **SECURITY ISSUE**: Plain Text Password Storage
-- **Problem**: Passwords should never be stored or compared in plain text
-- **Fix**: Implement password hashing with salt (e.g., bcrypt, scrypt)
+- **Problem**: passwords should never be stored or compared in plain text
+- **Fix**: implement password hashing with salt (e.g., bcrypt, scrypt)
 
-**CODE QUALITY**: Function should return user object, not boolean
-**PERFORMANCE**: Consider adding database indexes on username field
+**CODE QUALITY**: function should return user object, not boolean
+**PERFORMANCE**: consider adding database indexes on username field
         '''
     )
     .output_format([
-        "Start with critical security issues",
-        "Include specific code examples and fixes",
-        "Provide risk assessment for each issue",
-        "End with positive feedback where applicable"
+        "start with critical security issues",
+        "include specific code examples and fixes",
+        "provide risk assessment for each issue",
+        "end with positive feedback where applicable"
     ])
 )
 
 print(builder)
-````
-
-### API documentation example
-
-Show expected documentation format and completeness:
-
-````python
-# API documentation with example
-builder = (
-    tb.PromptBuilder()
-    .persona("technical writer", "API documentation")
-    .task_context("Create comprehensive API endpoint documentation")
-    .core_analysis([
-        "Endpoint purpose and functionality",
-        "Request/response schemas with examples",
-        "Authentication requirements",
-        "Error handling and status codes"
-    ])
-    .example(
-        input_example="POST /api/v1/users - Create new user endpoint",
-        output_example='''
-## POST /api/v1/users
-
-**Purpose**: Create a new user account in the system
-
-**Authentication**: Bearer token required
-
-**Request Schema**:
-```json
-{
-  "username": "string (required, 3-50 chars)",
-  "email": "string (required, valid email format)",
-  "password": "string (required, min 8 chars)",
-  "profile": {
-    "firstName": "string (optional)",
-    "lastName": "string (optional)"
-  }
-}
-```
-
-**Success Response (201 Created)**:
-```json
-{
-  "id": "12345",
-  "username": "johndoe",
-  "email": "john@example.com",
-  "profile": {
-    "firstName": "John",
-    "lastName": "Doe"
-  },
-  "createdAt": "2023-01-15T10:30:00Z"
-}
-```
-
-**Error Responses**:
-- `400 Bad Request`: Invalid input data
-- `409 Conflict`: Username or email already exists
-- `401 Unauthorized`: Invalid or missing authentication token
-        '''
-    )
-)
 ````
 
 ### Data analysis example
@@ -2740,15 +2381,15 @@ Demonstrate analytical depth and presentation style:
 builder = (
     tb.PromptBuilder()
     .persona("data scientist", "business analytics")
-    .task_context("Analyze customer behavior data and provide insights")
+    .task_context("analyze customer behavior data and provide insights")
     .core_analysis([
-        "Customer segmentation patterns",
-        "Behavioral trends and anomalies",
-        "Statistical significance of findings",
-        "Business recommendations"
+        "customer segmentation patterns",
+        "behavioral trends and anomalies",
+        "statistical significance of findings",
+        "business recommendations"
     ])
     .example(
-        input_example="Customer purchase data showing 15% increase in mobile transactions but 8% decrease in desktop purchases over Q3",
+        input_example="customer purchase data showing 15% increase in mobile transactions but 8% decrease in desktop purchases over Q3",
         output_example='''
 **KEY FINDING**: Mobile-First Customer Behavior Shift
 
@@ -2776,51 +2417,6 @@ builder = (
 )
 ````
 
-### Security audit example
-
-Show comprehensive security assessment format:
-
-````python
-# Security audit with example
-builder = (
-    tb.PromptBuilder()
-    .persona("security engineer", "application security")
-    .critical_constraint("Prioritize vulnerabilities by CVSS score and exploitability")
-    .task_context("Conduct security assessment of web application")
-    .core_analysis([
-        "Authentication and authorization flaws",
-        "Input validation vulnerabilities",
-        "Data protection issues",
-        "Infrastructure security gaps"
-    ])
-    .example(
-        input_example="Web application with user authentication, file upload, and database integration",
-        output_example='''
-**CRITICAL (CVSS 9.1)**: Unrestricted File Upload
-- **Issue**: Application allows upload of executable files (.php, .jsp)
-- **Impact**: Remote code execution, full system compromise
-- **Evidence**: Uploaded test.php successfully executed
-- **Remediation**: Implement file type whitelist, scan uploads, store outside web root
-
-**HIGH (CVSS 7.8)**: SQL Injection in Search Function
-- **Issue**: User input directly concatenated into SQL queries
-- **Impact**: Data exfiltration, privilege escalation
-- **Evidence**: Union-based injection successful in /search endpoint
-- **Remediation**: Use parameterized queries, input validation
-
-**MEDIUM (CVSS 5.4)**: Missing Security Headers
-- **Issue**: No HSTS, CSP, or X-Frame-Options headers
-- **Impact**: Clickjacking, man-in-the-middle attacks
-- **Remediation**: Implement comprehensive security header policy
-
-**Compliance Status**:
-- OWASP Top 10: 3 critical violations identified
-- Estimated remediation time: 2-3 weeks
-        '''
-    )
-)
-````
-
 ### Business analysis example
 
 Demonstrate strategic analysis format:
@@ -2830,12 +2426,12 @@ Demonstrate strategic analysis format:
 builder = (
     tb.PromptBuilder()
     .persona("business consultant", "strategic planning")
-    .task_context("Analyze market expansion opportunity")
+    .task_context("analyze market expansion opportunity")
     .core_analysis([
-        "Market size and growth potential",
-        "Competitive landscape assessment",
-        "Resource requirements and ROI",
-        "Risk factors and mitigation"
+        "market size and growth potential",
+        "competitive landscape assessment",
+        "resource requirements and ROI",
+        "risk factors and mitigation"
     ])
     .example(
         input_example="SaaS company considering expansion into European markets, currently serving 50k US customers",
@@ -2941,40 +2537,42 @@ Use multiple examples to show different scenarios:
 builder = (
     tb.PromptBuilder()
     .persona("senior developer", "code mentorship")
-    .task_context("Provide educational code review for junior developers")
+    .task_context("provide educational code review for junior developers")
     .core_analysis([
-        "Code correctness and logic",
-        "Best practices and patterns",
-        "Performance considerations",
-        "Learning opportunities"
+        "code correctness and logic",
+        "best practices and patterns",
+        "performance considerations",
+        "learning opportunities"
     ])
     .example(
-        input_example="Simple function with basic logic error",
-        output_example="Focus on explaining the logic error clearly with corrected version and learning points"
+        input_example="simple function with basic logic error",
+        output_example="focus on explaining the logic error clearly with corrected version and learning points"
     )
     .example(
-        input_example="Complex function with performance issues",
-        output_example="Analyze algorithmic complexity, suggest optimizations, explain trade-offs between readability and performance"
+        input_example="complex function with performance issues",
+        output_example="analyze algorithmic complexity, suggest optimizations, explain trade-offs between readability and performance"
     )
     .example(
-        input_example="Well-written code with minor style issues",
-        output_example="Acknowledge good practices, suggest minor improvements, reinforce positive patterns"
+        input_example="well-written code with minor style issues",
+        output_example="acknowledge good practices, suggest minor improvements, reinforce positive patterns"
     )
 )
 ````
 
 Integration Notes
 -----------------
-- **Few-Shot Learning**: Leverages AI's pattern recognition for improved response quality
-- **Format Demonstration**: Shows concrete examples of expected output structure and style
-- **Quality Calibration**: Establishes benchmarks for response depth and professionalism
-- **Variation Handling**: Multiple examples can demonstrate different scenarios and approaches
-- **Learning Reinforcement**: Examples reinforce other prompt elements like constraints and formatting
-- **Prompt Positioning**: Examples appear late in prompt to provide final guidance before response generation
+- **Few-Shot Learning**: leverages AI's pattern recognition for improved response quality
+- **Format Demonstration**: shows concrete examples of expected output structure and style
+- **Quality Calibration**: establishes benchmarks for response depth and professionalism
+- **Variation Handling**: multiple examples can demonstrate different scenarios and approaches
+- **Learning Reinforcement**: examples reinforce other prompt elements like constraints and
+formatting
+- **Prompt Positioning**: examples appear late in prompt to provide final guidance before response
+generation
 
-The example method provides powerful demonstration-based learning that significantly improves
-response quality, consistency, and alignment with expectations through concrete input/output
-pattern recognition rather than abstract instruction following.
+The `.example()` method provides powerful demonstration-based learning that significantly
+improves response quality, consistency, and alignment with expectations through concrete
+input/output pattern recognition rather than abstract instruction following.
         """
         # fmt: on
         self._examples.append({"input": input_example, "output": output_example})
@@ -2982,47 +2580,51 @@ pattern recognition rather than abstract instruction following.
 
     def final_emphasis(self, emphasis: str) -> "PromptBuilder":
         """
-        Set final emphasis that leverages recency bias to ensure critical instructions receive maximum attention.
+        Set final emphasis that leverages recency bias to ensure critical instructions receive
+        maximum attention.
 
-        Final emphasis strategically positions the most important instruction at the very end of the prompt,
-        leveraging the psychological principle of recency bias to ensure that critical guidance remains
-        fresh in the AI's attention during response generation. This method provides a powerful way to
-        reinforce the most essential requirement or constraint that must not be overlooked.
+        Final emphasis strategically positions the most important instruction at the very end of the
+        system prompt, leveraging the psychological principle of recency bias to ensure that
+        critical guidance remains fresh in the AI's attention during response generation. This
+        method provides a powerful way to reinforce the most essential requirement or constraint
+        that must not be overlooked.
 
-        **Recency Bias**: research in cognitive psychology demonstrates that information presented at the
-        end of a sequence receives heightened attention and retention. By placing critical instructions
-        at the prompt's conclusion, final emphasis ensures that the most important guidance influences
-        the AI's response generation process when attention is most focused on producing output.
+        **Recency Bias**: research in cognitive psychology demonstrates that information presented
+        at the end of a sequence receives heightened attention and retention. By placing critical
+        instructions at the prompt's conclusion, final emphasis ensures that the most important
+        guidance influences the AI's response generation process when attention is most focused on
+        producing output.
 
-        **Attention Anchoring**: final emphasis serves as an attention anchor that prevents drift from
-        core objectives during complex prompt processing. When prompts contain extensive context,
-        constraints, and examples, the final emphasis acts as a cognitive reset that refocuses attention
-        on the primary objective before response generation begins.
+        **Attention Anchoring**: final emphasis serves as an attention anchor that prevents drift
+        from core objectives during complex prompt processing. When prompts contain extensive
+        context, constraints, and examples, the final emphasis acts as a cognitive reset that
+        refocuses attention on the primary objective before response generation begins.
 
-        **Override Mechanism**: final emphasis can serve as an override mechanism for complex prompts
-        where multiple competing priorities might create confusion. By explicitly stating the most
-        critical requirement at the end, this method ensures that primary objectives take precedence
-        over secondary considerations when trade-offs must be made.
+        **Override Mechanism**: final emphasis can serve as an override mechanism for complex
+        prompts where multiple competing priorities might create confusion. By explicitly stating
+        the most critical requirement at the end, this method ensures that primary objectives take
+        precedence over secondary considerations when trade-offs must be made.
 
         **Quality Assurance**: the strategic placement of final emphasis helps prevent AI responses
-        that technically satisfy prompt requirements but miss the primary intent. This is particularly
-        valuable for complex analytical tasks where technical completeness might overshadow the
-        core objective.
+        that technically satisfy prompt requirements but miss the primary intent. This is
+        particularly valuable for complex analytical tasks where technical completeness might
+        overshadow the core objective.
 
         Parameters
         ----------
         emphasis
-            The most critical instruction or objective that must receive primary attention
-            during response generation. Should be formulated as a clear, actionable directive
-            that captures the essential requirement (e.g., `"Focus your entire response on
-            practical implementation steps"`, `"Prioritize security considerations above all else"`,
-            `"Ensure all recommendations are cost-effective and implementable"`).
+            The most critical instruction or objective that must receive primary attention during
+            response generation. Should be formulated as a clear, actionable directive that captures
+            the essential requirement (e.g.,
+            `"focus your entire response on practical implementation steps"`,
+            `"prioritize security considerations above all else"`,
+            `"ensure all recommendations are cost-effective and implementable"`, etc.).
 
         Returns
         -------
         PromptBuilder
-            Self for method chaining, allowing combination with other prompt building
-            methods to create comprehensive, structured prompts.
+            Self for method chaining, allowing combination with other prompt building methods to
+            create comprehensive, structured prompts.
 
         Examples
         --------
@@ -3037,21 +2639,21 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security")
-            .task_context("Review web application for deployment readiness")
+            .task_context("review web application for deployment readiness")
             .core_analysis([
-                "Authentication and authorization mechanisms",
-                "Input validation and data sanitization",
-                "Infrastructure security configuration",
-                "Compliance with security standards"
+                "authentication and authorization mechanisms",
+                "input validation and data sanitization",
+                "infrastructure security configuration",
+                "compliance with security standards"
             ])
-            .constraint("Include performance optimization suggestions")
-            .constraint("Consider user experience implications")
+            .constraint("include performance optimization suggestions")
+            .constraint("consider user experience implications")
             .output_format([
-                "Executive summary with risk assessment",
-                "Critical security issues requiring immediate attention",
-                "Performance and UX recommendations where applicable"
+                "executive summary with risk assessment",
+                "critical security issues requiring immediate attention",
+                "performance and UX recommendations where applicable"
             ])
-            .final_emphasis("Security vulnerabilities must be identified and addressed before any performance or UX considerations")
+            .final_emphasis("security vulnerabilities must be identified and addressed before any performance or UX considerations")
         )
 
         print(builder)
@@ -3066,21 +2668,21 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("business consultant", "strategic planning")
-            .task_context("Develop growth strategy for startup with limited funding")
+            .task_context("develop growth strategy for startup with limited funding")
             .core_analysis([
-                "Market opportunity assessment",
-                "Competitive landscape analysis",
-                "Resource requirements and scaling plan",
-                "Revenue generation strategies"
+                "market opportunity assessment",
+                "competitive landscape analysis",
+                "resource requirements and scaling plan",
+                "revenue generation strategies"
             ])
-            .constraint("Include innovative growth tactics")
-            .constraint("Consider partnership opportunities")
+            .constraint("include innovative growth tactics")
+            .constraint("consider partnership opportunities")
             .output_format([
-                "Executive summary with growth potential",
-                "Detailed strategy with implementation phases",
-                "Resource allocation and timeline"
+                "executive summary with growth potential",
+                "detailed strategy with implementation phases",
+                "resource allocation and timeline"
             ])
-            .final_emphasis("All recommendations must be implementable with minimal upfront investment and show clear ROI within 6 months")
+            .final_emphasis("all recommendations must be implementable with minimal upfront investment and show clear ROI within 6 months")
         )
         ```
 
@@ -3093,21 +2695,21 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "mentorship and code quality")
-            .task_context("Review junior developer's code for learning and improvement")
+            .task_context("review junior developer's code for learning and improvement")
             .core_analysis([
-                "Code correctness and functionality",
-                "Best practices and design patterns",
-                "Performance optimization opportunities",
-                "Security considerations"
+                "code correctness and functionality",
+                "best practices and design patterns",
+                "performance optimization opportunities",
+                "security considerations"
             ])
-            .constraint("Identify areas for improvement")
-            .constraint("Provide specific examples and fixes")
+            .constraint("identify areas for improvement")
+            .constraint("provide specific examples and fixes")
             .output_format([
-                "Overall assessment with learning objectives",
-                "Technical issues with explanations and solutions",
-                "Positive reinforcement for good practices"
+                "overall assessment with learning objectives",
+                "technical issues with explanations and solutions",
+                "positive reinforcement for good practices"
             ])
-            .final_emphasis("Frame all feedback as learning opportunities with clear explanations of why changes improve the code")
+            .final_emphasis("frame all feedback as learning opportunities with clear explanations of why changes improve the code")
         )
         ```
 
@@ -3120,129 +2722,21 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("product manager", "user experience and design")
-            .task_context("Evaluate new feature proposal for mobile application")
+            .task_context("evaluate new feature proposal for mobile application")
             .core_analysis([
-                "User needs and problem-solution fit",
-                "Technical implementation complexity",
-                "Performance and scalability impact",
-                "Business value and metrics"
+                "user needs and problem-solution fit",
+                "technical implementation complexity",
+                "performance and scalability impact",
+                "business value and metrics"
             ])
-            .constraint("Consider technical feasibility constraints")
-            .constraint("Include development effort estimates")
+            .constraint("consider technical feasibility constraints")
+            .constraint("include development effort estimates")
             .output_format([
-                "Feature assessment with user impact analysis",
-                "Implementation recommendations",
-                "Success metrics and validation plan"
+                "feature assessment with user impact analysis",
+                "implementation recommendations",
+                "success metrics and validation plan"
             ])
-            .final_emphasis("User experience and accessibility must be prioritized over technical convenience or development speed")
-        )
-        ```
-
-        ### Compliance-focused audit
-
-        Ensure regulatory requirements take precedence:
-
-        ```python
-        # Financial audit with compliance emphasis
-        builder = (
-            tb.PromptBuilder()
-            .persona("compliance officer", "financial regulations")
-            .task_context("Audit trading platform for regulatory compliance")
-            .core_analysis([
-                "Know Your Customer (KYC) procedures",
-                "Anti-Money Laundering (AML) controls",
-                "Transaction monitoring and reporting",
-                "Data protection and privacy measures"
-            ])
-            .constraint("Include efficiency improvement suggestions")
-            .constraint("Consider user experience impact")
-            .output_format([
-                "Compliance status summary",
-                "Critical violations requiring immediate attention",
-                "Process improvement recommendations"
-            ])
-            .final_emphasis("Regulatory compliance violations must be flagged as blocking issues regardless of operational impact or user friction")
-        )
-        ```
-
-        ### Academic rigor emphasis
-
-        Prioritize methodological soundness in research analysis:
-
-        ```python
-        # Research methodology review with academic emphasis
-        builder = (
-            tb.PromptBuilder()
-            .persona("research methodologist", "quantitative analysis")
-            .task_context("Evaluate research study design and statistical approach")
-            .core_analysis([
-                "Sample size and power analysis",
-                "Statistical methodology appropriateness",
-                "Bias mitigation and control variables",
-                "Validity and reliability measures"
-            ])
-            .constraint("Consider practical implementation constraints")
-            .constraint("Include suggestions for improvement")
-            .output_format([
-                "Methodological assessment summary",
-                "Statistical validity evaluation",
-                "Recommendations for strengthening the study"
-            ])
-            .final_emphasis("Academic rigor and statistical validity must not be compromised for practical convenience or timeline pressures")
-        )
-        ```
-
-        ### Scalability priority
-
-        Emphasize long-term architectural considerations:
-
-        ```python
-        # Architecture review with scalability emphasis
-        builder = (
-            tb.PromptBuilder()
-            .persona("solution architect", "enterprise systems")
-            .task_context("Review microservices architecture for e-commerce platform")
-            .core_analysis([
-                "Service decomposition and boundaries",
-                "Data consistency and transaction management",
-                "Performance and load distribution",
-                "Security and monitoring capabilities"
-            ])
-            .constraint("Consider current team capabilities")
-            .constraint("Include migration strategy from current system")
-            .output_format([
-                "Architecture assessment with scalability analysis",
-                "Implementation roadmap with phases",
-                "Risk assessment and mitigation strategies"
-            ])
-            .final_emphasis("All architectural decisions must prioritize long-term scalability and maintainability over short-term development convenience")
-        )
-        ```
-
-        ### Practical implementation focus
-
-        Ensure recommendations are actionable and realistic:
-
-        ```python
-        # Strategic planning with implementation emphasis
-        builder = (
-            tb.PromptBuilder()
-            .persona("operations manager", "process improvement")
-            .task_context("Develop operational efficiency improvement plan")
-            .core_analysis([
-                "Current process bottlenecks and inefficiencies",
-                "Technology automation opportunities",
-                "Staff training and capability requirements",
-                "Cost-benefit analysis of improvements"
-            ])
-            .constraint("Include theoretical best practices")
-            .constraint("Consider industry benchmarks")
-            .output_format([
-                "Current state assessment",
-                "Improvement recommendations with priorities",
-                "Implementation timeline and resource requirements"
-            ])
-            .final_emphasis("Every recommendation must include specific, actionable steps that can be implemented with existing resources within 90 days")
+            .final_emphasis("user experience and accessibility must be prioritized over technical convenience or development speed")
         )
         ```
 
@@ -3255,63 +2749,39 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("content strategist", "editorial quality")
-            .task_context("Evaluate content library for quality and effectiveness")
+            .task_context("evaluate content library for quality and effectiveness")
             .core_analysis([
-                "Content accuracy and factual verification",
-                "Engagement metrics and user feedback",
+                "content accuracy and factual verification",
+                "engagement metrics and user feedback",
                 "SEO optimization and discoverability",
-                "Brand consistency and messaging alignment"
+                "brand consistency and messaging alignment"
             ])
-            .constraint("Include competitive analysis")
-            .constraint("Consider content volume requirements")
+            .constraint("include competitive analysis")
+            .constraint("consider content volume requirements")
             .output_format([
-                "Content quality assessment",
-                "Priority improvement areas",
-                "Content strategy recommendations"
+                "content quality assessment",
+                "priority improvement areas",
+                "content strategy recommendations"
             ])
-            .final_emphasis("Focus on identifying and improving the highest-impact content pieces rather than addressing all content issues superficially")
-        )
-        ```
-
-        ### Innovation balance
-
-        Emphasize balanced approach between innovation and stability:
-
-        ```python
-        # Technology evaluation with balance emphasis
-        builder = (
-            tb.PromptBuilder()
-            .persona("technology director", "innovation and stability")
-            .task_context("Evaluate emerging technologies for enterprise adoption")
-            .core_analysis([
-                "Technology maturity and stability assessment",
-                "Integration complexity and risks",
-                "Competitive advantages and differentiation",
-                "Team learning curve and adoption timeline"
-            ])
-            .constraint("Include cutting-edge technology options")
-            .constraint("Consider conservative enterprise requirements")
-            .output_format([
-                "Technology assessment matrix",
-                "Adoption recommendations by priority",
-                "Risk mitigation and implementation strategy"
-            ])
-            .final_emphasis("Balance innovation opportunities with enterprise stability requirements, prioritizing technologies that provide significant value with manageable risk")
+            .final_emphasis("focus on identifying and improving the highest-impact content pieces rather than addressing all content issues superficially")
         )
         ```
 
         Integration Notes
         -----------------
-        - **Recency Bias Leverage**: Strategically positions critical guidance at prompt conclusion for maximum impact
-        - **Attention Anchoring**: Prevents objective drift during complex prompt processing
-        - **Priority Override**: Ensures primary objectives take precedence when trade-offs are required
-        - **Quality Assurance**: Prevents technically complete but intent-missing responses
-        - **Cognitive Reset**: Refocuses attention on core objectives before response generation
-        - **Strategic Positioning**: Complements front-loaded critical constraints with end-positioned emphasis
+        - **Recency Bias Leverage**: strategically positions critical guidance at prompt conclusion
+        for maximum impact
+        - **Attention Anchoring**: prevents objective drift during complex prompt processing
+        - **Priority Override**: ensures primary objectives take precedence when trade-offs are
+        required
+        - **Quality Assurance**: prevents technically complete but intent-missing responses
+        - **Cognitive Reset**: refocuses attention on core objectives before response generation
+        - **Strategic Positioning**: complements front-loaded critical constraints with
+        end-positioned emphasis
 
-        The final_emphasis method provides a powerful attention management tool that ensures the most
-        critical requirements maintain prominence throughout the AI's response generation process,
-        leveraging psychological principles to maximize adherence to primary objectives.
+        The `.final_emphasis()` method provides a powerful attention management tool that ensures
+        the most critical requirements maintain prominence throughout the AI's response generation
+        process, leveraging psychological principles to maximize adherence to primary objectives.
         """
         self._final_emphasis = emphasis
         return self
@@ -3321,26 +2791,27 @@ pattern recognition rather than abstract instruction following.
         Specify topics or behaviors to avoid through negative constraints that guide AI responses
         away from unwanted content.
 
-        Negative constraints provide explicit guidance about what the AI should not include or discuss in
-        its response, creating clear boundaries that prevent unwanted content, inappropriate suggestions,
-        or off-topic discussions. This method adds an "Avoid:" constraint that appears in the standard
-        constraints section, providing clear guidance about prohibited topics or approaches.
+        Negative constraints provide explicit guidance about what the AI should not include or
+        discuss in its response, creating clear boundaries that prevent unwanted content,
+        inappropriate suggestions, or off-topic discussions. This method adds an "Avoid:" constraint
+        that appears in the standard constraints section, providing clear guidance about prohibited
+        topics or approaches.
 
-        **Negative Guidance**: research in cognitive psychology shows that explicit negative instructions
-        can be effective when combined with positive guidance. By clearly stating what to avoid, this
-        method helps the AI navigate complex topics while staying within appropriate boundaries and
-        maintaining focus on desired outcomes.
+        **Negative Guidance**: research in cognitive psychology shows that explicit negative
+        instructions can be effective when combined with positive guidance. By clearly stating what
+        to avoid, this method helps the AI navigate complex topics while staying within appropriate
+        boundaries and maintaining focus on desired outcomes.
 
         **Boundary Setting**: avoid topics serves as a content filter and boundary-setting mechanism
-        that prevents responses from venturing into sensitive, irrelevant, or counterproductive areas.
-        This is particularly valuable for professional contexts where certain topics or approaches
-        could be inappropriate or harmful.
+        that prevents responses from venturing into sensitive, irrelevant, or counterproductive
+        areas. This is particularly valuable for professional contexts where certain topics or
+        approaches could be inappropriate or harmful.
 
         **Risk Mitigation**: negative constraints help mitigate risks associated with AI-generated
         content by explicitly excluding potentially problematic topics, biased perspectives, or
         approaches that could lead to harmful or inappropriate recommendations.
 
-        **Focus Enhancement**: by eliminating distracting or irrelevant topics, `avoid_topics()`
+        **Focus Enhancement**: by eliminating distracting or irrelevant topics, `.avoid_topics()`
         helps maintain laser focus on the core objectives and prevents the AI from exploring
         tangential areas that might dilute the quality or relevance of the response.
 
@@ -3348,16 +2819,16 @@ pattern recognition rather than abstract instruction following.
         ----------
         topics
             List of specific topics, behaviors, approaches, or content areas that should be
-            explicitly avoided in the response. Each item should be clearly defined and
-            specific enough to provide clear guidance (e.g., "controversial political opinions",
-            "deprecated technologies", "cost-cutting through layoffs", "quick fixes without
-            testing").
+            explicitly avoided in the response. Each item should be clearly defined and specific
+            enough to provide clear guidance (e.g., `"controversial political opinions"`,
+            `"deprecated technologies"`, `"cost-cutting through layoffs"`,
+            `"quick fixes without testing"`, etc.).
 
         Returns
         -------
         PromptBuilder
-            Self for method chaining, allowing combination with other prompt building
-            methods to create comprehensive, structured prompts.
+            Self for method chaining, allowing combination with other prompt building methods to
+            create comprehensive, structured prompts.
 
         Examples
         --------
@@ -3372,24 +2843,24 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("solution architect", "modern enterprise systems")
-            .task_context("Design scalable microservices architecture for e-commerce platform")
+            .task_context("design scalable microservices architecture for e-commerce platform")
             .core_analysis([
-                "Service decomposition strategy",
-                "Inter-service communication patterns",
-                "Data consistency approaches",
-                "Scalability and performance optimization"
+                "service decomposition strategy",
+                "inter-service communication patterns",
+                "data consistency approaches",
+                "scalability and performance optimization"
             ])
             .avoid_topics([
-                "Monolithic architecture patterns",
-                "Deprecated Java EE technologies",
-                "Synchronous blocking communication",
-                "Database shared between services",
-                "Manual deployment processes"
+                "monolithic architecture patterns",
+                "deprecated Java EE technologies",
+                "synchronous blocking communication",
+                "database shared between services",
+                "manual deployment processes"
             ])
             .output_format([
-                "Architecture overview with service boundaries",
-                "Technology stack recommendations",
-                "Implementation roadmap with phases"
+                "architecture overview with service boundaries",
+                "technology stack recommendations",
+                "implementation roadmap with phases"
             ])
         )
 
@@ -3405,25 +2876,25 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("business consultant", "sustainable growth strategies")
-            .task_context("Develop growth strategy for struggling retail company")
+            .task_context("develop growth strategy for struggling retail company")
             .core_analysis([
-                "Market positioning and competitive advantages",
-                "Operational efficiency improvements",
-                "Customer experience enhancements",
-                "Revenue diversification opportunities"
+                "market positioning and competitive advantages",
+                "operational efficiency improvements",
+                "customer experience enhancements",
+                "revenue diversification opportunities"
             ])
             .avoid_topics([
-                "Mass layoffs as primary cost reduction",
-                "Exploiting regulatory loopholes",
-                "Aggressive customer data monetization",
-                "Environmental impact trade-offs for profit",
-                "Anti-competitive pricing strategies"
+                "mass layoffs as primary cost reduction",
+                "exploiting regulatory loopholes",
+                "aggressive customer data monetization",
+                "environmental impact trade-offs for profit",
+                "anti-competitive pricing strategies"
             ])
-            .constraint("Focus on sustainable, long-term solutions")
+            .constraint("focus on sustainable, long-term solutions")
             .output_format([
-                "Strategic assessment with market analysis",
-                "Growth initiatives with ethical considerations",
-                "Implementation timeline with stakeholder impact"
+                "strategic assessment with market analysis",
+                "growth initiatives with ethical considerations",
+                "implementation timeline with stakeholder impact"
             ])
         )
         ```
@@ -3437,25 +2908,25 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security best practices")
-            .task_context("Audit web application security for financial services company")
+            .task_context("audit web application security for financial services company")
             .core_analysis([
-                "Authentication and authorization mechanisms",
-                "Data protection and encryption standards",
-                "Input validation and sanitization",
-                "Infrastructure security configuration"
+                "authentication and authorization mechanisms",
+                "data protection and encryption standards",
+                "input validation and sanitization",
+                "infrastructure security configuration"
             ])
             .avoid_topics([
-                "Security through obscurity approaches",
-                "Custom cryptographic implementations",
-                "Storing passwords in plain text or weak hashing",
-                "Disabling security features for convenience",
-                "Ignoring OWASP recommendations"
+                "security through obscurity approaches",
+                "custom cryptographic implementations",
+                "storing passwords in plain text or weak hashing",
+                "disabling security features for convenience",
+                "ignoring OWASP recommendations"
             ])
-            .critical_constraint("All recommendations must follow industry security standards")
+            .critical_constraint("all recommendations must follow industry security standards")
             .output_format([
-                "Security assessment with risk levels",
-                "Critical vulnerabilities requiring immediate attention",
-                "Best practice implementation roadmap"
+                "security assessment with risk levels",
+                "critical vulnerabilities requiring immediate attention",
+                "best practice implementation roadmap"
             ])
         )
         ```
@@ -3469,89 +2940,25 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("instructional designer", "modern programming education")
-            .task_context("Create comprehensive Python programming curriculum for beginners")
+            .task_context("create comprehensive Python programming curriculum for beginners")
             .core_analysis([
-                "Progressive skill building sequence",
-                "Hands-on practice opportunities",
-                "Real-world application examples",
-                "Common mistake prevention strategies"
+                "progressive skill building sequence",
+                "hands-on practice opportunities",
+                "real-world application examples",
+                "common mistake prevention strategies"
             ])
             .avoid_topics([
-                "Memorization-based learning without understanding",
-                "Outdated Python 2.x syntax and practices",
-                "Complex theoretical concepts before practical foundation",
-                "Overwhelming students with too many options",
-                "Abstract examples without real-world relevance"
+                "memorization-based learning without understanding",
+                "outdated Python 2.x syntax and practices",
+                "complex theoretical concepts before practical foundation",
+                "overwhelming students with too many options",
+                "abstract examples without real-world relevance"
             ])
-            .constraint("Include diverse learning styles and accessibility considerations")
+            .constraint("include diverse learning styles and accessibility considerations")
             .output_format([
-                "Curriculum structure with learning objectives",
-                "Module breakdown with practical exercises",
-                "Assessment strategies and progress tracking"
-            ])
-        )
-        ```
-
-        ### Product management guidance
-
-        Avoid feature creep and user-hostile practices:
-
-        ```python
-        # Product strategy avoiding common pitfalls
-        builder = (
-            tb.PromptBuilder()
-            .persona("product manager", "user-centered design")
-            .task_context("Prioritize feature roadmap for mobile productivity application")
-            .core_analysis([
-                "User needs analysis and pain points",
-                "Competitive landscape assessment",
-                "Technical feasibility and resource requirements",
-                "Business impact and revenue potential"
-            ])
-            .avoid_topics([
-                "Feature additions without user validation",
-                "Dark patterns to increase engagement artificially",
-                "Copying competitor features without strategic purpose",
-                "Technical debt accumulation for speed",
-                "Ignoring accessibility requirements"
-            ])
-            .constraint("Prioritize user value and experience quality")
-            .output_format([
-                "Feature prioritization matrix with user impact",
-                "Roadmap timeline with development phases",
-                "Success metrics and validation plans"
-            ])
-        )
-        ```
-
-        ### Financial investment analysis
-
-        Avoid high-risk or unethical investment approaches:
-
-        ```python
-        # Investment analysis avoiding risky strategies
-        builder = (
-            tb.PromptBuilder()
-            .persona("financial advisor", "responsible investment strategies")
-            .task_context("Develop investment portfolio strategy for retirement planning")
-            .core_analysis([
-                "Risk tolerance assessment and diversification",
-                "Long-term growth potential analysis",
-                "Market volatility considerations",
-                "Tax efficiency optimization"
-            ])
-            .avoid_topics([
-                "High-risk speculative investments as primary strategy",
-                "Market timing strategies without evidence",
-                "Single-sector concentration for growth",
-                "Ignoring client risk tolerance for higher returns",
-                "Investments in companies with poor ESG practices"
-            ])
-            .constraint("Focus on evidence-based investment principles")
-            .output_format([
-                "Portfolio allocation with risk assessment",
-                "Investment timeline with rebalancing strategy",
-                "Performance expectations and scenario analysis"
+                "curriculum structure with learning objectives",
+                "module breakdown with practical exercises",
+                "assessment strategies and progress tracking"
             ])
         )
         ```
@@ -3565,25 +2972,25 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code quality and best practices")
-            .task_context("Review pull request for production deployment")
+            .task_context("review pull request for production deployment")
             .core_analysis([
-                "Code correctness and functionality",
-                "Security vulnerability assessment",
-                "Performance implications and optimization",
-                "Maintainability and documentation quality"
+                "code correctness and functionality",
+                "security vulnerability assessment",
+                "performance implications and optimization",
+                "maintainability and documentation quality"
             ])
             .avoid_topics([
-                "Quick fixes that introduce technical debt",
-                "Skipping unit tests for faster delivery",
-                "Hard-coding configuration values",
-                "Ignoring error handling for edge cases",
-                "Copy-pasting code without understanding"
+                "quick fixes that introduce technical debt",
+                "skipping unit tests for faster delivery",
+                "hard-coding configuration values",
+                "ignoring error handling for edge cases",
+                "copy-pasting code without understanding"
             ])
-            .constraint("Provide constructive feedback with learning opportunities")
+            .constraint("provide constructive feedback with learning opportunities")
             .output_format([
-                "Code quality assessment with specific examples",
-                "Security and performance concerns",
-                "Improvement recommendations with rationale"
+                "code quality assessment with specific examples",
+                "security and performance concerns",
+                "improvement recommendations with rationale"
             ])
         )
         ```
@@ -3591,13 +2998,16 @@ pattern recognition rather than abstract instruction following.
         Integration Notes
         -----------------
         - **Boundary Setting**: establishes clear content and approach boundaries for AI responses
-        - **Risk Mitigation**: prevents problematic or inappropriate content through explicit exclusion
+        - **Risk Mitigation**: prevents problematic or inappropriate content through explicit
+        exclusion
         - **Focus Enhancement**: eliminates distracting topics to maintain response relevance
-        - **Professional Standards**: ensures responses align with ethical and professional guidelines
+        - **Professional Standards**: ensures responses align with ethical and professional
+        guidelines
         - **Quality Assurance**: prevents low-quality approaches through negative guidance
-        - **Complementary Constraints**: works alongside positive constraints to create comprehensive guidance
+        - **Complementary Constraints**: works alongside positive constraints to create
+        comprehensive guidance
 
-        The `avoid_topics()` method provides essential boundary-setting capabilities that ensure AI
+        The `.avoid_topics()` method provides essential boundary-setting capabilities that ensure AI
         responses remain appropriate, focused, and aligned with professional standards while
         explicitly excluding problematic approaches or content areas that could compromise response
         quality or appropriateness.
@@ -3628,30 +3038,27 @@ pattern recognition rather than abstract instruction following.
         machines, pathways serve as intelligent guardrails that adapt to user behavior while
         ensuring important steps and information gathering requirements are addressed.
 
-        **Flexible Structure**: Pathways provide conversation guidance without enforcing rigid
-        adherence, allowing the AI to adapt to natural conversation patterns while ensuring key
-        objectives are met. This balances structure with conversational flexibility.
+        Pathways provide conversation guidance without enforcing rigid adherence, allowing the AI to
+        adapt to natural conversation patterns while ensuring key objectives are met. This balances
+        structure with conversational flexibility. Pathways help ensure systematic information
+        gathering and step completion while maintaining user-friendly interactions.
 
-        **Attention Optimization**: Pathway specifications are integrated into the prompt structure
-        at an optimal position for AI attention, providing clear guidance without overwhelming
-        other prompt components.
-
-        **Information Management**: Pathways help ensure systematic information gathering and
-        step completion while maintaining user-friendly interactions. This is particularly
-        valuable for complex processes like bookings, troubleshooting, or guided workflows.
+        In terms of attention optimization, pathway specifications are integrated into the prompt
+        structure at an optimal position for AI attention, providing clear guidance without
+        overwhelming other prompt components.
 
         Parameters
         ----------
         pathway_spec
-            A Pathways object created using the chainable Pathways API, or a dictionary
+            A `Pathways` object created using the chainable Pathways API, or a dictionary
             specification containing pathway definition. The specification includes states,
             transitions, information requirements, and flow control logic.
 
         Returns
         -------
         PromptBuilder
-            Self for method chaining, allowing combination with other prompt building
-            methods to create comprehensive, structured prompts.
+            Self for method chaining, allowing combination with other prompt building methods to
+            create comprehensive, structured prompts.
 
         Examples
         --------
@@ -3664,28 +3071,25 @@ pattern recognition rather than abstract instruction following.
 
         # Define support pathway
         support_pathway = (
-            tb.Pathways("Technical Support")
-            .description("Systematic technical problem resolution")
-            .activation_conditions([
-                "User reports technical issues",
-                "User needs troubleshooting help"
-            ])
-            .start_with("problem_identification")
-                .chat_state("problem_identification")
-                .description("Understand the technical problem")
-                .collect(["issue_description", "error_messages", "recent_changes"])
-                .next_state("basic_diagnostics")
-            .then("basic_diagnostics")
-                .decision_state("basic_diagnostics")
-                .description("Determine if basic fixes might work")
-                .branch_on("Simple configuration issue", "quick_fix")
-                .branch_on("Complex system problem", "advanced_diagnostics")
-            .then("quick_fix")
-                .chat_state("quick_fix")
-                .description("Provide immediate solution steps")
-                .success_condition("Problem is resolved")
-                .fallback("Problem persists", "advanced_diagnostics")
-
+            tb.Pathways(
+                title="Technical Support",
+                desc="systematic technical problem resolution",
+                activation=["user reports technical issues", "user needs troubleshooting help"]
+            )
+            # === STATE: problem_identification ===
+            .state("understand the technical problem", id="problem_identification")
+            .required(["issue description", "error messages", "recent changes"])
+            .next_state("basic_diagnostics")
+            # === STATE: basic_diagnostics ===
+            .state("determine if basic fixes might work", id="basic_diagnostics")
+            .branch_on("simple configuration issue", id="quick_fix")
+            .branch_on("complex system problem", id="advanced_diagnostics")
+            # === STATE: quick_fix ===
+            .state("provide immediate solution steps", id="quick_fix")
+            .success_condition("problem is resolved")
+            # === STATE: advanced_diagnostics ===
+            .state("perform detailed system analysis", id="advanced_diagnostics")
+            .success_condition("root cause identified and resolved")
         )
 
         # Use in prompt
@@ -3694,69 +3098,24 @@ pattern recognition rather than abstract instruction following.
             .persona("technical support specialist", "troubleshooting")
             .pathways(support_pathway)
             .final_emphasis("Follow pathway while adapting to user needs")
-
-        )
-        ```
-
-        ### Booking flow pathway
-
-        Guide users through complex booking process:
-
-        ```python
-        # Flight booking pathway
-        booking_pathway = (
-            tb.Pathways("Flight Booking")
-            .description("Guide users through booking a flight")
-            .activation_conditions([
-                "User wants to book a flight",
-                "User asks about flight reservations"
-            ])
-            .start_with("greeting")
-                .chat_state("greeting")
-                .description("Welcome user and understand their travel needs")
-                .collect(["departure city", "destination", "travel dates"])
-                .next_state("search_flights")
-            .then("search_flights")
-                .tool_state("search_flights")
-                .description("Search available flights")
-                .tools(["flight_search_api"])
-                .next_state("present_options")
-            .then("present_options")
-                .chat_state("present_options")
-                .description("Show flight options to user")
-                .success_condition("User selects a flight option")
-                .next_state("booking_confirmation")
-
-        )
-
-        # Integration with bot
-        bot = (
-            tb.ChatBot()
-            .provider_model("openai:gpt-4-turbo")
-            .system_prompt(
-                tb.PromptBuilder()
-                .persona("travel agent", "flight booking specialist")
-                .pathways(booking_pathway)
-                .output_format([
-                    "Be clear about next steps",
-                    "Confirm information before proceeding",
-                    "Provide helpful alternatives when needed"
-                ])
-
-            )
         )
         ```
 
         Integration Notes
         -----------------
-        - **Flexible Guidance**: Pathways provide structure without rigidity, allowing natural conversation flow
-        - **Information Gathering**: Systematic collection of required information while maintaining user experience
-        - **Adaptive Branching**: Support for conditional flows based on user responses and circumstances
-        - **Tool Integration**: Clear guidance on when and how to use external tools within the conversation flow
-        - **Completion Tracking**: Built-in success conditions and completion criteria for complex processes
+        - **Flexible Guidance**: Pathways provide structure without rigidity, allowing natural
+        conversation flow
+        - **Information Gathering**: systematic collection of required information while maintaining
+        user experience
+        - **Adaptive Branching**: support for conditional flows based on user responses and
+        circumstances
+        - **Tool Integration**: clear guidance on when and how to use external tools within the
+        conversation flow
+        - **Completion Tracking**: built-in success conditions and completion criteria for complex
+        processes
 
-        The pathways method enables sophisticated conversation flow management while preserving the
-        natural, adaptive qualities that make AI conversations engaging and user-friendly.
+        The `.pathways()` method enables sophisticated conversation flow management while preserving
+        the natural, adaptive qualities that make AI conversations engaging and user-friendly.
         """
         # Handle both Pathways objects and dictionary specifications
         if hasattr(pathway_spec, "_to_prompt_text"):
@@ -3819,26 +3178,27 @@ pattern recognition rather than abstract instruction following.
 
     def focus_on(self, primary_goal: str) -> "PromptBuilder":
         """
-        Set the primary focus that leverages both front-loading and recency bias for maximum attention impact.
+        Set the primary focus that leverages both front-loading and recency bias for maximum
+        attention impact.
 
-        Focus_on is a powerful dual-positioning method that ensures the most critical objective receives
-        maximum attention throughout the prompt by strategically placing it both at the beginning (as a
-        critical constraint) and at the end (as final emphasis). This dual-anchor approach leverages
-        both primacy and recency effects to create the strongest possible attention focus on the primary
-        objective.
+        `.focus_on()` provides a powerful dual-positioning method that ensures the most critical
+        objective receives maximum attention throughout the prompt by strategically placing it both
+        at the beginning (as a critical constraint) and at the end (as final emphasis). This
+        dual-anchor approach leverages both primacy and recency effects to create the strongest
+        possible attention focus on the primary objective.
 
-        **Dual Attention Strategy**: research in cognitive psychology demonstrates that information
-        positioned at both the beginning and end of a sequence receives the highest attention and
-        retention. By anchoring the primary goal at both positions, focus_on ensures that the most
-        critical objective maintains prominence throughout the entire prompt processing sequence.
+        **Dual Attention Strategy**: information positioned at both the beginning and end of a
+        sequence receives the highest attention and retention. By anchoring the primary goal at both
+        positions, `.focus_on()` ensures that the most critical objective maintains prominence
+        throughout the entire prompt processing sequence.
 
         **Primacy and Recency Effects**: the method capitalizes on both primacy bias (heightened
         attention to early information) and recency bias (heightened attention to final information)
         to create a reinforcing attention pattern that keeps the primary objective at the forefront
         of the AI's processing throughout response generation.
 
-        **Objective Reinforcement**: unlike single-position emphasis methods, focus_on creates a
-        reinforcing loop where the primary goal is established early as a critical requirement and
+        **Objective Reinforcement**: unlike single-position emphasis methods, `.focus_on()` creates
+        a reinforcing loop where the primary goal is established early as a critical requirement and
         then reinforced at the end as the ultimate focus. This dual reinforcement significantly
         reduces the risk of objective drift in complex prompts.
 
@@ -3852,15 +3212,16 @@ pattern recognition rather than abstract instruction following.
         primary_goal
             The single most important objective that must receive maximum attention and priority
             throughout the AI's response. Should be formulated as a clear, specific, and measurable
-            objective that captures the essential purpose of the prompt (e.g., "Provide actionable
-            security recommendations", "Create implementable cost reduction strategies", "Generate
-            learning-focused technical explanations").
+            objective that captures the essential purpose of the prompt (e.g.,
+            `"provide actionable security recommendations"`,
+            `"create implementable cost reduction strategies"`,
+            `"generate learning-focused technical explanations"`, etc.).
 
         Returns
         -------
         PromptBuilder
-            Self for method chaining, allowing combination with other prompt building
-            methods to create comprehensive, structured prompts.
+            Self for method chaining, allowing combination with other prompt building methods to
+            create comprehensive, structured prompts.
 
         Examples
         --------
@@ -3875,20 +3236,20 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("security architect", "enterprise security design")
-            .focus_on("Identify and eliminate all security vulnerabilities before considering any other improvements")
-            .task_context("Analyze enterprise application architecture for production deployment")
+            .focus_on("identify and eliminate all security vulnerabilities before considering any other improvements")
+            .task_context("analyze enterprise application architecture for production deployment")
             .core_analysis([
-                "Authentication and authorization mechanisms",
-                "Data protection and encryption standards",
-                "Network security and access controls",
-                "Infrastructure security configuration"
+                "authentication and authorization mechanisms",
+                "data protection and encryption standards",
+                "network security and access controls",
+                "infrastructure security configuration"
             ])
-            .constraint("Include performance optimization suggestions where security-compatible")
-            .constraint("Consider user experience implications of security measures")
+            .constraint("include performance optimization suggestions where security-compatible")
+            .constraint("consider user experience implications of security measures")
             .output_format([
-                "Security assessment with risk severity levels",
-                "Critical vulnerabilities requiring immediate attention",
-                "Security-first recommendations with implementation priorities"
+                "security assessment with risk severity levels",
+                "critical vulnerabilities requiring immediate attention",
+                "security-first recommendations with implementation priorities"
             ])
         )
 
@@ -3904,20 +3265,20 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("operations consultant", "cost optimization and efficiency")
-            .focus_on("Maximize cost savings while maintaining operational quality")
-            .task_context("Develop operational efficiency improvement plan for manufacturing company")
+            .focus_on("maximize cost savings while maintaining operational quality")
+            .task_context("develop operational efficiency improvement plan for manufacturing company")
             .core_analysis([
-                "Current cost structure and inefficiencies",
-                "Automation and technology opportunities",
-                "Process optimization potential",
-                "Resource allocation improvements"
+                "current cost structure and inefficiencies",
+                "automation and technology opportunities",
+                "process optimization potential",
+                "resource allocation improvements"
             ])
-            .constraint("Include innovation opportunities where cost-effective")
-            .constraint("Consider employee impact and change management")
+            .constraint("include innovation opportunities where cost-effective")
+            .constraint("consider employee impact and change management")
             .output_format([
-                "Cost analysis with savings potential",
-                "Implementation priorities by ROI and payback period",
-                "Budget-conscious recommendations with measurable outcomes"
+                "cost analysis with savings potential",
+                "implementation priorities by ROI and payback period",
+                "budget-conscious recommendations with measurable outcomes"
             ])
         )
         ```
@@ -3931,20 +3292,20 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("UX designer", "user-centered product design")
-            .focus_on("Optimize every aspect of the user experience above technical or business convenience")
-            .task_context("Redesign mobile banking application interface for improved usability")
+            .focus_on("optimize every aspect of the user experience above technical or business convenience")
+            .task_context("redesign mobile banking application interface for improved usability")
             .core_analysis([
-                "User journey mapping and pain points",
-                "Accessibility and inclusive design requirements",
-                "Interface clarity and intuitive navigation",
-                "Performance impact on user experience"
+                "user journey mapping and pain points",
+                "accessibility and inclusive design requirements",
+                "interface clarity and intuitive navigation",
+                "performance impact on user experience"
             ])
-            .constraint("Consider technical implementation constraints")
-            .constraint("Include business stakeholder requirements")
+            .constraint("consider technical implementation constraints")
+            .constraint("include business stakeholder requirements")
             .output_format([
                 "UX assessment with user impact analysis",
-                "Design recommendations prioritized by user value",
-                "Implementation plan with user testing validation"
+                "design recommendations prioritized by user value",
+                "implementation plan with user testing validation"
             ])
         )
         ```
@@ -3958,47 +3319,20 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("instructional designer", "evidence-based learning design")
-            .focus_on("Maximize student learning outcomes and knowledge retention")
-            .task_context("Design comprehensive data science curriculum for career changers")
+            .focus_on("maximize student learning outcomes and knowledge retention")
+            .task_context("design comprehensive data science curriculum for career changers")
             .core_analysis([
-                "Learning objective alignment and progression",
-                "Skill building sequence and scaffolding",
-                "Practice opportunities and feedback mechanisms",
-                "Real-world application and project integration"
+                "learning objective alignment and progression",
+                "skill building sequence and scaffolding",
+                "practice opportunities and feedback mechanisms",
+                "real-world application and project integration"
             ])
-            .constraint("Consider time constraints and resource limitations")
-            .constraint("Include diverse learning styles and accessibility")
+            .constraint("consider time constraints and resource limitations")
+            .constraint("include diverse learning styles and accessibility")
             .output_format([
-                "Curriculum structure with learning outcome mapping",
-                "Module design with skill progression tracking",
-                "Assessment strategy focused on competency development"
-            ])
-        )
-        ```
-
-        ### Performance optimization priority
-
-        Make system performance the primary consideration across all decisions:
-
-        ```python
-        # Technical optimization with performance focus
-        builder = (
-            tb.PromptBuilder()
-            .persona("performance engineer", "high-scale system optimization")
-            .focus_on("Achieve maximum system performance and scalability")
-            .task_context("Optimize distributed microservices architecture for peak traffic handling")
-            .core_analysis([
-                "Current performance bottlenecks and limitations",
-                "Scalability patterns and load distribution",
-                "Caching strategies and data optimization",
-                "Infrastructure scaling and resource management"
-            ])
-            .constraint("Maintain code maintainability where possible")
-            .constraint("Consider development team capabilities")
-            .output_format([
-                "Performance analysis with benchmark comparisons",
-                "Optimization recommendations by impact and effort",
-                "Implementation roadmap with performance milestones"
+                "curriculum structure with learning outcome mapping",
+                "module design with skill progression tracking",
+                "assessment strategy focused on competency development"
             ])
         )
         ```
@@ -4012,20 +3346,20 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("compliance officer", "financial services regulation")
-            .focus_on("Ensure 100% regulatory compliance before any operational considerations")
-            .task_context("Audit investment management platform for regulatory adherence")
+            .focus_on("ensure 100% regulatory compliance before any operational considerations")
+            .task_context("audit investment management platform for regulatory adherence")
             .core_analysis([
-                "Regulatory requirement mapping and gaps",
-                "Risk assessment and mitigation strategies",
-                "Documentation and audit trail completeness",
-                "Process compliance and control effectiveness"
+                "regulatory requirement mapping and gaps",
+                "risk assessment and mitigation strategies",
+                "documentation and audit trail completeness",
+                "process compliance and control effectiveness"
             ])
-            .constraint("Include operational efficiency opportunities where compliant")
-            .constraint("Consider user experience impact of compliance measures")
+            .constraint("include operational efficiency opportunities where compliant")
+            .constraint("consider user experience impact of compliance measures")
             .output_format([
-                "Compliance status with regulatory requirement tracking",
-                "Critical violations requiring immediate remediation",
-                "Compliance-first recommendations with implementation priorities"
+                "compliance status with regulatory requirement tracking",
+                "critical violations requiring immediate remediation",
+                "compliance-first recommendations with implementation priorities"
             ])
         )
         ```
@@ -4039,20 +3373,20 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("innovation strategist", "emerging technology adoption")
-            .focus_on("Identify and implement innovative solutions that create significant competitive advantage")
-            .task_context("Develop technology roadmap for digital transformation initiative")
+            .focus_on("identify and implement innovative solutions that create significant competitive advantage")
+            .task_context("develop technology roadmap for digital transformation initiative")
             .core_analysis([
-                "Emerging technology opportunities and applications",
-                "Competitive differentiation potential",
-                "Implementation feasibility and risk assessment",
+                "emerging technology opportunities and applications",
+                "competitive differentiation potential",
+                "implementation feasibility and risk assessment",
                 "ROI and business impact projections"
             ])
-            .constraint("Consider enterprise stability and risk tolerance")
-            .constraint("Include team capability development requirements")
+            .constraint("consider enterprise stability and risk tolerance")
+            .constraint("include team capability development requirements")
             .output_format([
-                "Innovation assessment with competitive impact analysis",
-                "Technology recommendations prioritized by advantage potential",
-                "Implementation strategy with innovation milestones"
+                "innovation assessment with competitive impact analysis",
+                "technology recommendations prioritized by advantage potential",
+                "implementation strategy with innovation milestones"
             ])
         )
         ```
@@ -4066,91 +3400,41 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("quality engineer", "manufacturing excellence")
-            .focus_on("Achieve superior product quality that exceeds customer expectations")
-            .task_context("Optimize manufacturing process for automotive component production")
+            .focus_on("achieve superior product quality that exceeds customer expectations")
+            .task_context("optimize manufacturing process for automotive component production")
             .core_analysis([
-                "Current quality metrics and defect analysis",
-                "Process control and variability reduction",
-                "Quality assurance and testing protocols",
-                "Continuous improvement opportunities"
+                "current quality metrics and defect analysis",
+                "process control and variability reduction",
+                "quality assurance and testing protocols",
+                "continuous improvement opportunities"
             ])
-            .constraint("Consider production efficiency where quality-compatible")
-            .constraint("Include cost implications of quality improvements")
+            .constraint("consider production efficiency where quality-compatible")
+            .constraint("include cost implications of quality improvements")
             .output_format([
-                "Quality assessment with defect root cause analysis",
-                "Process improvements prioritized by quality impact",
-                "Implementation plan with quality validation metrics"
-            ])
-        )
-        ```
-
-        ### Customer satisfaction focus
-
-        Prioritize customer satisfaction and loyalty above all business metrics:
-
-        ```python
-        # Customer experience with satisfaction focus
-        builder = (
-            tb.PromptBuilder()
-            .persona("customer success manager", "customer loyalty and satisfaction")
-            .focus_on("Maximize customer satisfaction and long-term loyalty")
-            .task_context("Develop customer service improvement strategy for SaaS platform")
-            .core_analysis([
-                "Current customer satisfaction metrics and feedback",
-                "Service delivery gaps and pain points",
-                "Customer success journey optimization",
-                "Retention and loyalty enhancement opportunities"
-            ])
-            .constraint("Consider operational resource constraints")
-            .constraint("Include revenue impact where customer-positive")
-            .output_format([
-                "Customer satisfaction analysis with improvement priorities",
-                "Service enhancement recommendations by customer impact",
-                "Implementation timeline with satisfaction measurement"
-            ])
-        )
-        ```
-
-        ### Sustainability leadership
-
-        Make environmental sustainability the primary driver of all decisions:
-
-        ```python
-        # Business strategy with sustainability focus
-        builder = (
-            tb.PromptBuilder()
-            .persona("sustainability director", "environmental leadership")
-            .focus_on("Minimize environmental impact while maintaining business viability")
-            .task_context("Develop sustainable operations strategy for retail supply chain")
-            .core_analysis([
-                "Current environmental impact assessment",
-                "Sustainable technology and process opportunities",
-                "Supply chain optimization for sustainability",
-                "Carbon footprint reduction strategies"
-            ])
-            .constraint("Consider financial viability and business continuity")
-            .constraint("Include stakeholder impact and change management")
-            .output_format([
-                "Sustainability assessment with environmental impact metrics",
-                "Green initiatives prioritized by environmental benefit",
-                "Implementation roadmap with sustainability milestones"
+                "quality assessment with defect root cause analysis",
+                "process improvements prioritized by quality impact",
+                "implementation plan with quality validation metrics"
             ])
         )
         ```
 
         Integration Notes
         -----------------
-        - **Dual Positioning**: Leverages both primacy and recency effects for maximum attention impact
-        - **Objective Reinforcement**: Creates reinforcing attention pattern that prevents goal drift
-        - **Attention Hierarchy**: Establishes clear priority structure for complex prompts
-        - **Trade-off Guidance**: Provides clear decision criteria when competing objectives conflict
-        - **Quality Assurance**: Ensures responses align with the most critical objective throughout
-        - **Strategic Emphasis**: Combines front-loaded critical constraints with end-positioned final emphasis
+        - **Dual Positioning**: leverages both primacy and recency effects for maximum attention
+        impact
+        - **Objective Reinforcement**: creates reinforcing attention pattern that prevents goal
+        drift
+        - **Attention Hierarchy**: establishes clear priority structure for complex prompts
+        - **Trade-off Guidance**: provides clear decision criteria when competing objectives
+        conflict
+        - **Quality Assurance**: ensures responses align with the most critical objective throughout
+        - **Strategic Emphasis**: combines front-loaded critical constraints with end-positioned
+        final emphasis
 
-        The focus_on method provides the strongest possible attention management by establishing the
-        primary objective as both the opening critical requirement and closing final emphasis,
-        creating a dual-anchor system that maintains unwavering focus on the most important goal
-        throughout the entire AI response generation process.
+        The `.focus_on()` method provides the strongest possible attention management by
+        establishing the primary objective as both the opening critical requirement and closing
+        final emphasis, creating a dual-anchor system that maintains unwavering focus on the most
+        important goal throughout the entire AI response generation process.
         """
         # Add as critical constraint (front-loaded)
         self.critical_constraint(f"Primary objective: {primary_goal}")
@@ -4162,37 +3446,40 @@ pattern recognition rather than abstract instruction following.
         """
         Internal method to construct the final prompt using attention-optimized structure.
 
-        This method is used internally by ChatBot to create the system prompt while preserving
-        the structured data for testing and analysis.
+        This method is used internally by ChatBot to create the system prompt while preserving the
+        structured data for testing and analysis.
         """
         # fmt: off
         """
-        Construct the final prompt using attention-optimized structure based on cognitive psychology principles.
+        Construct the final prompt using attention-optimized structure based on cognitive psychology
+        principles.
 
-        The build method transforms the accumulated prompt components into a strategically structured prompt
-        that maximizes AI attention and response quality through evidence-based sequencing. This method
-        implements a comprehensive attention management system that leverages primacy effects, recency bias,
-        and cognitive load optimization to ensure that the most critical information receives maximum focus
-        during AI processing.
+        The build method transforms the accumulated prompt components into a strategically
+        structured prompt that maximizes AI attention and response quality through evidence-based
+        sequencing. This method implements a comprehensive attention management system that
+        leverages primacy effects, recency bias, and cognitive load optimization to ensure that the
+        most critical information receives maximum focus during AI processing.
 
-        **Attention Architecture**: the prompt structure follows a carefully researched sequence that aligns
-        with how large language models process and prioritize information. Each section is positioned to
-        optimize attention allocation, with critical elements placed at psychologically proven high-attention
-        positions (beginning and end) while supporting information is organized to minimize cognitive load.
+        **Attention Architecture**: the prompt structure follows a carefully researched sequence
+        that aligns with how large language models process and prioritize information. Each section
+        is positioned to optimize attention allocation, with critical elements placed at
+        high-attention positions (beginning and end) while supporting information is organized to
+        minimize cognitive load.
 
-        **Cognitive Load Management**: the structured approach prevents cognitive overload by presenting
-        information in digestible, hierarchically organized sections. This allows the AI to process complex
-        requirements systematically while maintaining focus on the most important objectives throughout
-        response generation.
+        **Cognitive Load Management**: the structured approach prevents cognitive overload by
+        presenting information in digestible, hierarchically organized sections. This allows the AI
+        to process complex requirements systematically while maintaining focus on the most important
+        objectives throughout response generation.
 
-        **Priority-Based Organization**: all prompt sections are automatically sorted by priority level,
-        ensuring that high-priority information receives prominent placement and attention. This systematic
-        prioritization prevents important requirements from being overshadowed by less critical details.
+        **Priority-Based Organization**: all prompt sections are automatically sorted by priority
+        level, ensuring that high-priority information receives prominent placement and attention.
+        This systematic prioritization prevents important requirements from being overshadowed by
+        less critical details.
 
-        **Behavioral Anchoring**: the persona-first structure establishes behavioral context before presenting
-        tasks or constraints, allowing the AI to adopt the appropriate role and mindset before processing
-        specific requirements. This behavioral anchoring significantly improves response quality and
-        consistency with desired expertise levels.
+        **Behavioral Anchoring**: the persona-first structure establishes behavioral context before
+        presenting tasks or constraints, allowing the AI to adopt the appropriate role and mindset
+        before processing specific requirements. This behavioral anchoring significantly improves
+        response quality and consistency with desired expertise levels.
 
         **Structural Sequence**: the method implements an 8-section attention-optimized structure:
 
@@ -4225,16 +3512,16 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("software architect", "system design")
-            .task_context("Design API architecture for e-commerce platform")
+            .task_context("design API architecture for e-commerce platform")
             .core_analysis([
-                "Service boundaries and responsibilities",
-                "Data flow and state management",
-                "Security and authentication approach"
+                "service boundaries and responsibilities",
+                "data flow and state management",
+                "security and authentication approach"
             ])
             .output_format([
-                "Architecture overview diagram",
+                "architecture overview diagram",
                 "API specification with endpoints",
-                "Implementation recommendations"
+                "implementation recommendations"
             ])
         )
 
@@ -4269,15 +3556,15 @@ pattern recognition rather than abstract instruction following.
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security")
-            .focus_on("Identify critical security vulnerabilities that pose immediate risk")
+            .focus_on("identify critical security vulnerabilities that pose immediate risk")
             .task_context(
-                "Audit web application for production deployment",
+                "audit web application for production deployment",
                 priority=tb.Priority.HIGH
             )
             .core_analysis([
-                "Authentication and authorization mechanisms",
-                "Input validation and data sanitization",
-                "Infrastructure security configuration"
+                "authentication and authorization mechanisms",
+                "input validation and data sanitization",
+                "infrastructure security configuration"
                 ],
                 priority=tb.Priority.HIGH
             )
@@ -4286,15 +3573,15 @@ pattern recognition rather than abstract instruction following.
                 "Evaluate each finding using CVSS scoring methodology",
                 priority=tb.Priority.MEDIUM
             )
-            .constraint("Include remediation effort estimates")
+            .constraint("include remediation effort estimates")
             .avoid_topics([
-                "Security through obscurity approaches",
-                "Custom cryptographic implementations"
+                "security through obscurity approaches",
+                "custom cryptographic implementations"
             ])
             .output_format([
-                "Executive summary with critical issues",
-                "Detailed findings with CVSS scores",
-                "Prioritized remediation roadmap"
+                "executive summary with critical issues",
+                "detailed findings with CVSS scores",
+                "prioritized remediation roadmap"
             ])
             .example(
                 "SQL injection vulnerability in login form",
@@ -4340,282 +3627,6 @@ pattern recognition rather than abstract instruction following.
 
         Focus your entire response on: Identify critical security vulnerabilities that pose immediate risk
         ```
-
-        ### Business strategy prompt with constraints
-
-        Professional business analysis with comprehensive requirements:
-
-        ```python
-        # Build a strategic planning prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("business consultant", "strategic planning and market analysis")
-            .task_context("Develop market entry strategy for SaaS startup")
-            .critical_constraint("All recommendations must be implementable with $500K budget")
-            .core_analysis([
-                "Target market size and segmentation",
-                "Competitive landscape and positioning",
-                "Go-to-market strategy and channels",
-                "Revenue projections and unit economics"
-            ])
-            .constraint("Focus on B2B market opportunities")
-            .constraint("Include 12-month timeline with milestones")
-            .avoid_topics([
-                "Aggressive customer acquisition without unit economics validation",
-                "Market strategies requiring significant upfront capital"
-            ])
-            .output_format([
-                "Market analysis with addressable market sizing",
-                "Competitive positioning and differentiation strategy",
-                "Implementation roadmap with budget allocation"
-            ])
-            .final_emphasis("Prioritize strategies with fastest path to sustainable revenue")
-        )
-
-        prompt = builder
-        ```
-
-        ### Educational content development
-
-        Learning-focused prompt with pedagogical considerations:
-
-        ```python
-        # Build an instructional design prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("instructional designer", "adult learning and skill development")
-            .task_context("Create Python programming curriculum for career changers")
-            .core_analysis([
-                "Learning objective progression and scaffolding",
-                "Hands-on practice and project integration",
-                "Assessment strategies and competency validation"
-            ])
-            .structured_section(
-                "Cognitive Load Management",
-                "Design lessons that prevent information overload while building complexity",
-                priority=tb.Priority.HIGH
-            )
-            .constraint("Include diverse learning styles and accessibility considerations")
-            .constraint("Provide clear success metrics and progress tracking")
-            .avoid_topics([
-                "Memorization-based learning without practical application",
-                "Complex theoretical concepts before foundational skills"
-            ])
-            .output_format([
-                "Curriculum structure with weekly learning outcomes",
-                "Module breakdown with practice exercises",
-                "Assessment rubrics and competency milestones"
-            ])
-            .example(
-                "Week 3: Functions and code organization",
-                "Learning Outcome: Students write reusable functions with clear parameters and return values. Practice: Build a calculator with separate functions for each operation. Assessment: Code review focusing on function design principles."
-            )
-        )
-
-        prompt = builder
-        ```
-
-        ### Technical code review prompt
-
-        Development-focused prompt with quality emphasis:
-
-        ```python
-        # Build a code review prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("senior developer", "code quality and mentorship")
-            .task_context("Review pull request for production deployment readiness")
-            .critical_constraint("Code must meet production quality standards before approval")
-            .core_analysis([
-                "Code correctness and functionality",
-                "Security vulnerability assessment",
-                "Performance implications and optimization opportunities",
-                "Maintainability and documentation quality"
-            ])
-            .constraint("Provide constructive feedback with learning opportunities")
-            .constraint("Include specific examples and improvement suggestions")
-            .avoid_topics([
-                "Quick fixes that introduce technical debt",
-                "Skipping unit tests for faster delivery"
-            ])
-            .output_format([
-                "Overall assessment with approval recommendation",
-                "Specific issues categorized by severity",
-                "Improvement suggestions with code examples"
-            ])
-            .focus_on("Ensure code quality meets production standards while providing educational feedback")
-        )
-
-        prompt = builder
-        ```
-
-        ### Medical analysis prompt with safety emphasis
-
-        Healthcare-focused prompt with patient safety priority:
-
-        ```python
-        # Build a medical analysis prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("healthcare systems analyst", "patient safety and quality improvement")
-            .task_context("Analyze hospital workflow for efficiency improvements")
-            .critical_constraint("Patient safety must never be compromised for efficiency gains")
-            .core_analysis([
-                "Patient flow and care coordination effectiveness",
-                "Resource utilization and bottleneck identification",
-                "Technology integration opportunities",
-                "Staff workflow and communication patterns"
-            ])
-            .structured_section(
-                "Safety Impact Assessment",
-                "Evaluate how each proposed change affects patient safety outcomes",
-                priority=tb.Priority.CRITICAL
-            )
-            .constraint("Include staff training and change management requirements")
-            .avoid_topics([
-                "Efficiency improvements that reduce patient care time",
-                "Cost-cutting measures that compromise safety protocols"
-            ])
-            .output_format([
-                "Workflow analysis with safety impact assessment",
-                "Improvement recommendations prioritized by patient benefit",
-                "Implementation plan with safety validation protocols"
-            ])
-            .final_emphasis("Every recommendation must enhance or maintain patient safety as the primary objective")
-        )
-
-        prompt = builder
-        ```
-
-        ### Research methodology prompt
-
-        Academic research with methodological rigor:
-
-        ```python
-        # Build a research design prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("research methodologist", "quantitative analysis and study design")
-            .task_context("Design study to evaluate educational intervention effectiveness")
-            .core_analysis([
-                "Research design appropriateness and validity",
-                "Sample size calculations and statistical power",
-                "Bias mitigation and control strategies",
-                "Measurement instruments and reliability"
-            ])
-            .structured_section(
-                "Ethical Considerations",
-                "Address participant protection and informed consent requirements",
-                priority=tb.Priority.HIGH
-            )
-            .constraint("Maintain rigorous scientific standards throughout")
-            .constraint("Include practical implementation considerations")
-            .avoid_topics([
-                "P-hacking or selective result reporting",
-                "Inadequate sample sizes for meaningful conclusions"
-            ])
-            .output_format([
-                "Study design with methodological justification",
-                "Statistical analysis plan with power calculations",
-                "Ethical review requirements and procedures"
-            ])
-            .example(
-                "Randomized controlled trial with 200 participants",
-                "Design: RCT with treatment/control groups (n=100 each). Power analysis indicates 80% power to detect medium effect size (d=0.5) at α=0.05. Block randomization ensures balanced groups."
-            )
-        )
-
-        prompt = builder
-        ```
-
-        ### Financial analysis prompt with risk management
-
-        Investment analysis with comprehensive risk assessment:
-
-        ```python
-        # Build a financial analysis prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("financial analyst", "investment research and risk assessment")
-            .task_context("Evaluate portfolio diversification strategy for institutional investor")
-            .core_analysis([
-                "Asset allocation optimization and correlation analysis",
-                "Risk-adjusted return projections",
-                "Market volatility and stress testing",
-                "Liquidity requirements and constraints"
-            ])
-            .structured_section(
-                "ESG Integration",
-                "Incorporate environmental, social, and governance factors into analysis",
-                priority=tb.Priority.MEDIUM
-            )
-            .constraint("Include regulatory compliance requirements")
-            .constraint("Consider tax efficiency optimization opportunities")
-            .avoid_topics([
-                "High-risk speculative investments without proper analysis",
-                "Ignoring correlation risks during market stress"
-            ])
-            .output_format([
-                "Portfolio optimization with efficient frontier analysis",
-                "Risk assessment with scenario modeling",
-                "Implementation roadmap with rebalancing strategy"
-            ])
-            .focus_on("Optimize risk-adjusted returns while maintaining portfolio stability")
-        )
-
-        prompt = builder
-        ```
-
-        ### Content strategy prompt with audience focus
-
-        Marketing content development with user-centric approach:
-
-        ```python
-        # Build a content strategy prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("content strategist", "audience engagement and value creation")
-            .task_context("Develop content marketing strategy for B2B software company")
-            .core_analysis([
-                "Audience persona development and pain point analysis",
-                "Content format effectiveness and engagement metrics",
-                "Distribution channel optimization and reach",
-                "Competitive content landscape and differentiation"
-            ])
-            .constraint("Focus on providing genuine value to target audience")
-            .constraint("Include SEO optimization without compromising quality")
-            .avoid_topics([
-                "Clickbait tactics without delivering promised value",
-                "Content created solely for volume metrics"
-            ])
-            .output_format([
-                "Content calendar with audience value mapping",
-                "Content format recommendations with engagement projections",
-                "Distribution strategy with channel optimization"
-            ])
-            .example(
-                "Technical decision-maker pain point: evaluating security solutions",
-                "Content: 'Security Framework Comparison Guide' - detailed analysis of popular frameworks with implementation complexity, cost analysis, and real-world case studies."
-            )
-            .final_emphasis("Every piece of content must solve a specific problem for the target audience")
-        )
-
-        prompt = builder
-        ```
-
-        Integration Notes
-        -----------------
-        - **Attention Architecture**: implements evidence-based sequencing for maximum AI focus
-        - **Cognitive Load Management**: organizes information to prevent processing overload
-        - **Priority-Based Organization**: automatically sorts sections by importance level
-        - **Behavioral Anchoring**: establishes role context before presenting requirements
-        - **Structural Optimization**: uses 8-section framework for comprehensive coverage
-        - **Psychological Principles**: leverages primacy, recency, and attention management research
-
-        The build method represents the culmination of the attention-optimized prompt engineering
-        approach, transforming accumulated components into a strategically structured prompt that
-        maximizes AI performance through evidence-based design principles and cognitive psychology
-        research.
         """
         # fmt: on
         prompt_parts = []
