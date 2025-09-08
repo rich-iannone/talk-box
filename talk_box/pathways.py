@@ -128,10 +128,11 @@ class Pathways:
 
     This approach provides:
 
-    - **Visual state boundaries** with `# === STATE: description ===` comments
-    - **Natural state definition** with description first: `.state("What happens here", id="name")`
-    - **Smart type inference** where `.tools()` → tool, `.branch_on()` → decision, `.required()` → collect
-    - **Automatic start state** where the first `.state()` becomes the starting state
+    - visual state boundaries with `# === STATE: description ===` comments
+    - natural state definition with description first: `.state("What happens here", id="name")`
+    - smart type inference where `.tools()` → `"tool"`, `.branch_on()` → `"decision"`,
+    `.required()` → `"collect"`
+    - automatic start state where the first `.state()` becomes the starting state
 
     ### 3. State Configuration Pattern (repeat for each state):
 
@@ -144,16 +145,16 @@ class Pathways:
         .state("Wrap up")                              # Linear states don't need IDs
 
         # Configure the state
-        .required([...])                            # What must be accomplished
-        .optional([...])                            # What would be nice to have
-        .tools([...])                               # Available tools (infers type="tool")
-        .success_condition("When state succeeds")   # How to know it's complete
+        .required([...])                               # What must be accomplished
+        .optional([...])                               # What would be nice to have
+        .tools([...])                                  # Available tools (infers type="tool")
+        .success_condition("When state succeeds")      # How to know it's complete
 
         # Define state transitions (choose one)
-        .next_state("next_state")                   # Linear progression
-        .branch_on("condition", id="target_state")  # Conditional (infers type="decision")
-        .next_state("common_state")                 # Reconverge after branching
-        .fallback("error_condition", "backup_state") # Error handling
+        .next_state("next_state")                      # Linear progression
+        .branch_on("condition", id="target_state")     # Conditional (infers type="decision")
+        .next_state("common_state")                    # Reconverge after branching
+        .fallback("error_condition", "backup_state")   # Error handling
     ```
 
     ### 4. Pathway Completion (call once at end):
@@ -175,19 +176,19 @@ class Pathways:
     -----------------------------
     Each state type serves a specific role in the conversation flow:
 
-    - **`type="chat"`**: Open conversation, explanations, guidance (default)
-    - **`type="decision"`**: Branching logic, must use `branch_on()` not `next_state()`
-    - **`type="collect"`**: Structured information gathering
-    - **`type="tool"`**: Using specific tools or APIs, requires `tools()`
-    - **`type="summary"`**: Conclusions, confirmations, completion actions
+    - `type="chat"`: open conversation, explanations, guidance (default)
+    - `type="decision"`: branching logic, must use `branch_on()` not `next_state()`
+    - `type="collect"`: structured information gathering
+    - `type="tool"`: using specific tools or APIs, requires `tools()`
+    - `type="summary"`: conclusions, confirmations, completion actions
 
     Key Rules
     ---------
-    - escription is required and provided in `.state()` method
-    - `type="decision"` must use `branch_on()`, never `next_state()`
-    - `type="tool"` must include `tools()` specification
-    - State names must be unique and use `lowercase_with_underscores`
-    - Target states in transitions must be defined later with another `.state()`
+    - description is required and provided in `.state()` method
+    - if you use `type="decision"`, you must use `branch_on()` and never `next_state()`
+    - `type="tool"` must include a `tools()` specification
+    - state names must be unique and use `"lowercase_with_underscores"`
+    - target states in transitions must be defined later with another `.state()`
 
     Examples
     --------
@@ -377,51 +378,54 @@ class Pathways:
 
         Examples
         --------
-        Natural API with type inference:
+        Complete pathway showing `.state()` method creating clear conversation structure:
 
-        ```python
+        ```{python}
+        import talk_box as tb
+
+        # Creating a complete product recommendation pathway
         pathway = (
             tb.Pathways(
-                title="Customer Support",
-                desc="Help resolve customer issues"
+                title="Product Recommendation",
+                desc="Help customers find the right product for their needs",
+                activation="Customer needs product guidance"
             )
-            .state("Welcome customer and understand their needs")
-            .required(["problem_description", "urgency_level"])
-            .state("Determine support approach needed", id="triage")
-            .branch_on("Technical issue", id="troubleshooting")
-            .branch_on("Billing question", id="billing_help")
-            .state("Provide technical troubleshooting", id="troubleshooting")
-            .tools(["diagnostic_tool", "knowledge_base"])
+
+            # .state() defines what happens at each step ---
+            # === STATE: welcom ===
+            .state("Welcome customer and understand their situation", id="welcome")
+            .required(["customer_goal", "budget_range"])
+            .next_state("analysis")
+
+            # a .state() with a good descriptions makes the flow clear ---
+            # === STATE: analysis ===
+            .state("Analyze needs and preferences", id="analysis")
+            .required(["specific_requirements", "priorities"])
+            .success_condition("Customer needs are clearly understood")
+            .next_state("recommendation")
+
+            # .state() creates the final outcome step ---
+            # === STATE: recommendation ===
+            .state("Present tailored recommendations", id="recommendation")
+            .required(["product_matches", "rationale"])
+            .success_condition("Customer has clear next steps")
         )
+
+        # See how the pathway materializes
+        print(pathway)
         ```
 
-        Explicit type specification (useful for complex workflows):
-
-        ```python
-        pathway = (
-            tb.Pathways(
-                title="Data Analysis Pipeline",
-                desc="Guide user through structured data analysis"
-            )
-            .state("Gather analysis requirements", id="requirements", type="collect")
-            .required(["dataset_info", "analysis_goals"])
-            .state("Choose analysis approach", id="method_selection", type="decision")
-            .branch_on("Statistical analysis needed", id="stats")
-            .branch_on("Machine learning required", id="ml_pipeline")
-            .state("Run statistical tests", id="stats", type="tool")
-            .tools(["scipy_stats", "hypothesis_testing"])
-            .state("Summarize findings", id="summary", type="summary")
-        )
-        ```
+        The `.state()` method creates clear conversation boundaries and progression. Notice how each
+        state has a specific purpose and builds toward the final goal.
 
         When to use explicit types:
 
-        - **Complex workflows** where type inference might be ambiguous
-        - **Documentation clarity** when the state's purpose isn't obvious from methods
-        - **Team development** to make intentions explicit for other developers
-        - **Mixed functionality** when a state serves multiple purposes (e.g., both collecting info
+        - in complex workflows where type inference might be ambiguous
+        - for documentation clarity when the state's purpose isn't obvious from methods
+        - for team development to make intentions explicit for other developers
+        - for mixed functionality when a state serves multiple purposes (e.g., both collecting info
         and using tools)
-        - **Error prevention** to avoid unintended type inference conflicts
+        - as a form of error prevention for avoiding unintended type inference conflicts
 
         Notes
         -----
@@ -558,16 +562,53 @@ class Pathways:
 
         Examples
         --------
-        ```python
-        .state("booking_details", desc="Get essential travel information")
-            .required(["departure_city", "destination", "travel_date"])
-            .optional(["return_date", "time_preference"])
-            .next_state("search_flights")
+        Complete pathway showing `.required()` defining essential information:
 
-        # Or for a single item
-        .state("get_email", desc="Collect user email")
-            .required("email_address")
+        ```{python}
+        import talk_box as tb
+
+        # Creating a loan application pathway
+        pathway = (
+            tb.Pathways(
+                title="Loan Application Process",
+                desc="Guide customers through loan application requirements",
+                activation="Customer wants to apply for a loan"
+            )
+            # === STATE: personal_info ===
+            .state("Gather basic applicant information", id="personal_info")
+
+            # .required() ensures critical data is collected ---
+            .required(["full_name", "social_security_number", "employment_status"])
+
+            .next_state("financial_details")
+            # === STATE: financial_details ===
+            .state("Collect financial information", id="financial_details")
+
+            # .required() can specify multiple essential items ---
+            .required([
+                "annual_income",
+                "monthly_expenses",
+                "existing_debt",
+                "credit_score_authorization"
+            ])
+
+            .success_condition("All financial data verified")
+            .next_state("review")
+            # === STATE: review ===
+            .state("Review application completeness", id="review")
+
+            # .required() works with single items too ---
+            .required("applicant_signature")
+
+            .success_condition("Application ready for processing")
+        )
+
+        # See the pathway with required information highlighted
+        print(pathway)
         ```
+
+        The `.required()` method ensures the LLM won't proceed until essential information is
+        collected. This prevents incomplete applications and ensures thorough data gathering.
 
         Notes
         -----
@@ -592,7 +633,7 @@ class Pathways:
         """
         Specify optional information that would be helpful but not required.
 
-        Use with required() to define nice-to-have information that can improve the outcome but
+        Use with `.required()` to define nice-to-have information that can improve the outcome but
         isn't essential for state completion. The LLM will attempt to gather this if the
         conversation allows.
 
@@ -604,14 +645,55 @@ class Pathways:
 
         Examples
         --------
-        ```python
-        .required(["departure_city", "destination", "travel_date"])
-        .optional(["airline_preference", "seat_preference", "meal_requirements"])
+        Complete pathway showing `.optional()` enhancing outcomes without blocking progress:
 
-        # Or for a single optional item
-        .required("user_email")
-        .optional("phone_number")
+        ```{python}
+        import talk_box as tb
+
+        # Creating a travel booking pathway
+        pathway = (
+            tb.Pathways(
+                title="Flight Booking Assistant",
+                desc="Help customers find and book flights",
+                activation="Customer wants to book a flight"
+            )
+            # === STATE: travel_basics ===
+            .state("Gather essential travel details", id="travel_basics")
+            .required(["departure_city", "destination", "travel_date"])
+
+            # .optional() adds helpful details without slowing the process ---
+            .optional([
+                "return_date",
+                "preferred_departure_time",
+                "airline_preference"
+            ])
+
+            .next_state("search_flights")
+            # === STATE: search_flights ===
+            .state("Find matching flights", id="search_flights")
+            .required(["flight_options_found"])
+
+            # .optional() can improve personalization ---
+            .optional("seating_preference")
+
+            .success_condition("Customer has reviewed flight options")
+            .next_state("booking")
+            # === STATE: booking ===
+            .state("Complete the booking", id="booking")
+            .required(["payment_information", "traveler_details"])
+
+            # .optional() for enhanced services ---
+            .optional(["travel_insurance", "special_meal_requests", "frequent_flyer_number"])
+
+            .success_condition("Booking confirmed")
+        )
+
+        # See how optional items enhance the pathway
+        print(pathway)
         ```
+
+        The `.optional()` method allows the conversation to gather helpful information when
+        available, but doesn't block progress if users want to move forward quickly.
 
         Notes
         -----
@@ -644,16 +726,61 @@ class Pathways:
 
         Examples
         --------
-        ```python
-        .state("Find flights matching user criteria")
-            .tools(["flight_search_api", "price_comparison_tool"])
-            .success_condition("Found at least 3 flight options")
-            .next_state("present_options")
+        Complete pathway showing `.tools()` enabling specific capabilities:
 
-        # Or for a single tool
-        .state("Search database")
-            .tools("database_search")
+        ```{python}
+        import talk_box as tb
+
+        # Creating a technical diagnosis pathway
+        pathway = (
+            tb.Pathways(
+                title="System Diagnostics",
+                desc="Diagnose and resolve technical issues",
+                activation="User reports technical problems"
+            )
+            # === STATE: problem_intake ===
+            .state("Understand the reported issue", id="problem_intake")
+            .required(["problem_description", "system_details", "error_messages"])
+            .next_state("initial_diagnosis")
+            # === STATE: initial_diagnosis ===
+            .state("Run initial diagnostic checks", id="initial_diagnosis")
+
+            # .tools() specifies what capabilities are available ---
+            .tools([
+                "system_health_checker",
+                "log_analyzer",
+                "performance_monitor"
+            ])
+
+            .success_condition("Initial diagnosis completed")
+            .next_state("detailed_analysis")
+            # === STATE: detailed_analysis ===
+            .state("Perform detailed system analysis", id="detailed_analysis")
+
+            # .tools() can specify advanced diagnostic tools ---
+            .tools([
+                "network_diagnostics",
+                "database_integrity_check",
+                "security_scan"
+            ])
+
+            .required(["root_cause_identified"])
+            .next_state("solution")
+            # === STATE: solution ===
+            .state("Implement solution", id="solution")
+
+            # .tools() for implementation capabilities ---
+            .tools("automated_repair_tool")
+
+            .success_condition("Issue resolved and system stable")
+        )
+
+        # See how tools are integrated into the pathway
+        print(pathway)
         ```
+
+        The `.tools()` method tells the LLM what specific capabilities are available at each step,
+        automatically inferring the state type as "tool" when tools are the primary focus.
 
         Notes
         -----
@@ -678,23 +805,60 @@ class Pathways:
         Define what indicates successful completion of the current state.
 
         Use to specify when the state's objectives are met and it's ready to transition. More
-        specific than just completing required() items. Can be used in any order within the state
+        specific than just completing `.required()` items. Can be used in any order within the state
         configuration.
 
         Parameters
         ----------
-        condition : str
+        condition
             Specific, observable condition indicating the state succeeded. Use action-oriented
             language that the LLM can recognize.
 
         Examples
         --------
-        ```python
-        .state("explanation", desc="Explain the solution to the user")
-            .required(["solution_steps", "expected_outcome"])
-            .success_condition("User confirms understanding and agrees to proceed")
-            .next_state("implementation")
+        Complete pathway showing `.success_condition()` defining clear completion criteria:
+
+        ```{python}
+        import talk_box as tb
+
+        # Creating a learning assessment pathway
+        pathway = (
+            tb.Pathways(
+                title="Skill Assessment",
+                desc="Evaluate student understanding and provide targeted feedback",
+                activation="Student completes a learning module"
+            )
+            # === STATE: practice ===
+            .state("Present practice problems", id="practice")
+            .required(["problems_attempted", "student_responses"])
+
+            # .success_condition() defines when understanding is demonstrated ---
+            .success_condition("Student correctly solves at least 3 out of 5 problems")
+
+            .next_state("feedback")
+            # === STATE: feedback ===
+            .state("Provide personalized feedback", id="feedback")
+            .required(["specific_feedback", "improvement_areas"])
+
+            # .success_condition() ensures feedback is constructive ---
+            .success_condition("Student understands their mistakes and next steps")
+
+            .next_state("advanced_practice")
+            # === STATE: advanced_practice ===
+            .state("Offer advanced challenges", id="advanced_practice")
+            .required(["challenging_problems_presented"])
+            .optional("hints_if_needed")
+
+            # .success_condition() confirms mastery ---
+            .success_condition("Student demonstrates confident problem-solving ability")
+        )
+
+        # See how success conditions guide the learning process
+        print(pathway)
         ```
+
+        The `.success_condition()` method ensures the LLM knows exactly when each step is truly
+        complete, preventing premature progression and ensuring thorough coverage.
 
         Notes
         -----
@@ -711,9 +875,9 @@ class Pathways:
         """
         Define direct transition to the next state.
 
-        Use for linear progression after state completion. Do not use with
-        type="decision" states - use branch_on() instead. This creates
-        unconditional forward movement in the pathway.
+        Use for linear progression after state completion. Do not use with `type="decision"`
+        states (use `.branch_on()` instead). This creates unconditional forward movement in the
+        pathway.
 
         Parameters
         ----------
@@ -723,12 +887,53 @@ class Pathways:
 
         Examples
         --------
-        ```python
-        .state("greeting", desc="Welcome user and understand their needs")
-            .required(["user_goal", "urgency"])
-            .success_condition("User has explained their situation")
-            .next_state("assessment")  # Linear progression
+        Complete pathway showing `.next_state()` creating linear progression:
+
+        ```{python}
+        import talk_box as tb
+
+        # Creating a customer onboarding pathway
+        pathway = (
+            tb.Pathways(
+                title="Customer Onboarding",
+                desc="Welcome new customers and set up their accounts",
+                activation="New customer signs up"
+            )
+            # === STATE: welcome ===
+            .state("Welcome and collect basic information", id="welcome")
+            .required(["full_name", "email", "company_name"])
+
+            # .next_state() creates smooth linear progression ---
+            .next_state("account_setup")
+
+            # === STATE: account_setup ===
+            .state("Set up account preferences", id="account_setup")
+            .required(["password_created", "preferences_selected"])
+            .success_condition("Account is fully configured")
+
+            # .next_state() continues the sequential flow ---
+            .next_state("feature_tour")
+
+            # === STATE: feature_tour ===
+            .state("Provide guided feature tour", id="feature_tour")
+            .required(["key_features_demonstrated"])
+            .success_condition("Customer understands main functionality")
+
+            # .next_state() leads to final step ---
+            .next_state("completion")
+
+            # === STATE: completion ===
+            .state("Complete onboarding process", id="completion")
+            .required(["welcome_resources_provided", "next_steps_explained"])
+            .success_condition("Customer is ready to use the platform")
+        )
+
+        # See the clear linear progression
+        print(pathway)
         ```
+
+        The `.next_state()` method creates straightforward, sequential flows where each step
+        naturally follows the previous one. This is perfect for processes with a clear order.
 
         Notes
         -----
@@ -762,12 +967,65 @@ class Pathways:
 
         Examples
         --------
-        ```python
-        .state("Determine support type needed", id="triage")
-            .branch_on("User reports technical error", id="technical_support")
-            .branch_on("User has billing question", id="billing_support")
-            .branch_on("User needs general help", id="general_assistance")
+        Complete pathway showing `.branch_on()` creating conditional routing:
+
+        ```{python}
+        import talk_box as tb
+
+        # Creating a healthcare triage pathway
+        pathway = (
+            tb.Pathways(
+                title="Medical Triage",
+                desc="Route patients to appropriate care based on symptoms",
+                activation="Patient seeks medical assistance"
+            )
+            # === STATE: initial_assessment ===
+            .state("Assess patient symptoms and urgency", id="initial_assessment")
+            .required(["symptoms_described", "pain_level", "duration"])
+            .success_condition("Symptoms are clearly documented")
+            .next_state("triage_decision")
+            # === STATE: triage_decision ===
+            .state("Determine appropriate care level", id="triage_decision")
+            .required(["urgency_evaluated"])
+
+            # .branch_on() routes based on severity -----
+            .branch_on("Severe or life-threatening symptoms", id="emergency_care")
+            .branch_on("Moderate symptoms requiring prompt attention", id="urgent_care")
+            .branch_on("Mild symptoms manageable with routine care", id="standard_care")
+
+            # The first branch leads to emergency care -----
+            # === STATE: emergency_care ===
+            .state("Initiate emergency protocol", id="emergency_care")
+            .required(["911_called", "immediate_first_aid"])
+            .success_condition("Emergency services contacted")
+            .next_state("follow_up")
+
+            # The second branch leads to urgent care -----
+            # === STATE: urgent_care ===
+            .state("Schedule urgent care appointment", id="urgent_care")
+            .required(["same_day_appointment", "preparation_instructions"])
+            .success_condition("Urgent care arranged")
+            .next_state("follow_up")
+
+            # The third branch leads to standard care -----
+            # === STATE: standard_care ===
+            .state("Provide self-care guidance", id="standard_care")
+            .required(["home_care_instructions", "symptom_monitoring"])
+            .success_condition("Patient understands self-care plan")
+            .next_state("follow_up")
+            # === STATE: follow_up ===
+            .state("Arrange follow-up care", id="follow_up")
+            .required(["follow_up_scheduled"])
+            .success_condition("Continuity of care ensured")
+        )
+
+        # See how branching creates appropriate care pathways
+        print(pathway)
         ```
+
+        The `.branch_on()` method enables smart routing based on conditions, automatically
+        inferring the `"decision"` state type and allowing multiple pathways that can reconverge
+        later.
 
         Notes
         -----
@@ -804,12 +1062,60 @@ class Pathways:
 
         Examples
         --------
-        ```python
-        .state("Explain the recommended solution", id="solution_explanation")
-            .success_condition("User understands and accepts solution")
-            .fallback("User expresses confusion or disagreement", "clarification")
-            .next_state("implementation")
+        Complete pathway showing `.fallback()` providing graceful error recovery:
+
+        ```{python}
+        import talk_box as tb
+
+        # Creating a complex problem-solving pathway with fallbacks
+        pathway = (
+            tb.Pathways(
+                title="Technical Problem Resolution",
+                desc="Systematic approach to solving technical issues",
+                activation="User encounters a technical problem"
+            )
+            # === STATE: problem_analysis ===
+            .state("Understand the problem details", id="problem_analysis")
+            .required(["problem_description", "system_context", "error_details"])
+            .success_condition("Problem is clearly defined")
+            .next_state("solution_attempt")
+            # === STATE: solution_attempt ===
+            .state("Apply standard solution", id="solution_attempt")
+            .required(["solution_implemented", "results_verified"])
+            .success_condition("Problem is resolved")
+
+            # .fallback() handles situations where standard solutions don't work ---
+            .fallback("Solution doesn't resolve the issue", "advanced_troubleshooting")
+
+            .next_state("completion")
+            # === STATE: advanced_troubleshooting ===
+            .state("Advanced diagnostic procedures", id="advanced_troubleshooting")
+            .tools(["system_diagnostics", "log_analyzer", "network_tracer"])
+            .required(["root_cause_identified"])
+            .success_condition("Advanced solution implemented")
+
+            # .fallback() provides escalation when even advanced methods fail -----
+            .fallback("Issue remains unresolved after advanced diagnostics", "expert_escalation")
+
+            .next_state("completion")
+
+            # === STATE: expert_escalation ===
+            .state("Escalate to specialist support", id="expert_escalation")
+            .required(["detailed_case_summary", "expert_contacted"])
+            .success_condition("Case transferred to appropriate specialist")
+            .next_state("completion")
+            # === STATE: completion ===
+            .state("Confirm resolution and document", id="completion")
+            .required(["resolution_confirmed", "case_documented"])
+            .success_condition("Issue fully resolved and documented")
+        )
+
+        # See how fallbacks provide multiple recovery paths
+        print(pathway)
         ```
+
+        The `.fallback()` method ensures conversations don't get stuck when expected outcomes don't
+        occur, providing alternative paths for complex scenarios and edge cases.
 
         Notes
         -----
