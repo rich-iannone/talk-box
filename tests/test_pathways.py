@@ -183,11 +183,15 @@ def test_unified_api_example():
     assert pathway._description == "Testing the simplified API"
 
     # Verify state types
-    assert pathway._states["greeting"].state_type == StateType.COLLECT  # Now inferred from .required()
+    assert (
+        pathway._states["greeting"].state_type == StateType.COLLECT
+    )  # Now inferred from .required()
     assert pathway._states["assessment"].state_type == StateType.COLLECT
     assert pathway._states["routing"].state_type == StateType.DECISION
     assert pathway._states["tech_support"].state_type == StateType.TOOL
-    assert pathway._states["info_sharing"].state_type == StateType.COLLECT  # Now inferred from .required()
+    assert (
+        pathway._states["info_sharing"].state_type == StateType.COLLECT
+    )  # Now inferred from .required()
     assert pathway._states["completion"].state_type == StateType.SUMMARY
 
 
