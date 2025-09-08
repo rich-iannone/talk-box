@@ -183,11 +183,11 @@ def test_unified_api_example():
     assert pathway._description == "Testing the simplified API"
 
     # Verify state types
-    assert pathway._states["greeting"].state_type == StateType.CHAT
+    assert pathway._states["greeting"].state_type == StateType.COLLECT  # Now inferred from .required()
     assert pathway._states["assessment"].state_type == StateType.COLLECT
     assert pathway._states["routing"].state_type == StateType.DECISION
     assert pathway._states["tech_support"].state_type == StateType.TOOL
-    assert pathway._states["info_sharing"].state_type == StateType.CHAT
+    assert pathway._states["info_sharing"].state_type == StateType.COLLECT  # Now inferred from .required()
     assert pathway._states["completion"].state_type == StateType.SUMMARY
 
 
@@ -319,9 +319,9 @@ def test_complex_branching_pathway():
     expected_types = {
         "intake": StateType.COLLECT,
         "triage": StateType.DECISION,
-        "simple_resolution": StateType.CHAT,
+        "simple_resolution": StateType.COLLECT,  # Now inferred from .required()
         "detailed_analysis": StateType.TOOL,
-        "complex_resolution": StateType.CHAT,
+        "complex_resolution": StateType.COLLECT,  # Now inferred from .required()
         "escalation": StateType.TOOL,
         "completion": StateType.SUMMARY,
     }

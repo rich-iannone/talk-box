@@ -546,8 +546,9 @@ class Pathways:
         """
         Specify required information for the current state to be considered complete.
 
-        Use after `.description()` to define what must be obtained before the state can transition
-        to the next step. The LLM will focus on gathering this information before proceeding.
+        Use to define what must be obtained before the state can transition to the next step. The
+        LLM will focus on gathering this information before proceeding. Can be used in any order
+        within the state configuration.
 
         Parameters
         ----------
@@ -632,8 +633,8 @@ class Pathways:
         Specify tools available for use in the current state.
 
         Essential for `type="tool"` states, but can also be used in other states where specific
-        capabilities are needed. Follow this with `.success_condition()` to define when tool usage
-        is complete.
+        capabilities are needed. Typically combined with `.success_condition()` to define when tool
+        usage is complete.
 
         Parameters
         ----------
@@ -676,8 +677,9 @@ class Pathways:
         """
         Define what indicates successful completion of the current state.
 
-        Use after configuring state requirements to specify when the state's objectives are met and
-        it's ready to transition. More specific than just completing required() items.
+        Use to specify when the state's objectives are met and it's ready to transition. More
+        specific than just completing required() items. Can be used in any order within the state
+        configuration.
 
         Parameters
         ----------
