@@ -100,7 +100,7 @@ def test_pathway_building_still_works():
             fallback_strategy="Escalate to human support",
         )
         .state("Gather information", id="intake")
-        .collect(["issue_description", "contact_info"])
+        .required(["issue_description", "contact_info"])
         .next_state("resolution")
         .state("Provide solution", id="resolution")
         .success_condition("User's issue is resolved")

@@ -152,7 +152,7 @@ class Pathways:
         # Define state transitions (choose one)
         .next_state("next_state")                   # Linear progression
         .branch_on("condition", id="target_state")  # Conditional (infers type="decision")
-        .merge_to("common_state")                   # Reconverge after branching
+        .next_state("common_state")                 # Reconverge after branching
         .fallback("error_condition", "backup_state") # Error handling
     ```
 
@@ -251,11 +251,11 @@ class Pathways:
         .state("Diagnose and resolve technical issues", id="technical_support")
         .tools(["system_diagnostics", "troubleshooting_guide"])
         .success_condition("Technical issue is resolved")
-        .merge_to("completion")
+        .next_state("completion")
         # === STATE: billing_support ===
         .state("Address billing and account questions", id="billing_support")
         .required(["billing_issue_understood", "solution_provided"])
-        .merge_to("completion")
+        .next_state("completion")
         # === STATE: completion ===
         .state("Ensure customer satisfaction and wrap up", id="completion", type="summary")
         .required(["issue_resolved_confirmation", "follow_up_if_needed"])
@@ -358,7 +358,7 @@ class Pathways:
             identifier and should be specific about the expected interaction or outcome.
         id
             Optional unique identifier for the state. Required only when other states need to
-            reference this state (via `.branch_on()`, `.next_state()`, `.merge_to()`). If not
+            reference this state (via `.branch_on()`, `.next_state()`). If not
             provided, an ID will be auto-generated from the description.
         type
             Optional explicit state type. If not provided, the type will be inferred from subsequent
@@ -786,38 +786,6 @@ class Pathways:
                 )
             )
         return self
-
-    def merge_to(self, state_name: str) -> "Pathways":
-        """
-        Merge current state path back to a common state.
-
-        Use when multiple branches need to converge back to a single workflow state. This is
-        essentially an alias for `.next_state()` but makes the intent clearer in branching
-        scenarios.
-
-        Parameters
-        ----------
-        state_name
-            Common state where multiple paths converge.
-
-        Examples
-        --------
-        ```python
-        .state("Address billing-specific questions", id="billing_help")
-            .required(["billing_issue_understood", "solution_provided"])
-            .merge_to("completion")  # Merge back to common end
-        .state("Provide technical assistance", id="technical_help")
-            .tools(["diagnostic_tool", "troubleshooting_guide"])
-            .merge_to("completion")  # Same convergence point
-        ```
-
-        Notes
-        -----
-        - functionally identical to `.next_state()` but clearer for branching
-        - use after branch paths to show convergence
-        - target state should typically be defined later
-        """
-        return self.next_state(state_name)
 
     def fallback(self, condition: str, state_name: str) -> "Pathways":
         """

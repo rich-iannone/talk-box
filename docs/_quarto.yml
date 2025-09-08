@@ -136,7 +136,6 @@ quartodoc:
         - Pathways.success_condition
         - Pathways.next_state
         - Pathways.branch_on
-        - Pathways.merge_to
         - Pathways.fallback
         - Pathways.completion_actions
     - title: "Pre-configured Prompt Builders"
