@@ -578,18 +578,19 @@ class Pathways:
             .state("Gather basic applicant information", id="personal_info")
 
             # .required() ensures critical data is collected ---
-            .required(["full_name", "social_security_number", "employment_status"])
+            .required(["applicant's full name", "current employment status"])
 
             .next_state("financial_details")
             # === STATE: financial_details ===
             .state("Collect financial information", id="financial_details")
 
             # .required() can specify multiple essential items ---
+
             .required([
-                "annual_income",
-                "monthly_expenses",
-                "existing_debt",
-                "credit_score_authorization"
+                "verified annual income amount",
+                "detailed monthly expenses breakdown",
+                "complete existing debt information",
+                "authorization to check credit score"
             ])
 
             .success_condition("All financial data verified")
@@ -598,7 +599,7 @@ class Pathways:
             .state("Review application completeness", id="review")
 
             # .required() works with single items too ---
-            .required("applicant_signature")
+            .required("applicant's legal signature and consent")
 
             .success_condition("Application ready for processing")
         )
@@ -633,9 +634,9 @@ class Pathways:
         """
         Specify optional information that would be helpful but not required.
 
-        Use with `.required()` to define nice-to-have information that can improve the outcome but
-        isn't essential for state completion. The LLM will attempt to gather this if the
-        conversation allows.
+        Use to define nice-to-have information that can improve the outcome but isn't essential
+        for state completion. The LLM will attempt to gather this if the conversation allows.
+        Often used alongside `.required()` to create comprehensive information gathering states.
 
         Parameters
         ----------
@@ -659,31 +660,35 @@ class Pathways:
             )
             # === STATE: travel_basics ===
             .state("Gather essential travel details", id="travel_basics")
-            .required(["departure_city", "destination", "travel_date"])
+            .required(["departure city", "destination city", "preferred travel date"])
 
-            # .optional() adds helpful details without slowing the process ---
+            # .optional() adds helpful details without slowing the process -----
             .optional([
-                "return_date",
-                "preferred_departure_time",
-                "airline_preference"
+                "return date if roundtrip",
+                "preferred departure time window",
+                "airline preference or loyalty program"
             ])
 
             .next_state("search_flights")
             # === STATE: search_flights ===
             .state("Find matching flights", id="search_flights")
-            .required(["flight_options_found"])
+            .required(["available flight options found and presented"])
 
             # .optional() can improve personalization ---
-            .optional("seating_preference")
+            .optional("preferred seating section or specific seat requests")
 
             .success_condition("Customer has reviewed flight options")
             .next_state("booking")
             # === STATE: booking ===
             .state("Complete the booking", id="booking")
-            .required(["payment_information", "traveler_details"])
+            .required(["valid payment information", "complete traveler details for all passengers"])
 
             # .optional() for enhanced services ---
-            .optional(["travel_insurance", "special_meal_requests", "frequent_flyer_number"])
+            .optional([
+                "travel insurance coverage options",
+                "special meal requests or dietary needs",
+                "frequent flyer number for miles credit"
+            ])
 
             .success_condition("Booking confirmed")
         )
