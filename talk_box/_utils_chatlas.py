@@ -24,8 +24,7 @@ class ChatlasAdapter:
     """
     Adapter to integrate Talk Box with chatlas for real LLM interactions.
 
-    Supports multiple providers through chatlas.ChatAuto which automatically
-    selects the appropriate provider based on environment variables.
+    Supports multiple providers through several chatlas classes and models.
     """
 
     def __init__(self, provider: Optional[str] = None, model: Optional[str] = None):
