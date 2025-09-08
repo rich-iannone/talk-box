@@ -49,7 +49,7 @@ def test_pathways_with_none_activation():
 def test_pathways_prompt_generation():
     """Test pathway generates a prompt."""
     pathway = tb.Pathways("Test", desc="A test pathway").state("A test state", id="test_state")
-    prompt = pathway.generate_prompt()
+    prompt = pathway._to_prompt_text()
     assert "Test" in prompt
     assert "A test pathway" in prompt
     assert "TEST_STATE" in prompt  # State names are uppercase in the prompt
@@ -360,7 +360,7 @@ def test_pathway_prompt_generation():
         .success_condition("Customer needs clearly understood")
     )
 
-    prompt = pathway.generate_prompt()
+    prompt = pathway._to_prompt_text()
 
     # Basic pathway info should be present
     assert "Support Flow" in prompt

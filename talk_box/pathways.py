@@ -1007,9 +1007,8 @@ class Pathways:
         return self._build().get(key)
 
     def __str__(self) -> str:
-        """Return a string representation of the pathway."""
-        data = self._build()
-        return f"Pathways('{data['title']}', states={len(data['states'])}, conditions={len(data.get('activation_conditions', []))})"
+        """Return detailed pathway specification for print() display."""
+        return self._to_prompt_text()
 
     def __repr__(self) -> str:
         """Return a developer-friendly representation of the Pathways configuration."""
@@ -1067,9 +1066,9 @@ class Pathways:
             "priority": transition.priority,
         }
 
-    def to_prompt_text(self) -> str:
+    def _to_prompt_text(self) -> str:
         """
-        Generate text specification for inclusion in system prompts.
+        Internal method to generate text specification for inclusion in system prompts.
 
         Returns
         -------
@@ -1197,16 +1196,3 @@ class Pathways:
         )
 
         return "\n".join(lines)
-
-    def generate_prompt(self) -> str:
-        """
-        Generate text specification for inclusion in system prompts.
-
-        This is an alias for to_prompt_text() for backwards compatibility.
-
-        Returns
-        -------
-        str
-            Formatted pathway specification for LLM consumption
-        """
-        return self.to_prompt_text()

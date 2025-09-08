@@ -3759,10 +3759,10 @@ pattern recognition rather than abstract instruction following.
         natural, adaptive qualities that make AI conversations engaging and user-friendly.
         """
         # Handle both Pathways objects and dictionary specifications
-        if hasattr(pathway_spec, "to_prompt_text"):
-            pathway_text = pathway_spec.to_prompt_text()
-        elif hasattr(pathway_spec, "build"):
-            # If it has a build method but no to_prompt_text, it might be a built spec
+        if hasattr(pathway_spec, "_to_prompt_text"):
+            pathway_text = pathway_spec._to_prompt_text()
+        elif hasattr(pathway_spec, "_build"):
+            # If it has a build method but no _to_prompt_text, it might be a built spec
             built_spec = pathway_spec._build()
             pathway_text = self._format_pathway_spec(built_spec)
         elif isinstance(pathway_spec, dict):
