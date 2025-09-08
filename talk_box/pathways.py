@@ -216,11 +216,11 @@ class Pathways:
         )
         # === STATE: verification ===
         .state("Verify user identity", id="verification")
-        .required(["email_address", "account_verification"])
+        .required(["email address", "account verification"])
         .next_state("password_update")
         # === STATE: password_update ===
         .state("Guide user through creating new password", id="password_update")
-        .required(["new_password_created", "password_requirements_met"])
+        .required(["new password is created", "password requirements are met"])
         .success_condition("User successfully logs in with new password")
     )
     ```
@@ -255,11 +255,11 @@ class Pathways:
         .next_state("completion")
         # === STATE: billing_support ===
         .state("Address billing and account questions", id="billing_support")
-        .required(["billing_issue_understood", "solution_provided"])
+        .required(["billing issue is understood", "solution is provided"])
         .next_state("completion")
         # === STATE: completion ===
         .state("Ensure customer satisfaction and wrap up", id="completion", type="summary")
-        .required(["issue_resolved_confirmation", "follow_up_if_needed"])
+        .required(["issue resolved confirmation", "follow up if needed"])
         .success_condition("Customer satisfaction confirmed")
     )
     ```
@@ -285,7 +285,7 @@ class Pathways:
         )
         # === STATE: intake ===
         .state("Understand the problem", id="intake")
-        .required(["issue_description"])
+        .required(["issue description"])
         .next_state("solution")
         # === STATE: solution ===
         .state("Provide solution", id="solution")
@@ -394,20 +394,20 @@ class Pathways:
             # .state() defines what happens at each step ---
             # === STATE: welcom ===
             .state("Welcome customer and understand their situation", id="welcome")
-            .required(["customer_goal", "budget_range"])
+            .required(["the customer's goal", "a budget range"])
             .next_state("analysis")
 
             # a .state() with a good descriptions makes the flow clear ---
             # === STATE: analysis ===
             .state("Analyze needs and preferences", id="analysis")
-            .required(["specific_requirements", "priorities"])
+            .required(["specific requirements", "priorities"])
             .success_condition("Customer needs are clearly understood")
             .next_state("recommendation")
 
             # .state() creates the final outcome step ---
             # === STATE: recommendation ===
             .state("Present tailored recommendations", id="recommendation")
-            .required(["product_matches", "rationale"])
+            .required(["product matches", "rationale"])
             .success_condition("Customer has clear next steps")
         )
 
@@ -672,7 +672,7 @@ class Pathways:
             .next_state("search_flights")
             # === STATE: search_flights ===
             .state("Find matching flights", id="search_flights")
-            .required(["available flight options found and presented"])
+            .required("available flight options found and presented")
 
             # .optional() can improve personalization ---
             .optional("preferred seating section or specific seat requests")
@@ -745,7 +745,7 @@ class Pathways:
             )
             # === STATE: problem_intake ===
             .state("Understand the reported issue", id="problem_intake")
-            .required(["problem_description", "system_details", "error_messages"])
+            .required(["problem description", "system details", "error messages"])
             .next_state("initial_diagnosis")
             # === STATE: initial_diagnosis ===
             .state("Run initial diagnostic checks", id="initial_diagnosis")
@@ -769,7 +769,7 @@ class Pathways:
                 "security_scan"
             ])
 
-            .required(["root_cause_identified"])
+            .required(["the root cause is identified"])
             .next_state("solution")
             # === STATE: solution ===
             .state("Implement solution", id="solution")
@@ -835,7 +835,7 @@ class Pathways:
             )
             # === STATE: practice ===
             .state("Present practice problems", id="practice")
-            .required(["problems_attempted", "student_responses"])
+            .required(["problems are attempted", "student provided responses"])
 
             # .success_condition() defines when understanding is demonstrated ---
             .success_condition("Student correctly solves at least 3 out of 5 problems")
@@ -843,7 +843,7 @@ class Pathways:
             .next_state("feedback")
             # === STATE: feedback ===
             .state("Provide personalized feedback", id="feedback")
-            .required(["specific_feedback", "improvement_areas"])
+            .required(["specific feedback", "improvement areas"])
 
             # .success_condition() ensures feedback is constructive ---
             .success_condition("Student understands their mistakes and next steps")
@@ -851,8 +851,8 @@ class Pathways:
             .next_state("advanced_practice")
             # === STATE: advanced_practice ===
             .state("Offer advanced challenges", id="advanced_practice")
-            .required(["challenging_problems_presented"])
-            .optional("hints_if_needed")
+            .required("challenging problems are presented")
+            .optional("hints if needed")
 
             # .success_condition() confirms mastery ---
             .success_condition("Student demonstrates confident problem-solving ability")
@@ -906,14 +906,14 @@ class Pathways:
             )
             # === STATE: welcome ===
             .state("Welcome and collect basic information", id="welcome")
-            .required(["full_name", "email", "company_name"])
+            .required(["full name", "email", "company name"])
 
             # .next_state() creates smooth linear progression ---
             .next_state("account_setup")
 
             # === STATE: account_setup ===
             .state("Set up account preferences", id="account_setup")
-            .required(["password_created", "preferences_selected"])
+            .required(["password is created", "preferences are selected"])
             .success_condition("Account is fully configured")
 
             # .next_state() continues the sequential flow ---
@@ -921,7 +921,7 @@ class Pathways:
 
             # === STATE: feature_tour ===
             .state("Provide guided feature tour", id="feature_tour")
-            .required(["key_features_demonstrated"])
+            .required("key features are demonstrated")
             .success_condition("Customer understands main functionality")
 
             # .next_state() leads to final step ---
@@ -929,7 +929,7 @@ class Pathways:
 
             # === STATE: completion ===
             .state("Complete onboarding process", id="completion")
-            .required(["welcome_resources_provided", "next_steps_explained"])
+            .required(["welcome resources are provided", "next steps are explained"])
             .success_condition("Customer is ready to use the platform")
         )
 
@@ -986,12 +986,12 @@ class Pathways:
             )
             # === STATE: initial_assessment ===
             .state("Assess patient symptoms and urgency", id="initial_assessment")
-            .required(["symptoms_described", "pain_level", "duration"])
+            .required(["symptoms are described", "pain level", "duration"])
             .success_condition("Symptoms are clearly documented")
             .next_state("triage_decision")
             # === STATE: triage_decision ===
             .state("Determine appropriate care level", id="triage_decision")
-            .required(["urgency_evaluated"])
+            .required("urgency is evaluated")
 
             # .branch_on() routes based on severity -----
             .branch_on("Severe or life-threatening symptoms", id="emergency_care")
@@ -1001,27 +1001,27 @@ class Pathways:
             # The first branch leads to emergency care -----
             # === STATE: emergency_care ===
             .state("Initiate emergency protocol", id="emergency_care")
-            .required(["911_called", "immediate_first_aid"])
-            .success_condition("Emergency services contacted")
+            .required(["911 is called", "immediate first aid is provided"])
+            .success_condition("Emergency services are contacted")
             .next_state("follow_up")
 
             # The second branch leads to urgent care -----
             # === STATE: urgent_care ===
             .state("Schedule urgent care appointment", id="urgent_care")
-            .required(["same_day_appointment", "preparation_instructions"])
-            .success_condition("Urgent care arranged")
+            .required(["same day appointment", "preparation instructions"])
+            .success_condition("Urgent care is arranged")
             .next_state("follow_up")
 
             # The third branch leads to standard care -----
             # === STATE: standard_care ===
             .state("Provide self-care guidance", id="standard_care")
-            .required(["home_care_instructions", "symptom_monitoring"])
+            .required(["home care instructions", "symptom monitoring"])
             .success_condition("Patient understands self-care plan")
             .next_state("follow_up")
             # === STATE: follow_up ===
             .state("Arrange follow-up care", id="follow_up")
-            .required(["follow_up_scheduled"])
-            .success_condition("Continuity of care ensured")
+            .required(["follow up is scheduled"])
+            .success_condition("Continuity of care is ensured")
         )
 
         # See how branching creates appropriate care pathways
@@ -1081,12 +1081,12 @@ class Pathways:
             )
             # === STATE: problem_analysis ===
             .state("Understand the problem details", id="problem_analysis")
-            .required(["problem_description", "system_context", "error_details"])
+            .required(["problem description", "system context", "error details"])
             .success_condition("Problem is clearly defined")
             .next_state("solution_attempt")
             # === STATE: solution_attempt ===
             .state("Apply standard solution", id="solution_attempt")
-            .required(["solution_implemented", "results_verified"])
+            .required(["solution is implemented", "results are verified"])
             .success_condition("Problem is resolved")
 
             # .fallback() handles situations where standard solutions don't work ---
@@ -1096,8 +1096,8 @@ class Pathways:
             # === STATE: advanced_troubleshooting ===
             .state("Advanced diagnostic procedures", id="advanced_troubleshooting")
             .tools(["system_diagnostics", "log_analyzer", "network_tracer"])
-            .required(["root_cause_identified"])
-            .success_condition("Advanced solution implemented")
+            .required("root cause is identified")
+            .success_condition("Advanced solution is implemented")
 
             # .fallback() provides escalation when even advanced methods fail -----
             .fallback("Issue remains unresolved after advanced diagnostics", "expert_escalation")
@@ -1106,12 +1106,12 @@ class Pathways:
 
             # === STATE: expert_escalation ===
             .state("Escalate to specialist support", id="expert_escalation")
-            .required(["detailed_case_summary", "expert_contacted"])
-            .success_condition("Case transferred to appropriate specialist")
+            .required(["detailed case summary", "expert is contacted"])
+            .success_condition("Case is transferred to appropriate specialist")
             .next_state("completion")
             # === STATE: completion ===
             .state("Confirm resolution and document", id="completion")
-            .required(["resolution_confirmed", "case_documented"])
+            .required(["resolution is confirmed", "case is documented"])
             .success_condition("Issue fully resolved and documented")
         )
 
