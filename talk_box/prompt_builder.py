@@ -1251,7 +1251,7 @@ class PromptBuilder:
 
         Add constraints that improve response quality and consistency:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
         # Documentation quality constraints
@@ -1276,7 +1276,7 @@ class PromptBuilder:
 
         Guide implementation approaches and technical choices:
 
-        ```python
+        ```{python}
         # Architecture review with technical preferences
         builder = (
             tb.PromptBuilder()
@@ -1298,7 +1298,7 @@ class PromptBuilder:
 
         Shape the AI's communication style and approach:
 
-        ```python
+        ```{python}
         # Code review with specific behavioral guidance
         builder = (
             tb.PromptBuilder()
@@ -1318,11 +1318,11 @@ class PromptBuilder:
 
         ### Context-specific constraints
 
-        Add domain or situation-specific requirements:
+        Add domain or situation-specific requirements. In this example for a healthcare application,
+        we focus on HIPAA compliance and patient privacy.
 
-        ```python
-        # Healthcare application constraints
-        healthcare_builder = (
+        ```{python}
+        builder = (
             tb.PromptBuilder()
             .persona("healthcare software architect", "HIPAA compliance")
             .critical_constraint("all recommendations must maintain patient privacy")
@@ -1332,24 +1332,15 @@ class PromptBuilder:
             .constraint("include audit trail requirements in recommendations")
         )
 
-        # Educational content constraints
-        education_builder = (
-            tb.PromptBuilder()
-            .persona("curriculum designer", "computer science education")
-            .task_context("create programming exercises for beginners")
-            .constraint("use relatable, real-world examples")
-            .constraint("progress from simple to complex concepts gradually")
-            .constraint("include common mistake explanations")
-            .constraint("provide both guided and independent practice opportunities")
-        )
+        print(builder)
         ```
 
         ### Multiple related constraints
 
-        Group related constraints for comprehensive guidance:
+        Group related constraints for comprehensive guidance. This example focuses on data analysis
+        with multiple quality constraints:
 
-        ```python
-        # Data analysis with multiple quality constraints
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("data scientist", "business analytics")
@@ -1365,14 +1356,15 @@ class PromptBuilder:
                 "predictive modeling opportunities"
             ])
         )
+
+        print(builder)
         ```
 
         ### Combining with critical constraints
 
         Use standard constraints to complement critical requirements:
 
-        ```python
-        # Security analysis with layered constraints
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security")
@@ -1388,14 +1380,16 @@ class PromptBuilder:
                 "data protection and encryption"
             ])
         )
+
+        print(builder)
         ```
 
         ### Output enhancement constraints
 
-        Improve the structure and usability of responses:
+        We can improve the structure and usability of responses by adding quality-focused
+        constraints:
 
-        ```python
-        # Technical documentation with output quality constraints
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("technical documentation specialist")
@@ -1411,78 +1405,8 @@ class PromptBuilder:
                 "prevention recommendations"
             ])
         )
-        ```
 
-        ### Domain expertise constraints
-
-        Leverage domain-specific knowledge and practices:
-
-        ```python
-        # Financial modeling with industry constraints
-        finance_builder = (
-            tb.PromptBuilder()
-            .persona("quantitative analyst", "risk modeling")
-            .task_context("build portfolio risk assessment model")
-            .constraint("follow industry standard risk metrics (VaR, CVaR)")
-            .constraint("include stress testing scenarios")
-            .constraint("provide model validation approaches")
-            .constraint("consider regulatory compliance requirements")
-        )
-
-        # Machine learning with best practice constraints
-        ml_builder = (
-            tb.PromptBuilder()
-            .persona("machine learning engineer", "model deployment")
-            .task_context("design ML pipeline for production deployment")
-            .constraint("include data drift monitoring strategies")
-            .constraint("address model explainability requirements")
-            .constraint("consider computational efficiency constraints")
-            .constraint("plan for model versioning and rollback capabilities")
-        )
-        ```
-
-        ### Constraint measurement and evaluation
-
-        Create constraints that enable objective assessment:
-
-        ```python
-        # Performance optimization with measurable constraints
-        builder = (
-            tb.PromptBuilder()
-            .persona("performance engineer", "web applications")
-            .task_context("optimize application response times")
-            .constraint("target specific performance metrics (load time, throughput)")
-            .constraint("include before/after measurement strategies")
-            .constraint("consider mobile and desktop performance separately")
-            .constraint("provide implementation effort estimates")
-            .core_analysis([
-                "frontend optimization opportunities",
-                "backend performance bottlenecks",
-                "database query optimization"
-            ])
-        )
-        ```
-
-        ### Collaborative and communication constraints
-
-        Enhance team collaboration and knowledge sharing:
-
-        ```python
-        # Code review for team collaboration
-        builder = (
-            tb.PromptBuilder()
-            .persona("tech lead", "team mentorship")
-            .task_context("review code changes for team learning")
-            .constraint("explain best practices for team knowledge sharing")
-            .constraint("suggest pair programming opportunities")
-            .constraint("identify patterns that could be standardized")
-            .constraint("recommend documentation improvements")
-            .core_analysis([
-                "code quality and maintainability",
-                "team collaboration opportunities",
-                "knowledge transfer potential"
-            ])
-        )
+        print(builder)
         ```
 
         Integration Notes
