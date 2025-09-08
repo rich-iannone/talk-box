@@ -259,7 +259,7 @@ class Pathways:
         # === STATE: completion ===
         .state("Ensure customer satisfaction and wrap up", id="completion", type="summary")
         .required(["issue_resolved_confirmation", "follow_up_if_needed"])
-        .completion_actions(["log_interaction", "send_summary_email"])
+        .success_condition("Customer satisfaction confirmed")
     )
     ```
 
@@ -822,50 +822,6 @@ class Pathways:
             self._states[self._current_state_name].fallback_actions.append(
                 f"If {condition}, go to {state_name}"
             )
-        return self
-
-    def completion_actions(self, actions: Union[str, List[str]]) -> "Pathways":
-        """
-        Define actions to take when the state completes successfully.
-
-        Use in summary states or final states to specify follow-up actions that should occur after
-        successful completion. These might be system actions, notifications, or next steps.
-
-        Parameters
-        ----------
-        actions
-            Specific actions to perform upon successful state completion. Can be a single string or
-            a list of strings. Use action-oriented language.
-
-        Examples
-        --------
-        ```python
-        .state("Finalize and confirm the booking", id="completion", type="summary")
-            .required(["booking_details_confirmed", "payment_processed"])
-            .completion_actions([
-                "send_confirmation_email",
-                "update_booking_system",
-                "schedule_reminder_notifications"
-            ])
-
-        # Or for a single action
-        .state("Complete order processing", type="summary")
-            .completion_actions("send_confirmation_email")
-        ```
-
-        Notes
-        -----
-        - best used in states with `type="summary"` or final states
-        - describes what happens after successful completion
-        - use specific action verbs: `"send"`, `"update"`, `"schedule"`
-        - can represent both system actions and user guidance
-        """
-        # Convert string to list if needed
-        if isinstance(actions, str):
-            actions = [actions]
-
-        if self._current_state_name in self._states:
-            self._states[self._current_state_name].fallback_actions.extend(actions)
         return self
 
     def _build(self) -> Dict[str, Any]:

@@ -137,7 +137,6 @@ quartodoc:
         - Pathways.next_state
         - Pathways.branch_on
         - Pathways.fallback
-        - Pathways.completion_actions
     - title: "Pre-configured Prompt Builders"
       desc: "Ready-to-use attention-based prompt templates"
       contents:
