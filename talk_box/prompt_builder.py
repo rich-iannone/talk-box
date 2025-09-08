@@ -652,7 +652,7 @@ class PromptBuilder:
 
         Set a clear professional identity for the AI:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
         # Simple role without specific expertise
@@ -669,7 +669,7 @@ class PromptBuilder:
 
         Combine role with specific area of expertise:
 
-        ```python
+        ```{python}
         # Specialized expertise within role
         builder = (
             tb.PromptBuilder()
@@ -689,7 +689,7 @@ class PromptBuilder:
 
         Use seniority indicators for complex tasks:
 
-        ```python
+        ```{python}
         # Senior-level role for complex analysis
         builder = (
             tb.PromptBuilder()
@@ -701,36 +701,48 @@ class PromptBuilder:
 
         ### Domain-specific personas
 
-        Create personas tailored to specific industries or domains:
+        We can create personas tailored to specific industries or domains. Here is one that is
+        focused on healthcare domain expertise:
 
-        ```python
-        # Healthcare domain expertise
+        ```{python}
         healthcare_builder = (
             tb.PromptBuilder()
             .persona("healthcare data analyst", "clinical research")
             .task_context("analyze patient outcome data for treatment effectiveness")
         )
 
-        # Financial services expertise
+        print(healthcare_builder)
+        ```
+
+        This is a specialized persona for the financial services industry:
+
+        ```{python}
         finance_builder = (
             tb.PromptBuilder()
             .persona("quantitative analyst", "risk management")
             .task_context("evaluate portfolio risk exposure across asset classes")
         )
 
-        # Educational technology expertise
+        print(finance_builder)
+        ```
+
+        This is a persona with educational technology expertise:
+
+        ```{python}
         edtech_builder = (
             tb.PromptBuilder()
             .persona("educational technologist", "learning analytics")
             .task_context("design metrics for measuring student engagement")
         )
+
+        print(edtech_builder)
         ```
 
         ### Combining personas with other prompt elements
 
         Build comprehensive prompts with persona as the foundation:
 
-        ```python
+        ```{python}
         # Complete code review prompt with expert persona
         review_prompt = (
             tb.PromptBuilder()
@@ -751,13 +763,15 @@ class PromptBuilder:
             ])
             .final_emphasis("focus on issues that could impact production security or performance")
         )
+
+        print(review_prompt)
         ```
 
         ### Persona influence on response style
 
-        See how different personas affect response characteristics:
+        Subtle differences in personas can affect response characteristics:
 
-        ```python
+        ```{python}
         # Technical depth variation
         beginner_persona = (
             tb.PromptBuilder()
@@ -765,12 +779,17 @@ class PromptBuilder:
             .task_context("explain RESTful API design principles")
         )
 
+        print(beginner_persona)
+        ```
+
+        ```{python}
         expert_persona = (
             tb.PromptBuilder()
             .persona("principal engineer", "API architecture")
             .task_context("explain RESTful API design principles")
         )
 
+        print(expert_persona)
         ```
 
         The expert persona will provide more sophisticated insights, advanced patterns, and industry
@@ -778,35 +797,44 @@ class PromptBuilder:
 
         ### Multiple expertise areas
 
-        Handle roles with multiple specializations:
+        We can handle roles with multiple specializations. This persona has broad expertise
+        combining multiple areas.
 
-        ```python
-        # Broad expertise combining multiple areas
+        ```{python}
         fullstack_persona = (
             tb.PromptBuilder()
             .persona("full-stack architect", "web applications and cloud infrastructure")
             .task_context("design end-to-end solution for real-time collaboration platform")
         )
 
-        # Research-focused persona with interdisciplinary expertise
+        print(fullstack_persona)
+        ```
+
+        This is a research-focused persona with interdisciplinary expertise.
+
+        ```{python}
         research_persona = (
             tb.PromptBuilder()
             .persona("research scientist", "machine learning and cognitive psychology")
             .task_context("evaluate AI model bias in human-computer interaction contexts")
         )
+
+        print(research_persona)
         ```
 
         ### Persona consistency across conversations
 
         Maintain consistent persona behavior in extended interactions:
 
-        ```python
+        ```{python}
         # Establish consistent technical writing persona
         technical_writer = (
             tb.PromptBuilder()
             .persona("technical documentation specialist", "developer tools")
             .task_context("create user guide for API integration")
         )
+
+        print(technical_writer)
         ```
 
         Integration Notes
@@ -874,7 +902,7 @@ class PromptBuilder:
 
         Set a clear, focused task for the prompt:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
         # Simple task context
@@ -889,10 +917,10 @@ class PromptBuilder:
 
         ### Task with custom priority
 
-        Use different priority levels for task positioning:
+        Use different priority levels for task positioning. Here is an example of a high priority
+        task that is important but not critical:
 
-        ```python
-        # High priority task (but not critical)
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("software architect")
@@ -902,13 +930,15 @@ class PromptBuilder:
                 priority=tb.Priority.HIGH
             )
         )
+
+        print(builder)
         ```
 
         ### Detailed task with scope boundaries
 
         Create comprehensive task descriptions with clear boundaries:
 
-        ```python
+        ```{python}
         # Detailed task with specific scope
         builder = (
             tb.PromptBuilder()
@@ -924,6 +954,8 @@ class PromptBuilder:
                 "include practical usage examples"
             ])
         )
+
+        print(builder)
         ```
         """
         self._task_context = context
