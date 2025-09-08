@@ -130,7 +130,6 @@ quartodoc:
       desc: "Methods for building structured conversation flows"
       contents:
         - Pathways.state
-        - Pathways.collect
         - Pathways.required
         - Pathways.optional
         - Pathways.tools

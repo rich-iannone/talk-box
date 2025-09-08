@@ -114,7 +114,7 @@ class Pathways:
         )
         # === STATE: intake ===
         .state("Gather customer information", id="intake")
-        .collect(["issue description", "contact info"])
+        .required(["issue description", "contact info"])
         .next_state("triage")
         # === STATE: triage ===
         .state("Route to appropriate support", id="triage")
@@ -130,7 +130,7 @@ class Pathways:
 
     - **Visual state boundaries** with `# === STATE: description ===` comments
     - **Natural state definition** with description first: `.state("What happens here", id="name")`
-    - **Smart type inference** where `.tools()` → tool, `.branch_on()` → decision, `.collect()` → collect
+    - **Smart type inference** where `.tools()` → tool, `.branch_on()` → decision, `.required()` → collect
     - **Automatic start state** where the first `.state()` becomes the starting state
 
     ### 3. State Configuration Pattern (repeat for each state):
@@ -138,7 +138,7 @@ class Pathways:
     ```python
         # Define the state with description first
         .state("What happens in this state", id="state_name")
-        .state("Gather information", id="state_name")  # type inferred as "collect" from .collect()
+        .state("Gather information", id="state_name")  # type inferred as "collect" from .required()
         .state("Make decisions", id="state_name")      # type inferred as "decision" from .branch_on()
         .state("Use tools/APIs", id="state_name")      # type inferred as "tool" from .tools()
         .state("Wrap up")                              # Linear states don't need IDs
@@ -215,7 +215,7 @@ class Pathways:
         )
         # === STATE: verification ===
         .state("Verify user identity", id="verification")
-        .collect(["email_address", "account_verification"])
+        .required(["email_address", "account_verification"])
         .next_state("password_update")
         # === STATE: password_update ===
         .state("Guide user through creating new password", id="password_update")
@@ -284,7 +284,7 @@ class Pathways:
         )
         # === STATE: intake ===
         .state("Understand the problem", id="intake")
-        .collect(["issue_description"])
+        .required(["issue_description"])
         .next_state("solution")
         # === STATE: solution ===
         .state("Provide solution", id="solution")
@@ -370,7 +370,7 @@ class Pathways:
 
         - `.tools()` → `"tool"`
         - `.branch_on()` → `"decision"`
-        - `.collect()`/`.required()` → `"collect"`
+        - `.required()` → `"collect"`
         - Default → `"chat"`
 
         If multiple methods suggest different types, the first inference takes precedence.
@@ -386,7 +386,7 @@ class Pathways:
                 desc="Help resolve customer issues"
             )
             .state("Welcome customer and understand their needs")
-            .collect(["problem_description", "urgency_level"])
+            .required(["problem_description", "urgency_level"])
             .state("Determine support approach needed", id="triage")
             .branch_on("Technical issue", id="troubleshooting")
             .branch_on("Billing question", id="billing_help")
@@ -404,7 +404,7 @@ class Pathways:
                 desc="Guide user through structured data analysis"
             )
             .state("Gather analysis requirements", id="requirements", type="collect")
-            .collect(["dataset_info", "analysis_goals"])
+            .required(["dataset_info", "analysis_goals"])
             .state("Choose analysis approach", id="method_selection", type="decision")
             .branch_on("Statistical analysis needed", id="stats")
             .branch_on("Machine learning required", id="ml_pipeline")
@@ -542,48 +542,6 @@ class Pathways:
             }
             current_state.state_type = state_type_map[new_type]
 
-    def collect(self, info_types: Union[str, List[str]]) -> "Pathways":
-        """
-        Specify information to collect in the current state.
-
-        Use in any state to define what information the LLM should gather from the user. This is an
-        alias for `.required()`. Use whichever reads better in your context.
-
-        Parameters
-        ----------
-        info_types
-            Specific types of information to gather. Can be a single string or a list of strings.
-            Be concrete and actionable.
-
-        Examples
-        --------
-        ```python
-        .state("Gather user registration information")
-            .collect(["full_name", "email_address", "preferred_contact_method"])
-
-        # Or for a single item
-        .state("Get user's email")
-            .collect("email_address")
-        ```
-
-        Notes
-        -----
-        - same as `.required()` so use whichever reads better
-        - be specific: `"email address"` not `"contact info"`
-        - works with any state type but most natural with `type="collect"`
-        - infers state type as `"collect"` if not explicitly set
-        """
-        # Infer state type as "collect"
-        self._infer_state_type("collect")
-
-        # Convert string to list if needed
-        if isinstance(info_types, str):
-            info_types = [info_types]
-
-        if self._current_state_name in self._states:
-            self._states[self._current_state_name].required_info.extend(info_types)
-        return self
-
     def required(self, info_types: Union[str, List[str]]) -> "Pathways":
         """
         Specify required information for the current state to be considered complete.
@@ -616,7 +574,11 @@ class Pathways:
         - be specific and concrete
         - pair with `.optional()` for nice-to-have information
         - use `.success_condition()` to define when requirements are truly met
+        - infers state type as `"collect"` if not explicitly set
         """
+        # Infer state type as "collect"
+        self._infer_state_type("collect")
+
         # Convert string to list if needed
         if isinstance(info_types, str):
             info_types = [info_types]
