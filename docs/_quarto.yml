@@ -58,6 +58,7 @@ website:
         contents:
           - user-guide/prompt-engineering-guide.qmd
           - user-guide/prompt-builder.qmd
+          - user-guide/pathways.qmd
       - section: "Testing & Validation"
         contents:
           - user-guide/testing-avoid-topics.qmd
