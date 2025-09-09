@@ -3328,18 +3328,18 @@ print(builder)
                 activation=["user reports technical issues", "user needs troubleshooting help"]
             )
             # === STATE: problem_identification ===
-            .state("understand the technical problem", id="problem_identification")
+            .state("understand the technical problem")
             .required(["issue description", "error messages", "recent changes"])
             .next_state("basic_diagnostics")
             # === STATE: basic_diagnostics ===
-            .state("determine if basic fixes might work", id="basic_diagnostics")
+            .state("basic diagnostics: determine if basic fixes might work")
             .branch_on("simple configuration issue", id="quick_fix")
             .branch_on("complex system problem", id="advanced_diagnostics")
             # === STATE: quick_fix ===
-            .state("provide immediate solution steps", id="quick_fix")
+            .state("quick fix: provide immediate solution steps")
             .success_condition("problem is resolved")
             # === STATE: advanced_diagnostics ===
-            .state("perform detailed system analysis", id="advanced_diagnostics")
+            .state("advanced diagnostics: perform detailed system analysis")
             .success_condition("root cause identified and resolved")
         )
 
