@@ -103,7 +103,7 @@ class Pathways:
         # First .state() call automatically becomes the starting state
     ```
 
-    ### 2. State Definition (using unified `.state()`method)
+    ### 2. State Definition
 
     ```python
     pathway = (
@@ -139,11 +139,11 @@ class Pathways:
     ```python
         # Define the state with description first
         .state("What happens in this state", id="state_name")
-        .state("Gather information", id="state_name")  # type inferred as "collect" from .required()
-        .state("Make decisions", id="state_name")      # type inferred as "decision" from .branch_on()
-        .state("Use tools/APIs", id="state_name")      # type inferred as "tool" from .tools()
-        .state("Provide final summary", id="summary_state", type="summary")  # explicit type
-        .state("Wrap up")                              # Linear states don't need IDs
+        .state("info: collect required information")            # inferred as "collect", id="info"
+        .state("make decision: evaluate options and choose")    # "make decision" → id="make_decision"
+        .state("use tools: apply specific capabilities")        # type inferred as "tool" from .tools()
+        .state("final summary: provide conclusion", type="summary")  # explicit type with semantic sugar
+        .state("Wrap up")                                       # Linear states don't really need IDs
 
         # Configure the state
         .required([...])                               # What must be accomplished
@@ -224,27 +224,27 @@ class Pathways:
     support_pathway = (
         tb.Pathways(
             title="Customer Support",
-            desc="Route and resolve customer inquiries",
-            activation=["User needs help", "User reports problem"],
-            completion_criteria=["Customer issue fully resolved", "Customer satisfied"],
-            fallback_strategy="If issue is complex, escalate to human support"
+            desc="route and resolve customer inquiries",
+            activation=["user needs help", "user reports problem"],
+            completion_criteria=["customer issue fully resolved", "customer satisfied"],
+            fallback_strategy="if issue is complex, escalate to human support"
         )
         # === STATE: triage ===
-        .state("Determine the type of support needed", id="triage")
+        .state("determine the type of support needed", id="triage")
         .branch_on("Technical problem reported", id="technical_support")
         .branch_on("Billing question asked", id="billing_support")
         .branch_on("General inquiry made", id="general_help")
         # === STATE: technical_support ===
-        .state("Diagnose and resolve technical issues", id="technical_support")
+        .state("diagnose and resolve technical issues", id="technical_support")
         .tools(["system_diagnostics", "troubleshooting_guide"])
         .success_condition("Technical issue is resolved")
         .next_state("completion")
         # === STATE: billing_support ===
-        .state("Address billing and account questions", id="billing_support")
+        .state("billing support: address billing and account questions")
         .required(["billing issue is understood", "solution is provided"])
-        .next_state("completion")
-        # === STATE: completion ===
-        .state("Ensure customer satisfaction and wrap up", id="completion", type="summary")
+        .next_state("final_summary")
+        # === STATE: final_summary ===
+        .state("final summary: ensure customer satisfaction and wrap up", type="summary")
         .required(["issue resolved confirmation", "follow up if needed"])
         .success_condition("Customer satisfaction confirmed")
     )
@@ -269,12 +269,12 @@ class Pathways:
             completion_criteria="User's problem is resolved",
             fallback_strategy="If problem is complex, escalate to specialized support"
         )
-        # === STATE: intake ===
-        .state("Understand the problem", id="intake")
+        # === STATE: problem_intake ===
+        .state("problem intake: understand the issue details")
         .required(["issue description"])
-        .next_state("solution")
-        # === STATE: solution ===
-        .state("Provide solution", id="solution")
+        .next_state("provide_solution")
+        # === STATE: provide_solution ===
+        .state("provide solution: offer targeted assistance")
         .success_condition("User's problem is resolved")
     )
     ```
@@ -342,11 +342,15 @@ class Pathways:
         ----------
         desc
             Clear description of the state's purpose and what should happen. This is the primary
-            identifier and should be specific about the expected interaction or outcome.
+            identifier and should be specific about the expected interaction or outcome. Supports
+            semantic sugar: use `"id: description"` format to specify both ID and description in
+            one parameter (e.g., `"completion: ensure customer satisfaction and wrap up"`). The ID
+            part will be automatically normalized (spaces converted to underscores, etc.).
         id
             Optional unique identifier for the state. Required only when other states need to
             reference this state (via `.branch_on()`, `.next_state()`). If not
-            provided, an ID will be auto-generated from the description.
+            provided, an ID will be auto-generated from the description. Ignored if `desc` uses
+            the `"id: description"` format.
         type
             Optional explicit state type. If not provided, the type will be inferred from subsequent
             method calls
@@ -379,6 +383,8 @@ class Pathways:
         -----------------
         - **Description Priority**: description always comes first as the primary identifier
         - **Reference Requirements**: ID only needed when other states need to reference this state
+        - **Semantic Sugar**: use `"id: description"` format to combine ID and description in one
+        parameter for cleaner syntax; ID part is automatically normalized (spaces → underscores)
         - **Type Inference**: inferred from usage patterns to reduce explicit configuration
         - **Conflict Resolution**: first method call determines type, conflicts generate warnings
         - **Auto-generation**: IDs use `snake_case` from description with uniqueness guarantees
@@ -396,7 +402,7 @@ class Pathways:
 
         Examples
         --------
-        Complete pathway showing `.state()` method creating clear conversation structure:
+        Complete pathway showing `.state()` method with both traditional and semantic sugar syntax:
 
         ```{python}
         import talk_box as tb
@@ -409,22 +415,22 @@ class Pathways:
                 activation="Customer needs product guidance"
             )
 
-            # .state() defines what happens at each step ---
+            # Traditional syntax: separate id parameter ---
             # === STATE: welcome ===
             .state("welcome customer and understand their situation", id="welcome")
             .required(["the customer's goal", "a budget range"])
-            .next_state("analysis")
+            .next_state("needs_analysis")
 
-            # a .state() with a good descriptions makes the flow clear ---
-            # === STATE: analysis ===
-            .state("analyze needs and preferences", id="analysis")
+            # Semantic sugar: "id: description" format ---
+            # === STATE: needs_analysis ===
+            .state("needs analysis: analyze customer requirements and preferences")  # "needs analysis" → "needs_analysis"
             .required(["specific requirements", "priorities"])
             .success_condition("customer needs are clearly understood")
-            .next_state("recommendation")
+            .next_state("final_recommendation")
 
-            # .state() creates the final outcome step ---
-            # === STATE: recommendation ===
-            .state("present tailored recommendations", id="recommendation")
+            # Spaces in ID automatically become underscores ---
+            # === STATE: final_recommendation ===
+            .state("final recommendation: present tailored product matches")  # "final recommendation" → "final_recommendation"
             .required(["product matches", "rationale"])
             .success_condition("customer has clear next steps")
         )
@@ -433,11 +439,32 @@ class Pathways:
         print(pathway)
         ```
         """
-        # Generate ID from description if not provided
+        import re
+
+        # Parse semantic sugar: "id: description" format
+        if id is None and ":" in desc:
+            # Check if desc follows "id: description" pattern
+            parts = desc.split(":", 1)
+            if len(parts) == 2:
+                potential_id = parts[0].strip()
+                # Convert spaces and other non-identifier chars to underscores for valid ID
+                normalized_id = re.sub(r"[^a-zA-Z0-9_]", "_", potential_id)
+                normalized_id = re.sub(r"_+", "_", normalized_id)  # Collapse multiple underscores
+                normalized_id = normalized_id.strip("_")  # Remove leading/trailing underscores
+
+                # Ensure it starts with a letter or underscore
+                if normalized_id and not normalized_id[0].isalpha() and normalized_id[0] != "_":
+                    normalized_id = "_" + normalized_id
+
+                # Use normalized ID if it results in a valid identifier
+                if normalized_id and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", normalized_id):
+                    id = normalized_id
+                    # Keep the full description including the "id: " prefix
+                    # desc remains unchanged
+
+        # Generate ID from description if still not provided
         if id is None:
             # Create snake_case ID from description
-            import re
-
             id = re.sub(r"[^\w\s]", "", desc.lower())
             id = re.sub(r"\s+", "_", id.strip())
             # Ensure uniqueness
