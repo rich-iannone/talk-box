@@ -2613,7 +2613,7 @@ input/output pattern recognition rather than abstract instruction following.
                 "positive reinforcement for good practices"
             ])
             .final_emphasis(
-                "frame all feedback as learning opportunities with clear "explanations of why "
+                "frame all feedback as learning opportunities with clear explanations of why "
                 "changes improve the code"
             )
         )
