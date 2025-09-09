@@ -284,8 +284,8 @@ onboarding_pathway = (
         activation="user is a new customer or mentions account setup",
         completion_criteria="customer account is fully configured and ready to use"
     )
-    # === STATE: welcome ===
-    .state("welcome customer and collect basic information", id="welcome")
+    # === STATE: initial ===
+    .state("initial: welcome customer and collect basic information")
     .required([
         "customer's full name",
         "email address",
@@ -295,7 +295,7 @@ onboarding_pathway = (
     .next_state("setup")
 
     # === STATE: setup ===
-    .state("configure account preferences", id="setup")
+    .state("setup: configure account preferences")
     .required([
         "password created and confirmed",
         "notification preferences selected",
@@ -306,7 +306,7 @@ onboarding_pathway = (
     .next_state("tour")
 
     # === STATE: tour ===
-    .state("provide guided tour of key features", id="tour")
+    .state("tour: provide guided tour of key features")
     .required(["main features demonstrated", "first task completed"])
     .success_condition("customer understands how to use core functionality")
 )
