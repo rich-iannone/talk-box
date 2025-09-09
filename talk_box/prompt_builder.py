@@ -609,24 +609,6 @@ class PromptBuilder:
         principles to create consistent, expert-level responses aligned with the specified role and
         domain expertise.
 
-        **Research Foundation**: Based on research demonstrating that personas significantly improve
-        reasoning performance by providing behavioral context and role-specific cognitive
-        frameworks. The persona acts as a cognitive anchor that guides response generation, tone,
-        and the depth of domain-specific knowledge applied.
-
-        **Prompt Positioning**: The persona is always placed at the beginning of the final prompt
-        structure to establish behavioral context before any task-specific instructions. This
-        follows the principle of behavioral anchoring, where early identity establishment influences
-        all subsequent reasoning patterns.
-
-        **Best Practices**:
-
-        - use specific, professional role titles rather than generic descriptions
-        - include relevant experience levels when appropriate (`"senior"`, `"expert"`, `"lead"`,
-        etc.)
-        - match expertise areas to the expected task complexity
-        - consider domain-specific terminology and communication styles
-
         Parameters
         ----------
         role
@@ -645,6 +627,46 @@ class PromptBuilder:
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods to
             create comprehensive, structured prompts.
+
+        Research Foundation
+        -------------------
+        **Behavioral Psychology.** Persona establishment leverages behavioral psychology principles
+        to create consistent response patterns aligned with professional roles and expertise domains.
+
+        **Identity Anchoring.** Setting a clear professional identity serves as a cognitive anchor
+        that influences all subsequent AI reasoning and response generation processes.
+
+        **Domain Expertise Activation.** Specifying expertise areas activates relevant knowledge
+        domains and professional terminology appropriate to the specified field.
+
+        Prompt Positioning
+        ------------------
+        Persona statements are positioned at the very beginning of prompts to establish the
+        behavioral framework before any task instructions or constraints are provided.
+
+        Best Practices
+        --------------
+        Follow these guidelines for effective persona establishment:
+
+        - use specific, professional role titles rather than generic descriptions
+        - include relevant expertise areas to enhance domain-specific knowledge application
+        - ensure persona aligns with the complexity and scope of the intended task
+        - maintain consistency with persona throughout all prompt elements
+
+        Integration Notes
+        -----------------
+        - **Behavioral Anchoring**: the persona establishes cognitive framework before task
+        instructions
+        - **Response Consistency**: maintains consistent voice and expertise level throughout
+        interaction
+        - **Domain Knowledge**: activates relevant knowledge domains and professional terminology
+        - **Communication Style**: influences formality, technical depth, and explanatory approach
+        - **Quality Indicators**: expert personas tend to provide more nuanced, comprehensive
+        responses
+
+        The `.persona()` method provides the foundational identity that guides all subsequent AI
+        behavior, ensuring responses align with professional expectations and domain expertise
+        requirements.
 
         Examples
         --------
@@ -836,21 +858,6 @@ class PromptBuilder:
 
         print(technical_writer)
         ```
-
-        Integration Notes
-        -----------------
-        - **Behavioral Anchoring**: the persona establishes cognitive framework before task
-        instructions
-        - **Response Consistency**: maintains consistent voice and expertise level throughout
-        interaction
-        - **Domain Knowledge**: activates relevant knowledge domains and professional terminology
-        - **Communication Style**: influences formality, technical depth, and explanatory approach
-        - **Quality Indicators**: expert personas tend to provide more nuanced, comprehensive
-        responses
-
-        The `.persona()` method provides the foundational identity that guides all subsequent AI
-        behavior, ensuring responses align with professional expectations and domain expertise
-        requirements.
         """
         persona_text = f"You are a {role}"
         if expertise:
@@ -869,17 +876,6 @@ class PromptBuilder:
         This method is essential for creating focused, goal-oriented prompts that produce relevant
         and actionable responses.
 
-        **Positioning and Attention**: Task context is typically placed early in the prompt
-        structure (after persona and critical constraints) to establish clear expectations. The
-        default `CRITICAL` priority ensures the task receives prominent attention placement.
-
-        **Best Practices**:
-
-        - use clear, specific language that defines measurable outcomes
-        - focus on action-oriented descriptions ("analyze", "review", "create")
-        - avoid vague or ambiguous task descriptions
-        - include scope boundaries when appropriate
-
         Parameters
         ----------
         context
@@ -895,6 +891,21 @@ class PromptBuilder:
         -------
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods.
+
+        Prompt Positioning
+        ------------------
+        Task context is typically placed early in the prompt structure (after persona and critical
+        constraints) to establish clear expectations. The default `CRITICAL` priority ensures the
+        task receives prominent attention placement.
+
+        Best Practices
+        --------------
+        Follow these guidelines for effective task definition:
+
+        - use clear, specific language that defines measurable outcomes
+        - focus on action-oriented descriptions ("analyze", "review", "create")
+        - avoid vague or ambiguous task descriptions
+        - include scope boundaries when appropriate
 
         Examples
         --------
@@ -973,26 +984,6 @@ class PromptBuilder:
         dual-anchor approach leverages both primacy and recency effects to create the strongest
         possible attention focus on the primary objective.
 
-        **Dual Attention Strategy**: information positioned at both the beginning and end of a
-        sequence receives the highest attention and retention. By anchoring the primary goal at both
-        positions, `.focus_on()` ensures that the most critical objective maintains prominence
-        throughout the entire prompt processing sequence.
-
-        **Primacy and Recency Effects**: the method capitalizes on both primacy bias (heightened
-        attention to early information) and recency bias (heightened attention to final information)
-        to create a reinforcing attention pattern that keeps the primary objective at the forefront
-        of the AI's processing throughout response generation.
-
-        **Objective Reinforcement**: unlike single-position emphasis methods, `.focus_on()` creates
-        a reinforcing loop where the primary goal is established early as a critical requirement and
-        then reinforced at the end as the ultimate focus. This dual reinforcement significantly
-        reduces the risk of objective drift in complex prompts.
-
-        **Attention Hierarchy Management**: by explicitly establishing one primary objective above
-        all others, this method helps manage attention hierarchy in complex prompts with multiple
-        competing requirements, ensuring that when trade-offs must be made, the primary goal takes
-        clear precedence.
-
         Parameters
         ----------
         primary_goal
@@ -1008,6 +999,46 @@ class PromptBuilder:
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods to
             create comprehensive, structured prompts.
+
+        Research Foundation
+        ------------------
+        **Dual Attention Strategy.** Information positioned at both the beginning and end of a
+        sequence receives the highest attention and retention. By anchoring the primary goal at both
+        positions, `.focus_on()` ensures that the most critical objective maintains prominence
+        throughout the entire prompt processing sequence.
+
+        **Primacy and Recency Effects.** The method capitalizes on both primacy bias (heightened
+        attention to early information) and recency bias (heightened attention to final information)
+        to create a reinforcing attention pattern that keeps the primary objective at the forefront
+        of the AI's processing throughout response generation.
+
+        **Objective Reinforcement.** Unlike single-position emphasis methods, `.focus_on()` creates
+        a reinforcing loop where the primary goal is established early as a critical requirement and
+        then reinforced at the end as the ultimate focus. This dual reinforcement significantly
+        reduces the risk of objective drift in complex prompts.
+
+        **Attention Hierarchy Management.** By explicitly establishing one primary objective above
+        all others, this method helps manage attention hierarchy in complex prompts with multiple
+        competing requirements, ensuring that when trade-offs must be made, the primary goal takes
+        clear precedence.
+
+        Integration Notes
+        -----------------
+        - **Dual Positioning**: leverages both primacy and recency effects for maximum attention
+        impact
+        - **Objective Reinforcement**: creates reinforcing attention pattern that prevents goal
+        drift
+        - **Attention Hierarchy**: establishes clear priority structure for complex prompts
+        - **Trade-off Guidance**: provides clear decision criteria when competing objectives
+        conflict
+        - **Quality Assurance**: ensures responses align with the most critical objective throughout
+        - **Strategic Emphasis**: combines front-loaded critical constraints with end-positioned
+        final emphasis
+
+        The `.focus_on()` method provides the strongest possible attention management by
+        establishing the primary objective as both the opening critical requirement and closing
+        final emphasis, creating a dual-anchor system that maintains unwavering focus on the most
+        important goal throughout the entire AI response generation process.
 
         Examples
         --------
@@ -1203,24 +1234,6 @@ class PromptBuilder:
             ])
         )
         ```
-
-        Integration Notes
-        -----------------
-        - **Dual Positioning**: leverages both primacy and recency effects for maximum attention
-        impact
-        - **Objective Reinforcement**: creates reinforcing attention pattern that prevents goal
-        drift
-        - **Attention Hierarchy**: establishes clear priority structure for complex prompts
-        - **Trade-off Guidance**: provides clear decision criteria when competing objectives
-        conflict
-        - **Quality Assurance**: ensures responses align with the most critical objective throughout
-        - **Strategic Emphasis**: combines front-loaded critical constraints with end-positioned
-        final emphasis
-
-        The `.focus_on()` method provides the strongest possible attention management by
-        establishing the primary objective as both the opening critical requirement and closing
-        final emphasis, creating a dual-anchor system that maintains unwavering focus on the most
-        important goal throughout the entire AI response generation process.
         """
         # Add as critical constraint (front-loaded)
         self.critical_constraint(f"Primary objective: {primary_goal}")
@@ -1234,31 +1247,9 @@ class PromptBuilder:
 
         Critical constraints are the highest-priority requirements that must be prominently
         positioned in the final prompt to ensure maximum model attention and compliance. These
-        constraints are automatically placed in the "CRITICAL REQUIREMENTS" section immediately
+        constraints are automatically placed in the `"CRITICAL REQUIREMENTS"` section immediately
         after the persona and before the main task, leveraging the primacy effect to maximize their
         influence on response generation.
-
-        **Research Foundation**: based on findings demonstrating that early-positioned instructions
-        have the greatest impact on task accuracy and model compliance. The front-loading strategy
-        ensures critical requirements receive maximum attention allocation during the model's
-        processing phase.
-
-        **Attention Positioning**: critical constraints are placed at the very beginning of the
-        constraint hierarchy, appearing before any task context or analysis requirements. This
-        strategic positioning leverages cognitive psychology principles where information presented
-        early has disproportionate influence on decision-making and response generation.
-
-        **Use Cases**: Critical constraints are ideal for:
-
-        - security and safety requirements that cannot be compromised
-        - output format restrictions that must be strictly followed
-        - behavioral boundaries that define acceptable response patterns
-        - quality thresholds that determine response adequacy
-        - time-sensitive or high-stakes operational requirements
-
-        **Constraint Hierarchy**: Multiple critical constraints are ordered by insertion, with the
-        first added appearing first in the final prompt. This allows for fine-grained control over
-        the relative importance of multiple critical requirements.
 
         Parameters
         ----------
@@ -1274,6 +1265,43 @@ class PromptBuilder:
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods to
             create comprehensive, structured prompts.
+
+        Research Foundation
+        -------------------
+        **Primacy Effect Research.** Based on findings demonstrating that early-positioned
+        instructions have the greatest impact on task accuracy and model compliance. The
+        front-loading strategy ensures critical requirements receive maximum attention allocation
+        during the model's processing phase.
+
+        **Attention Positioning Theory.** Critical constraints are placed at the very beginning of
+        the constraint hierarchy, appearing before any task context or analysis requirements. This
+        strategic positioning leverages cognitive psychology principles where information presented
+        early has disproportionate influence on decision-making and response generation.
+
+        **Constraint Hierarchy Management.** Multiple critical constraints are ordered by insertion,
+        with the first added appearing first in the final prompt. This allows for fine-grained
+        control over the relative importance of multiple critical requirements, creating a clear
+        precedence structure for complex prompts with competing priorities.
+
+        **Use Case Classification.** Critical constraints are ideal for security and safety
+        requirements that cannot be compromised, output format restrictions that must be strictly
+        followed, behavioral boundaries that define acceptable response patterns, quality thresholds
+        that determine response adequacy, and time-sensitive or high-stakes operational requirements.
+
+        Integration Notes
+        -----------------
+        - **Primacy Effect**: critical constraints appear early in the prompt for maximum impact
+        - **Attention Allocation**: front-loading ensures these requirements receive priority
+        processing
+        - **Constraint Ordering**: multiple critical constraints maintain insertion order for
+        hierarchical importance
+        - **Quality Assurance**: critical constraints serve as quality gates for response evaluation
+        - **Behavioral Anchoring**: works with persona to establish both identity and non-negotiable
+        requirements
+
+        The `.critical_constraint()` method ensures that the most important requirements are
+        positioned for maximum attention and compliance, creating a foundation of non-negotiable
+        standards that guide all subsequent reasoning and response generation.
 
         Examples
         --------
@@ -1447,21 +1475,6 @@ class PromptBuilder:
 
         print(builder)
         ```
-
-        Integration Notes
-        -----------------
-        - **Primacy Effect**: critical constraints appear early in the prompt for maximum impact
-        - **Attention Allocation**: front-loading ensures these requirements receive priority
-        processing
-        - **Constraint Ordering**: multiple critical constraints maintain insertion order for
-        hierarchical importance
-        - **Quality Assurance**: critical constraints serve as quality gates for response evaluation
-        - **Behavioral Anchoring**: works with persona to establish both identity and non-negotiable
-        requirements
-
-        The `.critical_constraint()` method ensures that the most important requirements are
-        positioned for maximum attention and compliance, creating a foundation of non-negotiable
-        standards that guide all subsequent reasoning and response generation.
         """
         self._constraints.insert(0, constraint)
         return self
@@ -1476,27 +1489,6 @@ class PromptBuilder:
         the fundamental analytical requirements receive prominent attention and are treated as
         non-negotiable deliverables.
 
-        **Strategic Purpose**: core analysis requirements serve as the analytical backbone of the
-        prompt, defining the specific dimensions of investigation that must be covered. Unlike
-        general constraints or suggestions, core analysis points are treated as mandatory
-        analytical objectives that structure the AI's systematic examination of the subject matter.
-
-        **Attention Priority**: this method automatically assigns `Priority.HIGH` and marks the
-        section as required, ensuring that core analysis requirements are prominently positioned
-        after critical constraints and task context but before standard constraints and formatting
-        requirements. This placement leverages attention optimization principles to ensure
-        analytical objectives receive appropriate focus.
-
-        **Analytical Framework**: each analysis point should represent a distinct analytical
-        dimension or investigative angle that contributes to comprehensive coverage of the task. The
-        points work together to create a systematic analytical framework that guides the AI's
-        examination process and ensures thorough, structured analysis.
-
-        **Quality Assurance**: by marking core analysis as required, this method establishes
-        analytical accountability and the AI must address each specified analysis point to provide a
-        complete response. This prevents superficial analysis and ensures comprehensive coverage of
-        critical analytical dimensions.
-
         Parameters
         ----------
         analysis_points
@@ -1510,6 +1502,44 @@ class PromptBuilder:
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods to
             create comprehensive, structured prompts.
+
+        Research Foundation
+        -------------------
+        **Strategic Purpose Framework.** Core analysis requirements serve as the analytical backbone
+        of the prompt, defining the specific dimensions of investigation that must be covered.
+        Unlike general constraints or suggestions, core analysis points are treated as mandatory
+        analytical objectives that structure the AI's systematic examination of the subject matter.
+
+        **Attention Priority Theory.** This method automatically assigns `Priority.HIGH` and marks
+        the section as required, ensuring that core analysis requirements are prominently positioned
+        after critical constraints and task context but before standard constraints and formatting
+        requirements. This placement leverages attention optimization principles to ensure
+        analytical objectives receive appropriate focus.
+
+        **Analytical Framework Design.** Each analysis point should represent a distinct analytical
+        dimension or investigative angle that contributes to comprehensive coverage of the task. The
+        points work together to create a systematic analytical framework that guides the AI's
+        examination process and ensures thorough, structured analysis.
+
+        **Quality Assurance Mechanism.** By marking core analysis as required, this method
+        establishes analytical accountability and the AI must address each specified analysis point
+        to provide a complete response. This prevents superficial analysis and ensures comprehensive
+        coverage of critical analytical dimensions.
+
+        Integration Notes
+        -----------------
+        - **Analytical Structure**: creates systematic framework for comprehensive analysis
+        - **High Priority Placement**: automatically positioned prominently in the prompt hierarchy
+        - **Required Coverage**: marked as required to ensure all analytical dimensions are
+        addressed
+        - **Quality Assurance**: establishes analytical accountability and prevents superficial
+        responses
+        - **Systematic Investigation**: guides AI through structured, thorough examination process
+        - **Comprehensive Coverage**: ensures critical analytical aspects are not overlooked
+
+        The `.core_analysis()` method provides the analytical backbone for sophisticated prompts,
+        ensuring that complex tasks receive systematic, thorough examination across all critical
+        dimensions while maintaining focus on the most important analytical objectives.
 
         Examples
         --------
@@ -1644,21 +1674,6 @@ class PromptBuilder:
             ])
         )
         ```
-
-        Integration Notes
-        -----------------
-        - **Analytical Structure**: creates systematic framework for comprehensive analysis
-        - **High Priority Placement**: automatically positioned prominently in the prompt hierarchy
-        - **Required Coverage**: marked as required to ensure all analytical dimensions are
-        addressed
-        - **Quality Assurance**: establishes analytical accountability and prevents superficial
-        responses
-        - **Systematic Investigation**: guides AI through structured, thorough examination process
-        - **Comprehensive Coverage**: ensures critical analytical aspects are not overlooked
-
-        The `.core_analysis()` method provides the analytical backbone for sophisticated prompts,
-        ensuring that complex tasks receive systematic, thorough examination across all critical
-        dimensions while maintaining focus on the most important analytical objectives.
         """
         return self.structured_section(
             "Core Analysis", analysis_points, priority=Priority.HIGH, required=True
@@ -1679,23 +1694,6 @@ class PromptBuilder:
         Each section is formatted with an uppercase title and organized content, enabling the AI
         model to process information in logical, digestible chunks while maintaining focus on
         specific aspects of the task.
-
-        **Research Foundation.** Creates distinct attention clusters for preventing attention drift
-        in complex prompts. The structured approach leverages cognitive psychology principles of
-        chunking and visual hierarchy to improve information processing and comprehension.
-
-        **Attention Clustering.** Structured sections group related information together, creating
-        focused attention zones that help the model process complex requirements systematically.
-        This prevents attention from being scattered across disconnected information and maintains
-        cognitive coherence throughout the prompt.
-
-        **Visual Hierarchy.** Each section uses uppercase titles and consistent formatting to create
-        clear visual boundaries. This visual organization helps both human readers and AI models
-        navigate complex prompts more effectively.
-
-        **Priority-Based Ordering.** Sections are automatically ordered by priority and insertion
-        order in the final prompt, ensuring that higher-priority content receives appropriate
-        attention placement while maintaining logical information flow.
 
         Parameters
         ----------
@@ -1723,6 +1721,44 @@ class PromptBuilder:
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods to
             create comprehensive, structured prompts.
+
+        Research Foundation
+        -------------------
+        **Attention Clustering Theory.** Creates distinct attention clusters for preventing
+        attention drift in complex prompts. The structured approach leverages cognitive psychology
+        principles of chunking and visual hierarchy to improve information processing and
+        comprehension.
+
+        **Cognitive Boundary Management.** Structured sections group related information together,
+        creating focused attention zones that help the model process complex requirements
+        systematically. This prevents attention from being scattered across disconnected information
+        and maintains cognitive coherence throughout the prompt.
+
+        **Visual Hierarchy Psychology.** Each section uses uppercase titles and consistent
+        formatting to create clear visual boundaries. This visual organization helps both human
+        readers and AI models navigate complex prompts more effectively by leveraging established
+        patterns of visual information processing.
+
+        **Priority-Based Information Architecture.** Sections are automatically ordered by priority
+        and insertion order in the final prompt, ensuring that higher-priority content receives
+        appropriate attention placement while maintaining logical information flow that aligns with
+        cognitive processing patterns.
+
+        Integration Notes
+        -----------------
+        - **Attention Clustering**: creates focused information zones that prevent cognitive
+        overload
+        - **Visual Organization**: consistent formatting improves prompt readability and navigation
+        - **Priority-Based Ordering**: sections are automatically sorted by priority for optimal
+        attention flow
+        - **Flexible Content**: supports both single-string and list-based content organization
+        - **Requirement Emphasis**: required sections receive visual emphasis to ensure coverage
+        - **Cognitive Chunking**: information is organized in digestible units that align with human
+        processing limits
+
+        The `.structured_section()` method provides a powerful tool for organizing complex
+        information in attention-optimized ways, enabling the creation of sophisticated prompts that
+        maintain clarity and focus while addressing multiple aspects of complex tasks.
 
         Examples
         --------
@@ -1980,22 +2016,6 @@ class PromptBuilder:
 
         print(builder)
         ```
-
-        Integration Notes
-        -----------------
-        - **Attention Clustering**: creates focused information zones that prevent cognitive
-        overload
-        - **Visual Organization**: consistent formatting improves prompt readability and navigation
-        - **Priority-Based Ordering**: sections are automatically sorted by priority for optimal
-        attention flow
-        - **Flexible Content**: supports both single-string and list-based content organization
-        - **Requirement Emphasis**: required sections receive visual emphasis to ensure coverage
-        - **Cognitive Chunking**: information is organized in digestible units that align with human
-        processing limits
-
-        The `.structured_section()` method provides a powerful tool for organizing complex
-        information in attention-optimized ways, enabling the creation of sophisticated prompts that
-        maintain clarity and focus while addressing multiple aspects of complex tasks.
         """
         if isinstance(content, list):
             content_str = "\n".join(f"- {item}" for item in content)
@@ -2028,27 +2048,6 @@ class PromptBuilder:
         `ADDITIONAL CONSTRAINTS` section after the main task context and structured sections,
         providing important guidance while maintaining the attention hierarchy of the prompt.
 
-        **Positioning Strategy**: standard constraints are positioned after critical constraints
-        and core content to maintain optimal attention flow. This positioning ensures that
-        essential task information receives primary focus while still communicating important
-        requirements and preferences to the model.
-
-        **Use Cases**: standard constraints are ideal for:
-
-        - quality preferences and style guidelines
-        - secondary requirements that enhance output quality
-        - behavioral preferences that improve response tone
-        - technical preferences for implementation approaches
-        - context-specific guidelines that refine the response scope
-
-        **Constraint Hierarchy**: standard constraints appear in the order they are added,
-        after any critical constraints. This allows for logical grouping of related
-        requirements and systematic constraint organization.
-
-        **Relationship to Critical Constraints**: while `critical_constraint()` is used for
-        non-negotiable requirements that must be front-loaded, `constraint()` is used for
-        important but secondary requirements that guide response quality and style.
-
         Parameters
         ----------
         constraint
@@ -2062,6 +2061,45 @@ class PromptBuilder:
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods to
             create comprehensive, structured prompts.
+
+        Research Foundation
+        -------------------
+        **Positioning Strategy Theory.** Standard constraints are positioned after critical
+        constraints and core content to maintain optimal attention flow. This positioning ensures
+        that essential task information receives primary focus while still communicating important
+        requirements and preferences to the model.
+
+        **Constraint Hierarchy Management.** Standard constraints appear in the order they are
+        added, after any critical constraints. This allows for logical grouping of related
+        requirements and systematic constraint organization that respects cognitive processing
+        priorities.
+
+        **Use Case Classification.** Standard constraints are ideal for quality preferences and
+        style guidelines, secondary requirements that enhance output quality, behavioral preferences
+        that improve response tone, technical preferences for implementation approaches, and
+        context-specific guidelines that refine the response scope.
+
+        **Differentiated Constraint Strategy.** While `critical_constraint()` is used for
+        non-negotiable requirements that must be front-loaded, `constraint()` is used for important
+        but secondary requirements that guide response quality and style without overriding primary
+        attention allocation.
+
+        Integration Notes
+        -----------------
+        - **Attention Hierarchy**: standard constraints appear after critical content to maintain
+        focus
+        - **Quality Enhancement**: these constraints refine and improve response quality without
+        overriding priorities
+        - **Flexibility**: supports diverse requirement types from technical to behavioral to
+        domain specific
+        - **Systematic Organization**: constraints are grouped logically in the final prompt
+        structure
+        - **Complementary Function**: works alongside critical constraints to create comprehensive
+        requirement sets
+
+        The `.constraint()` method provides flexible, systematic way to communicate important
+        requirements and preferences that enhance response quality while respecting the overall
+        attention optimization strategy of the prompt building system.
 
         Examples
         --------
@@ -2226,23 +2264,6 @@ class PromptBuilder:
 
         print(builder)
         ```
-
-        Integration Notes
-        -----------------
-        - **Attention Hierarchy**: standard constraints appear after critical content to maintain
-        focus
-        - **Quality Enhancement**: these constraints refine and improve response quality without
-        overriding priorities
-        - **Flexibility**: supports diverse requirement types from technical to behavioral to
-        domain specific
-        - **Systematic Organization**: constraints are grouped logically in the final prompt
-        structure
-        - **Complementary Function**: works alongside critical constraints to create comprehensive
-        requirement sets
-
-        The `.constraint()` method provides flexible, systematic way to communicate important
-        requirements and preferences that enhance response quality while respecting the overall
-        attention optimization strategy of the prompt building system.
         """
         self._constraints.append(constraint)
         return self
@@ -2258,24 +2279,6 @@ class PromptBuilder:
         that appears in the standard constraints section, providing clear guidance about prohibited
         topics or approaches.
 
-        **Negative Guidance**: research in cognitive psychology shows that explicit negative
-        instructions can be effective when combined with positive guidance. By clearly stating what
-        to avoid, this method helps the AI navigate complex topics while staying within appropriate
-        boundaries and maintaining focus on desired outcomes.
-
-        **Boundary Setting**: avoid topics serves as a content filter and boundary-setting mechanism
-        that prevents responses from venturing into sensitive, irrelevant, or counterproductive
-        areas. This is particularly valuable for professional contexts where certain topics or
-        approaches could be inappropriate or harmful.
-
-        **Risk Mitigation**: negative constraints help mitigate risks associated with AI-generated
-        content by explicitly excluding potentially problematic topics, biased perspectives, or
-        approaches that could lead to harmful or inappropriate recommendations.
-
-        **Focus Enhancement**: by eliminating distracting or irrelevant topics, `.avoid_topics()`
-        helps maintain laser focus on the core objectives and prevents the AI from exploring
-        tangential areas that might dilute the quality or relevance of the response.
-
         Parameters
         ----------
         topics
@@ -2290,6 +2293,43 @@ class PromptBuilder:
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods to
             create comprehensive, structured prompts.
+
+        Research Foundation
+        -------------------
+        **Negative Guidance Psychology.** Research in cognitive psychology shows that explicit
+        negative instructions can be effective when combined with positive guidance. By clearly
+        stating what to avoid, this method helps the AI navigate complex topics while staying within
+        appropriate boundaries and maintaining focus on desired outcomes.
+
+        **Boundary Setting Mechanism.** Avoid topics serves as a content filter and
+        boundary-setting mechanism that prevents responses from venturing into sensitive,
+        irrelevant, or counterproductive areas. This is particularly valuable for professional
+        contexts where certain topics or approaches could be inappropriate or harmful.
+
+        **Risk Mitigation Strategy.** Negative constraints help mitigate risks associated with
+        AI-generated content by explicitly excluding potentially problematic topics, biased
+        perspectives, or approaches that could lead to harmful or inappropriate recommendations.
+
+        **Focus Enhancement Theory.** By eliminating distracting or irrelevant topics,
+        `.avoid_topics()` helps maintain laser focus on the core objectives and prevents the AI from
+        exploring tangential areas that might dilute the quality or relevance of the response.
+
+        Integration Notes
+        -----------------
+        - **Boundary Setting**: establishes clear content and approach boundaries for AI responses
+        - **Risk Mitigation**: prevents problematic or inappropriate content through explicit
+        exclusion
+        - **Focus Enhancement**: eliminates distracting topics to maintain response relevance
+        - **Professional Standards**: ensures responses align with ethical and professional
+        guidelines
+        - **Quality Assurance**: prevents low-quality approaches through negative guidance
+        - **Complementary Constraints**: works alongside positive constraints to create
+        comprehensive guidance
+
+        The `.avoid_topics()` method provides essential boundary-setting capabilities that ensure AI
+        responses remain appropriate, focused, and aligned with professional standards while
+        explicitly excluding problematic approaches or content areas that could compromise response
+        quality or appropriateness.
 
         Examples
         --------
@@ -2460,23 +2500,6 @@ class PromptBuilder:
 
         print(builder)
         ```
-
-        Integration Notes
-        -----------------
-        - **Boundary Setting**: establishes clear content and approach boundaries for AI responses
-        - **Risk Mitigation**: prevents problematic or inappropriate content through explicit
-        exclusion
-        - **Focus Enhancement**: eliminates distracting topics to maintain response relevance
-        - **Professional Standards**: ensures responses align with ethical and professional
-        guidelines
-        - **Quality Assurance**: prevents low-quality approaches through negative guidance
-        - **Complementary Constraints**: works alongside positive constraints to create
-        comprehensive guidance
-
-        The `.avoid_topics()` method provides essential boundary-setting capabilities that ensure AI
-        responses remain appropriate, focused, and aligned with professional standards while
-        explicitly excluding problematic approaches or content areas that could compromise response
-        quality or appropriateness.
         """
         # Create strong refusal language instead of weak "avoid" guidance
         if len(topics) == 1:
@@ -2508,25 +2531,6 @@ class PromptBuilder:
         of the prompt, ensuring that formatting guidance influences response generation while
         maintaining the attention hierarchy for more critical content.
 
-        **Research Foundation**: addresses attention drift issues by providing specific, measurable
-        formatting constraints that anchor response structure. Clear formatting requirements help
-        maintain cognitive coherence and ensure that complex responses remain organized and
-        accessible to human readers.
-
-        **Structural Guidance**: output format specifications serve as response templates that guide
-        the AI's information organization and presentation. Unlike content-focused constraints,
-        these requirements focus on how information should be structured, ordered, and presented to
-        maximize clarity and usability.
-
-        **Response Quality**: well-defined formatting requirements significantly improve response
-        quality by preventing stream-of-consciousness outputs and ensuring systematic information
-        organization. This is particularly important for complex analytical tasks where information
-        hierarchy and clear structure are essential for comprehension.
-
-        **Professional Standards**: formatting specifications enable alignment with professional
-        documentation standards, report formats, and organizational communication preferences,
-        ensuring that AI-generated content meets workplace and industry expectations.
-
         Parameters
         ----------
         format_specs
@@ -2542,6 +2546,41 @@ class PromptBuilder:
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods to
             create comprehensive, structured prompts.
+
+        Research Foundation
+        -------------------
+        **Attention Drift Mitigation.** Addresses attention drift issues by providing specific,
+        measurable formatting constraints that anchor response structure. Clear formatting
+        requirements help maintain cognitive coherence and ensure that complex responses remain
+        organized and accessible to human readers.
+
+        **Structural Guidance Framework.** Output format specifications serve as response templates
+        that guide the AI's information organization and presentation. Unlike content-focused
+        constraints, these requirements focus on how information should be structured, ordered, and
+        presented to maximize clarity and usability.
+
+        **Response Quality Enhancement.** Well-defined formatting requirements significantly improve
+        response quality by preventing stream-of-consciousness outputs and ensuring systematic
+        information organization. This is particularly important for complex analytical tasks where
+        information hierarchy and clear structure are essential for comprehension.
+
+        **Professional Standards Alignment.** Formatting specifications enable alignment with
+        professional documentation standards, report formats, and organizational communication
+        preferences, ensuring that AI-generated content meets workplace and industry expectations.
+
+        Integration Notes
+        -----------------
+        - **Response Structure**: provides clear templates for organized, professional outputs
+        - **Cognitive Clarity**: prevents stream-of-consciousness responses through structured
+        guidance
+        - **Quality Assurance**: ensures consistent formatting that meets professional standards
+        - **Information Hierarchy**: guides appropriate organization of complex information
+        - **Accessibility**: improves readability and navigability of AI-generated content
+        - **Professional Alignment**: enables compliance with organizational communication standards
+
+        The `.output_format()` method ensures that AI responses are well-structured, professionally
+        formatted, and organized in ways that maximize clarity, usability, and impact for human
+        readers across diverse professional contexts.
 
         Examples
         --------
@@ -2656,20 +2695,6 @@ class PromptBuilder:
 
         print(builder)
         ```
-
-        Integration Notes
-        -----------------
-        - **Response Structure**: provides clear templates for organized, professional outputs
-        - **Cognitive Clarity**: prevents stream-of-consciousness responses through structured
-        guidance
-        - **Quality Assurance**: ensures consistent formatting that meets professional standards
-        - **Information Hierarchy**: guides appropriate organization of complex information
-        - **Accessibility**: improves readability and navigability of AI-generated content
-        - **Professional Alignment**: enables compliance with organizational communication standards
-
-        The `.output_format()` method ensures that AI responses are well-structured, professionally
-        formatted, and organized in ways that maximize clarity, usability, and impact for human
-        readers across diverse professional contexts.
         """
         self._output_format.extend(format_specs)
         return self
@@ -2684,24 +2709,6 @@ of expected input/output patterns, helping the AI understand the desired respons
 style, and level of detail. Examples appear in the `"EXAMPLES"` section near the end of
 the prompt, allowing the model to learn from specific demonstrations while maintaining
 the attention hierarchy for core content.
-
-**Few-Shot Learning**: examples leverage the AI model's ability to learn from demonstrations
-without explicit training. By providing concrete input/output pairs, examples enable the
-model to infer patterns, styles, and expected behaviors that might be difficult to specify
-through constraints alone.
-
-**Response Calibration**: examples serve as calibration tools that help establish the
-appropriate level of detail, technical depth, formatting style, and analytical approach
-for responses. This is particularly valuable for complex tasks where abstract descriptions
-of requirements might be ambiguous.
-
-**Pattern Recognition**: multiple examples can demonstrate variations in approach, showing
-how different types of inputs should be handled while maintaining consistent output quality
-and format. This helps the AI generalize appropriately across different scenarios.
-
-**Quality Anchoring**: examples set quality expectations by demonstrating high-quality
-responses that serve as benchmarks for the AI's own outputs. This helps maintain
-consistency and professionalism across different prompt executions.
 
 Parameters
 ----------
@@ -2722,6 +2729,42 @@ Returns
 PromptBuilder
     Self for method chaining, allowing combination with other prompt building methods to
     create comprehensive, structured prompts.
+
+Research Foundation
+-------------------
+**Few-Shot Learning Theory.** Examples leverage the AI model's ability to learn from
+demonstrations without explicit training. By providing concrete input/output pairs,
+examples enable the model to infer patterns, styles, and expected behaviors that might be
+difficult to specify through constraints alone.
+
+**Response Calibration Mechanism.** Examples serve as calibration tools that help establish
+the appropriate level of detail, technical depth, formatting style, and analytical approach
+for responses. This is particularly valuable for complex tasks where abstract descriptions
+of requirements might be ambiguous.
+
+**Pattern Recognition Enhancement.** Multiple examples can demonstrate variations in
+approach, showing how different types of inputs should be handled while maintaining
+consistent output quality and format. This helps the AI generalize appropriately across
+different scenarios.
+
+**Quality Anchoring Psychology.** Examples set quality expectations by demonstrating
+high-quality responses that serve as benchmarks for the AI's own outputs. This helps
+maintain consistency and professionalism across different prompt executions.
+
+Integration Notes
+-----------------
+- **Few-Shot Learning**: leverages AI's pattern recognition for improved response quality
+- **Format Demonstration**: shows concrete examples of expected output structure and style
+- **Quality Calibration**: establishes benchmarks for response depth and professionalism
+- **Variation Handling**: multiple examples can demonstrate different scenarios and approaches
+- **Learning Reinforcement**: examples reinforce other prompt elements like constraints and
+formatting
+- **Prompt Positioning**: examples appear late in prompt to provide final guidance before response
+generation
+
+The `.example()` method provides powerful demonstration-based learning that significantly
+improves response quality, consistency, and alignment with expectations through concrete
+input/output pattern recognition rather than abstract instruction following.
 
 Examples
 --------
@@ -2971,21 +3014,6 @@ builder = (
 
 print(builder)
 ````
-
-Integration Notes
------------------
-- **Few-Shot Learning**: leverages AI's pattern recognition for improved response quality
-- **Format Demonstration**: shows concrete examples of expected output structure and style
-- **Quality Calibration**: establishes benchmarks for response depth and professionalism
-- **Variation Handling**: multiple examples can demonstrate different scenarios and approaches
-- **Learning Reinforcement**: examples reinforce other prompt elements like constraints and
-formatting
-- **Prompt Positioning**: examples appear late in prompt to provide final guidance before response
-generation
-
-The `.example()` method provides powerful demonstration-based learning that significantly
-improves response quality, consistency, and alignment with expectations through concrete
-input/output pattern recognition rather than abstract instruction following.
         """
         # fmt: on
         self._examples.append({"input": input_example, "output": output_example})
@@ -3002,27 +3030,6 @@ input/output pattern recognition rather than abstract instruction following.
         method provides a powerful way to reinforce the most essential requirement or constraint
         that must not be overlooked.
 
-        **Recency Bias**: research in cognitive psychology demonstrates that information presented
-        at the end of a sequence receives heightened attention and retention. By placing critical
-        instructions at the prompt's conclusion, final emphasis ensures that the most important
-        guidance influences the AI's response generation process when attention is most focused on
-        producing output.
-
-        **Attention Anchoring**: final emphasis serves as an attention anchor that prevents drift
-        from core objectives during complex prompt processing. When prompts contain extensive
-        context, constraints, and examples, the final emphasis acts as a cognitive reset that
-        refocuses attention on the primary objective before response generation begins.
-
-        **Override Mechanism**: final emphasis can serve as an override mechanism for complex
-        prompts where multiple competing priorities might create confusion. By explicitly stating
-        the most critical requirement at the end, this method ensures that primary objectives take
-        precedence over secondary considerations when trade-offs must be made.
-
-        **Quality Assurance**: the strategic placement of final emphasis helps prevent AI responses
-        that technically satisfy prompt requirements but miss the primary intent. This is
-        particularly valuable for complex analytical tasks where technical completeness might
-        overshadow the core objective.
-
         Parameters
         ----------
         emphasis
@@ -3038,6 +3045,45 @@ input/output pattern recognition rather than abstract instruction following.
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods to
             create comprehensive, structured prompts.
+
+        Research Foundation
+        -------------------
+        **Recency Bias Psychology.** Research in cognitive psychology demonstrates that information
+        presented at the end of a sequence receives heightened attention and retention. By placing
+        critical instructions at the prompt's conclusion, final emphasis ensures that the most
+        important guidance influences the AI's response generation process when attention is most
+        focused on producing output.
+
+        **Attention Anchoring Mechanism.** Final emphasis serves as an attention anchor that
+        prevents drift from core objectives during complex prompt processing. When prompts contain
+        extensive context, constraints, and examples, the final emphasis acts as a cognitive reset
+        that refocuses attention on the primary objective before response generation begins.
+
+        **Override Mechanism Theory.** Final emphasis can serve as an override mechanism for complex
+        prompts where multiple competing priorities might create confusion. By explicitly stating
+        the most critical requirement at the end, this method ensures that primary objectives take
+        precedence over secondary considerations when trade-offs must be made.
+
+        **Quality Assurance Strategy.** The strategic placement of final emphasis helps prevent AI
+        responses that technically satisfy prompt requirements but miss the primary intent. This is
+        particularly valuable for complex analytical tasks where technical completeness might
+        overshadow the core objective.
+
+        Integration Notes
+        -----------------
+        - **Recency Bias Leverage**: strategically positions critical guidance at prompt conclusion
+        for maximum impact
+        - **Attention Anchoring**: prevents objective drift during complex prompt processing
+        - **Priority Override**: ensures primary objectives take precedence when trade-offs are
+        required
+        - **Quality Assurance**: prevents technically complete but intent-missing responses
+        - **Cognitive Reset**: refocuses attention on core objectives before response generation
+        - **Strategic Positioning**: complements front-loaded critical constraints with
+        end-positioned emphasis
+
+        The `.final_emphasis()` method provides a powerful attention management tool that ensures
+        the most critical requirements maintain prominence throughout the AI's response generation
+        process, leveraging psychological principles to maximize adherence to primary objectives.
 
         Examples
         --------
@@ -3201,22 +3247,6 @@ input/output pattern recognition rather than abstract instruction following.
 
         print(builder)
         ```
-
-        Integration Notes
-        -----------------
-        - **Recency Bias Leverage**: strategically positions critical guidance at prompt conclusion
-        for maximum impact
-        - **Attention Anchoring**: prevents objective drift during complex prompt processing
-        - **Priority Override**: ensures primary objectives take precedence when trade-offs are
-        required
-        - **Quality Assurance**: prevents technically complete but intent-missing responses
-        - **Cognitive Reset**: refocuses attention on core objectives before response generation
-        - **Strategic Positioning**: complements front-loaded critical constraints with
-        end-positioned emphasis
-
-        The `.final_emphasis()` method provides a powerful attention management tool that ensures
-        the most critical requirements maintain prominence throughout the AI's response generation
-        process, leveraging psychological principles to maximize adherence to primary objectives.
         """
         self._final_emphasis = emphasis
         return self
@@ -3226,18 +3256,9 @@ input/output pattern recognition rather than abstract instruction following.
         Add conversational pathway guidance to structure and guide conversation flow.
 
         Pathways provide flexible conversation flow guidance that helps AI assistants navigate
-        complex interactions while maintaining natural conversation patterns. Unlike rigid state
-        machines, pathways serve as intelligent guardrails that adapt to user behavior while
-        ensuring important steps and information gathering requirements are addressed.
-
-        Pathways provide conversation guidance without enforcing rigid adherence, allowing the AI to
-        adapt to natural conversation patterns while ensuring key objectives are met. This balances
-        structure with conversational flexibility. Pathways help ensure systematic information
-        gathering and step completion while maintaining user-friendly interactions.
-
-        In terms of attention optimization, pathway specifications are integrated into the prompt
-        structure at an optimal position for AI attention, providing clear guidance without
-        overwhelming other prompt components.
+        complex interactions while maintaining natural conversation patterns. This method enables
+        sophisticated conversation flow management while preserving the natural, adaptive qualities
+        that make AI conversations engaging and user-friendly.
 
         Parameters
         ----------
@@ -3251,6 +3272,42 @@ input/output pattern recognition rather than abstract instruction following.
         PromptBuilder
             Self for method chaining, allowing combination with other prompt building methods to
             create comprehensive, structured prompts.
+
+        Research Foundation
+        -------------------
+        **Conversational State Management Theory.** Unlike rigid state machines, pathways serve as
+        intelligent guardrails that adapt to user behavior while ensuring important steps and
+        information gathering requirements are addressed. This approach balances structure with
+        conversational flexibility, allowing natural dialogue patterns while maintaining systematic
+        progress toward objectives.
+
+        **Adaptive Flow Psychology.** Pathways provide conversation guidance without enforcing rigid
+        adherence, allowing the AI to adapt to natural conversation patterns while ensuring key
+        objectives are met. This balances structure with conversational flexibility and helps
+        ensure systematic information gathering and step completion while maintaining user-friendly
+        interactions.
+
+        **Attention Optimization Integration.** Pathway specifications are integrated into the
+        prompt structure at an optimal position for AI attention, providing clear guidance without
+        overwhelming other prompt components. This strategic positioning ensures that conversation
+        flow guidance receives appropriate attention while maintaining the overall prompt's
+        cognitive load balance.
+
+        Integration Notes
+        -----------------
+        - **Flexible Guidance**: pathways provide structure without rigidity, allowing natural
+        conversation flow
+        - **Information Gathering**: systematic collection of required information while maintaining
+        user experience
+        - **Adaptive Branching**: support for conditional flows based on user responses and
+        circumstances
+        - **Tool Integration**: clear guidance on when and how to use external tools within the
+        conversation flow
+        - **Completion Tracking**: built-in success conditions and completion criteria for complex
+        processes
+
+        The `.pathways()` method enables sophisticated conversation flow management while preserving
+        the natural, adaptive qualities that make AI conversations engaging and user-friendly.
 
         Examples
         --------
@@ -3292,22 +3349,6 @@ input/output pattern recognition rather than abstract instruction following.
             .final_emphasis("Follow pathway while adapting to user needs")
         )
         ```
-
-        Integration Notes
-        -----------------
-        - **Flexible Guidance**: Pathways provide structure without rigidity, allowing natural
-        conversation flow
-        - **Information Gathering**: systematic collection of required information while maintaining
-        user experience
-        - **Adaptive Branching**: support for conditional flows based on user responses and
-        circumstances
-        - **Tool Integration**: clear guidance on when and how to use external tools within the
-        conversation flow
-        - **Completion Tracking**: built-in success conditions and completion criteria for complex
-        processes
-
-        The `.pathways()` method enables sophisticated conversation flow management while preserving
-        the natural, adaptive qualities that make AI conversations engaging and user-friendly.
         """
         # Handle both Pathways objects and dictionary specifications
         if hasattr(pathway_spec, "_to_prompt_text"):
@@ -3375,186 +3416,6 @@ input/output pattern recognition rather than abstract instruction following.
         This method is used internally by ChatBot to create the system prompt while preserving the
         structured data for testing and analysis.
         """
-        # fmt: off
-        """
-        Construct the final prompt using attention-optimized structure based on cognitive psychology
-        principles.
-
-        The build method transforms the accumulated prompt components into a strategically
-        structured prompt that maximizes AI attention and response quality through evidence-based
-        sequencing. This method implements a comprehensive attention management system that
-        leverages primacy effects, recency bias, and cognitive load optimization to ensure that the
-        most critical information receives maximum focus during AI processing.
-
-        **Attention Architecture**: the prompt structure follows a carefully researched sequence
-        that aligns with how large language models process and prioritize information. Each section
-        is positioned to optimize attention allocation, with critical elements placed at
-        high-attention positions (beginning and end) while supporting information is organized to
-        minimize cognitive load.
-
-        **Cognitive Load Management**: the structured approach prevents cognitive overload by
-        presenting information in digestible, hierarchically organized sections. This allows the AI
-        to process complex requirements systematically while maintaining focus on the most important
-        objectives throughout response generation.
-
-        **Priority-Based Organization**: all prompt sections are automatically sorted by priority
-        level, ensuring that high-priority information receives prominent placement and attention.
-        This systematic prioritization prevents important requirements from being overshadowed by
-        less critical details.
-
-        **Behavioral Anchoring**: the persona-first structure establishes behavioral context before
-        presenting tasks or constraints, allowing the AI to adopt the appropriate role and mindset
-        before processing specific requirements. This behavioral anchoring significantly improves
-        response quality and consistency with desired expertise levels.
-
-        **Structural Sequence**: the method implements an 8-section attention-optimized structure:
-
-        1. **Persona**: establishes behavioral context and expertise level
-        2. **Critical Constraints**: front-loads most important requirements (primacy effect)
-        3. **Task Context**: provides clear objective with priority level
-        4. **Structured Sections**: presents analysis requirements in priority order
-        5. **Standard Constraints**: adds additional requirements without overwhelming
-        6. **Output Format**: specifies structure and presentation requirements
-        7. **Examples**: provides concrete demonstrations when available
-        8. **Final Emphasis**: leverages recency bias for ultimate priority
-
-        Returns
-        -------
-        str
-            Complete prompt string with attention-optimized structure, ready for submission to LLMs.
-            The prompt follows evidence-based sequencing principles to maximize response quality and
-            adherence to requirements.
-
-        Examples
-        --------
-        ### Basic prompt construction
-
-        Simple prompt with essential components:
-
-        ```python
-        import talk_box as tb
-
-        # Build a basic technical analysis prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("software architect", "system design")
-            .task_context("design API architecture for e-commerce platform")
-            .core_analysis([
-                "service boundaries and responsibilities",
-                "data flow and state management",
-                "security and authentication approach"
-            ])
-            .output_format([
-                "architecture overview diagram",
-                "API specification with endpoints",
-                "implementation recommendations"
-            ])
-        )
-
-        prompt = builder
-        print(prompt)
-        ```
-
-        Output structure:
-
-        ```
-        You are a software architect specializing in system design.
-
-        TASK: Design API architecture for e-commerce platform
-
-        Core Analysis Requirements:
-        - Service boundaries and responsibilities
-        - Data flow and state management
-        - Security and authentication approach
-
-        OUTPUT FORMAT:
-        - Architecture overview diagram
-        - API specification with endpoints
-        - Implementation recommendations
-        ```
-
-        ### Complex prompt with full feature set
-
-        Comprehensive prompt utilizing all available features:
-
-        ```python
-        # Build a complex security audit prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("security engineer", "application security")
-            .focus_on("identify critical security vulnerabilities that pose immediate risk")
-            .task_context(
-                "audit web application for production deployment",
-                priority=tb.Priority.HIGH
-            )
-            .core_analysis([
-                "authentication and authorization mechanisms",
-                "input validation and data sanitization",
-                "infrastructure security configuration"
-                ],
-                priority=tb.Priority.HIGH
-            )
-            .structured_section(
-                "Risk Assessment Framework",
-                "Evaluate each finding using CVSS scoring methodology",
-                priority=tb.Priority.MEDIUM
-            )
-            .constraint("include remediation effort estimates")
-            .avoid_topics([
-                "security through obscurity approaches",
-                "custom cryptographic implementations"
-            ])
-            .output_format([
-                "executive summary with critical issues",
-                "detailed findings with CVSS scores",
-                "prioritized remediation roadmap"
-            ])
-            .example(
-                "SQL injection vulnerability in login form",
-                "**Critical**: SQL injection in authentication endpoint (CVSS 9.8). Immediate fix required: implement parameterized queries and input validation."
-            )
-        )
-
-        prompt = builder
-        print(prompt)
-        ```
-
-        Output structure demonstrates full attention optimization:
-        ```
-        You are a security engineer specializing in application security.
-
-        CRITICAL REQUIREMENTS:
-        - Primary objective: Identify critical security vulnerabilities that pose immediate risk
-
-        TASK: Audit web application for production deployment
-
-        Core Analysis Requirements:
-        - Authentication and authorization mechanisms
-        - Input validation and data sanitization
-        - Infrastructure security configuration
-
-        Risk Assessment Framework:
-        Evaluate each finding using CVSS scoring methodology
-
-        ADDITIONAL CONSTRAINTS:
-        - Include remediation effort estimates
-        - Avoid: Security through obscurity approaches, Custom cryptographic implementations
-
-        OUTPUT FORMAT:
-        - Executive summary with critical issues
-        - Detailed findings with CVSS scores
-        - Prioritized remediation roadmap
-
-        EXAMPLES:
-
-        Example 1:
-        Input: SQL injection vulnerability in login form
-        Output: **Critical**: SQL injection in authentication endpoint (CVSS 9.8). Immediate fix required - implement parameterized queries and input validation.
-
-        Focus your entire response on: Identify critical security vulnerabilities that pose immediate risk
-        ```
-        """
-        # fmt: on
         prompt_parts = []
 
         # 1. Persona
