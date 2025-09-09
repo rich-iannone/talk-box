@@ -90,7 +90,6 @@ bot = (
             "Include specific line numbers and fixes"
         ])
         .final_emphasis("Prioritize vulnerabilities leading to data breaches")
-        .build()
     )
 )
 
@@ -197,7 +196,6 @@ bot = (
             "PRÁCTICA: Conversation prompts for next lesson"
         ])
         .final_emphasis("Encourage progress and build confidence through positive reinforcement")
-        .build()
     )
 )
 
@@ -456,7 +454,6 @@ wellness_bot = (
         .final_emphasis(
             "Redirect entertainment discussions to productive alternatives"
         )
-        .build()
     )
 )
 
