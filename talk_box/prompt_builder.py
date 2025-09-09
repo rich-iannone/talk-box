@@ -2031,12 +2031,12 @@ class PromptBuilder:
         --------
         ### Basic formatting requirements
 
-        Define clear structure for analytical responses:
+        Define clear structure for analytical responses in code reviews with bullet points and
+        summaries within the `.output_format()` method:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
-        # Simple formatting for code review
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code review")
@@ -2059,10 +2059,9 @@ class PromptBuilder:
 
         ### Executive reporting format
 
-        Structure responses for business stakeholders:
+        Structure responses for business stakeholders with clear sections and prioritized findings:
 
-        ```python
-        # Executive report formatting
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("business analyst", "strategic planning")
@@ -2081,13 +2080,15 @@ class PromptBuilder:
                 "timeline and resource requirements"
             ])
         )
+
+        print(builder)
         ```
 
         ### Technical documentation format
 
-        Structure comprehensive technical documentation:
+        Structure comprehensive technical documentation with clear sections and examples:
 
-        ```python
+        ```{python}
         # Technical documentation formatting
         builder = (
             tb.PromptBuilder()
@@ -2107,13 +2108,16 @@ class PromptBuilder:
                 "SDK and integration examples"
             ])
         )
+
+        print(builder)
         ```
 
         ### Research and analysis format
 
-        Structure academic or research-style outputs:
+        Structure academic or research-style outputs with an output format that includes
+        methodology, findings, and recommendations:
 
-        ```python
+        ```{python}
         # Research analysis formatting
         builder = (
             tb.PromptBuilder()
@@ -2133,6 +2137,8 @@ class PromptBuilder:
                 "recommendations with supporting rationale"
             ])
         )
+
+        print(builder)
         ```
 
         Integration Notes
