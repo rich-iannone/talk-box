@@ -2550,7 +2550,10 @@ input/output pattern recognition rather than abstract instruction following.
                 "critical security issues requiring immediate attention",
                 "performance and UX recommendations where applicable"
             ])
-            .final_emphasis("security vulnerabilities must be identified and addressed before any performance or UX considerations")
+            .final_emphasis(
+                "security vulnerabilities must be identified and addressed before "
+                "any performance or UX considerations"
+            )
         )
 
         print(builder)
