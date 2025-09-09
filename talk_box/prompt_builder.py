@@ -3256,7 +3256,9 @@ print(builder)
         Add conversational pathway guidance to structure and guide conversation flow.
 
         Pathways provide flexible conversation flow guidance that helps AI assistants navigate
-        complex interactions while maintaining natural conversation patterns. This method enables
+        complex interactions while maintaining natural conversation patterns. This method requires
+        a `Pathways` object created using the chainable Pathways API, which defines states,
+        transitions, and flow control logic for structured conversations. The method enables
         sophisticated conversation flow management while preserving the natural, adaptive qualities
         that make AI conversations engaging and user-friendly.
 
