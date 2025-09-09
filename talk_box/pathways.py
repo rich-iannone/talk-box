@@ -103,7 +103,7 @@ class Pathways:
         # First .state() call automatically becomes the starting state
     ```
 
-    ### 2. State Definition (using unified `.state()`method)
+    ### 2. State Definition
 
     ```python
     pathway = (
@@ -113,15 +113,15 @@ class Pathways:
             activation="User needs help"
         )
         # === STATE: intake ===
-        .state("Gather customer information", id="intake")
+        .state("intake: gather customer information")
         .required(["issue description", "contact info"])
         .next_state("triage")
         # === STATE: triage ===
-        .state("Route to appropriate support", id="triage")
+        .state("triage: route to appropriate support")
         .branch_on("Technical issue", id="tech_support")
         .branch_on("Billing question", id="billing")
         # === STATE: tech_support ===
-        .state("Resolve technical problems", id="tech_support")
+        .state("tech support: resolve technical problems")
         .success_condition("Issue resolved")
     )
     ```
@@ -129,7 +129,7 @@ class Pathways:
     This approach provides:
 
     - visual state boundaries with `# === STATE: description ===` comments
-    - natural state definition with description first: `.state("What happens here", id="name")`
+    - natural state definition with shorthand syntax: `.state("id: what happens here")`
     - smart type inference where `.tools()` → `"tool"`, `.branch_on()` → `"decision"`,
     `.required()` → `"collect"`
     - automatic start state where the first `.state()` becomes the starting state
@@ -139,11 +139,11 @@ class Pathways:
     ```python
         # Define the state with description first
         .state("What happens in this state", id="state_name")
-        .state("Gather information", id="state_name")  # type inferred as "collect" from .required()
-        .state("Make decisions", id="state_name")      # type inferred as "decision" from .branch_on()
-        .state("Use tools/APIs", id="state_name")      # type inferred as "tool" from .tools()
-        .state("Provide final summary", id="summary_state", type="summary")  # explicit type
-        .state("Wrap up")                              # Linear states don't need IDs
+        .state("info: collect required information")            # inferred as "collect", id="info"
+        .state("make decision: evaluate options and choose")    # "make decision" → id="make_decision"
+        .state("use tools: apply specific capabilities")        # type inferred as "tool" from .tools()
+        .state("final summary: provide conclusion", type="summary")  # explicit type with shorthand syntax
+        .state("Wrap up")                                       # Linear states don't really need IDs
 
         # Configure the state
         .required([...])                               # What must be accomplished
@@ -201,11 +201,11 @@ class Pathways:
             fallback_strategy="If user lacks access to recovery methods, escalate to manual verification"
         )
         # === STATE: verification ===
-        .state("Verify user identity", id="verification")
+        .state("verification: verify user identity")
         .required(["email address", "account verification"])
         .next_state("password_update")
         # === STATE: password_update ===
-        .state("Guide user through creating new password", id="password_update")
+        .state("password update: guide user through creating new password")
         .required(["new password is created", "password requirements are met"])
         .success_condition("User successfully logs in with new password")
     )
@@ -224,27 +224,27 @@ class Pathways:
     support_pathway = (
         tb.Pathways(
             title="Customer Support",
-            desc="Route and resolve customer inquiries",
-            activation=["User needs help", "User reports problem"],
-            completion_criteria=["Customer issue fully resolved", "Customer satisfied"],
-            fallback_strategy="If issue is complex, escalate to human support"
+            desc="route and resolve customer inquiries",
+            activation=["user needs help", "user reports problem"],
+            completion_criteria=["customer issue fully resolved", "customer satisfied"],
+            fallback_strategy="if issue is complex, escalate to human support"
         )
         # === STATE: triage ===
-        .state("Determine the type of support needed", id="triage")
+        .state("triage: determine the type of support needed")
         .branch_on("Technical problem reported", id="technical_support")
         .branch_on("Billing question asked", id="billing_support")
         .branch_on("General inquiry made", id="general_help")
         # === STATE: technical_support ===
-        .state("Diagnose and resolve technical issues", id="technical_support")
+        .state("technical support: diagnose and resolve technical issues")
         .tools(["system_diagnostics", "troubleshooting_guide"])
         .success_condition("Technical issue is resolved")
         .next_state("completion")
         # === STATE: billing_support ===
-        .state("Address billing and account questions", id="billing_support")
+        .state("billing support: address billing and account questions")
         .required(["billing issue is understood", "solution is provided"])
         .next_state("completion")
         # === STATE: completion ===
-        .state("Ensure customer satisfaction and wrap up", id="completion", type="summary")
+        .state("completion: ensure customer satisfaction and wrap up", type="summary")
         .required(["issue resolved confirmation", "follow up if needed"])
         .success_condition("Customer satisfaction confirmed")
     )
@@ -269,12 +269,12 @@ class Pathways:
             completion_criteria="User's problem is resolved",
             fallback_strategy="If problem is complex, escalate to specialized support"
         )
-        # === STATE: intake ===
-        .state("Understand the problem", id="intake")
+        # === STATE: problem_intake ===
+        .state("problem intake: understand the issue details")
         .required(["issue description"])
-        .next_state("solution")
-        # === STATE: solution ===
-        .state("Provide solution", id="solution")
+        .next_state("provide_solution")
+        # === STATE: provide_solution ===
+        .state("provide solution: offer targeted assistance")
         .success_condition("User's problem is resolved")
     )
     ```
@@ -342,11 +342,16 @@ class Pathways:
         ----------
         desc
             Clear description of the state's purpose and what should happen. This is the primary
-            identifier and should be specific about the expected interaction or outcome.
+            identifier and should be specific about the expected interaction or outcome. Supports
+            shorthand syntax: use `"id: description"` format to specify both ID and description in
+            one parameter (e.g., `"completion: ensure customer satisfaction and wrap up"`). The ID
+            part will be automatically normalized (spaces converted to underscores, etc.).
         id
             Optional unique identifier for the state. Required only when other states need to
             reference this state (via `.branch_on()`, `.next_state()`). If not
-            provided, an ID will be auto-generated from the description.
+            provided, an ID will be extracted from `desc` using `"id: description"` format if
+            present, otherwise auto-generated. If explicitly provided, shorthand parsing
+            is bypassed.
         type
             Optional explicit state type. If not provided, the type will be inferred from subsequent
             method calls
@@ -379,6 +384,9 @@ class Pathways:
         -----------------
         - **Description Priority**: description always comes first as the primary identifier
         - **Reference Requirements**: ID only needed when other states need to reference this state
+        - **Shorthand Syntax**: use `"id: description"` format to combine ID and description in one
+        parameter for cleaner syntax; ID part is automatically normalized (spaces → underscores)
+        - **Explicit ID Priority**: when `id=` parameter is provided, shorthand parsing is bypassed
         - **Type Inference**: inferred from usage patterns to reduce explicit configuration
         - **Conflict Resolution**: first method call determines type, conflicts generate warnings
         - **Auto-generation**: IDs use `snake_case` from description with uniqueness guarantees
@@ -396,7 +404,7 @@ class Pathways:
 
         Examples
         --------
-        Complete pathway showing `.state()` method creating clear conversation structure:
+        Complete pathway showing `.state()` method with both traditional and shorthand syntax:
 
         ```{python}
         import talk_box as tb
@@ -409,22 +417,22 @@ class Pathways:
                 activation="Customer needs product guidance"
             )
 
-            # .state() defines what happens at each step ---
+            # Traditional syntax: separate id parameter ---
             # === STATE: welcome ===
-            .state("welcome customer and understand their situation", id="welcome")
+            .state("welcome: welcome customer and understand their situation")
             .required(["the customer's goal", "a budget range"])
-            .next_state("analysis")
+            .next_state("needs_analysis")
 
-            # a .state() with a good descriptions makes the flow clear ---
-            # === STATE: analysis ===
-            .state("analyze needs and preferences", id="analysis")
+            # Shorthand syntax: "id: description" format ---
+            # === STATE: needs_analysis ===
+            .state("needs analysis: analyze customer requirements and preferences")
             .required(["specific requirements", "priorities"])
             .success_condition("customer needs are clearly understood")
-            .next_state("recommendation")
+            .next_state("final_recommendation")
 
-            # .state() creates the final outcome step ---
-            # === STATE: recommendation ===
-            .state("present tailored recommendations", id="recommendation")
+            # Spaces in ID automatically become underscores ---
+            # === STATE: final_recommendation ===
+            .state("final recommendation: present tailored product matches")
             .required(["product matches", "rationale"])
             .success_condition("customer has clear next steps")
         )
@@ -433,11 +441,32 @@ class Pathways:
         print(pathway)
         ```
         """
-        # Generate ID from description if not provided
+        import re
+
+        # Parse shorthand syntax: "id: description" format
+        if id is None and ":" in desc:
+            # Check if desc follows "id: description" pattern
+            parts = desc.split(":", 1)
+            if len(parts) == 2:
+                potential_id = parts[0].strip()
+                # Convert spaces and other non-identifier chars to underscores for valid ID
+                normalized_id = re.sub(r"[^a-zA-Z0-9_]", "_", potential_id)
+                normalized_id = re.sub(r"_+", "_", normalized_id)  # Collapse multiple underscores
+                normalized_id = normalized_id.strip("_")  # Remove leading/trailing underscores
+
+                # Ensure it starts with a letter or underscore
+                if normalized_id and not normalized_id[0].isalpha() and normalized_id[0] != "_":
+                    normalized_id = "_" + normalized_id
+
+                # Use normalized ID if it results in a valid identifier
+                if normalized_id and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", normalized_id):
+                    id = normalized_id
+                    # Keep the full description including the "id: " prefix
+                    # desc remains unchanged
+
+        # Generate ID from description if still not provided
         if id is None:
             # Create snake_case ID from description
-            import re
-
             id = re.sub(r"[^\w\s]", "", desc.lower())
             id = re.sub(r"\s+", "_", id.strip())
             # Ensure uniqueness
@@ -591,14 +620,14 @@ class Pathways:
                 activation="customer wants to apply for a loan"
             )
             # === STATE: personal_info ===
-            .state("gather basic applicant information", id="personal_info")
+            .state("personal info: gather basic applicant information")
 
             # .required() ensures critical data is collected ---
             .required(["applicant's full name", "current employment status"])
 
             .next_state("financial_details")
             # === STATE: financial_details ===
-            .state("collect financial information", id="financial_details")
+            .state("financial details: collect financial information")
 
             # .required() can specify multiple essential items ---
 
@@ -612,7 +641,7 @@ class Pathways:
             .success_condition("All financial data verified")
             .next_state("review")
             # === STATE: review ===
-            .state("review application completeness", id="review")
+            .state("review: review application completeness")
 
             # .required() works with single items too ---
             .required("applicant's legal signature and consent")
@@ -685,7 +714,7 @@ class Pathways:
                 activation="customer wants to book a flight"
             )
             # === STATE: travel_basics ===
-            .state("gather essential travel details", id="travel_basics")
+            .state("travel basics: gather essential travel details")
             .required(["departure city", "destination city", "preferred travel date"])
 
             # .optional() adds helpful details without slowing the process -----
@@ -697,7 +726,7 @@ class Pathways:
 
             .next_state("search_flights")
             # === STATE: search_flights ===
-            .state("find matching flights", id="search_flights")
+            .state("search flights: find matching flights")
             .required("available flight options found and presented")
 
             # .optional() can improve personalization ---
@@ -706,7 +735,7 @@ class Pathways:
             .success_condition("customer has reviewed flight options")
             .next_state("booking")
             # === STATE: booking ===
-            .state("complete the booking", id="booking")
+            .state("booking: complete the booking")
             .required(["valid payment information", "complete traveler details for all passengers"])
 
             # .optional() for enhanced services ---
@@ -780,11 +809,11 @@ class Pathways:
                 activation="user reports technical problems"
             )
             # === STATE: problem_intake ===
-            .state("understand the reported issue", id="problem_intake")
+            .state("problem intake: understand the reported issue")
             .required(["problem description", "system details", "error messages"])
             .next_state("initial_diagnosis")
             # === STATE: initial_diagnosis ===
-            .state("run initial diagnostic checks", id="initial_diagnosis")
+            .state("initial diagnosis: run initial diagnostic checks")
 
             # .tools() specifies what capabilities are available ---
             .tools([
@@ -796,7 +825,7 @@ class Pathways:
             .success_condition("initial diagnosis completed")
             .next_state("detailed_analysis")
             # === STATE: detailed_analysis ===
-            .state("perform detailed system analysis", id="detailed_analysis")
+            .state("detailed analysis: perform detailed system analysis")
 
             # .tools() can specify advanced diagnostic tools ---
             .tools([
@@ -808,7 +837,7 @@ class Pathways:
             .required(["the root cause is identified"])
             .next_state("solution")
             # === STATE: solution ===
-            .state("implement solution", id="solution")
+            .state("solution: implement solution")
 
             # .tools() for implementation capabilities ---
             .tools("automated_repair_tool")
@@ -880,7 +909,7 @@ class Pathways:
                 activation="student completes a learning module"
             )
             # === STATE: practice ===
-            .state("present practice problems", id="practice")
+            .state("practice: present practice problems")
             .required(["problems are attempted", "student provided responses"])
 
             # .success_condition() defines when understanding is demonstrated ---
@@ -888,7 +917,7 @@ class Pathways:
 
             .next_state("feedback")
             # === STATE: feedback ===
-            .state("provide personalized feedback", id="feedback")
+            .state("feedback: provide personalized feedback")
             .required(["specific feedback", "improvement areas"])
 
             # .success_condition() ensures feedback is constructive ---
@@ -896,7 +925,7 @@ class Pathways:
 
             .next_state("advanced_practice")
             # === STATE: advanced_practice ===
-            .state("offer advanced challenges", id="advanced_practice")
+            .state("advanced practice: offer advanced challenges")
             .required("challenging problems are presented")
             .optional("hints if needed")
 
@@ -961,14 +990,14 @@ class Pathways:
                 activation="new customer signs up"
             )
             # === STATE: welcome ===
-            .state("welcome and collect basic information", id="welcome")
+            .state("welcome: welcome and collect basic information")
             .required(["full name", "email", "company name"])
 
             # .next_state() creates smooth linear progression ---
             .next_state("account_setup")
 
             # === STATE: account_setup ===
-            .state("set up account preferences", id="account_setup")
+            .state("account setup: set up account preferences")
             .required(["password is created", "preferences are selected"])
             .success_condition("account is fully configured")
 
@@ -976,7 +1005,7 @@ class Pathways:
             .next_state("feature_tour")
 
             # === STATE: feature_tour ===
-            .state("provide guided feature tour", id="feature_tour")
+            .state("feature tour: provide guided feature tour")
             .required("key features are demonstrated")
             .success_condition("customer understands main functionality")
 
@@ -984,7 +1013,7 @@ class Pathways:
             .next_state("completion")
 
             # === STATE: completion ===
-            .state("complete onboarding process", id="completion")
+            .state("completion: complete onboarding process")
             .required(["welcome resources are provided", "next steps are explained"])
             .success_condition("customer is ready to use the platform")
         )
@@ -1051,12 +1080,12 @@ class Pathways:
                 activation="patient seeks medical assistance"
             )
             # === STATE: initial_assessment ===
-            .state("assess patient symptoms and urgency", id="initial_assessment")
+            .state("initial assessment: assess patient symptoms and urgency")
             .required(["symptoms are described", "pain level", "duration"])
             .success_condition("Symptoms are clearly documented")
             .next_state("triage_decision")
             # === STATE: triage_decision ===
-            .state("determine appropriate care level", id="triage_decision")
+            .state("triage decision: determine appropriate care level")
             .required("urgency is evaluated")
 
             # .branch_on() routes based on severity -----
@@ -1066,26 +1095,26 @@ class Pathways:
 
             # The first branch leads to emergency care -----
             # === STATE: emergency_care ===
-            .state("initiate emergency protocol", id="emergency_care")
+            .state("emergency care: initiate emergency protocol")
             .required(["911 is called", "immediate first aid is provided"])
             .success_condition("emergency services are contacted")
             .next_state("follow_up")
 
             # The second branch leads to urgent care -----
             # === STATE: urgent_care ===
-            .state("schedule urgent care appointment", id="urgent_care")
+            .state("urgent care: schedule urgent care appointment")
             .required(["same day appointment", "preparation instructions"])
             .success_condition("urgent care is arranged")
             .next_state("follow_up")
 
             # The third branch leads to standard care -----
             # === STATE: standard_care ===
-            .state("provide self-care guidance", id="standard_care")
+            .state("standard care: provide self-care guidance")
             .required(["home care instructions", "symptom monitoring"])
             .success_condition("patient understands self-care plan")
             .next_state("follow_up")
             # === STATE: follow_up ===
-            .state("arrange follow-up care", id="follow_up")
+            .state("follow up: arrange follow-up care")
             .required(["follow up is scheduled"])
             .success_condition("continuity of care is ensured")
         )
@@ -1154,12 +1183,12 @@ class Pathways:
                 activation="user encounters a technical problem"
             )
             # === STATE: problem_analysis ===
-            .state("understand the problem details", id="problem_analysis")
+            .state("problem analysis: understand the problem details")
             .required(["problem description", "system context", "error details"])
             .success_condition("problem is clearly defined")
             .next_state("solution_attempt")
             # === STATE: solution_attempt ===
-            .state("apply standard solution", id="solution_attempt")
+            .state("solution attempt: apply standard solution")
             .required(["solution is implemented", "results are verified"])
             .success_condition("problem is resolved")
 
@@ -1168,7 +1197,7 @@ class Pathways:
 
             .next_state("completion")
             # === STATE: advanced_troubleshooting ===
-            .state("advanced diagnostic procedures", id="advanced_troubleshooting")
+            .state("advanced troubleshooting: advanced diagnostic procedures")
             .tools(["system_diagnostics", "log_analyzer", "network_tracer"])
             .required("root cause is identified")
             .success_condition("advanced solution is implemented")
@@ -1179,12 +1208,12 @@ class Pathways:
             .next_state("completion")
 
             # === STATE: expert_escalation ===
-            .state("escalate to specialist support", id="expert_escalation")
+            .state("expert escalation: escalate to specialist support")
             .required(["detailed case summary", "expert is contacted"])
             .success_condition("case is transferred to appropriate specialist")
             .next_state("completion")
             # === STATE: completion ===
-            .state("confirm resolution and document", id="completion")
+            .state("completion: confirm resolution and document")
             .required(["resolution is confirmed", "case is documented"])
             .success_condition("issue fully resolved and documented")
         )
