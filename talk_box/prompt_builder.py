@@ -2720,12 +2720,12 @@ input/output pattern recognition rather than abstract instruction following.
         --------
         ### Technical architecture review
 
-        Avoid outdated or problematic technologies:
+        Avoid outdated or problematic technologies and approaches for a bot focused on modern
+        software architecture:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
-        # Architecture review avoiding deprecated approaches
         builder = (
             tb.PromptBuilder()
             .persona("solution architect", "modern enterprise systems")
@@ -2755,10 +2755,9 @@ input/output pattern recognition rather than abstract instruction following.
 
         ### Business strategy consultation
 
-        Avoid ethically questionable or short-term approaches:
+        Avoid ethically questionable or short-term approaches when advising on business strategy:
 
-        ```python
-        # Business strategy avoiding problematic tactics
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("business consultant", "sustainable growth strategies")
@@ -2783,14 +2782,15 @@ input/output pattern recognition rather than abstract instruction following.
                 "implementation timeline with stakeholder impact"
             ])
         )
+
+        print(builder)
         ```
 
         ### Security audit guidance
 
         Avoid security through obscurity and weak practices:
 
-        ```python
-        # Security audit avoiding poor practices
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security best practices")
@@ -2815,14 +2815,15 @@ input/output pattern recognition rather than abstract instruction following.
                 "best practice implementation roadmap"
             ])
         )
+
+        print(builder)
         ```
 
         ### Educational content development
 
-        Avoid outdated or confusing learning approaches:
+        Avoid outdated or confusing learning approaches by specifying poor pedagogical practices:
 
-        ```python
-        # Educational content avoiding poor pedagogical practices
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("instructional designer", "modern programming education")
@@ -2847,14 +2848,16 @@ input/output pattern recognition rather than abstract instruction following.
                 "assessment strategies and progress tracking"
             ])
         )
+
+        print(builder)
         ```
 
         ### Code review guidance
 
-        Avoid problematic coding practices and shortcuts:
+        Avoid problematic coding practices and shortcuts. For this example, we create a code review
+        prompt that emphasizes constructive feedback while avoiding poor development practices:
 
-        ```python
-        # Code review avoiding poor development practices
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code quality and best practices")
@@ -2879,6 +2882,8 @@ input/output pattern recognition rather than abstract instruction following.
                 "improvement recommendations with rationale"
             ])
         )
+
+        print(builder)
         ```
 
         Integration Notes
