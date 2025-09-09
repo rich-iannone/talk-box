@@ -210,7 +210,7 @@ class Pathways:
         tb.Pathways(
             title="Password Reset",
             desc="Help users reset their forgotten passwords",
-            activation="User can't log in", "User forgot password",
+            activation=["User can't log in", "User forgot password"],
             completion_criteria="User successfully logs in with new password",
             fallback_strategy="If user lacks access to recovery methods, escalate to manual verification"
         )
