@@ -1445,20 +1445,20 @@ class PromptBuilder:
         model to process information in logical, digestible chunks while maintaining focus on
         specific aspects of the task.
 
-        **Research Foundation**: creates distinct attention clusters for preventing attention drift
+        **Research Foundation.** Creates distinct attention clusters for preventing attention drift
         in complex prompts. The structured approach leverages cognitive psychology principles of
         chunking and visual hierarchy to improve information processing and comprehension.
 
-        **Attention Clustering**: structured sections group related information together, creating
+        **Attention Clustering.** Structured sections group related information together, creating
         focused attention zones that help the model process complex requirements systematically.
         This prevents attention from being scattered across disconnected information and maintains
         cognitive coherence throughout the prompt.
 
-        **Visual Hierarchy**: each section uses uppercase titles and consistent formatting to create
+        **Visual Hierarchy.** Each section uses uppercase titles and consistent formatting to create
         clear visual boundaries. This visual organization helps both human readers and AI models
         navigate complex prompts more effectively.
 
-        **Priority-Based Ordering**: sections are automatically ordered by priority and insertion
+        **Priority-Based Ordering.** Sections are automatically ordered by priority and insertion
         order in the final prompt, ensuring that higher-priority content receives appropriate
         attention placement while maintaining logical information flow.
 
@@ -1495,7 +1495,7 @@ class PromptBuilder:
 
         Create a simple section with clear organization:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
         # Single-item structured section
@@ -1516,7 +1516,7 @@ class PromptBuilder:
 
         Use list format for multiple related items:
 
-        ```python
+        ```{python}
         # Multi-item structured section
         builder = (
             tb.PromptBuilder()
@@ -1531,13 +1531,15 @@ class PromptBuilder:
                 ]
             )
         )
+
+        print(builder)
         ```
 
         ### High-priority required section
 
         Create critical sections that must be addressed:
 
-        ```python
+        ```{python}
         # High-priority required section
         builder = (
             tb.PromptBuilder()
@@ -1554,13 +1556,15 @@ class PromptBuilder:
                 required=True
             )
         )
+
+        print(builder)
         ```
 
         ### Multiple sections with different priorities
 
         Build comprehensive prompts with multiple organized sections:
 
-        ```python
+        ```{python}
         # Complex prompt with multiple structured sections
         builder = (
             tb.PromptBuilder()
@@ -1596,15 +1600,17 @@ class PromptBuilder:
                 priority=tb.Priority.LOW
             )
         )
+
+        print(builder)
         ```
 
         ### Domain-specific structured sections
 
-        Create sections tailored to specific industries or contexts:
+        Create sections tailored to specific industries or contexts. Here's an example for
+        healthcare:
 
-        ```python
-        # Healthcare application review
-        healthcare_builder = (
+        ```{python}
+        builder = (
             tb.PromptBuilder()
             .persona("healthcare software architect", "HIPAA compliance")
             .task_context("review patient data management system")
@@ -1620,8 +1626,13 @@ class PromptBuilder:
             )
         )
 
-        # Financial systems analysis
-        finance_builder = (
+        print(builder)
+        ```
+
+        And here's one for finance:
+
+        ```{python}
+        builder = (
             tb.PromptBuilder()
             .persona("financial systems architect", "regulatory compliance")
             .task_context("design trading system architecture")
@@ -1636,14 +1647,15 @@ class PromptBuilder:
                 required=True
             )
         )
+
+        print(builder)
         ```
 
         ### Performance and optimization sections
 
         Structure performance-related requirements clearly:
 
-        ```python
-        # Performance optimization prompt
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("performance engineer", "web application optimization")
@@ -1668,45 +1680,15 @@ class PromptBuilder:
                 priority=tb.Priority.MEDIUM
             )
         )
-        ```
 
-        ### Educational content sections
-
-        Organize learning objectives and pedagogical structure:
-
-        ```python
-        # Educational content design
-        builder = (
-            tb.PromptBuilder()
-            .persona("curriculum designer", "computer science education")
-            .task_context("create comprehensive Python programming course")
-            .structured_section(
-                "Learning Objectives", [
-                    "understand fundamental programming concepts",
-                    "master Python syntax and data structures",
-                    "apply object-oriented programming principles",
-                    "build practical projects and applications"
-                ],
-                priority=tb.Priority.HIGH,
-                required=True
-            )
-            .structured_section(
-                "Pedagogical Approach", [
-                    "start with hands-on coding exercises",
-                    "progress from simple to complex concepts",
-                    "include real-world project examples",
-                    "provide immediate feedback and correction"
-                ],
-                priority=tb.Priority.MEDIUM
-            )
-        )
+        print(builder)
         ```
 
         ### Research and analysis sections
 
         Structure analytical requirements and methodologies:
 
-        ```python
+        ```{python}
         # Research analysis prompt
         builder = (
             tb.PromptBuilder()
@@ -1733,46 +1715,15 @@ class PromptBuilder:
                 required=True
             )
         )
-        ```
 
-        ### Quality assurance sections
-
-        Structure testing and validation requirements:
-
-        ```python
-        # Quality assurance prompt
-        builder = (
-            tb.PromptBuilder()
-            .persona("QA engineer", "test automation and quality assurance")
-            .task_context("develop comprehensive testing strategy")
-            .structured_section(
-                "Testing Scope", [
-                    "unit testing for individual components",
-                    "integration testing for system interactions",
-                    "end-to-end testing for user workflows",
-                    "performance testing under load conditions"
-                ],
-                priority=tb.Priority.HIGH,
-                required=True
-            )
-            .structured_section(
-                "Quality Metrics", [
-                    "code coverage targets (minimum 80%)",
-                    "test execution time optimization",
-                    "defect detection and resolution rates",
-                    "automation coverage and maintenance"
-                ],
-                priority=tb.Priority.MEDIUM
-            )
-        )
+        print(builder)
         ```
 
         ### Mixed content types in sections
 
         Combine different content formats within sections:
 
-        ```python
-        # Mixed format content
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("technical writer", "API documentation")
@@ -1791,18 +1742,20 @@ class PromptBuilder:
                 required=True
             )
         )
+
+        print(builder)
         ```
 
         Integration Notes
         -----------------
-        - **Attention Clustering**: Creates focused information zones that prevent cognitive
+        - **Attention Clustering**: creates focused information zones that prevent cognitive
         overload
-        - **Visual Organization**: Consistent formatting improves prompt readability and navigation
-        - **Priority-Based Ordering**: Sections are automatically sorted by priority for optimal
+        - **Visual Organization**: consistent formatting improves prompt readability and navigation
+        - **Priority-Based Ordering**: sections are automatically sorted by priority for optimal
         attention flow
-        - **Flexible Content**: Supports both single-string and list-based content organization
-        - **Requirement Emphasis**: Required sections receive visual emphasis to ensure coverage
-        - **Cognitive Chunking**: Information is organized in digestible units that align with human
+        - **Flexible Content**: supports both single-string and list-based content organization
+        - **Requirement Emphasis**: required sections receive visual emphasis to ensure coverage
+        - **Cognitive Chunking**: information is organized in digestible units that align with human
         processing limits
 
         The `.structured_section()` method provides a powerful tool for organizing complex
