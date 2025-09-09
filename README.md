@@ -79,15 +79,15 @@ bot = (
     .system_prompt(
         tb.PromptBuilder()
         .persona("senior security engineer", "web application security")
-        .critical_constraint("Focus only on CVSS 7.0+ vulnerabilities")
+        .critical_constraint("focus only on CVSS 7.0+ vulnerabilities")
         .core_analysis([
             "SQL injection risks",
-            "Authentication bypass possibilities",
-            "Data validation gaps"
+            "authentication bypass possibilities",
+            "data validation gaps"
         ])
         .output_format([
             "CRITICAL: Immediate security risks",
-            "Include specific line numbers and fixes"
+            "include specific line numbers and fixes"
         ])
         .final_emphasis("Prioritize vulnerabilities leading to data breaches")
     )
@@ -104,16 +104,16 @@ bot.show("prompt")
 You are a senior security engineer with expertise in web application security.
 
 CRITICAL REQUIREMENTS:
-- Focus only on CVSS 7.0+ vulnerabilities
+- focus only on CVSS 7.0+ vulnerabilities
 
 CORE ANALYSIS (Required):
 - SQL injection risks
-- Authentication bypass possibilities
-- Data validation gaps
+- authentication bypass possibilities
+- data validation gaps
 
 OUTPUT FORMAT:
 - CRITICAL: Immediate security risks
-- Include specific line numbers and fixes
+- include specific line numbers and fixes
 
 Prioritize vulnerabilities leading to data breaches
 ```
@@ -131,9 +131,9 @@ doc_bot = (
     .provider_model("anthropic:claude-sonnet-4-20250514")
     .structured_prompt(
         persona="technical writer",
-        task="Review and improve documentation",
-        constraints=["Focus on clarity and accessibility", "Include code examples"],
-        format=["Content improvements", "Structure suggestions"],
+        task="review and improve documentation",
+        constraints=["focus on clarity and accessibility", "include code examples"],
+        format=["content improvements", "structure suggestions"],
         focus="making complex topics easy to understand"
     )
 )
@@ -149,16 +149,16 @@ response = doc_bot.chat("Here's my API documentation draft...")
 You are a technical writer with expertise in documentation and user education.
 
 CRITICAL REQUIREMENTS:
-- Focus on clarity and accessibility
+- focus on clarity and accessibility
 
 CORE ANALYSIS (Required):
-- Include code examples
-- Ensure content improvements
-- Provide structure suggestions
+- include code examples
+- ensure content improvements
+- provide structure suggestions
 
 OUTPUT FORMAT:
-- Content improvements
-- Structure suggestions
+- content improvements
+- structure suggestions
 
 Prioritize making complex topics easy to understand
 ```
@@ -184,16 +184,16 @@ bot = (
     .system_prompt(
         tb.PromptBuilder()
         .persona("experienced Spanish teacher", "conversational fluency and grammar")
-        .critical_constraint("Focus on practical, everyday Spanish usage")
+        .critical_constraint("focus on practical, everyday Spanish usage")
         .core_analysis([
-            "Grammar accuracy and common mistakes",
-            "Vocabulary building with context",
-            "Pronunciation and speaking confidence"
+            "grammar accuracy and common mistakes",
+            "vocabulary building with context",
+            "pronunciation and speaking confidence"
         ])
         .output_format([
-            "CORRECCIONES: Grammar fixes with explanations",
-            "VOCABULARIO: New words with example sentences",
-            "PRÁCTICA: Conversation prompts for next lesson"
+            "CORRECCIONES: grammar fixes with explanations",
+            "VOCABULARIO: new words with example sentences",
+            "PRÁCTICA: conversation prompts for next lesson"
         ])
         .final_emphasis("Encourage progress and build confidence through positive reinforcement")
     )
@@ -210,19 +210,19 @@ response = bot.show("console")
 You are an experienced Spanish teacher with expertise in conversational fluency and grammar.
 
 CRITICAL REQUIREMENTS:
-- Focus on practical, everyday Spanish usage
+- focus on practical, everyday Spanish usage
 
 CORE ANALYSIS (Required):
-- Grammar accuracy and common mistakes
-- Vocabulary building with context
-- Pronunciation and speaking confidence
+- grammar accuracy and common mistakes
+- vocabulary building with context
+- pronunciation and speaking confidence
 
 OUTPUT FORMAT:
-- CORRECCIONES: Grammar fixes with explanations
-- VOCABULARIO: New words with example sentences
-- PRÁCTICA: Conversation prompts for next lesson
+- CORRECCIONES: grammar fixes with explanations
+- VOCABULARIO: new words with example sentences
+- PRÁCTICA: conversation prompts for next lesson
 
-Prioritize encouraging progress and building confidence through positive reinforcement
+Encourage progress and build confidence through positive reinforcement
 ```
 
 </details>
@@ -280,35 +280,35 @@ import talk_box as tb
 onboarding_pathway = (
     tb.Pathways(
         title="Customer Onboarding",
-        desc="Welcome new customers and set up their accounts",
-        activation="User is a new customer or mentions account setup",
-        completion_criteria="Customer account is fully configured and ready to use"
+        desc="welcome new customers and set up their accounts",
+        activation="user is a new customer or mentions account setup",
+        completion_criteria="customer account is fully configured and ready to use"
     )
     # === STATE: welcome ===
-    .state("Welcome customer and collect basic information", id="welcome")
+    .state("welcome customer and collect basic information", id="welcome")
     .required([
         "customer's full name",
         "email address",
         "company or organization name"
     ])
-    .success_condition("Customer feels welcomed and basic info is collected")
+    .success_condition("customer feels welcomed and basic info is collected")
     .next_state("setup")
 
     # === STATE: setup ===
-    .state("Configure account preferences", id="setup")
+    .state("configure account preferences", id="setup")
     .required([
         "password created and confirmed",
         "notification preferences selected",
         "timezone configured"
     ])
     .optional(["profile photo uploaded", "team member invitations"])
-    .success_condition("Account is fully configured")
+    .success_condition("account is fully configured")
     .next_state("tour")
 
     # === STATE: tour ===
-    .state("Provide guided tour of key features", id="tour")
+    .state("provide guided tour of key features", id="tour")
     .required(["main features demonstrated", "first task completed"])
-    .success_condition("Customer understands how to use core functionality")
+    .success_condition("customer understands how to use core functionality")
 )
 
 # Integrate pathway into a chatbot
@@ -320,9 +320,9 @@ support_bot = (
         .persona("helpful customer success specialist")
         .pathways(onboarding_pathway)
         .output_format([
-            "Ask one focused question at a time",
-            "Provide clear, step-by-step guidance",
-            "Confirm understanding before moving forward"
+            "ask one focused question at a time",
+            "provide clear, step-by-step guidance",
+            "confirm understanding before moving forward"
         ])
     )
 )
