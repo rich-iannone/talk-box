@@ -239,7 +239,7 @@ class Pathways:
         tb.Pathways(
             title="Customer Support",
             desc="Route and resolve customer inquiries",
-            activation="User needs help", "User reports problem",
+            activation=["User needs help", "User reports problem"],
             completion_criteria=["Customer issue fully resolved", "Customer satisfied"],
             fallback_strategy="If issue is complex, escalate to human support"
         )
