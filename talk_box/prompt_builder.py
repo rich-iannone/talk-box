@@ -2527,12 +2527,12 @@ input/output pattern recognition rather than abstract instruction following.
         --------
         ### Security-focused analysis
 
-        Ensure security remains the primary consideration despite other requirements:
+        Ensure security remains the primary consideration despite other requirements using the
+        `.final_emphasis()` method:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
-        # Security audit with final emphasis
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security")
@@ -2558,10 +2558,9 @@ input/output pattern recognition rather than abstract instruction following.
 
         ### Cost-conscious recommendations
 
-        Emphasize budget constraints in business analysis:
+        Emphasize budget constraints in business analysis by placing cost considerations at the end:
 
-        ```python
-        # Business strategy with cost emphasis
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("business consultant", "strategic planning")
@@ -2581,14 +2580,15 @@ input/output pattern recognition rather than abstract instruction following.
             ])
             .final_emphasis("all recommendations must be implementable with minimal upfront investment and show clear ROI within 6 months")
         )
+
+        print(builder)
         ```
 
         ### Learning-focused code review
 
-        Prioritize educational value in technical feedback:
+        Prioritize educational value in technical feedback through the use of final emphasis:
 
-        ```python
-        # Code review with learning emphasis
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "mentorship and code quality")
@@ -2608,14 +2608,16 @@ input/output pattern recognition rather than abstract instruction following.
             ])
             .final_emphasis("frame all feedback as learning opportunities with clear explanations of why changes improve the code")
         )
+
+        print(builder)
         ```
 
         ### User experience priority
 
-        Ensure UX considerations override technical preferences:
+        Ensure UX considerations override technical preferences. This is particularly important in
+        product management and design contexts:
 
-        ```python
-        # Product feature analysis with UX emphasis
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("product manager", "user experience and design")
@@ -2635,14 +2637,17 @@ input/output pattern recognition rather than abstract instruction following.
             ])
             .final_emphasis("user experience and accessibility must be prioritized over technical convenience or development speed")
         )
+
+        print(builder)
         ```
 
         ### Quality over quantity emphasis
 
-        Prioritize depth and thoroughness over breadth:
+        Prioritize depth and thoroughness over breadth. With the `.final_emphasis()` method, ensure
+        that the AI focuses on high-impact content rather than trying to address every possible
+        issue.
 
-        ```python
-        # Content analysis with quality emphasis
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("content strategist", "editorial quality")
@@ -2662,6 +2667,8 @@ input/output pattern recognition rather than abstract instruction following.
             ])
             .final_emphasis("focus on identifying and improving the highest-impact content pieces rather than addressing all content issues superficially")
         )
+
+        print(builder)
         ```
 
         Integration Notes
