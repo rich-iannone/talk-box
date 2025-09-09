@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
+from ._text_formatter import wrap_prompt_text
+
 
 class Priority(Enum):
     """
@@ -3396,10 +3398,32 @@ print(builder)
                 )
 
                 if state.get("required_info"):
-                    lines.append(f"  Required: {', '.join(state['required_info'])}")
+                    required_items = state["required_info"]
+                    if len(required_items) == 1:
+                        lines.append(f"  Required: {required_items[0]}")
+                    else:
+                        numbered_items = [
+                            f"({i}) {item}" for i, item in enumerate(required_items, 1)
+                        ]
+                        lines.append(f"  Required: {', '.join(numbered_items)}")
+
+                if state.get("optional_info"):
+                    optional_items = state["optional_info"]
+                    if len(optional_items) == 1:
+                        lines.append(f"  Optional: {optional_items[0]}")
+                    else:
+                        numbered_items = [
+                            f"({i}) {item}" for i, item in enumerate(optional_items, 1)
+                        ]
+                        lines.append(f"  Optional: {', '.join(numbered_items)}")
 
                 if state.get("tools"):
-                    lines.append(f"  Tools: {', '.join(state['tools'])}")
+                    tools_items = state["tools"]
+                    if len(tools_items) == 1:
+                        lines.append(f"  Tools: {tools_items[0]}")
+                    else:
+                        numbered_items = [f"({i}) {item}" for i, item in enumerate(tools_items, 1)]
+                        lines.append(f"  Tools: {', '.join(numbered_items)}")
 
         # Completion and guidance
         if spec.get("completion_criteria"):
@@ -3466,7 +3490,9 @@ print(builder)
         if self._final_emphasis:
             prompt_parts.append(f"\n{self._final_emphasis}")
 
-        return "\n".join(prompt_parts)
+        # Join and apply intelligent text formatting
+        raw_prompt = "\n".join(prompt_parts)
+        return wrap_prompt_text(raw_prompt, width=100)
 
     def __str__(self) -> str:
         """Return the complete built prompt text."""
