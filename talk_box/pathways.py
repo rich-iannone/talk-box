@@ -210,7 +210,7 @@ class Pathways:
         tb.Pathways(
             title="Password Reset",
             desc="Help users reset their forgotten passwords",
-            activation=["User can't log in", "User forgot password"],
+            activation="User can't log in", "User forgot password",
             completion_criteria="User successfully logs in with new password",
             fallback_strategy="If user lacks access to recovery methods, escalate to manual verification"
         )
@@ -239,7 +239,7 @@ class Pathways:
         tb.Pathways(
             title="Customer Support",
             desc="Route and resolve customer inquiries",
-            activation=["User needs help", "User reports problem"],
+            activation="User needs help", "User reports problem",
             completion_criteria=["Customer issue fully resolved", "Customer satisfied"],
             fallback_strategy="If issue is complex, escalate to human support"
         )
@@ -264,8 +264,8 @@ class Pathways:
     )
     ```
 
-    This branching example shows how `.state()` creates clear decision points that route conversations
-    appropriately, then merge back together for consistent completion.
+    This branching example shows how `.state()` creates clear decision points that route
+    conversations appropriately, then merge back together for consistent completion.
 
     Inspecting Pathways
     -------------------
@@ -365,16 +365,48 @@ class Pathways:
             Optional explicit state type. If not provided, the type will be inferred from subsequent
             method calls
 
-        Conflict Resolution
+        Returns
+        -------
+        Pathways
+            Self for method chaining, allowing combination with other pathway building methods to
+            create comprehensive conversation flows.
+
+        Research Foundation
         -------------------
-        Based on method usage, the state type is inferred as follows:
+        **State Type Inference System.** Based on method usage, the state type is automatically
+        inferred to reduce cognitive load and API complexity. The inference follows this hierarchy:
+        `.tools()` → `"tool"`, `.branch_on()` → `"decision"`, `.required()` → `"collect"`, with
+        `"chat"` as the default. If multiple methods suggest different types, the first inference
+        takes precedence to maintain consistency.
 
-        - `.tools()` → `"tool"`
-        - `.branch_on()` → `"decision"`
-        - `.required()` → `"collect"`
-        - Default → `"chat"`
+        **Automatic Start State Management.** The first state defined automatically becomes the
+        starting state, eliminating the need for explicit start state configuration. This
+        simplifies pathway creation while ensuring every pathway has a clear entry point for
+        conversation flow.
 
-        If multiple methods suggest different types, the first inference takes precedence.
+        **ID Generation and Reference System.** When no explicit ID is provided, the system
+        auto-generates snake_case identifiers from state descriptions, ensuring uniqueness through
+        numeric suffixes when conflicts occur. IDs are only required when other states need to
+        reference the state for transitions or branching.
+
+        Integration Notes
+        -----------------
+        - **Description Priority**: description always comes first as the primary identifier
+        - **Reference Requirements**: ID only needed when other states need to reference this state
+        - **Type Inference**: inferred from usage patterns to reduce explicit configuration
+        - **Conflict Resolution**: first method call determines type, conflicts generate warnings
+        - **Auto-generation**: IDs use `snake_case` from description with uniqueness guarantees
+        - **Visual Organization**: use `# === STATE: name ===` comments for visual state separation
+        in complex pathways
+        - **Explicit Type Usage**: consider explicit types for complex workflows, documentation
+        clarity, team development, mixed functionality, or error prevention
+
+        The `.state()` method creates clear conversation boundaries and progression, with each state
+        having a specific purpose that builds toward the final goal. When to use explicit types:
+        in complex workflows where type inference might be ambiguous, for documentation clarity
+        when the state's purpose isn't obvious from methods, for team development to make intentions
+        explicit, for mixed functionality when a state serves multiple purposes, or as error
+        prevention for avoiding unintended type inference conflicts.
 
         Examples
         --------
@@ -414,27 +446,6 @@ class Pathways:
         # See how the pathway materializes
         print(pathway)
         ```
-
-        The `.state()` method creates clear conversation boundaries and progression. Notice how each
-        state has a specific purpose and builds toward the final goal.
-
-        When to use explicit types:
-
-        - in complex workflows where type inference might be ambiguous
-        - for documentation clarity when the state's purpose isn't obvious from methods
-        - for team development to make intentions explicit for other developers
-        - for mixed functionality when a state serves multiple purposes (e.g., both collecting info
-        and using tools)
-        - as a form of error prevention for avoiding unintended type inference conflicts
-
-        Notes
-        -----
-        - description always comes first
-        - ID only needed when other states need to reference this state
-        - type inferred from usage: `.tools()` → `"tool"`, `.branch_on()` → `"decision"`
-        - first method call determines type, and conflicts generate warnings
-        - auto-generated IDs use `snake_case` from description
-        - use `# === STATE: name ===` comments for visual state separation in complex pathways
         """
         # Generate ID from description if not provided
         if id is None:
@@ -560,6 +571,25 @@ class Pathways:
             Essential information that must be collected or established. Can be a single string or a
             list of strings. Be specific and measurable.
 
+        Returns
+        -------
+        Pathways
+            Self for method chaining, allowing combination with other pathway building methods to
+            create comprehensive conversation flows.
+
+        Integration Notes
+        -----------------
+        - **State Progression**: state cannot progress until required items are addressed
+        - **Type Inference**: infers state type as `"collect"` if not explicitly set
+        - **Specificity**: be specific and concrete for clear guidance
+        - **Complementary Use**: pair with `.optional()` for nice-to-have information
+        - **Completion Criteria**: use `.success_condition()` to define when requirements are truly
+        met
+        - **Systematic Collection**: ensures thorough data gathering before progression
+
+        The `.required()` method ensures the LLM won't proceed until essential information is
+        collected, preventing incomplete processes and ensuring thorough data gathering.
+
         Examples
         --------
         Complete pathway showing `.required()` defining essential information:
@@ -607,17 +637,6 @@ class Pathways:
         # See the pathway with required information highlighted
         print(pathway)
         ```
-
-        The `.required()` method ensures the LLM won't proceed until essential information is
-        collected. This prevents incomplete applications and ensures thorough data gathering.
-
-        Notes
-        -----
-        - state cannot progress until required items are addressed
-        - be specific and concrete
-        - pair with `.optional()` for nice-to-have information
-        - use `.success_condition()` to define when requirements are truly met
-        - infers state type as `"collect"` if not explicitly set
         """
         # Infer state type as "collect"
         self._infer_state_type("collect")
@@ -643,6 +662,27 @@ class Pathways:
         info_types
             Additional information that would be beneficial but not essential. Can be a single
             string or a list of strings.
+
+        Returns
+        -------
+        Pathways
+            Self for method chaining, allowing combination with other pathway building methods to
+            create comprehensive conversation flows.
+
+        Integration Notes
+        -----------------
+        - **Flexible Progression**: state can progress without optional items
+        - **Enhanced Outcomes**: helps create more comprehensive outcomes when available
+        - **Balanced Flow**: use sparingly as too many optionals can slow the flow
+        - **State Compatibility**: best used in states with `type="collect"` or structured chat
+        states
+        - **Complementary Use**: often used alongside `.required()` to create comprehensive
+        information gathering
+        - **Conversation Adaptation**: allows gathering helpful information when conversation
+        naturally allows
+
+        The `.optional()` method allows conversations to gather helpful information when available,
+        but doesn't block progress if users want to move forward quickly.
 
         Examples
         --------
@@ -696,16 +736,6 @@ class Pathways:
         # See how optional items enhance the pathway
         print(pathway)
         ```
-
-        The `.optional()` method allows the conversation to gather helpful information when
-        available, but doesn't block progress if users want to move forward quickly.
-
-        Notes
-        -----
-        - state can progress without optional items
-        - helps create more comprehensive outcomes when available
-        - use sparingly as too many optionals can slow the flow
-        - best used in states with `type="collect"` or structured chat states
         """
         # Convert string to list if needed
         if isinstance(info_types, str):
@@ -728,6 +758,26 @@ class Pathways:
         tool_names
             Names of specific tools or capabilities the LLM should use. Can be a single string or a
             list of strings. These should match actual available tools.
+
+        Returns
+        -------
+        Pathways
+            Self for method chaining, allowing combination with other pathway building methods to
+            create comprehensive conversation flows.
+
+        Integration Notes
+        -----------------
+        - **Type Inference**: infers state type as `"tool"` if not explicitly set
+        - **Tool Matching**: tool names should match actual available capabilities
+        - **Completion Criteria**: use `.success_condition()` to define completion criteria
+        - **Error Handling**: consider `.fallback()` for when tools fail
+        - **State Focus**: essential for `type="tool"` states but can be used in other states where
+        specific capabilities are needed
+        - **Capability Specification**: tells the LLM what specific capabilities are available at
+        each step
+
+        The `.tools()` method tells the LLM what specific capabilities are available at each step,
+        automatically inferring the state type as "tool" when tools are the primary focus.
 
         Examples
         --------
@@ -783,16 +833,6 @@ class Pathways:
         # See how tools are integrated into the pathway
         print(pathway)
         ```
-
-        The `.tools()` method tells the LLM what specific capabilities are available at each step,
-        automatically inferring the state type as "tool" when tools are the primary focus.
-
-        Notes
-        -----
-        - infers state type as `"tool"` if not explicitly set
-        - tool names should match actual available capabilities
-        - Use `.success_condition()` to define completion criteria
-        - Consider `.fallback()` for when tools fail
         """
         # Infer state type as "tool"
         self._infer_state_type("tool")
@@ -818,6 +858,26 @@ class Pathways:
         condition
             Specific, observable condition indicating the state succeeded. Use action-oriented
             language that the LLM can recognize.
+
+        Returns
+        -------
+        Pathways
+            Self for method chaining, allowing combination with other pathway building methods to
+            create comprehensive conversation flows.
+
+        Integration Notes
+        -----------------
+        - **Completion Clarity**: more specific than just completing `.required()` items
+        - **Observable Criteria**: should be observable/confirmable in conversation
+        - **Active Voice**: use active voice like `"user confirms..."` not
+        `"user understanding confirmed"`
+        - **Multiple Conditions**: can have multiple success conditions for complex states
+        - **Progression Control**: prevents premature progression and ensures thorough coverage
+        - **Objective Definition**: specifies when the state's objectives are met and ready to
+        transition
+
+        The `.success_condition()` method ensures the LLM knows exactly when each step is truly
+        complete, preventing premature progression and ensuring thorough coverage.
 
         Examples
         --------
@@ -861,16 +921,6 @@ class Pathways:
         # See how success conditions guide the learning process
         print(pathway)
         ```
-
-        The `.success_condition()` method ensures the LLM knows exactly when each step is truly
-        complete, preventing premature progression and ensuring thorough coverage.
-
-        Notes
-        -----
-        - more specific than just completing required() items
-        - should be observable/confirmable in conversation
-        - use active voice: `"user confirms..."` not `"user understanding confirmed"`
-        - can have multiple success conditions for complex states
         """
         if self._current_state_name in self._states:
             self._states[self._current_state_name].success_conditions.append(condition)
@@ -889,6 +939,26 @@ class Pathways:
         state_name
             Name of the state to transition to next. The target state must be defined later in the
             pathway using `.state()`.
+
+        Returns
+        -------
+        Pathways
+            Self for method chaining, allowing combination with other pathway building methods to
+            create comprehensive conversation flows.
+
+        Integration Notes
+        -----------------
+        - **Linear Progression**: creates unconditional transition after state completion
+        - **Decision State Restriction**: cannot be used with `type="decision"` states; use
+        `.branch_on()` instead
+        - **Forward Declaration**: target state must be defined later with `.state()`
+        - **Sequential Flow**: perfect for processes with a clear order
+        - **Unconditional Movement**: for conditional logic, use `.branch_on()`
+        - **Straightforward Routing**: creates sequential flows where each step naturally follows
+        the previous
+
+        The `.next_state()` method creates straightforward, sequential flows where each step
+        naturally follows the previous one, perfect for processes with a clear order.
 
         Examples
         --------
@@ -936,16 +1006,6 @@ class Pathways:
         # See the clear linear progression
         print(pathway)
         ```
-
-        The `.next_state()` method creates straightforward, sequential flows where each step
-        naturally follows the previous one. This is perfect for processes with a clear order.
-
-        Notes
-        -----
-        - creates unconditional transition after state completion
-        - cannot be used with `type="decision"` states; use `.branch_on()` instead
-        - target state must be defined later with `.state()`
-        - for conditional logic, use `.branch_on()`
         """
         if self._current_state_name:
             self._transitions.append(
@@ -969,6 +1029,26 @@ class Pathways:
         id
             Target state ID for this branch condition. The target state must be defined later with
             `.state()`.
+
+        Returns
+        -------
+        Pathways
+            Self for method chaining, allowing combination with other pathway building methods to
+            create comprehensive conversation flows.
+
+        Integration Notes
+        -----------------
+        - **Type Inference**: infers current state type as `"decision"` if not explicitly set
+        - **Mutual Exclusivity**: conditions should be mutually exclusive when possible
+        - **Forward Declaration**: each branch must lead to a state defined later with `.state()`
+        - **Concrete Conditions**: be specific like `"user mentions password issues"` not
+        `"user has problems"`
+        - **Smart Routing**: enables routing based on conditions with automatic decision state
+        inference
+        - **Reconvergence**: allows multiple pathways that can reconverge later
+
+        The `.branch_on()` method enables smart routing based on conditions, automatically inferring
+        the `"decision"` state type and allowing multiple pathways that can reconverge later.
 
         Examples
         --------
@@ -1027,17 +1107,6 @@ class Pathways:
         # See how branching creates appropriate care pathways
         print(pathway)
         ```
-
-        The `.branch_on()` method enables smart routing based on conditions, automatically
-        inferring the `"decision"` state type and allowing multiple pathways that can reconverge
-        later.
-
-        Notes
-        -----
-        - infers current state type as `"decision"` if not explicitly set
-        - conditions should be mutually exclusive when possible
-        - each branch must lead to a state defined later with `.state()`
-        - be specific: `"user mentions password issues"` not `"user has problems"`
         """
         # Infer state type as "decision"
         self._infer_state_type("decision")
@@ -1064,6 +1133,25 @@ class Pathways:
             situation.
         state_name
             State to transition to when fallback condition occurs.
+
+        Returns
+        -------
+        Pathways
+            Self for method chaining, allowing combination with other pathway building methods to
+            create comprehensive conversation flows.
+
+        Integration Notes
+        -----------------
+        - **Error Handling**: use for error handling and recovery from unexpected situations
+        - **Graceful Degradation**: provides graceful degradation instead of getting stuck
+        - **Failure Scenarios**: condition should describe failure scenarios clearly
+        - **Combined Usage**: can be used alongside `.next_state()` or `.branch_on()`
+        - **Stuck Prevention**: ensures conversations don't get stuck when expected outcomes don't
+        occur
+        - **Recovery Paths**: provides alternative paths for complex scenarios and edge cases
+
+        The `.fallback()` method ensures conversations don't get stuck when expected outcomes don't
+        occur, providing alternative paths for complex scenarios and edge cases.
 
         Examples
         --------
@@ -1118,16 +1206,6 @@ class Pathways:
         # See how fallbacks provide multiple recovery paths
         print(pathway)
         ```
-
-        The `.fallback()` method ensures conversations don't get stuck when expected outcomes don't
-        occur, providing alternative paths for complex scenarios and edge cases.
-
-        Notes
-        -----
-        - use for error handling and recovery
-        - condition should describe failure scenarios
-        - provides graceful degradation instead of getting stuck
-        - can be used alongside `.next_state()` or `.branch_on()`
         """
         if self._current_state_name in self._states:
             self._states[self._current_state_name].fallback_actions.append(
