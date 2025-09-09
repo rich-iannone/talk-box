@@ -142,6 +142,7 @@ class Pathways:
         .state("Gather information", id="state_name")  # type inferred as "collect" from .required()
         .state("Make decisions", id="state_name")      # type inferred as "decision" from .branch_on()
         .state("Use tools/APIs", id="state_name")      # type inferred as "tool" from .tools()
+        .state("Provide final summary", id="summary_state", type="summary")  # explicit type
         .state("Wrap up")                              # Linear states don't need IDs
 
         # Configure the state
@@ -155,21 +156,6 @@ class Pathways:
         .branch_on("condition", id="target_state")     # Conditional (infers type="decision")
         .next_state("common_state")                    # Reconverge after branching
         .fallback("error_condition", "backup_state")   # Error handling
-    ```
-
-    ### 4. Pathway Completion (call once at end):
-
-    ```python
-                ### 4. Pathway Completion (now in constructor):
-
-        ```python
-        tb.Pathways(
-            title="Support Flow",
-            desc="Customer support pathway",
-            activation="User needs help",
-            completion_criteria=[...],                 # What makes pathway successful
-            fallback_strategy="..."                    # Handle unexpected situations
-        )
     ```
 
     State Types and Their Purpose
