@@ -962,6 +962,272 @@ class PromptBuilder:
         self._task_priority = priority
         return self
 
+    def focus_on(self, primary_goal: str) -> "PromptBuilder":
+        """
+        Set the primary focus that leverages both front-loading and recency bias for maximum
+        attention impact.
+
+        `.focus_on()` provides a powerful dual-positioning method that ensures the most critical
+        objective receives maximum attention throughout the prompt by strategically placing it both
+        at the beginning (as a critical constraint) and at the end (as final emphasis). This
+        dual-anchor approach leverages both primacy and recency effects to create the strongest
+        possible attention focus on the primary objective.
+
+        **Dual Attention Strategy**: information positioned at both the beginning and end of a
+        sequence receives the highest attention and retention. By anchoring the primary goal at both
+        positions, `.focus_on()` ensures that the most critical objective maintains prominence
+        throughout the entire prompt processing sequence.
+
+        **Primacy and Recency Effects**: the method capitalizes on both primacy bias (heightened
+        attention to early information) and recency bias (heightened attention to final information)
+        to create a reinforcing attention pattern that keeps the primary objective at the forefront
+        of the AI's processing throughout response generation.
+
+        **Objective Reinforcement**: unlike single-position emphasis methods, `.focus_on()` creates
+        a reinforcing loop where the primary goal is established early as a critical requirement and
+        then reinforced at the end as the ultimate focus. This dual reinforcement significantly
+        reduces the risk of objective drift in complex prompts.
+
+        **Attention Hierarchy Management**: by explicitly establishing one primary objective above
+        all others, this method helps manage attention hierarchy in complex prompts with multiple
+        competing requirements, ensuring that when trade-offs must be made, the primary goal takes
+        clear precedence.
+
+        Parameters
+        ----------
+        primary_goal
+            The single most important objective that must receive maximum attention and priority
+            throughout the AI's response. Should be formulated as a clear, specific, and measurable
+            objective that captures the essential purpose of the prompt (e.g.,
+            `"provide actionable security recommendations"`,
+            `"create implementable cost reduction strategies"`,
+            `"generate learning-focused technical explanations"`, etc.).
+
+        Returns
+        -------
+        PromptBuilder
+            Self for method chaining, allowing combination with other prompt building methods to
+            create comprehensive, structured prompts.
+
+        Examples
+        --------
+        ### Security-first system analysis
+
+        Ensure security remains the absolute priority across all considerations:
+
+        ```python
+        import talk_box as tb
+
+        # System analysis with security focus
+        builder = (
+            tb.PromptBuilder()
+            .persona("security architect", "enterprise security design")
+            .focus_on("identify and eliminate all security vulnerabilities before considering any other improvements")
+            .task_context("analyze enterprise application architecture for production deployment")
+            .core_analysis([
+                "authentication and authorization mechanisms",
+                "data protection and encryption standards",
+                "network security and access controls",
+                "infrastructure security configuration"
+            ])
+            .constraint("include performance optimization suggestions where security-compatible")
+            .constraint("consider user experience implications of security measures")
+            .output_format([
+                "security assessment with risk severity levels",
+                "critical vulnerabilities requiring immediate attention",
+                "security-first recommendations with implementation priorities"
+            ])
+        )
+
+        print(builder)
+        ```
+
+        ### Cost-effectiveness priority
+
+        Prioritize cost-effective solutions above all other considerations:
+
+        ```python
+        # Business optimization with cost focus
+        builder = (
+            tb.PromptBuilder()
+            .persona("operations consultant", "cost optimization and efficiency")
+            .focus_on("maximize cost savings while maintaining operational quality")
+            .task_context("develop operational efficiency improvement plan for manufacturing company")
+            .core_analysis([
+                "current cost structure and inefficiencies",
+                "automation and technology opportunities",
+                "process optimization potential",
+                "resource allocation improvements"
+            ])
+            .constraint("include innovation opportunities where cost-effective")
+            .constraint("consider employee impact and change management")
+            .output_format([
+                "cost analysis with savings potential",
+                "implementation priorities by ROI and payback period",
+                "budget-conscious recommendations with measurable outcomes"
+            ])
+        )
+        ```
+
+        ### User experience excellence
+
+        Make user experience the paramount consideration in all decisions:
+
+        ```python
+        # Product development with UX focus
+        builder = (
+            tb.PromptBuilder()
+            .persona("UX designer", "user-centered product design")
+            .focus_on("optimize every aspect of the user experience above technical or business convenience")
+            .task_context("redesign mobile banking application interface for improved usability")
+            .core_analysis([
+                "user journey mapping and pain points",
+                "accessibility and inclusive design requirements",
+                "interface clarity and intuitive navigation",
+                "performance impact on user experience"
+            ])
+            .constraint("consider technical implementation constraints")
+            .constraint("include business stakeholder requirements")
+            .output_format([
+                "UX assessment with user impact analysis",
+                "design recommendations prioritized by user value",
+                "implementation plan with user testing validation"
+            ])
+        )
+        ```
+
+        ### Learning-centered education
+
+        Prioritize learning effectiveness over all other educational considerations:
+
+        ```python
+        # Educational design with learning focus
+        builder = (
+            tb.PromptBuilder()
+            .persona("instructional designer", "evidence-based learning design")
+            .focus_on("maximize student learning outcomes and knowledge retention")
+            .task_context("design comprehensive data science curriculum for career changers")
+            .core_analysis([
+                "learning objective alignment and progression",
+                "skill building sequence and scaffolding",
+                "practice opportunities and feedback mechanisms",
+                "real-world application and project integration"
+            ])
+            .constraint("consider time constraints and resource limitations")
+            .constraint("include diverse learning styles and accessibility")
+            .output_format([
+                "curriculum structure with learning outcome mapping",
+                "module design with skill progression tracking",
+                "assessment strategy focused on competency development"
+            ])
+        )
+        ```
+
+        ### Compliance-first approach
+
+        Ensure regulatory compliance takes absolute precedence:
+
+        ```python
+        # Compliance analysis with regulatory focus
+        builder = (
+            tb.PromptBuilder()
+            .persona("compliance officer", "financial services regulation")
+            .focus_on("ensure 100% regulatory compliance before any operational considerations")
+            .task_context("audit investment management platform for regulatory adherence")
+            .core_analysis([
+                "regulatory requirement mapping and gaps",
+                "risk assessment and mitigation strategies",
+                "documentation and audit trail completeness",
+                "process compliance and control effectiveness"
+            ])
+            .constraint("include operational efficiency opportunities where compliant")
+            .constraint("consider user experience impact of compliance measures")
+            .output_format([
+                "compliance status with regulatory requirement tracking",
+                "critical violations requiring immediate remediation",
+                "compliance-first recommendations with implementation priorities"
+            ])
+        )
+        ```
+
+        ### Innovation-driven development
+
+        Prioritize innovative solutions that provide competitive advantage:
+
+        ```python
+        # Technology strategy with innovation focus
+        builder = (
+            tb.PromptBuilder()
+            .persona("innovation strategist", "emerging technology adoption")
+            .focus_on("identify and implement innovative solutions that create significant competitive advantage")
+            .task_context("develop technology roadmap for digital transformation initiative")
+            .core_analysis([
+                "emerging technology opportunities and applications",
+                "competitive differentiation potential",
+                "implementation feasibility and risk assessment",
+                "ROI and business impact projections"
+            ])
+            .constraint("consider enterprise stability and risk tolerance")
+            .constraint("include team capability development requirements")
+            .output_format([
+                "innovation assessment with competitive impact analysis",
+                "technology recommendations prioritized by advantage potential",
+                "implementation strategy with innovation milestones"
+            ])
+        )
+        ```
+
+        ### Quality-first manufacturing
+
+        Make product quality the overriding priority in all manufacturing decisions:
+
+        ```python
+        # Manufacturing optimization with quality focus
+        builder = (
+            tb.PromptBuilder()
+            .persona("quality engineer", "manufacturing excellence")
+            .focus_on("achieve superior product quality that exceeds customer expectations")
+            .task_context("optimize manufacturing process for automotive component production")
+            .core_analysis([
+                "current quality metrics and defect analysis",
+                "process control and variability reduction",
+                "quality assurance and testing protocols",
+                "continuous improvement opportunities"
+            ])
+            .constraint("consider production efficiency where quality-compatible")
+            .constraint("include cost implications of quality improvements")
+            .output_format([
+                "quality assessment with defect root cause analysis",
+                "process improvements prioritized by quality impact",
+                "implementation plan with quality validation metrics"
+            ])
+        )
+        ```
+
+        Integration Notes
+        -----------------
+        - **Dual Positioning**: leverages both primacy and recency effects for maximum attention
+        impact
+        - **Objective Reinforcement**: creates reinforcing attention pattern that prevents goal
+        drift
+        - **Attention Hierarchy**: establishes clear priority structure for complex prompts
+        - **Trade-off Guidance**: provides clear decision criteria when competing objectives
+        conflict
+        - **Quality Assurance**: ensures responses align with the most critical objective throughout
+        - **Strategic Emphasis**: combines front-loaded critical constraints with end-positioned
+        final emphasis
+
+        The `.focus_on()` method provides the strongest possible attention management by
+        establishing the primary objective as both the opening critical requirement and closing
+        final emphasis, creating a dual-anchor system that maintains unwavering focus on the most
+        important goal throughout the entire AI response generation process.
+        """
+        # Add as critical constraint (front-loaded)
+        self.critical_constraint(f"Primary objective: {primary_goal}")
+        # Also set as final emphasis (recency bias)
+        self._final_emphasis = f"Focus your entire response on: {primary_goal}"
+        return self
+
     def critical_constraint(self, constraint: str) -> "PromptBuilder":
         """
         Add a critical constraint that will be front-loaded for maximum attention and impact.
@@ -1200,44 +1466,44 @@ class PromptBuilder:
         self._constraints.insert(0, constraint)
         return self
 
-    def constraint(self, constraint: str) -> "PromptBuilder":
+    def core_analysis(self, analysis_points: List[str]) -> "PromptBuilder":
         """
-        Add a standard constraint to the prompt that will appear in the additional constraints
-        section.
+        Define core analysis requirements as a high-priority, required structured section.
 
-        Standard constraints are important requirements and guidelines that shape the AI's response
-        but are not as critical as front-loaded constraints. These constraints appear in the
-        `ADDITIONAL CONSTRAINTS` section after the main task context and structured sections,
-        providing important guidance while maintaining the attention hierarchy of the prompt.
+        The core analysis method creates the central analytical framework that defines what specific
+        aspects must be examined and addressed in the AI's response. This method automatically
+        creates a `"CORE ANALYSIS (Required)"` section with high priority placement, ensuring that
+        the fundamental analytical requirements receive prominent attention and are treated as
+        non-negotiable deliverables.
 
-        **Positioning Strategy**: standard constraints are positioned after critical constraints
-        and core content to maintain optimal attention flow. This positioning ensures that
-        essential task information receives primary focus while still communicating important
-        requirements and preferences to the model.
+        **Strategic Purpose**: core analysis requirements serve as the analytical backbone of the
+        prompt, defining the specific dimensions of investigation that must be covered. Unlike
+        general constraints or suggestions, core analysis points are treated as mandatory
+        analytical objectives that structure the AI's systematic examination of the subject matter.
 
-        **Use Cases**: standard constraints are ideal for:
+        **Attention Priority**: this method automatically assigns `Priority.HIGH` and marks the
+        section as required, ensuring that core analysis requirements are prominently positioned
+        after critical constraints and task context but before standard constraints and formatting
+        requirements. This placement leverages attention optimization principles to ensure
+        analytical objectives receive appropriate focus.
 
-        - quality preferences and style guidelines
-        - secondary requirements that enhance output quality
-        - behavioral preferences that improve response tone
-        - technical preferences for implementation approaches
-        - context-specific guidelines that refine the response scope
+        **Analytical Framework**: each analysis point should represent a distinct analytical
+        dimension or investigative angle that contributes to comprehensive coverage of the task. The
+        points work together to create a systematic analytical framework that guides the AI's
+        examination process and ensures thorough, structured analysis.
 
-        **Constraint Hierarchy**: standard constraints appear in the order they are added,
-        after any critical constraints. This allows for logical grouping of related
-        requirements and systematic constraint organization.
-
-        **Relationship to Critical Constraints**: while `critical_constraint()` is used for
-        non-negotiable requirements that must be front-loaded, `constraint()` is used for
-        important but secondary requirements that guide response quality and style.
+        **Quality Assurance**: by marking core analysis as required, this method establishes
+        analytical accountability and the AI must address each specified analysis point to provide a
+        complete response. This prevents superficial analysis and ensures comprehensive coverage of
+        critical analytical dimensions.
 
         Parameters
         ----------
-        constraint
-            Specific constraint, requirement, or guideline that should influence the AI's response.
-            Should be clear and actionable, using directive language when appropriate (e.g.,
-            `"Use clear, concise language"`, `"Include practical examples"`,
-            `"Avoid overly technical jargon"`, etc.).
+        analysis_points
+            List of specific analysis requirements that define the mandatory analytical dimensions.
+            Each point should be clear, actionable, and represent a distinct aspect of the analysis.
+            Points should be formulated as analytical objectives rather than general suggestions
+            (e.g., `"evaluate security implementation patterns"` rather than `"look at security"`).
 
         Returns
         -------
@@ -1247,187 +1513,156 @@ class PromptBuilder:
 
         Examples
         --------
-        ### Quality and style constraints
+        ### Software architecture analysis
 
-        Add constraints that improve response quality and consistency:
+        Define core analytical requirements for architectural review:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
-        # Documentation quality constraints
+        # Comprehensive architecture analysis
         builder = (
             tb.PromptBuilder()
-            .persona("technical writer", "API documentation")
-            .task_context("create user guide for authentication API")
-            .constraint("use clear, concise language appropriate for developers")
-            .constraint("include practical code examples for each endpoint")
-            .constraint("provide troubleshooting guidance for common issues")
+            .persona("senior software architect", "enterprise systems")
+            .critical_constraint("focus on production-ready, scalable solutions")
+            .task_context("review microservices architecture for e-commerce platform")
             .core_analysis([
-                "authentication flow and requirements",
-                "error handling and status codes",
-                "rate limiting and best practices"
+                "evaluate service decomposition strategy and boundaries",
+                "assess inter-service communication patterns and protocols",
+                "analyze data consistency and transaction management approaches",
+                "review scalability patterns and load distribution mechanisms",
+                "examine security implementation across service boundaries"
             ])
         )
 
         print(builder)
         ```
 
-        ### Technical preference constraints
+        ### Security audit analysis
 
-        Guide implementation approaches and technical choices:
+        Structure mandatory security analysis dimensions:
 
-        ```{python}
-        # Architecture review with technical preferences
-        builder = (
-            tb.PromptBuilder()
-            .persona("senior software architect", "microservices")
-            .critical_constraint("focus only on production-ready patterns")
-            .task_context("review microservices architecture design")
-            .constraint("prefer established patterns over novel approaches")
-            .constraint("consider scalability implications for each recommendation")
-            .constraint("include performance trade-offs in analysis")
-            .core_analysis([
-                "service decomposition strategy",
-                "inter-service communication patterns",
-                "data consistency approaches"
-            ])
-        )
-        ```
-
-        ### Behavioral and tone constraints
-
-        Shape the AI's communication style and approach:
-
-        ```{python}
-        # Code review with specific behavioral guidance
-        builder = (
-            tb.PromptBuilder()
-            .persona("senior developer", "code quality")
-            .task_context("review pull request for junior developer")
-            .constraint("provide constructive, encouraging feedback")
-            .constraint("explain the reasoning behind each suggestion")
-            .constraint("include positive reinforcement for good practices")
-            .constraint("suggest learning resources for improvement areas")
-            .core_analysis([
-                "code correctness and logic",
-                "security considerations",
-                "maintainability and readability"
-            ])
-        )
-        ```
-
-        ### Context-specific constraints
-
-        Add domain or situation-specific requirements. In this example for a healthcare application,
-        we focus on HIPAA compliance and patient privacy.
-
-        ```{python}
-        builder = (
-            tb.PromptBuilder()
-            .persona("healthcare software architect", "HIPAA compliance")
-            .critical_constraint("all recommendations must maintain patient privacy")
-            .task_context("design patient data management system")
-            .constraint("consider healthcare industry regulations")
-            .constraint("prioritize data security over performance optimizations")
-            .constraint("include audit trail requirements in recommendations")
-        )
-
-        print(builder)
-        ```
-
-        ### Multiple related constraints
-
-        Group related constraints for comprehensive guidance. This example focuses on data analysis
-        with multiple quality constraints:
-
-        ```{python}
-        builder = (
-            tb.PromptBuilder()
-            .persona("data scientist", "business analytics")
-            .task_context("analyze customer behavior patterns")
-            .constraint("support findings with statistical evidence")
-            .constraint("use clear visualizations to illustrate trends")
-            .constraint("explain methodology and assumptions clearly")
-            .constraint("provide actionable business recommendations")
-            .constraint("include confidence levels for predictions")
-            .core_analysis([
-                "customer segmentation patterns",
-                "behavioral trend analysis",
-                "predictive modeling opportunities"
-            ])
-        )
-
-        print(builder)
-        ```
-
-        ### Combining with critical constraints
-
-        Use standard constraints to complement critical requirements:
-
-        ```{python}
+        ```python
+        # Security-focused core analysis
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security")
-            .critical_constraint("Identify blocking security vulnerabilities immediately")
-            .task_context("security audit of web application")
-            .constraint("consider OWASP Top 10 guidelines")                    # Standard
-            .constraint("evaluate both code and infrastructure security")      # Standard
-            .constraint("provide remediation priority levels")                 # Standard
-            .constraint("include compliance implications where relevant")      # Standard
+            .critical_constraint("prioritize critical vulnerabilities that block deployment")
+            .task_context("conduct comprehensive security audit of web application")
             .core_analysis([
-                "authentication and authorization",
-                "input validation and sanitization",
-                "data protection and encryption"
+                "analyze authentication and authorization mechanisms",
+                "evaluate input validation and sanitization practices",
+                "assess data protection and encryption implementations",
+                "review API security and rate limiting strategies",
+                "examine logging, monitoring, and incident response capabilities"
             ])
         )
-
-        print(builder)
         ```
 
-        ### Output enhancement constraints
+        ### Code quality review analysis
 
-        We can improve the structure and usability of responses by adding quality-focused
-        constraints:
+        Define analytical framework for code review:
 
-        ```{python}
+        ```python
+        # Code review with systematic analysis
         builder = (
             tb.PromptBuilder()
-            .persona("technical documentation specialist")
-            .task_context("create troubleshooting guide for deployment issues")
-            .constraint("organize information from most common to least common issues")
-            .constraint("include step-by-step resolution procedures")
-            .constraint("provide prevention strategies for each issue type")
-            .constraint("use consistent formatting and terminology throughout")
-            .output_format([
-                "issue description and symptoms",
-                "root cause analysis",
-                "step-by-step resolution",
-                "prevention recommendations"
+            .persona("senior developer", "code quality and best practices")
+            .task_context("review pull request for production deployment")
+            .core_analysis([
+                "evaluate logic correctness and edge case handling",
+                "assess performance implications and optimization opportunities",
+                "review maintainability and code organization patterns",
+                "analyze test coverage and quality assurance approaches",
+                "examine security considerations and vulnerability patterns"
+            ])
+            .constraint("provide constructive feedback with learning opportunities")
+            .constraint("include positive reinforcement for good practices")
+        )
+        ```
+
+        ### Data science model analysis
+
+        Structure analytical requirements for ML model evaluation:
+
+        ```python
+        # Machine learning model analysis
+        builder = (
+            tb.PromptBuilder()
+            .persona("data scientist", "machine learning and model evaluation")
+            .critical_constraint("include bias detection and fairness assessment")
+            .task_context("evaluate machine learning model for production deployment")
+            .core_analysis([
+                "assess model accuracy across different demographic groups",
+                "evaluate feature importance and model interpretability",
+                "analyze training data quality and representation",
+                "review model generalization and overfitting indicators",
+                "examine deployment considerations and monitoring requirements"
             ])
         )
+        ```
 
-        print(builder)
+        ### Business process analysis
+
+        Define analytical framework for process improvement:
+
+        ```python
+        # Business process optimization analysis
+        builder = (
+            tb.PromptBuilder()
+            .persona("business analyst", "process optimization")
+            .task_context("analyze customer onboarding process for efficiency improvements")
+            .core_analysis([
+                "map current process flow and identify bottlenecks",
+                "evaluate customer experience and friction points",
+                "assess resource utilization and cost implications",
+                "analyze compliance and risk management considerations",
+                "identify automation opportunities and technology solutions"
+            ])
+            .constraint("support recommendations with quantitative analysis")
+            .constraint("consider both short-term wins and long-term strategy")
+        )
+        ```
+
+        ### Financial analysis framework
+
+        Structure comprehensive financial evaluation:
+
+        ```python
+        # Financial performance analysis
+        builder = (
+            tb.PromptBuilder()
+            .persona("financial analyst", "portfolio and risk management")
+            .critical_constraint("include regulatory compliance considerations")
+            .task_context("analyze investment portfolio performance and risk exposure")
+            .core_analysis([
+                "evaluate return performance across asset classes and time periods",
+                "assess risk metrics including VaR, correlation, and concentration",
+                "analyze portfolio diversification and asset allocation effectiveness",
+                "review stress testing results and scenario analysis",
+                "examine liquidity management and cash flow projections"
+            ])
+        )
         ```
 
         Integration Notes
         -----------------
-        - **Attention Hierarchy**: standard constraints appear after critical content to maintain
-        focus
-        - **Quality Enhancement**: these constraints refine and improve response quality without
-        overriding priorities
-        - **Flexibility**: supports diverse requirement types from technical to behavioral to
-        domain specific
-        - **Systematic Organization**: constraints are grouped logically in the final prompt
-        structure
-        - **Complementary Function**: works alongside critical constraints to create comprehensive
-        requirement sets
+        - **Analytical Structure**: creates systematic framework for comprehensive analysis
+        - **High Priority Placement**: automatically positioned prominently in the prompt hierarchy
+        - **Required Coverage**: marked as required to ensure all analytical dimensions are
+        addressed
+        - **Quality Assurance**: establishes analytical accountability and prevents superficial
+        responses
+        - **Systematic Investigation**: guides AI through structured, thorough examination process
+        - **Comprehensive Coverage**: ensures critical analytical aspects are not overlooked
 
-        The `.constraint()` method provides flexible, systematic way to communicate important
-        requirements and preferences that enhance response quality while respecting the overall
-        attention optimization strategy of the prompt building system.
+        The `.core_analysis()` method provides the analytical backbone for sophisticated prompts,
+        ensuring that complex tasks receive systematic, thorough examination across all critical
+        dimensions while maintaining focus on the most important analytical objectives.
         """
-        self._constraints.append(constraint)
-        return self
+        return self.structured_section(
+            "Core Analysis", analysis_points, priority=Priority.HIGH, required=True
+        )
 
     def structured_section(
         self,
@@ -1783,44 +2018,44 @@ class PromptBuilder:
         self._sections.append(section)
         return self
 
-    def core_analysis(self, analysis_points: List[str]) -> "PromptBuilder":
+    def constraint(self, constraint: str) -> "PromptBuilder":
         """
-        Define core analysis requirements as a high-priority, required structured section.
+        Add a standard constraint to the prompt that will appear in the additional constraints
+        section.
 
-        The core analysis method creates the central analytical framework that defines what specific
-        aspects must be examined and addressed in the AI's response. This method automatically
-        creates a `"CORE ANALYSIS (Required)"` section with high priority placement, ensuring that
-        the fundamental analytical requirements receive prominent attention and are treated as
-        non-negotiable deliverables.
+        Standard constraints are important requirements and guidelines that shape the AI's response
+        but are not as critical as front-loaded constraints. These constraints appear in the
+        `ADDITIONAL CONSTRAINTS` section after the main task context and structured sections,
+        providing important guidance while maintaining the attention hierarchy of the prompt.
 
-        **Strategic Purpose**: core analysis requirements serve as the analytical backbone of the
-        prompt, defining the specific dimensions of investigation that must be covered. Unlike
-        general constraints or suggestions, core analysis points are treated as mandatory
-        analytical objectives that structure the AI's systematic examination of the subject matter.
+        **Positioning Strategy**: standard constraints are positioned after critical constraints
+        and core content to maintain optimal attention flow. This positioning ensures that
+        essential task information receives primary focus while still communicating important
+        requirements and preferences to the model.
 
-        **Attention Priority**: this method automatically assigns `Priority.HIGH` and marks the
-        section as required, ensuring that core analysis requirements are prominently positioned
-        after critical constraints and task context but before standard constraints and formatting
-        requirements. This placement leverages attention optimization principles to ensure
-        analytical objectives receive appropriate focus.
+        **Use Cases**: standard constraints are ideal for:
 
-        **Analytical Framework**: each analysis point should represent a distinct analytical
-        dimension or investigative angle that contributes to comprehensive coverage of the task. The
-        points work together to create a systematic analytical framework that guides the AI's
-        examination process and ensures thorough, structured analysis.
+        - quality preferences and style guidelines
+        - secondary requirements that enhance output quality
+        - behavioral preferences that improve response tone
+        - technical preferences for implementation approaches
+        - context-specific guidelines that refine the response scope
 
-        **Quality Assurance**: by marking core analysis as required, this method establishes
-        analytical accountability and the AI must address each specified analysis point to provide a
-        complete response. This prevents superficial analysis and ensures comprehensive coverage of
-        critical analytical dimensions.
+        **Constraint Hierarchy**: standard constraints appear in the order they are added,
+        after any critical constraints. This allows for logical grouping of related
+        requirements and systematic constraint organization.
+
+        **Relationship to Critical Constraints**: while `critical_constraint()` is used for
+        non-negotiable requirements that must be front-loaded, `constraint()` is used for
+        important but secondary requirements that guide response quality and style.
 
         Parameters
         ----------
-        analysis_points
-            List of specific analysis requirements that define the mandatory analytical dimensions.
-            Each point should be clear, actionable, and represent a distinct aspect of the analysis.
-            Points should be formulated as analytical objectives rather than general suggestions
-            (e.g., `"evaluate security implementation patterns"` rather than `"look at security"`).
+        constraint
+            Specific constraint, requirement, or guideline that should influence the AI's response.
+            Should be clear and actionable, using directive language when appropriate (e.g.,
+            `"Use clear, concise language"`, `"Include practical examples"`,
+            `"Avoid overly technical jargon"`, etc.).
 
         Returns
         -------
@@ -1830,156 +2065,437 @@ class PromptBuilder:
 
         Examples
         --------
-        ### Software architecture analysis
+        ### Quality and style constraints
 
-        Define core analytical requirements for architectural review:
+        Add constraints that improve response quality and consistency:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
-        # Comprehensive architecture analysis
+        # Documentation quality constraints
         builder = (
             tb.PromptBuilder()
-            .persona("senior software architect", "enterprise systems")
-            .critical_constraint("focus on production-ready, scalable solutions")
-            .task_context("review microservices architecture for e-commerce platform")
+            .persona("technical writer", "API documentation")
+            .task_context("create user guide for authentication API")
+            .constraint("use clear, concise language appropriate for developers")
+            .constraint("include practical code examples for each endpoint")
+            .constraint("provide troubleshooting guidance for common issues")
             .core_analysis([
-                "evaluate service decomposition strategy and boundaries",
-                "assess inter-service communication patterns and protocols",
-                "analyze data consistency and transaction management approaches",
-                "review scalability patterns and load distribution mechanisms",
-                "examine security implementation across service boundaries"
+                "authentication flow and requirements",
+                "error handling and status codes",
+                "rate limiting and best practices"
             ])
         )
 
         print(builder)
         ```
 
-        ### Security audit analysis
+        ### Technical preference constraints
 
-        Structure mandatory security analysis dimensions:
+        Guide implementation approaches and technical choices:
 
-        ```python
-        # Security-focused core analysis
+        ```{python}
+        # Architecture review with technical preferences
         builder = (
             tb.PromptBuilder()
-            .persona("security engineer", "application security")
-            .critical_constraint("prioritize critical vulnerabilities that block deployment")
-            .task_context("conduct comprehensive security audit of web application")
+            .persona("senior software architect", "microservices")
+            .critical_constraint("focus only on production-ready patterns")
+            .task_context("review microservices architecture design")
+            .constraint("prefer established patterns over novel approaches")
+            .constraint("consider scalability implications for each recommendation")
+            .constraint("include performance trade-offs in analysis")
             .core_analysis([
-                "analyze authentication and authorization mechanisms",
-                "evaluate input validation and sanitization practices",
-                "assess data protection and encryption implementations",
-                "review API security and rate limiting strategies",
-                "examine logging, monitoring, and incident response capabilities"
+                "service decomposition strategy",
+                "inter-service communication patterns",
+                "data consistency approaches"
             ])
         )
         ```
 
-        ### Code quality review analysis
+        ### Behavioral and tone constraints
 
-        Define analytical framework for code review:
+        Shape the AI's communication style and approach:
 
-        ```python
-        # Code review with systematic analysis
+        ```{python}
+        # Code review with specific behavioral guidance
+        builder = (
+            tb.PromptBuilder()
+            .persona("senior developer", "code quality")
+            .task_context("review pull request for junior developer")
+            .constraint("provide constructive, encouraging feedback")
+            .constraint("explain the reasoning behind each suggestion")
+            .constraint("include positive reinforcement for good practices")
+            .constraint("suggest learning resources for improvement areas")
+            .core_analysis([
+                "code correctness and logic",
+                "security considerations",
+                "maintainability and readability"
+            ])
+        )
+        ```
+
+        ### Context-specific constraints
+
+        Add domain or situation-specific requirements. In this example for a healthcare application,
+        we focus on HIPAA compliance and patient privacy.
+
+        ```{python}
+        builder = (
+            tb.PromptBuilder()
+            .persona("healthcare software architect", "HIPAA compliance")
+            .critical_constraint("all recommendations must maintain patient privacy")
+            .task_context("design patient data management system")
+            .constraint("consider healthcare industry regulations")
+            .constraint("prioritize data security over performance optimizations")
+            .constraint("include audit trail requirements in recommendations")
+        )
+
+        print(builder)
+        ```
+
+        ### Multiple related constraints
+
+        Group related constraints for comprehensive guidance. This example focuses on data analysis
+        with multiple quality constraints:
+
+        ```{python}
+        builder = (
+            tb.PromptBuilder()
+            .persona("data scientist", "business analytics")
+            .task_context("analyze customer behavior patterns")
+            .constraint("support findings with statistical evidence")
+            .constraint("use clear visualizations to illustrate trends")
+            .constraint("explain methodology and assumptions clearly")
+            .constraint("provide actionable business recommendations")
+            .constraint("include confidence levels for predictions")
+            .core_analysis([
+                "customer segmentation patterns",
+                "behavioral trend analysis",
+                "predictive modeling opportunities"
+            ])
+        )
+
+        print(builder)
+        ```
+
+        ### Combining with critical constraints
+
+        Use standard constraints to complement critical requirements:
+
+        ```{python}
+        builder = (
+            tb.PromptBuilder()
+            .persona("security engineer", "application security")
+            .critical_constraint("Identify blocking security vulnerabilities immediately")
+            .task_context("security audit of web application")
+            .constraint("consider OWASP Top 10 guidelines")                    # Standard
+            .constraint("evaluate both code and infrastructure security")      # Standard
+            .constraint("provide remediation priority levels")                 # Standard
+            .constraint("include compliance implications where relevant")      # Standard
+            .core_analysis([
+                "authentication and authorization",
+                "input validation and sanitization",
+                "data protection and encryption"
+            ])
+        )
+
+        print(builder)
+        ```
+
+        ### Output enhancement constraints
+
+        We can improve the structure and usability of responses by adding quality-focused
+        constraints:
+
+        ```{python}
+        builder = (
+            tb.PromptBuilder()
+            .persona("technical documentation specialist")
+            .task_context("create troubleshooting guide for deployment issues")
+            .constraint("organize information from most common to least common issues")
+            .constraint("include step-by-step resolution procedures")
+            .constraint("provide prevention strategies for each issue type")
+            .constraint("use consistent formatting and terminology throughout")
+            .output_format([
+                "issue description and symptoms",
+                "root cause analysis",
+                "step-by-step resolution",
+                "prevention recommendations"
+            ])
+        )
+
+        print(builder)
+        ```
+
+        Integration Notes
+        -----------------
+        - **Attention Hierarchy**: standard constraints appear after critical content to maintain
+        focus
+        - **Quality Enhancement**: these constraints refine and improve response quality without
+        overriding priorities
+        - **Flexibility**: supports diverse requirement types from technical to behavioral to
+        domain specific
+        - **Systematic Organization**: constraints are grouped logically in the final prompt
+        structure
+        - **Complementary Function**: works alongside critical constraints to create comprehensive
+        requirement sets
+
+        The `.constraint()` method provides flexible, systematic way to communicate important
+        requirements and preferences that enhance response quality while respecting the overall
+        attention optimization strategy of the prompt building system.
+        """
+        self._constraints.append(constraint)
+        return self
+
+    def avoid_topics(self, topics: List[str]) -> "PromptBuilder":
+        """
+        Specify topics or behaviors to avoid through negative constraints that guide AI responses
+        away from unwanted content.
+
+        Negative constraints provide explicit guidance about what the AI should not include or
+        discuss in its response, creating clear boundaries that prevent unwanted content,
+        inappropriate suggestions, or off-topic discussions. This method adds an "Avoid:" constraint
+        that appears in the standard constraints section, providing clear guidance about prohibited
+        topics or approaches.
+
+        **Negative Guidance**: research in cognitive psychology shows that explicit negative
+        instructions can be effective when combined with positive guidance. By clearly stating what
+        to avoid, this method helps the AI navigate complex topics while staying within appropriate
+        boundaries and maintaining focus on desired outcomes.
+
+        **Boundary Setting**: avoid topics serves as a content filter and boundary-setting mechanism
+        that prevents responses from venturing into sensitive, irrelevant, or counterproductive
+        areas. This is particularly valuable for professional contexts where certain topics or
+        approaches could be inappropriate or harmful.
+
+        **Risk Mitigation**: negative constraints help mitigate risks associated with AI-generated
+        content by explicitly excluding potentially problematic topics, biased perspectives, or
+        approaches that could lead to harmful or inappropriate recommendations.
+
+        **Focus Enhancement**: by eliminating distracting or irrelevant topics, `.avoid_topics()`
+        helps maintain laser focus on the core objectives and prevents the AI from exploring
+        tangential areas that might dilute the quality or relevance of the response.
+
+        Parameters
+        ----------
+        topics
+            List of specific topics, behaviors, approaches, or content areas that should be
+            explicitly avoided in the response. Each item should be clearly defined and specific
+            enough to provide clear guidance (e.g., `"controversial political opinions"`,
+            `"deprecated technologies"`, `"cost-cutting through layoffs"`,
+            `"quick fixes without testing"`, etc.).
+
+        Returns
+        -------
+        PromptBuilder
+            Self for method chaining, allowing combination with other prompt building methods to
+            create comprehensive, structured prompts.
+
+        Examples
+        --------
+        ### Technical architecture review
+
+        Avoid outdated or problematic technologies and approaches for a bot focused on modern
+        software architecture:
+
+        ```{python}
+        import talk_box as tb
+
+        builder = (
+            tb.PromptBuilder()
+            .persona("solution architect", "modern enterprise systems")
+            .task_context("design scalable microservices architecture for e-commerce platform")
+            .core_analysis([
+                "service decomposition strategy",
+                "inter-service communication patterns",
+                "data consistency approaches",
+                "scalability and performance optimization"
+            ])
+            .avoid_topics([
+                "monolithic architecture patterns",
+                "deprecated Java EE technologies",
+                "synchronous blocking communication",
+                "database shared between services",
+                "manual deployment processes"
+            ])
+            .output_format([
+                "architecture overview with service boundaries",
+                "technology stack recommendations",
+                "implementation roadmap with phases"
+            ])
+        )
+
+        print(builder)
+        ```
+
+        ### Business strategy consultation
+
+        Avoid ethically questionable or short-term approaches when advising on business strategy:
+
+        ```{python}
+        builder = (
+            tb.PromptBuilder()
+            .persona("business consultant", "sustainable growth strategies")
+            .task_context("develop growth strategy for struggling retail company")
+            .core_analysis([
+                "market positioning and competitive advantages",
+                "operational efficiency improvements",
+                "customer experience enhancements",
+                "revenue diversification opportunities"
+            ])
+            .avoid_topics([
+                "mass layoffs as primary cost reduction",
+                "exploiting regulatory loopholes",
+                "aggressive customer data monetization",
+                "environmental impact trade-offs for profit",
+                "anti-competitive pricing strategies"
+            ])
+            .constraint("focus on sustainable, long-term solutions")
+            .output_format([
+                "strategic assessment with market analysis",
+                "growth initiatives with ethical considerations",
+                "implementation timeline with stakeholder impact"
+            ])
+        )
+
+        print(builder)
+        ```
+
+        ### Security audit guidance
+
+        Avoid security through obscurity and weak practices:
+
+        ```{python}
+        builder = (
+            tb.PromptBuilder()
+            .persona("security engineer", "application security best practices")
+            .task_context("audit web application security for financial services company")
+            .core_analysis([
+                "authentication and authorization mechanisms",
+                "data protection and encryption standards",
+                "input validation and sanitization",
+                "infrastructure security configuration"
+            ])
+            .avoid_topics([
+                "security through obscurity approaches",
+                "custom cryptographic implementations",
+                "storing passwords in plain text or weak hashing",
+                "disabling security features for convenience",
+                "ignoring OWASP recommendations"
+            ])
+            .critical_constraint("all recommendations must follow industry security standards")
+            .output_format([
+                "security assessment with risk levels",
+                "critical vulnerabilities requiring immediate attention",
+                "best practice implementation roadmap"
+            ])
+        )
+
+        print(builder)
+        ```
+
+        ### Educational content development
+
+        Avoid outdated or confusing learning approaches by specifying poor pedagogical practices:
+
+        ```{python}
+        builder = (
+            tb.PromptBuilder()
+            .persona("instructional designer", "modern programming education")
+            .task_context("create comprehensive Python programming curriculum for beginners")
+            .core_analysis([
+                "progressive skill building sequence",
+                "hands-on practice opportunities",
+                "real-world application examples",
+                "common mistake prevention strategies"
+            ])
+            .avoid_topics([
+                "memorization-based learning without understanding",
+                "outdated Python 2.x syntax and practices",
+                "complex theoretical concepts before practical foundation",
+                "overwhelming students with too many options",
+                "abstract examples without real-world relevance"
+            ])
+            .constraint("include diverse learning styles and accessibility considerations")
+            .output_format([
+                "curriculum structure with learning objectives",
+                "module breakdown with practical exercises",
+                "assessment strategies and progress tracking"
+            ])
+        )
+
+        print(builder)
+        ```
+
+        ### Code review guidance
+
+        Avoid problematic coding practices and shortcuts. For this example, we create a code review
+        prompt that emphasizes constructive feedback while avoiding poor development practices:
+
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code quality and best practices")
             .task_context("review pull request for production deployment")
             .core_analysis([
-                "evaluate logic correctness and edge case handling",
-                "assess performance implications and optimization opportunities",
-                "review maintainability and code organization patterns",
-                "analyze test coverage and quality assurance approaches",
-                "examine security considerations and vulnerability patterns"
+                "code correctness and functionality",
+                "security vulnerability assessment",
+                "performance implications and optimization",
+                "maintainability and documentation quality"
+            ])
+            .avoid_topics([
+                "quick fixes that introduce technical debt",
+                "skipping unit tests for faster delivery",
+                "hard-coding configuration values",
+                "ignoring error handling for edge cases",
+                "copy-pasting code without understanding"
             ])
             .constraint("provide constructive feedback with learning opportunities")
-            .constraint("include positive reinforcement for good practices")
-        )
-        ```
-
-        ### Data science model analysis
-
-        Structure analytical requirements for ML model evaluation:
-
-        ```python
-        # Machine learning model analysis
-        builder = (
-            tb.PromptBuilder()
-            .persona("data scientist", "machine learning and model evaluation")
-            .critical_constraint("include bias detection and fairness assessment")
-            .task_context("evaluate machine learning model for production deployment")
-            .core_analysis([
-                "assess model accuracy across different demographic groups",
-                "evaluate feature importance and model interpretability",
-                "analyze training data quality and representation",
-                "review model generalization and overfitting indicators",
-                "examine deployment considerations and monitoring requirements"
+            .output_format([
+                "code quality assessment with specific examples",
+                "security and performance concerns",
+                "improvement recommendations with rationale"
             ])
         )
-        ```
 
-        ### Business process analysis
-
-        Define analytical framework for process improvement:
-
-        ```python
-        # Business process optimization analysis
-        builder = (
-            tb.PromptBuilder()
-            .persona("business analyst", "process optimization")
-            .task_context("analyze customer onboarding process for efficiency improvements")
-            .core_analysis([
-                "map current process flow and identify bottlenecks",
-                "evaluate customer experience and friction points",
-                "assess resource utilization and cost implications",
-                "analyze compliance and risk management considerations",
-                "identify automation opportunities and technology solutions"
-            ])
-            .constraint("support recommendations with quantitative analysis")
-            .constraint("consider both short-term wins and long-term strategy")
-        )
-        ```
-
-        ### Financial analysis framework
-
-        Structure comprehensive financial evaluation:
-
-        ```python
-        # Financial performance analysis
-        builder = (
-            tb.PromptBuilder()
-            .persona("financial analyst", "portfolio and risk management")
-            .critical_constraint("include regulatory compliance considerations")
-            .task_context("analyze investment portfolio performance and risk exposure")
-            .core_analysis([
-                "evaluate return performance across asset classes and time periods",
-                "assess risk metrics including VaR, correlation, and concentration",
-                "analyze portfolio diversification and asset allocation effectiveness",
-                "review stress testing results and scenario analysis",
-                "examine liquidity management and cash flow projections"
-            ])
-        )
+        print(builder)
         ```
 
         Integration Notes
         -----------------
-        - **Analytical Structure**: creates systematic framework for comprehensive analysis
-        - **High Priority Placement**: automatically positioned prominently in the prompt hierarchy
-        - **Required Coverage**: marked as required to ensure all analytical dimensions are
-        addressed
-        - **Quality Assurance**: establishes analytical accountability and prevents superficial
-        responses
-        - **Systematic Investigation**: guides AI through structured, thorough examination process
-        - **Comprehensive Coverage**: ensures critical analytical aspects are not overlooked
+        - **Boundary Setting**: establishes clear content and approach boundaries for AI responses
+        - **Risk Mitigation**: prevents problematic or inappropriate content through explicit
+        exclusion
+        - **Focus Enhancement**: eliminates distracting topics to maintain response relevance
+        - **Professional Standards**: ensures responses align with ethical and professional
+        guidelines
+        - **Quality Assurance**: prevents low-quality approaches through negative guidance
+        - **Complementary Constraints**: works alongside positive constraints to create
+        comprehensive guidance
 
-        The `.core_analysis()` method provides the analytical backbone for sophisticated prompts,
-        ensuring that complex tasks receive systematic, thorough examination across all critical
-        dimensions while maintaining focus on the most important analytical objectives.
+        The `.avoid_topics()` method provides essential boundary-setting capabilities that ensure AI
+        responses remain appropriate, focused, and aligned with professional standards while
+        explicitly excluding problematic approaches or content areas that could compromise response
+        quality or appropriateness.
         """
-        return self.structured_section(
-            "Core Analysis", analysis_points, priority=Priority.HIGH, required=True
-        )
+        # Create strong refusal language instead of weak "avoid" guidance
+        if len(topics) == 1:
+            refusal_text = (
+                f"IMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics[0]}. "
+                f"If asked about {topics[0]}, politely decline and redirect by saying something to the effect of "
+                f"'I'm not able to help with {topics[0]}. Is there something else I can assist you with instead?' "
+                f"(adapt the language and phrasing to match the conversation's language and tone)."
+            )
+        else:
+            topics_list = ", ".join(topics[:-1]) + f", or {topics[-1]}"
+            refusal_text = (
+                f"IMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics_list}. "
+                f"If asked about any of these topics, politely decline and redirect by saying something to the effect of "
+                f"'I'm not able to help with that topic. Is there something else I can assist you with instead?' "
+                f"(adapt the language and phrasing to match the conversation's language and tone)."
+            )
+
+        return self.constraint(refusal_text)
 
     def output_format(self, format_specs: List[str]) -> "PromptBuilder":
         """
@@ -2705,256 +3221,6 @@ input/output pattern recognition rather than abstract instruction following.
         self._final_emphasis = emphasis
         return self
 
-    def avoid_topics(self, topics: List[str]) -> "PromptBuilder":
-        """
-        Specify topics or behaviors to avoid through negative constraints that guide AI responses
-        away from unwanted content.
-
-        Negative constraints provide explicit guidance about what the AI should not include or
-        discuss in its response, creating clear boundaries that prevent unwanted content,
-        inappropriate suggestions, or off-topic discussions. This method adds an "Avoid:" constraint
-        that appears in the standard constraints section, providing clear guidance about prohibited
-        topics or approaches.
-
-        **Negative Guidance**: research in cognitive psychology shows that explicit negative
-        instructions can be effective when combined with positive guidance. By clearly stating what
-        to avoid, this method helps the AI navigate complex topics while staying within appropriate
-        boundaries and maintaining focus on desired outcomes.
-
-        **Boundary Setting**: avoid topics serves as a content filter and boundary-setting mechanism
-        that prevents responses from venturing into sensitive, irrelevant, or counterproductive
-        areas. This is particularly valuable for professional contexts where certain topics or
-        approaches could be inappropriate or harmful.
-
-        **Risk Mitigation**: negative constraints help mitigate risks associated with AI-generated
-        content by explicitly excluding potentially problematic topics, biased perspectives, or
-        approaches that could lead to harmful or inappropriate recommendations.
-
-        **Focus Enhancement**: by eliminating distracting or irrelevant topics, `.avoid_topics()`
-        helps maintain laser focus on the core objectives and prevents the AI from exploring
-        tangential areas that might dilute the quality or relevance of the response.
-
-        Parameters
-        ----------
-        topics
-            List of specific topics, behaviors, approaches, or content areas that should be
-            explicitly avoided in the response. Each item should be clearly defined and specific
-            enough to provide clear guidance (e.g., `"controversial political opinions"`,
-            `"deprecated technologies"`, `"cost-cutting through layoffs"`,
-            `"quick fixes without testing"`, etc.).
-
-        Returns
-        -------
-        PromptBuilder
-            Self for method chaining, allowing combination with other prompt building methods to
-            create comprehensive, structured prompts.
-
-        Examples
-        --------
-        ### Technical architecture review
-
-        Avoid outdated or problematic technologies and approaches for a bot focused on modern
-        software architecture:
-
-        ```{python}
-        import talk_box as tb
-
-        builder = (
-            tb.PromptBuilder()
-            .persona("solution architect", "modern enterprise systems")
-            .task_context("design scalable microservices architecture for e-commerce platform")
-            .core_analysis([
-                "service decomposition strategy",
-                "inter-service communication patterns",
-                "data consistency approaches",
-                "scalability and performance optimization"
-            ])
-            .avoid_topics([
-                "monolithic architecture patterns",
-                "deprecated Java EE technologies",
-                "synchronous blocking communication",
-                "database shared between services",
-                "manual deployment processes"
-            ])
-            .output_format([
-                "architecture overview with service boundaries",
-                "technology stack recommendations",
-                "implementation roadmap with phases"
-            ])
-        )
-
-        print(builder)
-        ```
-
-        ### Business strategy consultation
-
-        Avoid ethically questionable or short-term approaches when advising on business strategy:
-
-        ```{python}
-        builder = (
-            tb.PromptBuilder()
-            .persona("business consultant", "sustainable growth strategies")
-            .task_context("develop growth strategy for struggling retail company")
-            .core_analysis([
-                "market positioning and competitive advantages",
-                "operational efficiency improvements",
-                "customer experience enhancements",
-                "revenue diversification opportunities"
-            ])
-            .avoid_topics([
-                "mass layoffs as primary cost reduction",
-                "exploiting regulatory loopholes",
-                "aggressive customer data monetization",
-                "environmental impact trade-offs for profit",
-                "anti-competitive pricing strategies"
-            ])
-            .constraint("focus on sustainable, long-term solutions")
-            .output_format([
-                "strategic assessment with market analysis",
-                "growth initiatives with ethical considerations",
-                "implementation timeline with stakeholder impact"
-            ])
-        )
-
-        print(builder)
-        ```
-
-        ### Security audit guidance
-
-        Avoid security through obscurity and weak practices:
-
-        ```{python}
-        builder = (
-            tb.PromptBuilder()
-            .persona("security engineer", "application security best practices")
-            .task_context("audit web application security for financial services company")
-            .core_analysis([
-                "authentication and authorization mechanisms",
-                "data protection and encryption standards",
-                "input validation and sanitization",
-                "infrastructure security configuration"
-            ])
-            .avoid_topics([
-                "security through obscurity approaches",
-                "custom cryptographic implementations",
-                "storing passwords in plain text or weak hashing",
-                "disabling security features for convenience",
-                "ignoring OWASP recommendations"
-            ])
-            .critical_constraint("all recommendations must follow industry security standards")
-            .output_format([
-                "security assessment with risk levels",
-                "critical vulnerabilities requiring immediate attention",
-                "best practice implementation roadmap"
-            ])
-        )
-
-        print(builder)
-        ```
-
-        ### Educational content development
-
-        Avoid outdated or confusing learning approaches by specifying poor pedagogical practices:
-
-        ```{python}
-        builder = (
-            tb.PromptBuilder()
-            .persona("instructional designer", "modern programming education")
-            .task_context("create comprehensive Python programming curriculum for beginners")
-            .core_analysis([
-                "progressive skill building sequence",
-                "hands-on practice opportunities",
-                "real-world application examples",
-                "common mistake prevention strategies"
-            ])
-            .avoid_topics([
-                "memorization-based learning without understanding",
-                "outdated Python 2.x syntax and practices",
-                "complex theoretical concepts before practical foundation",
-                "overwhelming students with too many options",
-                "abstract examples without real-world relevance"
-            ])
-            .constraint("include diverse learning styles and accessibility considerations")
-            .output_format([
-                "curriculum structure with learning objectives",
-                "module breakdown with practical exercises",
-                "assessment strategies and progress tracking"
-            ])
-        )
-
-        print(builder)
-        ```
-
-        ### Code review guidance
-
-        Avoid problematic coding practices and shortcuts. For this example, we create a code review
-        prompt that emphasizes constructive feedback while avoiding poor development practices:
-
-        ```{python}
-        builder = (
-            tb.PromptBuilder()
-            .persona("senior developer", "code quality and best practices")
-            .task_context("review pull request for production deployment")
-            .core_analysis([
-                "code correctness and functionality",
-                "security vulnerability assessment",
-                "performance implications and optimization",
-                "maintainability and documentation quality"
-            ])
-            .avoid_topics([
-                "quick fixes that introduce technical debt",
-                "skipping unit tests for faster delivery",
-                "hard-coding configuration values",
-                "ignoring error handling for edge cases",
-                "copy-pasting code without understanding"
-            ])
-            .constraint("provide constructive feedback with learning opportunities")
-            .output_format([
-                "code quality assessment with specific examples",
-                "security and performance concerns",
-                "improvement recommendations with rationale"
-            ])
-        )
-
-        print(builder)
-        ```
-
-        Integration Notes
-        -----------------
-        - **Boundary Setting**: establishes clear content and approach boundaries for AI responses
-        - **Risk Mitigation**: prevents problematic or inappropriate content through explicit
-        exclusion
-        - **Focus Enhancement**: eliminates distracting topics to maintain response relevance
-        - **Professional Standards**: ensures responses align with ethical and professional
-        guidelines
-        - **Quality Assurance**: prevents low-quality approaches through negative guidance
-        - **Complementary Constraints**: works alongside positive constraints to create
-        comprehensive guidance
-
-        The `.avoid_topics()` method provides essential boundary-setting capabilities that ensure AI
-        responses remain appropriate, focused, and aligned with professional standards while
-        explicitly excluding problematic approaches or content areas that could compromise response
-        quality or appropriateness.
-        """
-        # Create strong refusal language instead of weak "avoid" guidance
-        if len(topics) == 1:
-            refusal_text = (
-                f"IMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics[0]}. "
-                f"If asked about {topics[0]}, politely decline and redirect by saying something to the effect of "
-                f"'I'm not able to help with {topics[0]}. Is there something else I can assist you with instead?' "
-                f"(adapt the language and phrasing to match the conversation's language and tone)."
-            )
-        else:
-            topics_list = ", ".join(topics[:-1]) + f", or {topics[-1]}"
-            refusal_text = (
-                f"IMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics_list}. "
-                f"If asked about any of these topics, politely decline and redirect by saying something to the effect of "
-                f"'I'm not able to help with that topic. Is there something else I can assist you with instead?' "
-                f"(adapt the language and phrasing to match the conversation's language and tone)."
-            )
-
-        return self.constraint(refusal_text)
-
     def pathways(self, pathway_spec) -> "PromptBuilder":
         """
         Add conversational pathway guidance to structure and guide conversation flow.
@@ -3101,272 +3367,6 @@ input/output pattern recognition rather than abstract instruction following.
         )
 
         return "\n".join(lines)
-
-    def focus_on(self, primary_goal: str) -> "PromptBuilder":
-        """
-        Set the primary focus that leverages both front-loading and recency bias for maximum
-        attention impact.
-
-        `.focus_on()` provides a powerful dual-positioning method that ensures the most critical
-        objective receives maximum attention throughout the prompt by strategically placing it both
-        at the beginning (as a critical constraint) and at the end (as final emphasis). This
-        dual-anchor approach leverages both primacy and recency effects to create the strongest
-        possible attention focus on the primary objective.
-
-        **Dual Attention Strategy**: information positioned at both the beginning and end of a
-        sequence receives the highest attention and retention. By anchoring the primary goal at both
-        positions, `.focus_on()` ensures that the most critical objective maintains prominence
-        throughout the entire prompt processing sequence.
-
-        **Primacy and Recency Effects**: the method capitalizes on both primacy bias (heightened
-        attention to early information) and recency bias (heightened attention to final information)
-        to create a reinforcing attention pattern that keeps the primary objective at the forefront
-        of the AI's processing throughout response generation.
-
-        **Objective Reinforcement**: unlike single-position emphasis methods, `.focus_on()` creates
-        a reinforcing loop where the primary goal is established early as a critical requirement and
-        then reinforced at the end as the ultimate focus. This dual reinforcement significantly
-        reduces the risk of objective drift in complex prompts.
-
-        **Attention Hierarchy Management**: by explicitly establishing one primary objective above
-        all others, this method helps manage attention hierarchy in complex prompts with multiple
-        competing requirements, ensuring that when trade-offs must be made, the primary goal takes
-        clear precedence.
-
-        Parameters
-        ----------
-        primary_goal
-            The single most important objective that must receive maximum attention and priority
-            throughout the AI's response. Should be formulated as a clear, specific, and measurable
-            objective that captures the essential purpose of the prompt (e.g.,
-            `"provide actionable security recommendations"`,
-            `"create implementable cost reduction strategies"`,
-            `"generate learning-focused technical explanations"`, etc.).
-
-        Returns
-        -------
-        PromptBuilder
-            Self for method chaining, allowing combination with other prompt building methods to
-            create comprehensive, structured prompts.
-
-        Examples
-        --------
-        ### Security-first system analysis
-
-        Ensure security remains the absolute priority across all considerations:
-
-        ```python
-        import talk_box as tb
-
-        # System analysis with security focus
-        builder = (
-            tb.PromptBuilder()
-            .persona("security architect", "enterprise security design")
-            .focus_on("identify and eliminate all security vulnerabilities before considering any other improvements")
-            .task_context("analyze enterprise application architecture for production deployment")
-            .core_analysis([
-                "authentication and authorization mechanisms",
-                "data protection and encryption standards",
-                "network security and access controls",
-                "infrastructure security configuration"
-            ])
-            .constraint("include performance optimization suggestions where security-compatible")
-            .constraint("consider user experience implications of security measures")
-            .output_format([
-                "security assessment with risk severity levels",
-                "critical vulnerabilities requiring immediate attention",
-                "security-first recommendations with implementation priorities"
-            ])
-        )
-
-        print(builder)
-        ```
-
-        ### Cost-effectiveness priority
-
-        Prioritize cost-effective solutions above all other considerations:
-
-        ```python
-        # Business optimization with cost focus
-        builder = (
-            tb.PromptBuilder()
-            .persona("operations consultant", "cost optimization and efficiency")
-            .focus_on("maximize cost savings while maintaining operational quality")
-            .task_context("develop operational efficiency improvement plan for manufacturing company")
-            .core_analysis([
-                "current cost structure and inefficiencies",
-                "automation and technology opportunities",
-                "process optimization potential",
-                "resource allocation improvements"
-            ])
-            .constraint("include innovation opportunities where cost-effective")
-            .constraint("consider employee impact and change management")
-            .output_format([
-                "cost analysis with savings potential",
-                "implementation priorities by ROI and payback period",
-                "budget-conscious recommendations with measurable outcomes"
-            ])
-        )
-        ```
-
-        ### User experience excellence
-
-        Make user experience the paramount consideration in all decisions:
-
-        ```python
-        # Product development with UX focus
-        builder = (
-            tb.PromptBuilder()
-            .persona("UX designer", "user-centered product design")
-            .focus_on("optimize every aspect of the user experience above technical or business convenience")
-            .task_context("redesign mobile banking application interface for improved usability")
-            .core_analysis([
-                "user journey mapping and pain points",
-                "accessibility and inclusive design requirements",
-                "interface clarity and intuitive navigation",
-                "performance impact on user experience"
-            ])
-            .constraint("consider technical implementation constraints")
-            .constraint("include business stakeholder requirements")
-            .output_format([
-                "UX assessment with user impact analysis",
-                "design recommendations prioritized by user value",
-                "implementation plan with user testing validation"
-            ])
-        )
-        ```
-
-        ### Learning-centered education
-
-        Prioritize learning effectiveness over all other educational considerations:
-
-        ```python
-        # Educational design with learning focus
-        builder = (
-            tb.PromptBuilder()
-            .persona("instructional designer", "evidence-based learning design")
-            .focus_on("maximize student learning outcomes and knowledge retention")
-            .task_context("design comprehensive data science curriculum for career changers")
-            .core_analysis([
-                "learning objective alignment and progression",
-                "skill building sequence and scaffolding",
-                "practice opportunities and feedback mechanisms",
-                "real-world application and project integration"
-            ])
-            .constraint("consider time constraints and resource limitations")
-            .constraint("include diverse learning styles and accessibility")
-            .output_format([
-                "curriculum structure with learning outcome mapping",
-                "module design with skill progression tracking",
-                "assessment strategy focused on competency development"
-            ])
-        )
-        ```
-
-        ### Compliance-first approach
-
-        Ensure regulatory compliance takes absolute precedence:
-
-        ```python
-        # Compliance analysis with regulatory focus
-        builder = (
-            tb.PromptBuilder()
-            .persona("compliance officer", "financial services regulation")
-            .focus_on("ensure 100% regulatory compliance before any operational considerations")
-            .task_context("audit investment management platform for regulatory adherence")
-            .core_analysis([
-                "regulatory requirement mapping and gaps",
-                "risk assessment and mitigation strategies",
-                "documentation and audit trail completeness",
-                "process compliance and control effectiveness"
-            ])
-            .constraint("include operational efficiency opportunities where compliant")
-            .constraint("consider user experience impact of compliance measures")
-            .output_format([
-                "compliance status with regulatory requirement tracking",
-                "critical violations requiring immediate remediation",
-                "compliance-first recommendations with implementation priorities"
-            ])
-        )
-        ```
-
-        ### Innovation-driven development
-
-        Prioritize innovative solutions that provide competitive advantage:
-
-        ```python
-        # Technology strategy with innovation focus
-        builder = (
-            tb.PromptBuilder()
-            .persona("innovation strategist", "emerging technology adoption")
-            .focus_on("identify and implement innovative solutions that create significant competitive advantage")
-            .task_context("develop technology roadmap for digital transformation initiative")
-            .core_analysis([
-                "emerging technology opportunities and applications",
-                "competitive differentiation potential",
-                "implementation feasibility and risk assessment",
-                "ROI and business impact projections"
-            ])
-            .constraint("consider enterprise stability and risk tolerance")
-            .constraint("include team capability development requirements")
-            .output_format([
-                "innovation assessment with competitive impact analysis",
-                "technology recommendations prioritized by advantage potential",
-                "implementation strategy with innovation milestones"
-            ])
-        )
-        ```
-
-        ### Quality-first manufacturing
-
-        Make product quality the overriding priority in all manufacturing decisions:
-
-        ```python
-        # Manufacturing optimization with quality focus
-        builder = (
-            tb.PromptBuilder()
-            .persona("quality engineer", "manufacturing excellence")
-            .focus_on("achieve superior product quality that exceeds customer expectations")
-            .task_context("optimize manufacturing process for automotive component production")
-            .core_analysis([
-                "current quality metrics and defect analysis",
-                "process control and variability reduction",
-                "quality assurance and testing protocols",
-                "continuous improvement opportunities"
-            ])
-            .constraint("consider production efficiency where quality-compatible")
-            .constraint("include cost implications of quality improvements")
-            .output_format([
-                "quality assessment with defect root cause analysis",
-                "process improvements prioritized by quality impact",
-                "implementation plan with quality validation metrics"
-            ])
-        )
-        ```
-
-        Integration Notes
-        -----------------
-        - **Dual Positioning**: leverages both primacy and recency effects for maximum attention
-        impact
-        - **Objective Reinforcement**: creates reinforcing attention pattern that prevents goal
-        drift
-        - **Attention Hierarchy**: establishes clear priority structure for complex prompts
-        - **Trade-off Guidance**: provides clear decision criteria when competing objectives
-        conflict
-        - **Quality Assurance**: ensures responses align with the most critical objective throughout
-        - **Strategic Emphasis**: combines front-loaded critical constraints with end-positioned
-        final emphasis
-
-        The `.focus_on()` method provides the strongest possible attention management by
-        establishing the primary objective as both the opening critical requirement and closing
-        final emphasis, creating a dual-anchor system that maintains unwavering focus on the most
-        important goal throughout the entire AI response generation process.
-        """
-        # Add as critical constraint (front-loaded)
-        self.critical_constraint(f"Primary objective: {primary_goal}")
-        # Also set as final emphasis (recency bias)
-        self._final_emphasis = f"Focus your entire response on: {primary_goal}"
-        return self
 
     def _build(self) -> str:
         """
