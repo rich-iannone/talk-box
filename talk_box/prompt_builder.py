@@ -2211,12 +2211,11 @@ Examples
 --------
 ### Code review example
 
-Demonstrate expected code review format and depth:
+Demonstrate expected code review format and depth while providing constructive feedback:
 
-````python
+````{python}
 import talk_box as tb
 
-# Code review with example
 builder = (
     tb.PromptBuilder()
     .persona("senior developer", "code quality and security")
@@ -2266,9 +2265,9 @@ print(builder)
 
 ### Data analysis example
 
-Demonstrate analytical depth and presentation style:
+Demonstrate analytical depth and presentation style using structured findings and recommendations:
 
-````python
+````{python}
 # Data analysis with example
 builder = (
     tb.PromptBuilder()
@@ -2307,14 +2306,16 @@ builder = (
         '''
     )
 )
+
+print(builder)
 ````
 
 ### Business analysis example
 
-Demonstrate strategic analysis format:
+Demonstrate strategic analysis format in business contexts with clear sections and actionable
+recommendations:
 
-````python
-# Business strategy with example
+````{python}
 builder = (
     tb.PromptBuilder()
     .persona("business consultant", "strategic planning")
@@ -2356,14 +2357,15 @@ builder = (
         '''
     )
 )
+
+print(builder)
 ````
 
 ### Educational content example
 
-Show instructional design and learning format:
+Show educational content format with clear learning objectives and hands-on exercises:
 
-````python
-# Educational content with example
+````{python}
 builder = (
     tb.PromptBuilder()
     .persona("programming instructor", "Python education")
@@ -2418,14 +2420,15 @@ else:
         '''
     )
 )
+
+print(builder)
 ````
 
 ### Multiple examples for variation
 
-Use multiple examples to show different scenarios:
+Use multiple examples to show different scenarios and approaches within the same prompt:
 
-````python
-# Multiple examples for code review
+````{python}
 builder = (
     tb.PromptBuilder()
     .persona("senior developer", "code mentorship")
@@ -2449,6 +2452,8 @@ builder = (
         output_example="acknowledge good practices, suggest minor improvements, reinforce positive patterns"
     )
 )
+
+print(builder)
 ````
 
 Integration Notes
