@@ -2581,7 +2581,10 @@ input/output pattern recognition rather than abstract instruction following.
                 "detailed strategy with implementation phases",
                 "resource allocation and timeline"
             ])
-            .final_emphasis("all recommendations must be implementable with minimal upfront investment and show clear ROI within 6 months")
+            .final_emphasis(
+                "all recommendations must be implementable with minimal upfront investment "
+                "and show clear ROI within 6 months"
+            )
         )
 
         print(builder)
@@ -2609,7 +2612,10 @@ input/output pattern recognition rather than abstract instruction following.
                 "technical issues with explanations and solutions",
                 "positive reinforcement for good practices"
             ])
-            .final_emphasis("frame all feedback as learning opportunities with clear explanations of why changes improve the code")
+            .final_emphasis(
+                "frame all feedback as learning opportunities with clear "explanations of why "
+                "changes improve the code"
+            )
         )
 
         print(builder)
@@ -2638,7 +2644,10 @@ input/output pattern recognition rather than abstract instruction following.
                 "implementation recommendations",
                 "success metrics and validation plan"
             ])
-            .final_emphasis("user experience and accessibility must be prioritized over technical convenience or development speed")
+            .final_emphasis(
+                "user experience and accessibility must be prioritized over technical "
+                "convenience or development speed"
+            )
         )
 
         print(builder)
@@ -2668,7 +2677,10 @@ input/output pattern recognition rather than abstract instruction following.
                 "priority improvement areas",
                 "content strategy recommendations"
             ])
-            .final_emphasis("focus on identifying and improving the highest-impact content pieces rather than addressing all content issues superficially")
+            .final_emphasis(
+                "focus on identifying and improving the highest-impact content pieces rather "
+                "than addressing all content issues superficially"
+            )
         )
 
         print(builder)
@@ -2928,15 +2940,17 @@ input/output pattern recognition rather than abstract instruction following.
         if len(topics) == 1:
             refusal_text = (
                 f"IMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics[0]}. "
-                f"If asked about {topics[0]}, politely decline and say: "
-                f"'I'm not able to help with {topics[0]}. Is there something else I can assist you with instead?'"
+                f"If asked about {topics[0]}, politely decline and redirect by saying something to the effect of "
+                f"'I'm not able to help with {topics[0]}. Is there something else I can assist you with instead?' "
+                f"(adapt the language and phrasing to match the conversation's language and tone)."
             )
         else:
             topics_list = ", ".join(topics[:-1]) + f", or {topics[-1]}"
             refusal_text = (
                 f"IMPORTANT CONSTRAINT: You MUST NOT provide any information, advice, or discussion about {topics_list}. "
-                f"If asked about any of these topics, politely decline and say: "
-                f"'I'm not able to help with that topic. Is there something else I can assist you with instead?'"
+                f"If asked about any of these topics, politely decline and redirect by saying something to the effect of "
+                f"'I'm not able to help with that topic. Is there something else I can assist you with instead?' "
+                f"(adapt the language and phrasing to match the conversation's language and tone)."
             )
 
         return self.constraint(refusal_text)
