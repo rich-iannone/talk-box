@@ -287,6 +287,7 @@ Follow standard language codes (ISO 639-1/639-2) for consistent formatting:
 # Standard language codes
 tb.VocabularyTerm(
     term="User Interface",
+    definition="The visual elements and controls through which users interact with software.",
     synonyms=[
         "UI", "interface", "frontend",
         "es:interfaz de usuario",      # Spanish
