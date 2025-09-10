@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
+from ._text_formatter import wrap_prompt_text
+
 
 class Priority(Enum):
     """
@@ -1046,10 +1048,9 @@ class PromptBuilder:
 
         Ensure security remains the absolute priority across all considerations:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
-        # System analysis with security focus
         builder = (
             tb.PromptBuilder()
             .persona("security architect", "enterprise security design")
@@ -1077,8 +1078,7 @@ class PromptBuilder:
 
         Prioritize cost-effective solutions above all other considerations:
 
-        ```python
-        # Business optimization with cost focus
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("operations consultant", "cost optimization and efficiency")
@@ -1098,14 +1098,15 @@ class PromptBuilder:
                 "budget-conscious recommendations with measurable outcomes"
             ])
         )
+
+        print(builder)
         ```
 
         ### User experience excellence
 
         Make user experience the paramount consideration in all decisions:
 
-        ```python
-        # Product development with UX focus
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("UX designer", "user-centered product design")
@@ -1125,14 +1126,15 @@ class PromptBuilder:
                 "implementation plan with user testing validation"
             ])
         )
+
+        print(builder)
         ```
 
         ### Learning-centered education
 
         Prioritize learning effectiveness over all other educational considerations:
 
-        ```python
-        # Educational design with learning focus
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("instructional designer", "evidence-based learning design")
@@ -1152,14 +1154,15 @@ class PromptBuilder:
                 "assessment strategy focused on competency development"
             ])
         )
+
+        print(builder)
         ```
 
         ### Compliance-first approach
 
         Ensure regulatory compliance takes absolute precedence:
 
-        ```python
-        # Compliance analysis with regulatory focus
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("compliance officer", "financial services regulation")
@@ -1179,14 +1182,15 @@ class PromptBuilder:
                 "compliance-first recommendations with implementation priorities"
             ])
         )
+
+        print(builder)
         ```
 
         ### Innovation-driven development
 
         Prioritize innovative solutions that provide competitive advantage:
 
-        ```python
-        # Technology strategy with innovation focus
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("innovation strategist", "emerging technology adoption")
@@ -1206,18 +1210,19 @@ class PromptBuilder:
                 "implementation strategy with innovation milestones"
             ])
         )
+
+        print(builder)
         ```
 
         ### Quality-first manufacturing
 
         Make product quality the overriding priority in all manufacturing decisions:
 
-        ```python
-        # Manufacturing optimization with quality focus
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("quality engineer", "manufacturing excellence")
-            .focus_on("achieve superior product quality that exceeds customer expectations")
+            .focus_on("achieving superior product quality that exceeds customer expectations")
             .task_context("optimize manufacturing process for automotive component production")
             .core_analysis([
                 "current quality metrics and defect analysis",
@@ -1233,6 +1238,8 @@ class PromptBuilder:
                 "implementation plan with quality validation metrics"
             ])
         )
+
+        print(builder)
         ```
         """
         # Add as critical constraint (front-loaded)
@@ -1547,10 +1554,9 @@ class PromptBuilder:
 
         Define core analytical requirements for architectural review:
 
-        ```python
+        ```{python}
         import talk_box as tb
 
-        # Comprehensive architecture analysis
         builder = (
             tb.PromptBuilder()
             .persona("senior software architect", "enterprise systems")
@@ -1572,8 +1578,7 @@ class PromptBuilder:
 
         Structure mandatory security analysis dimensions:
 
-        ```python
-        # Security-focused core analysis
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security")
@@ -1587,14 +1592,15 @@ class PromptBuilder:
                 "examine logging, monitoring, and incident response capabilities"
             ])
         )
+
+        print(builder)
         ```
 
         ### Code quality review analysis
 
         Define analytical framework for code review:
 
-        ```python
-        # Code review with systematic analysis
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code quality and best practices")
@@ -1609,14 +1615,15 @@ class PromptBuilder:
             .constraint("provide constructive feedback with learning opportunities")
             .constraint("include positive reinforcement for good practices")
         )
+
+        print(builder)
         ```
 
         ### Data science model analysis
 
         Structure analytical requirements for ML model evaluation:
 
-        ```python
-        # Machine learning model analysis
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("data scientist", "machine learning and model evaluation")
@@ -1630,14 +1637,15 @@ class PromptBuilder:
                 "examine deployment considerations and monitoring requirements"
             ])
         )
+
+        print(builder)
         ```
 
         ### Business process analysis
 
         Define analytical framework for process improvement:
 
-        ```python
-        # Business process optimization analysis
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("business analyst", "process optimization")
@@ -1652,14 +1660,15 @@ class PromptBuilder:
             .constraint("support recommendations with quantitative analysis")
             .constraint("consider both short-term wins and long-term strategy")
         )
+
+        print(builder)
         ```
 
         ### Financial analysis framework
 
         Structure comprehensive financial evaluation:
 
-        ```python
-        # Financial performance analysis
+        ```{python}
         builder = (
             tb.PromptBuilder()
             .persona("financial analyst", "portfolio and risk management")
@@ -1673,6 +1682,8 @@ class PromptBuilder:
                 "examine liquidity management and cash flow projections"
             ])
         )
+
+        print(builder)
         ```
         """
         return self.structured_section(
@@ -2110,7 +2121,6 @@ class PromptBuilder:
         ```{python}
         import talk_box as tb
 
-        # Documentation quality constraints
         builder = (
             tb.PromptBuilder()
             .persona("technical writer", "API documentation")
@@ -2133,7 +2143,6 @@ class PromptBuilder:
         Guide implementation approaches and technical choices:
 
         ```{python}
-        # Architecture review with technical preferences
         builder = (
             tb.PromptBuilder()
             .persona("senior software architect", "microservices")
@@ -2148,6 +2157,8 @@ class PromptBuilder:
                 "data consistency approaches"
             ])
         )
+
+        print(builder)
         ```
 
         ### Behavioral and tone constraints
@@ -2155,7 +2166,6 @@ class PromptBuilder:
         Shape the AI's communication style and approach:
 
         ```{python}
-        # Code review with specific behavioral guidance
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code quality")
@@ -2170,6 +2180,8 @@ class PromptBuilder:
                 "maintainability and readability"
             ])
         )
+
+        print(builder)
         ```
 
         ### Context-specific constraints
@@ -2644,7 +2656,6 @@ class PromptBuilder:
         Structure comprehensive technical documentation with clear sections and examples:
 
         ```{python}
-        # Technical documentation formatting
         builder = (
             tb.PromptBuilder()
             .persona("technical writer", "API documentation")
@@ -2673,7 +2684,6 @@ class PromptBuilder:
         methodology, findings, and recommendations:
 
         ```{python}
-        # Research analysis formatting
         builder = (
             tb.PromptBuilder()
             .persona("research analyst", "data science")
@@ -2808,8 +2818,7 @@ def authenticate_user(username, password):
 - **Fix**: implement password hashing with salt (e.g., bcrypt, scrypt)
 
 **CODE QUALITY**: function should return user object, not boolean
-**PERFORMANCE**: consider adding database indexes on username field
-        '''
+**PERFORMANCE**: consider adding database indexes on username field'''
     )
     .output_format([
         "start with critical security issues",
@@ -2827,7 +2836,6 @@ print(builder)
 Demonstrate analytical depth and presentation style using structured findings and recommendations:
 
 ````{python}
-# Data analysis with example
 builder = (
     tb.PromptBuilder()
     .persona("data scientist", "business analytics")
@@ -2861,8 +2869,7 @@ builder = (
 **Recommendations**:
 - Allocate 70% of UX budget to mobile optimization
 - Implement responsive design improvements
-- Create mobile-specific promotional campaigns
-        '''
+- Create mobile-specific promotional campaigns'''
     )
 )
 
@@ -3396,10 +3403,32 @@ print(builder)
                 )
 
                 if state.get("required_info"):
-                    lines.append(f"  Required: {', '.join(state['required_info'])}")
+                    required_items = state["required_info"]
+                    if len(required_items) == 1:
+                        lines.append(f"  Required: {required_items[0]}")
+                    else:
+                        numbered_items = [
+                            f"({i}) {item}" for i, item in enumerate(required_items, 1)
+                        ]
+                        lines.append(f"  Required: {', '.join(numbered_items)}")
+
+                if state.get("optional_info"):
+                    optional_items = state["optional_info"]
+                    if len(optional_items) == 1:
+                        lines.append(f"  Optional: {optional_items[0]}")
+                    else:
+                        numbered_items = [
+                            f"({i}) {item}" for i, item in enumerate(optional_items, 1)
+                        ]
+                        lines.append(f"  Optional: {', '.join(numbered_items)}")
 
                 if state.get("tools"):
-                    lines.append(f"  Tools: {', '.join(state['tools'])}")
+                    tools_items = state["tools"]
+                    if len(tools_items) == 1:
+                        lines.append(f"  Tools: {tools_items[0]}")
+                    else:
+                        numbered_items = [f"({i}) {item}" for i, item in enumerate(tools_items, 1)]
+                        lines.append(f"  Tools: {', '.join(numbered_items)}")
 
         # Completion and guidance
         if spec.get("completion_criteria"):
@@ -3466,7 +3495,9 @@ print(builder)
         if self._final_emphasis:
             prompt_parts.append(f"\n{self._final_emphasis}")
 
-        return "\n".join(prompt_parts)
+        # Join and apply intelligent text formatting
+        raw_prompt = "\n".join(prompt_parts)
+        return wrap_prompt_text(raw_prompt, width=100)
 
     def __str__(self) -> str:
         """Return the complete built prompt text."""
