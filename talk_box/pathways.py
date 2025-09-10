@@ -1446,7 +1446,14 @@ class Pathways:
 
         # Completion criteria
         if spec.get("completion_criteria"):
-            lines.append(f"Complete when: {'; '.join(spec['completion_criteria'])}")
+            criteria = spec['completion_criteria']
+            if len(criteria) == 1:
+                lines.append(f"Complete when: {criteria[0]}")
+            else:
+                formatted_criteria = ", ".join(
+                    [f"({i + 1}) {criterion}" for i, criterion in enumerate(criteria)]
+                )
+                lines.append(f"Complete when: {formatted_criteria}")
 
         # Fallback strategy
         if spec.get("fallback_strategy"):
