@@ -5,6 +5,414 @@ from typing import Dict, List, Optional, Union
 from ._text_formatter import wrap_prompt_text
 
 
+@dataclass
+class VocabularyTerm:
+    """
+    Define domain-specific terminology with multilingual support for consistent AI understanding.
+
+    `VocabularyTerm` creates a professional glossary entry that ensures AI systems correctly
+    interpret specialized terminology within specific business or technical contexts. These terms
+    are designed to integrate seamlessly with `PromptBuilder` through the `.vocabulary()` method,
+    where individual `VocabularyTerm` objects or lists of terms can be added to enhance prompt
+    clarity and domain-specific understanding.
+
+    Unlike general language understanding, domain vocabulary provides precise definitions that
+    prevent misinterpretation of terms that may have different meanings across industries, regions,
+    or organizational contexts. The class supports sophisticated multilingual environments through
+    language-aware synonyms and translations, enabling AI assistants to understand and respond
+    appropriately when users employ terminology in different languages or regional variants.
+
+    Parameters
+    ----------
+    term
+        The primary term or phrase being defined. Should be the canonical name used within your
+        organization or domain. Can include multi-word phrases, technical terminology, product
+        names, or specialized concepts that require explicit definition within your context.
+    definition
+        Precise definition of what this term means in your specific domain context. Should be clear,
+        unambiguous, and focused on the operational meaning rather than general dictionary
+        definitions. Include relevant scope, constraints, or contextual boundaries that distinguish
+        this term's usage in your domain.
+    synonyms
+        Alternative ways users might refer to this term, including colloquial expressions,
+        abbreviations, industry variants, and multilingual alternatives. Supports language-aware
+        formatting using `"lang:synonym"` or `"locale:synonym"` notation (e.g.,
+        `"es:cuota de mercado"`, `"de-AT:Marktanteil"`, `"fr-CA:part de marché"`) for international
+        contexts.
+    translations
+        A dictionary of direct translations of the primary term for different languages and locales.
+        Keys should use standard language codes (ISO 639-1/639-2) (e.g., `"es"`, `"de"`, `"fr"`,
+        etc.) or locale codes (e.g., `"es-MX"`, `"de-AT"`, `"fr-CA"`). Values are the translated
+        terms in the target language, maintaining semantic consistency across linguistic contexts.
+
+    Research Foundation
+    -------------------
+    **Domain Knowledge Anchoring Theory.** Research in cognitive linguistics demonstrates that
+    specialized domains develop unique terminologies that carry specific semantic loads different
+    from general usage. By explicitly defining domain vocabulary, AI systems can maintain
+    semantic consistency and avoid misinterpretation that occurs when general language models
+    encounter specialized terminology.
+
+    **Multilingual Semantic Consistency.** Studies in cross-linguistic communication show that
+    direct term-by-term translation often fails to capture domain-specific meanings that have
+    evolved within particular linguistic communities. VocabularyTerm addresses this by enabling
+    explicit definition of how terms should be interpreted across different languages while
+    maintaining semantic fidelity to the original domain concept.
+
+    **Professional Glossary Psychology.** Research in professional communication demonstrates that
+    shared terminology is foundational to effective domain expertise. By providing explicit
+    vocabulary definitions, AI systems can participate more effectively in professional contexts
+    where precise terminology usage is critical for accuracy, credibility, and operational
+    effectiveness.
+
+    **Contextual Disambiguation Framework.** Linguistic research shows that many terms carry
+    multiple meanings across different contexts, and successful communication requires explicit
+    disambiguation. VocabularyTerm provides this disambiguation by establishing clear contextual
+    boundaries for term usage within specific domains.
+
+    Integration Notes
+    -----------------
+    - **Semantic Consistency**: ensures AI maintains consistent understanding of specialized
+      terminology throughout conversations
+    - **Multilingual Support**: enables accurate interpretation across different languages and
+      regional variants
+    - **Professional Standards**: aligns AI communication with industry-specific terminology
+      conventions
+    - **Context Boundaries**: prevents misinterpretation by establishing clear domain-specific
+      definitions
+    - **User Experience**: improves communication effectiveness by recognizing diverse ways users
+      express domain concepts
+    - **Organizational Knowledge**: captures and standardizes institutional terminology for
+      consistent AI interactions
+
+    The `VocabularyTerm` class provides essential infrastructure for building domain-aware AI
+    systems that can communicate effectively within specialized contexts while maintaining semantic
+    accuracy across multilingual and multicultural environments.
+
+    ### Using `translations=` vs `synonyms=` with language codes
+
+    Understanding the difference between `translations=` and language-coded `synonyms=` is important
+    for effective multilingual vocabulary design.
+
+    **SYNONYMS with language codes.** Alternative expressions users might use.
+
+    ```{python}
+    recognition_term = tb.VocabularyTerm(
+        term="Market Penetration Rate",
+        definition="Percentage of target market currently using our services.",
+        synonyms=[
+            "market share",           # English alternative
+            "adoption rate",          # Another English way
+            "es:cuota de mercado",    # How Spanish users might say it
+            "de:Marktanteil",         # How German users might refer to it
+            "fr:part de marché"       # How French users might express it
+        ]
+    )
+
+    builder = (
+        tb.PromptBuilder()
+        .persona("international business consultant")
+        .vocabulary([recognition_term, standardization_term, comprehensive_term])
+    )
+
+    print(recognition_term)
+    ```
+
+    **TRANSLATIONS.** Official term names in different languages.
+
+    ```{python}
+    standardization_term = tb.VocabularyTerm(
+        term="Market Penetration Rate",
+        definition="Percentage of target market currently using our services.",
+        synonyms=["market share", "adoption rate"],     # English alternatives only
+        translations={
+            "es": "Tasa de Penetración de Mercado",     # Official Spanish name
+            "de": "Marktdurchdringungsrate",            # Official German name
+            "fr": "Taux de Pénétration du Marché"       # Official French name
+        }
+    )
+
+    builder = (
+        tb.PromptBuilder()
+        .persona("international business consultant")
+        .vocabulary([recognition_term, standardization_term, comprehensive_term])
+    )
+
+    print(standardization_term)
+    ```
+
+    **COMBINED.** Both official translations *and* alternative expressions.
+
+    ```{python}
+    comprehensive_term = tb.VocabularyTerm(
+        term="Customer Lifetime Value",
+        definition="Total revenue expected from a customer relationship over time.",
+        synonyms=[
+            "CLV",                                      # Common abbreviation
+            "lifetime revenue",                         # English alternative
+            "es:valor del cliente",                     # Informal Spanish expression
+            "de:Kundenwert",                            # Casual German way
+            "fr:valeur client"                          # Shortened French expression
+        ],
+        translations={
+            "es": "Valor de Vida del Cliente",          # Official Spanish translation
+            "de": "Kundenlebenszeitwert",               # Official German translation
+            "fr": "Valeur Vie Client"                   # Official French translation
+        }
+    )
+
+    builder = (
+        tb.PromptBuilder()
+        .persona("international business consultant")
+        .vocabulary([recognition_term, standardization_term, comprehensive_term])
+    )
+
+    print(builder)
+    ```
+
+    The output clearly shows the difference:
+
+    - **Translations** appear as `"[Translations: de:Marktdurchdringungsrate, es:Tasa de...]"`
+    - **Synonyms** appear as `"(Also: market share, de:Marktanteil, es:cuota de mercado)"`
+
+    Use `synonyms=` with language codes** when users might naturally refer to concepts using
+    different languages, informal terms, or abbreviations. Use `translations=` when you need to
+    establish official, standardized terminology across languages.
+
+    Examples
+    --------
+    ### Defining single vocabulary terms
+
+    Let's define a single term for a customer success context. A useful pattern is to generate a
+    `VocabularyTerm` object and then introduce it into a `PromptBuilder` via its `.vocabulary()`
+    method.
+
+    ```[python]
+    import talk_box as tb
+
+    # Single term for customer success domain
+    churn_term = tb.VocabularyTerm(
+        term="Customer Churn",
+        definition=(
+            "The percentage of customers who stop using our service during a specific time period."
+        ),
+        synonyms=["attrition rate", "customer turnover", "subscription cancellation rate"]
+    )
+
+    # Use in prompt builder
+    builder = tb.PromptBuilder().vocabulary(churn_term)
+
+    print(builder)
+    ```
+
+    ### Defining multiple vocabulary terms
+
+    You might have to define several `VocabularyTerm` objects to cover different aspects of your
+    domain. For that, create a list of `VocabularyTerm` objects and then pass that list object to
+    the `.vocabulary()` method of `PromptBuilder`.
+
+    This example shows how to define technical terminology for software development contexts using
+    a list of `VocabularyTerm` objects.
+
+    ```{python}
+    tech_vocab = [
+        tb.VocabularyTerm(
+            term="Blue-Green Deployment",
+            definition=(
+                "Deployment strategy using two identical production environments where traffic "
+                "is switched between them to enable zero-downtime releases."
+            ),
+            synonyms=[
+                "blue green strategy", "dual environment deployment", "zero downtime deployment",
+            ]
+        ),
+        tb.VocabularyTerm(
+            term="Circuit Breaker Pattern",
+            definition=(
+                "Microservices resilience pattern that prevents cascading failures by monitoring "
+                "service health and temporarily blocking requests to failing services"
+            ),
+            synonyms=[
+                "circuit breaker", "failure isolation pattern", "resilience pattern",
+            ]
+        ),
+        tb.VocabularyTerm(
+            term="Service Mesh",
+            definition=(
+                "Infrastructure layer that handles service-to-service communication, security, "
+                "and observability in microservices architectures."
+            ),
+            synonyms=[
+                "mesh architecture", "service communication layer", "microservices mesh",
+            ]
+        )
+    ]
+
+    builder = (
+        tb.PromptBuilder()
+        .persona("DevOps architect", "cloud infrastructure and microservices")
+        .vocabulary(tech_vocab)
+        .task_context("Design resilient microservices architecture")
+    )
+
+    print(builder)
+    ```
+
+    ### Multilingual vocabulary items
+
+    We can mark pieces of vocabulary with language codes to indicate the language or locale for
+    which a synonym applies. This enables precise multilingual support where users may refer to
+    terminology in different languages or regional variants.
+
+    In this example, we create international vocabulary with language-aware synonyms for global
+    operations of hotel management.
+
+    ```{python}
+    room_types = [
+        tb.VocabularyTerm(
+            term="Ocean View Room",
+            definition="Premium rooms on floors 15-20 with direct Atlantic Ocean visibility.",
+            synonyms=[
+                "seaside room", "beach view", "waterfront suite",
+                "es:habitación con vista al mar", "fr:chambre vue sur mer",
+                "de:Meerblickzimmer", "pt-BR:quarto vista oceano"
+            ]
+        ),
+        tb.VocabularyTerm(
+            term="Concierge Level",
+            definition=(
+                "Exclusive access tier with dedicated concierge services and premium amenities."
+            ),
+            synonyms=[
+                "VIP services", "premium tier", "exclusive access",
+                "es:nivel concierge", "fr:niveau concierge", "de:Concierge-Service"
+            ]
+        )
+    ]
+
+    builder = (
+        tb.PromptBuilder()
+        .persona("multilingual hotel booking assistant")
+        .vocabulary(room_types)
+    )
+
+    print(builder)
+    ```
+
+    ### Healthcare domain vocabulary
+
+    Here's an example of defining medical and healthcare terminology with precision requirements.
+
+    ```{python}
+    healthcare_vocab = [
+        tb.VocabularyTerm(
+            term="Electronic Health Record",
+            definition=(
+                "Digital version of patient medical history maintained by healthcare providers, "
+                "including diagnoses, medications, treatment plans, and test results."
+            ),
+            synonyms=[
+                "EHR", "electronic medical record", "EMR", "digital health record",
+                "es:historia clínica electrónica", "fr:dossier médical électronique",
+                "de:elektronische Patientenakte"
+            ]
+        ),
+        tb.VocabularyTerm(
+            term="Clinical Decision Support",
+            definition=(
+                "Health information technology that provides healthcare professionals with "
+                "patient-specific assessments and evidence-based treatment recommendations."
+            ),
+            synonyms=[
+                "CDS", "decision support system", "clinical guidance system",
+                "es:apoyo a decisiones clínicas", "fr:aide à la décision clinique",
+                "de:klinische Entscheidungsunterstützung"
+            ]
+        ),
+        tb.VocabularyTerm(
+            term="Health Level Seven",
+            definition=(
+                "International standard for exchanging healthcare information between different "
+                "healthcare systems and applications."
+            ),
+            synonyms=[
+                "HL7", "healthcare interoperability standard", "medical data exchange protocol",
+                "es:estándar de interoperabilidad sanitaria", "fr:norme interopérabilité santé",
+                "de:Gesundheitsdatenstandard"
+            ]
+        )
+    ]
+
+    builder = (
+        tb.PromptBuilder()
+        .persona("healthcare IT consultant", "medical informatics and system integration")
+        .vocabulary(healthcare_vocab)
+        .constraint("Maintain strict patient privacy and HIPAA compliance")
+        .avoid_topics([
+            "medical diagnosis", "treatment recommendations", "patient-specific medical advice"
+        ])
+    )
+
+    print(builder)
+    ```
+    """
+
+    term: str
+    definition: str
+    synonyms: Optional[List[str]] = None
+    translations: Optional[Dict[str, str]] = None
+
+    def _format_synonyms(self) -> str:
+        """Format synonyms with intelligent grouping by language."""
+        if not self.synonyms:
+            return ""
+
+        # Separate language-coded synonyms from plain synonyms
+        plain_synonyms = []
+        lang_synonyms = {}
+
+        for synonym in self.synonyms:
+            if ":" in synonym and len(synonym.split(":", 1)) == 2:
+                lang_code, term = synonym.split(":", 1)
+                # Validate that the part before colon looks like a language code
+                if len(lang_code) <= 5 and lang_code.replace("-", "").isalpha():
+                    if lang_code not in lang_synonyms:
+                        lang_synonyms[lang_code] = []
+                    lang_synonyms[lang_code].append(term)
+                else:
+                    plain_synonyms.append(synonym)
+            else:
+                plain_synonyms.append(synonym)
+
+        # Build formatted output
+        parts = []
+
+        # Add plain synonyms first
+        if plain_synonyms:
+            parts.append(", ".join(plain_synonyms))
+
+        # Add language-specific synonyms
+        for lang_code in sorted(lang_synonyms.keys()):
+            terms = lang_synonyms[lang_code]
+            if len(terms) == 1:
+                parts.append(f"{lang_code}:{terms[0]}")
+            else:
+                terms_str = ", ".join(terms)
+                parts.append(f"{lang_code}:({terms_str})")
+
+        return ", ".join(parts)
+
+    def _format_translations(self) -> str:
+        """Format direct translations of the primary term."""
+        if not self.translations:
+            return ""
+
+        # Sort by language code for consistency
+        sorted_translations = sorted(self.translations.items())
+        formatted_translations = [f"{lang}:{term}" for lang, term in sorted_translations]
+        return ", ".join(formatted_translations)
+
+
 class Priority(Enum):
     """
     Priority levels for prompt components based on attention positioning.
@@ -600,6 +1008,7 @@ class PromptBuilder:
         self._output_format: List[str] = []
         self._examples: List[Dict[str, str]] = []
         self._final_emphasis: Optional[str] = None
+        self._vocabulary: List[VocabularyTerm] = []
 
     def persona(self, role: str, expertise: Optional[str] = None) -> "PromptBuilder":
         """
@@ -3258,6 +3667,181 @@ print(builder)
         self._final_emphasis = emphasis
         return self
 
+    def vocabulary(self, terms: Union[VocabularyTerm, List[VocabularyTerm]]) -> "PromptBuilder":
+        """
+        Add domain-specific vocabulary definitions to ensure consistent understanding of
+        terminology.
+
+        The vocabulary method provides the AI with a professional glossary of terms specific to
+        your domain, similar to what professionals use to maintain consistent understanding of
+        specialized terminology. This helps ensure the AI correctly interprets domain-specific
+        language and responds using appropriate terminology.
+
+        Parameters
+        ----------
+        terms
+            Domain-specific terms with their definitions and optional synonyms. Can be a single
+            `VocabularyTerm` or a list of `VocabularyTerm` items for batch addition.
+
+        Returns
+        -------
+        PromptBuilder
+            Self for method chaining, allowing combination with other prompt building methods.
+
+        Research Foundation
+        -------------------
+        **Domain Knowledge Anchoring**: Explicit vocabulary definitions help establish consistent
+        domain context and prevent misinterpretation of specialized terminology that may have
+        different meanings in general contexts.
+
+        **Semantic Consistency**: Providing clear definitions ensures the AI maintains consistent
+        understanding of terms throughout the conversation, even when users employ synonyms or
+        alternative phrasings.
+
+        Examples
+        --------
+        ### Basic single term usage
+
+        This examples shows how to add a single vocabulary term to establish a domain context.
+
+        ```{python}
+        churn_term = tb.VocabularyTerm(
+            term="Customer Churn",
+            definition=(
+                "Percentage of customers who stop using our service during a specific time period."
+            ),
+            synonyms=["attrition rate", "customer turnover", "subscription cancellation rate"]
+        )
+
+        builder = (
+            tb.PromptBuilder()
+            .persona("customer success manager")
+            .vocabulary(churn_term)
+            .task_context("Analyze customer retention patterns and improvement strategies")
+        )
+
+        print(builder)
+        ```
+
+        ### Multilingual vocabulary for global operations
+
+        Here's an example where we create an internationalized vocabulary with language-aware
+        synonyms in the domain of global hotel management.
+
+        ```{python}
+        import talk_box as tb
+
+        room_types = [
+            tb.VocabularyTerm(
+                term="Ocean View Room",
+                definition="Premium rooms on floors 15-20 with direct Atlantic Ocean visibility.",
+                synonyms=[
+                    "seaside room", "beach view", "waterfront suite",
+                    "es:habitación con vista al mar", "fr:chambre vue sur mer",
+                    "de:Meerblickzimmer", "pt-BR:quarto vista oceano"
+                ]
+            ),
+            tb.VocabularyTerm(
+                term="Concierge Level",
+                definition=(
+                    "Exclusive access tier with dedicated concierge services and premium amenities"
+                ),
+                synonyms=[
+                    "VIP services", "premium tier", "exclusive access",
+                    "es:nivel concierge", "fr:niveau concierge", "de:Concierge-Service"
+                ]
+            )
+        ]
+
+        builder = (
+            tb.PromptBuilder()
+            .persona("multilingual hotel booking assistant")
+            .vocabulary(room_types)
+            .task_context("Assist international guests with room selections and amenities")
+        )
+
+        print(builder)
+        ```
+
+        ### Healthcare domain vocabulary with translations
+
+        Define medical terminology with official translations (through the `translations=` attribute
+        of `VocabularyTerm`) for international healthcare systems.
+
+        ```{python}
+        healthcare_vocab = [
+            tb.VocabularyTerm(
+                term="Electronic Health Record",
+                definition=(
+                    "Digital version of patient medical history maintained by healthcare "
+                    "providers including diagnoses, medications, treatment plans, and test results."
+                ),
+                synonyms=["EHR", "electronic medical record", "EMR", "digital health record"],
+                translations={
+                    "es": "Registro Médico Electrónico",
+                    "fr": "Dossier Médical Électronique",
+                    "de": "Elektronische Patientenakte",
+                    "pt": "Registro Eletrônico de Saúde"
+                }
+            ),
+            tb.VocabularyTerm(
+                term="Clinical Decision Support",
+                definition=(
+                    "Health information technology that provides healthcare professionals with "
+                    "patient-specific assessments and evidence-based treatment recommendations"
+                ),
+                synonyms=["CDS", "decision support system", "clinical guidance system"],
+                translations={
+                    "es": "Soporte de Decisiones Clínicas",
+                    "fr": "Aide à la Décision Clinique",
+                    "de": "Klinische Entscheidungsunterstützung",
+                    "pt": "Apoio à Decisão Clínica"
+                }
+            ),
+            tb.VocabularyTerm(
+                term="Health Level Seven",
+                definition=(
+                    "International standard for exchanging healthcare information between "
+                    "different healthcare systems and applications."
+                ),
+                synonyms=[
+                    "HL7", "healthcare interoperability standard", "medical data exchange protocol"
+                ],
+                translations={
+                    "es": "Nivel Siete de Salud",
+                    "fr": "Niveau Sept Santé",
+                    "de": "Gesundheitsstufe Sieben",
+                    "pt": "Nível Sete de Saúde"
+                }
+            )
+        ]
+
+        builder = (
+            tb.PromptBuilder()
+            .persona("healthcare IT consultant", "medical informatics and system integration")
+            .vocabulary(healthcare_vocab)
+            .constraint("Maintain strict patient privacy and HIPAA compliance")
+            .avoid_topics([
+                "medical diagnosis", "treatment recommendations", "patient-specific medical advice"
+            ])
+            .task_context("Design interoperable healthcare information systems")
+        )
+
+        print(builder)
+        ```
+
+
+        See Also
+        --------
+        - `VocabularyTerm`: Complete documentation for creating domain-specific terminology with
+        multilingual support, translations, and comprehensive examples
+        """
+        if isinstance(terms, VocabularyTerm):
+            self._vocabulary.append(terms)
+        else:
+            self._vocabulary.extend(terms)
+        return self
+
     def pathways(self, pathway_spec) -> "PromptBuilder":
         """
         Add conversational pathway guidance to structure and guide conversation flow.
@@ -3469,26 +4053,44 @@ print(builder)
         if self._task_context:
             prompt_parts.append(f"\nTASK: {self._task_context}")
 
-        # 4. Structured sections in priority order
+        # 4. Vocabulary/Glossary
+        if self._vocabulary:
+            prompt_parts.append("\nDOMAIN VOCABULARY:")
+            for term in self._vocabulary:
+                vocab_line = f"- **{term.term}**: {term.definition}"
+
+                # Add translations if present
+                formatted_translations = term._format_translations()
+                if formatted_translations:
+                    vocab_line += f" [Translations: {formatted_translations}]"
+
+                # Add synonyms if present
+                formatted_synonyms = term._format_synonyms()
+                if formatted_synonyms:
+                    vocab_line += f" (Also: {formatted_synonyms})"
+
+                prompt_parts.append(vocab_line)
+
+        # 5. Structured sections in priority order
         sorted_sections = sorted(self._sections, key=lambda s: (s.priority.value, s.order_hint))
 
         for section in sorted_sections:
             prompt_parts.append(f"\n{section.content}")
 
-        # 5. Standard constraints
+        # 6. Standard constraints
         standard_constraints = self._constraints[1:] if len(self._constraints) > 1 else []
         if standard_constraints:
             prompt_parts.append("\nADDITIONAL CONSTRAINTS:")
             for constraint in standard_constraints:
                 prompt_parts.append(f"- {constraint}")
 
-        # 6. Output format
+        # 7. Output format
         if self._output_format:
             prompt_parts.append("\nOUTPUT FORMAT:")
             for format_spec in self._output_format:
                 prompt_parts.append(f"- {format_spec}")
 
-        # 7. Examples
+        # 8. Examples
         if self._examples:
             prompt_parts.append("\nEXAMPLES:")
             for i, example in enumerate(self._examples, 1):
@@ -3496,7 +4098,7 @@ print(builder)
                 prompt_parts.append(f"Input: {example['input']}")
                 prompt_parts.append(f"Output: {example['output']}")
 
-        # 8. Final emphasis
+        # 9. Final emphasis
         if self._final_emphasis:
             prompt_parts.append(f"\n{self._final_emphasis}")
 
@@ -3541,6 +4143,10 @@ print(builder)
         # Add output format count
         if self._output_format:
             components.append(f"output_format={len(self._output_format)}")
+
+        # Add vocabulary count
+        if self._vocabulary:
+            components.append(f"vocabulary={len(self._vocabulary)}")
 
         # Add final emphasis indicator
         if self._final_emphasis:

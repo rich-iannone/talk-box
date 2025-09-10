@@ -109,7 +109,10 @@ quartodoc:
         - PromptBuilder.output_format
         - PromptBuilder.example
         - PromptBuilder.final_emphasis
+        - PromptBuilder.vocabulary
         - PromptBuilder.pathways
+        - name: VocabularyTerm
+          members: []
         - name: Pathways
           members: []
         - Pathways.state
