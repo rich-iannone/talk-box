@@ -336,6 +336,53 @@ support_bot = (
 - **Error Recovery**: Handle unexpected situations with defined fallback strategies
 - **Scalability**: Manage complex multi-step processes that would be overwhelming without structure
 
+## Domain-Specific Vocabulary
+
+Ensure AI systems correctly understand specialized terminology with professional glossaries:
+
+```python
+import talk_box as tb
+
+# Define healthcare terminology with multilingual support
+healthcare_vocab = [
+    tb.VocabularyTerm(
+        term="Electronic Health Record",
+        definition="Digital version of patient medical history maintained by healthcare providers",
+        synonyms=["EHR", "electronic medical record", "EMR"],
+        translations={
+            "es": "Registro Médico Electrónico",
+            "fr": "Dossier Médical Électronique",
+            "de": "Elektronische Patientenakte"
+        }
+    ),
+    tb.VocabularyTerm(
+        term="Clinical Decision Support",
+        definition="Health IT providing evidence-based treatment recommendations",
+        synonyms=["CDS", "decision support system"]
+    )
+]
+
+# Create a healthcare IT consultant bot
+health_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("healthcare IT consultant", "medical informatics")
+        .vocabulary(healthcare_vocab)
+        .constraint("Maintain strict patient privacy and HIPAA compliance")
+        .task_context("Design interoperable healthcare information systems")
+    )
+)
+```
+
+**Key Benefits of Domain Vocabulary:**
+
+- **Semantic Consistency**: Prevent misinterpretation of terms with different meanings across industries
+- **Multilingual Support**: Handle international contexts with proper translations and synonyms
+- **Professional Standards**: Align AI communication with industry-specific terminology
+- **Context Boundaries**: Establish clear domain-specific definitions to prevent confusion
+
 ## Pre-configured Engineering Templates
 
 Start with expert-crafted prompts for common engineering tasks:
