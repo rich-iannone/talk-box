@@ -69,6 +69,7 @@ Professional behavior templates for common use cases like customer support, tech
 
 - [Prompt Engineering Guide](prompt-engineering-guide.qmd): the science behind effective prompts
 - [PromptBuilder](prompt-builder.qmd): building attention-optimized prompts
+- [Domain Vocabulary](vocabulary.qmd): professional terminology management with multilingual support
 
 ---
 
