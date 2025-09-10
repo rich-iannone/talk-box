@@ -97,6 +97,8 @@ class VocabularyTerm:
     **SYNONYMS with language codes.** Alternative expressions users might use.
 
     ```{python}
+    import talk_box as tb
+
     recognition_term = tb.VocabularyTerm(
         term="Market Penetration Rate",
         definition="Percentage of target market currently using our services.",
@@ -112,7 +114,7 @@ class VocabularyTerm:
     builder = (
         tb.PromptBuilder()
         .persona("international business consultant")
-        .vocabulary([recognition_term, standardization_term, comprehensive_term])
+        .vocabulary(recognition_term)
     )
 
     print(recognition_term)
@@ -135,7 +137,7 @@ class VocabularyTerm:
     builder = (
         tb.PromptBuilder()
         .persona("international business consultant")
-        .vocabulary([recognition_term, standardization_term, comprehensive_term])
+        .vocabulary(standardization_term)
     )
 
     print(standardization_term)
@@ -164,7 +166,7 @@ class VocabularyTerm:
     builder = (
         tb.PromptBuilder()
         .persona("international business consultant")
-        .vocabulary([recognition_term, standardization_term, comprehensive_term])
+        .vocabulary(comprehensive_term)
     )
 
     print(builder)
@@ -187,7 +189,7 @@ class VocabularyTerm:
     `VocabularyTerm` object and then introduce it into a `PromptBuilder` via its `.vocabulary()`
     method.
 
-    ```[python]
+    ```{python}
     import talk_box as tb
 
     # Single term for customer success domain
@@ -411,6 +413,25 @@ class VocabularyTerm:
         sorted_translations = sorted(self.translations.items())
         formatted_translations = [f"{lang}:{term}" for lang, term in sorted_translations]
         return ", ".join(formatted_translations)
+
+    def __str__(self) -> str:
+        """Return a clean, readable string representation of the vocabulary term."""
+        lines = []
+
+        # Main term and definition
+        lines.append(f"**{self.term}**: {self.definition}")
+
+        # Add synonyms if present
+        synonyms_text = self._format_synonyms()
+        if synonyms_text:
+            lines.append(f"  (Also: {synonyms_text})")
+
+        # Add translations if present
+        translations_text = self._format_translations()
+        if translations_text:
+            lines.append(f"  [Translations: {translations_text}]")
+
+        return "\n".join(lines)
 
 
 class Priority(Enum):
@@ -3705,6 +3726,8 @@ print(builder)
         This examples shows how to add a single vocabulary term to establish a domain context.
 
         ```{python}
+        import talk_box as tb
+
         churn_term = tb.VocabularyTerm(
             term="Customer Churn",
             definition=(
