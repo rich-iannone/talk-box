@@ -3432,7 +3432,12 @@ print(builder)
 
         # Completion and guidance
         if spec.get("completion_criteria"):
-            lines.append(f"Complete when: {'; '.join(spec['completion_criteria'])}")
+            completion_items = spec['completion_criteria']
+            if len(completion_items) == 1:
+                lines.append(f"Complete when: {completion_items[0]}")
+            else:
+                numbered_items = [f"({i}) {item}" for i, item in enumerate(completion_items, 1)]
+                lines.append(f"Complete when: {', '.join(numbered_items)}")
 
         lines.append(
             "Follow as flexible guidance, adapting to user conversation patterns while ensuring key objectives are addressed."
