@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
+from ._text_formatter import wrap_prompt_text
+
 
 class StateType(Enum):
     """Types of states in a pathway."""
@@ -1257,7 +1259,7 @@ class Pathways:
 
     def __str__(self) -> str:
         """Return detailed pathway specification for print() display."""
-        return self._to_prompt_text()
+        return wrap_prompt_text(self._to_prompt_text())
 
     def __repr__(self) -> str:
         """Return a developer-friendly representation of the Pathways configuration."""
@@ -1446,7 +1448,7 @@ class Pathways:
 
         # Completion criteria
         if spec.get("completion_criteria"):
-            criteria = spec['completion_criteria']
+            criteria = spec["completion_criteria"]
             if len(criteria) == 1:
                 lines.append(f"Complete when: {criteria[0]}")
             else:
