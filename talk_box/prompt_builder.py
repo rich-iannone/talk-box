@@ -3432,7 +3432,7 @@ print(builder)
 
         # Completion and guidance
         if spec.get("completion_criteria"):
-            completion_items = spec['completion_criteria']
+            completion_items = spec["completion_criteria"]
             if len(completion_items) == 1:
                 lines.append(f"Complete when: {completion_items[0]}")
             else:
