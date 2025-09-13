@@ -49,6 +49,7 @@ dependencies = [
     "requests>=2.25.0", # For server health checks
     "fastapi>=0.68.0", # For React chat server
     "uvicorn>=0.15.0", # For running FastAPI server
+    "rich>=13.0.0", # For tool debugging UI
 ]
 
 [project.optional-dependencies]
