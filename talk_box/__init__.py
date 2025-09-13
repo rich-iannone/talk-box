@@ -27,8 +27,6 @@ from talk_box.prompt_builder import (
     code_review_prompt,
     debugging_prompt,
 )
-
-# Testing functions for easy access
 from talk_box.testing import (
     PathwayTestResults,
     TestResults,
@@ -51,7 +49,6 @@ from talk_box.tool_observability import (
     get_global_observer,
 )
 from talk_box.tools import (
-    TalkBoxTool,
     ToolCategory,
     ToolContext,
     ToolResult,
@@ -59,7 +56,7 @@ from talk_box.tools import (
     tool,
 )
 
-# Create backward compatibility alias
+# Create alias
 talk_box_tool = tool
 
 # Make key classes available at package level
