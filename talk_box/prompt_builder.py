@@ -1916,7 +1916,7 @@ class PromptBuilder:
         self._constraints.insert(0, constraint)
         return self
 
-    def core_analysis(self, analysis_points: List[str]) -> "PromptBuilder":
+    def core_analysis(self, analysis_points: Union[str, List[str]]) -> "PromptBuilder":
         """
         Define core analysis requirements as a high-priority, required structured section.
 
@@ -1929,7 +1929,7 @@ class PromptBuilder:
         Parameters
         ----------
         analysis_points
-            List of specific analysis requirements that define the mandatory analytical dimensions.
+            Specific analysis requirements that define the mandatory analytical dimensions. Can be a single string or list of strings.
             Each point should be clear, actionable, and represent a distinct aspect of the analysis.
             Points should be formulated as analytical objectives rather than general suggestions
             (e.g., `"evaluate security implementation patterns"` rather than `"look at security"`).
@@ -2710,7 +2710,7 @@ class PromptBuilder:
         self._constraints.append(constraint)
         return self
 
-    def avoid_topics(self, topics: List[str]) -> "PromptBuilder":
+    def avoid_topics(self, topics: Union[str, List[str]]) -> "PromptBuilder":
         """
         Specify topics or behaviors to avoid through negative constraints that guide AI responses
         away from unwanted content.
@@ -2724,8 +2724,8 @@ class PromptBuilder:
         Parameters
         ----------
         topics
-            List of specific topics, behaviors, approaches, or content areas that should be
-            explicitly avoided in the response. Each item should be clearly defined and specific
+            Specific topics, behaviors, approaches, or content areas that should be
+            explicitly avoided in the response. Can be a single string or list of strings. Each item should be clearly defined and specific
             enough to provide clear guidance (e.g., `"controversial political opinions"`,
             `"deprecated technologies"`, `"cost-cutting through layoffs"`,
             `"quick fixes without testing"`, etc.).
@@ -2943,6 +2943,10 @@ class PromptBuilder:
         print(builder)
         ```
         """
+        # Normalize input to list
+        if isinstance(topics, str):
+            topics = [topics]
+
         # Create strong refusal language instead of weak "avoid" guidance
         if len(topics) == 1:
             refusal_text = (
@@ -2962,7 +2966,7 @@ class PromptBuilder:
 
         return self.constraint(refusal_text)
 
-    def output_format(self, format_specs: List[str]) -> "PromptBuilder":
+    def output_format(self, format_specs: Union[str, List[str]]) -> "PromptBuilder":
         """
         Specify output formatting requirements to prevent ambiguous responses and ensure structured
         deliverables.
@@ -2976,8 +2980,8 @@ class PromptBuilder:
         Parameters
         ----------
         format_specs
-            List of specific formatting requirements that define how the response should be
-            structured and organized. Each specification should be clear, actionable, and measurable
+            Specific formatting requirements that define how the response should be
+            structured and organized. Can be a single string or a list of strings. Each specification should be clear, actionable, and measurable
             when possible. Specifications can address organization, headings, lists, examples,
             priorities, or any structural aspects of the response (e.g.,
             `"Start with executive summary"`, `"Use bullet points for key findings"`,
@@ -3136,6 +3140,10 @@ class PromptBuilder:
         print(builder)
         ```
         """
+        # Normalize input to list
+        if isinstance(format_specs, str):
+            format_specs = [format_specs]
+
         self._output_format.extend(format_specs)
         return self
 
