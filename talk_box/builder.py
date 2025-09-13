@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from talk_box.conversation import Conversation
     from talk_box.presets import PresetNames
     from talk_box.prompt_builder import PromptBuilder
+    from talk_box.tools import TalkBoxTool
 
 # Constants for validation
 MAX_TEMPERATURE = 2.0
@@ -1714,10 +1715,256 @@ class ChatBot:
         self._config["max_tokens"] = tokens
         return self
 
-    def tools(self, tool_list: list[str]) -> "ChatBot":
-        """Set the tools available to the chatbot."""
-        self._config["tools"] = tool_list.copy()
+    def tools(self, tools: Union[list[str], list["TalkBoxTool"], str]) -> "ChatBot":
+        """
+        Configure tools for this chatbot with unified API for custom and built-in tools.
+
+        This method provides a single, consistent way to add any combination of:
+        - Built-in Tool Box tools (by string name)
+        - Custom tools (by passing TalkBoxTool objects)
+        - Tools from Python files (by file/directory path)
+        - All Tool Box tools (with "all" shortcut)
+
+        Parameters
+        ----------
+        tools : Union[list[str], list[TalkBoxTool], str]
+            Tools to add to this chatbot. Can be:
+            - List of string names for built-in Tool Box tools: ["calculate", "web_search"]
+            - List of TalkBoxTool objects for custom tools: [my_custom_tool, another_tool]
+            - Mixed list: ["calculate", my_custom_tool, "web_search", "my_tools.py"]
+            - String "all" to load all built-in Tool Box tools
+            - Python file path: "my_tools.py" to load all tools from file
+            - Directory path: "./tools/" to load all tools from directory
+
+        Returns
+        -------
+        ChatBot
+            The chatbot instance with tools configured for method chaining
+
+        Examples
+        --------
+        >>> # Add specific built-in tools
+        >>> bot = ChatBot().tools(["calculate", "text_stats", "validate_email"])
+
+        >>> # Add custom tools
+        >>> bot = ChatBot().tools([my_custom_tool, another_custom_tool])
+
+        >>> # Mix built-in and custom tools
+        >>> bot = ChatBot().tools(["calculate", my_custom_tool, "web_search"])
+
+        >>> # Load all built-in tools
+        >>> bot = ChatBot().tools("all")
+
+        >>> # Load tools from Python file
+        >>> bot = ChatBot().tools("my_business_tools.py")
+
+        >>> # Load tools from directory
+        >>> bot = ChatBot().tools("./company_tools/")
+
+        >>> # Mix file loading with other tools
+        >>> bot = ChatBot().tools(["calculate", "my_tools.py", my_custom_tool])
+
+        >>> # Chaining - add more tools later
+        >>> bot = ChatBot().tools(["calculate"]).tools([my_custom_tool])
+        """
+        from talk_box.builtin_tools import get_builtin_tool, load_tool_box
+        from talk_box.tools import (
+            TalkBoxTool,
+            get_global_registry,
+            is_python_file_path,
+            load_tools_from_directory,
+            load_tools_from_file,
+        )
+
+        registry = get_global_registry()
+        successfully_added = []
+
+        # Handle "all" shortcut for all Tool Box tools
+        if tools == "all":
+            load_tool_box()
+            self._config["tool_box_enabled"] = True
+            return self
+
+        # Handle single string that might be a file path
+        if isinstance(tools, str) and is_python_file_path(tools):
+            try:
+                from pathlib import Path
+
+                path = Path(tools)
+
+                if path.is_file() and path.suffix == ".py":
+                    # Load tools from single Python file
+                    loaded_tools = load_tools_from_file(tools)
+                    for tool in loaded_tools:
+                        successfully_added.append(tool.name)
+                elif path.is_dir():
+                    # Load tools from directory
+                    loaded_tools = load_tools_from_directory(tools)
+                    for tool in loaded_tools:
+                        successfully_added.append(tool.name)
+                else:
+                    raise ValueError(f"Path exists but is not a Python file or directory: {tools}")
+
+                # Update config with successfully added tools before returning
+                current_tools = self._config.get("tools", [])
+                for tool_name in successfully_added:
+                    if tool_name not in current_tools:
+                        current_tools.append(tool_name)
+                self._config["tools"] = current_tools
+
+                # Enable tool registration for this bot if we added any tools
+                if successfully_added:
+                    self._config["tool_box_enabled"] = True
+
+                # Return after successful file loading
+                return self
+
+            except Exception as e:
+                print(f"Warning: Failed to load tools from '{tools}': {e}")
+                return self
+
+        # Ensure tools is a list for processing individual items
+        elif isinstance(tools, str):
+            # String that's not a file path and not "all"
+            raise ValueError(
+                "tools must be a list of tool names/objects, 'all', or a path to Python file/directory. "
+                f"Got string: '{tools}'"
+            )
+
+        if not isinstance(tools, list):
+            raise ValueError(
+                "tools must be a list of tool names/objects, 'all', or a Python file/directory path"
+            )
+
+        for tool_item in tools:
+            if isinstance(tool_item, str):
+                # Check if it's a file path first
+                if is_python_file_path(tool_item):
+                    try:
+                        from pathlib import Path
+
+                        path = Path(tool_item)
+
+                        if path.is_file() and path.suffix == ".py":
+                            # Load tools from Python file
+                            loaded_tools = load_tools_from_file(tool_item)
+                            for tool in loaded_tools:
+                                successfully_added.append(tool.name)
+                        elif path.is_dir():
+                            # Load tools from directory
+                            loaded_tools = load_tools_from_directory(tool_item)
+                            for tool in loaded_tools:
+                                successfully_added.append(tool.name)
+                        else:
+                            print(
+                                f"Warning: Path '{tool_item}' is not a valid Python file or directory"
+                            )
+                    except Exception as e:
+                        print(f"Warning: Failed to load tools from '{tool_item}': {e}")
+                else:
+                    # Built-in tool by name
+                    try:
+                        tool = get_builtin_tool(tool_item)
+                        if registry.get_tool(tool_item):
+                            successfully_added.append(tool_item)
+                        else:
+                            print(
+                                f"Warning: Built-in tool '{tool_item}' was not properly registered"
+                            )
+                    except ValueError as e:
+                        print(f"Warning: {e}")
+
+            elif isinstance(tool_item, TalkBoxTool):
+                # Custom tool object
+                try:
+                    registry.register(tool_item)
+                    successfully_added.append(tool_item.name)
+                except Exception as e:
+                    print(f"Warning: Failed to register custom tool '{tool_item.name}': {e}")
+
+            elif hasattr(tool_item, "_talk_box_tool"):
+                # Function decorated with @talk_box_tool
+                tool_obj = tool_item._talk_box_tool
+                try:
+                    # Tool should already be registered by the decorator, but ensure it's there
+                    if registry.get_tool(tool_obj.name):
+                        successfully_added.append(tool_obj.name)
+                    else:
+                        # Re-register if somehow not in registry
+                        registry.register(tool_obj)
+                        successfully_added.append(tool_obj.name)
+                except Exception as e:
+                    print(f"Warning: Failed to register custom tool '{tool_obj.name}': {e}")
+
+            else:
+                print(
+                    f"Warning: Unsupported tool type: {type(tool_item)}. "
+                    "Use string names for built-in tools or TalkBoxTool objects for custom tools."
+                )
+
+        # Update config with successfully added tools
+        current_tools = self._config.get("tools", [])
+        for tool_name in successfully_added:
+            if tool_name not in current_tools:
+                current_tools.append(tool_name)
+        self._config["tools"] = current_tools
+
+        # Enable tool registration for this bot if we added any tools
+        if successfully_added:
+            self._config["tool_box_enabled"] = True
+
         return self
+
+    def enable_tool_box(self) -> "ChatBot":
+        """
+        Enable all built-in Tool Box tools (deprecated - use .tools("all") instead).
+
+        This method loads and registers all 14 built-in tools from the Tool Box library.
+
+        .. deprecated::
+            Use `.tools("all")` instead for consistency with the unified tools API.
+
+        Returns
+        -------
+        ChatBot
+            The chatbot instance with Tool Box enabled for method chaining.
+
+        Examples
+        --------
+        >>> # Deprecated approach
+        >>> bot = ChatBot().enable_tool_box()
+
+        >>> # Preferred approach
+        >>> bot = ChatBot().tools("all")
+        """
+        import warnings
+
+        warnings.warn(
+            "enable_tool_box() is deprecated. Use .tools('all') instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.tools("all")
+
+    def add_tools(self, tool_names: list[str]) -> "ChatBot":
+        """
+        Add specific built-in tools.
+
+        Parameters
+        ----------
+        tool_names : list[str]
+            Names of specific Tool Box tools to add
+
+        Returns
+        -------
+        ChatBot
+            The chatbot instance with selected tools for method chaining
+
+        Examples
+        --------
+        >>> bot = ChatBot().add_tools(["calculate", "text_stats"])
+        """
+        return self.tools(tool_names)
 
     def avoid(self, avoid_list: list[str]) -> "ChatBot":
         """Set topics or behaviors to avoid."""
@@ -2114,6 +2361,7 @@ class ChatBot:
             "system_prompt": self.get_system_prompt(),  # Final constructed prompt
             # Advanced settings
             "tools": self._config["tools"],
+            "tool_box_enabled": self._config.get("tool_box_enabled", False),
             "verbose": self._config["verbose"],
             "llm_enabled": self._llm_enabled,
             "llm_integration": "🟢 LLM Ready"
@@ -2487,6 +2735,9 @@ class ChatBot:
         adapter = ChatlasAdapter(provider=provider, model=model)
         chat_session = adapter.create_chat_session(self._config)
 
+        # Register tools if Tool Box is enabled or tools are specified
+        self._register_tools_with_session(chat_session)
+
         # If we have conversation history, replay it to establish context
         if conversation and conversation.messages:
             # Replay all previous conversation messages to establish context
@@ -2514,6 +2765,21 @@ class ChatBot:
             response = adapter.chat_with_session(chat_session, message)
 
         return response.content
+
+    def _register_tools_with_session(self, chat_session) -> None:
+        """Register tools with the chatlas session if tools are available."""
+        try:
+            from talk_box.tools import get_global_registry
+
+            registry = get_global_registry()
+            if len(registry) > 0:
+                # Convert Talk Box tools to chatlas format and register
+                chatlas_tools = registry.to_chatlas_tools()
+                for tool in chatlas_tools:
+                    chat_session.register_tool(tool.func)
+        except Exception as e:
+            # Don't let tool registration failures break normal chat
+            print(f"Warning: Tool registration failed: {e}")
 
     def chat(
         self, message: Union[str, "Attachments"], conversation: Optional["Conversation"] = None
@@ -2707,6 +2973,66 @@ class ChatBot:
             # Return a simple session that just shows configuration
             return SimpleChatSession(self)
 
+    def _get_tools_display_section(self, config: dict) -> str:
+        """Generate a tools display section for HTML representation."""
+        tools = config.get("tools", []) or []
+        tool_box_enabled = config.get("tool_box_enabled", False)
+
+        # If nothing explicitly configured, show nothing
+        if not tools and not tool_box_enabled:
+            return ""
+
+        # If user explicitly loaded "all" (legacy path) keep prior behaviour: show all built-ins
+        # But otherwise ONLY show the tools explicitly selected in config["tools"].
+        display_tools: list[str] = []
+
+        explicit_all_requested = False
+        if any(t == "all" for t in tools) or (tool_box_enabled and not tools):
+            # Distinguish the 'all' case from normal selective enabling.
+            explicit_all_requested = True
+
+        if explicit_all_requested:
+            try:
+                from talk_box.tools import get_global_registry
+
+                registry = get_global_registry()
+                builtins = [
+                    tool.name
+                    for tool in registry.get_all_tools()
+                    if tool.tags and "tool_box" in tool.tags
+                ]
+                display_tools = sorted(set(builtins))
+            except Exception:
+                display_tools = ["(all tools loaded)"]
+        else:
+            # Only list what the user actually picked (order preserved)
+            seen = set()
+            for name in tools:
+                if name == "all":  # already handled
+                    continue
+                if name not in seen:
+                    seen.add(name)
+                    display_tools.append(name)
+
+        if not display_tools:
+            return ""
+
+        # Limit verbose listing
+        if len(display_tools) <= 5:
+            tools_display = ", ".join(display_tools)
+        else:
+            tools_display = f"{', '.join(display_tools[:4])}, +{len(display_tools) - 4} more"
+
+        count = len(display_tools)
+        return f"""
+            <div style="margin: 15px 0;">
+                <h4 style=\"color: #495057; margin-bottom: 8px; font-size: 1em;\">🛠️ Tools ({count} enabled)</h4>
+                <div style=\"background: white; color: #212529; padding: 12px; border-radius: 6px; border-left: 4px solid #17a2b8; font-family: 'Monaco', 'Menlo', monospace; font-size: 0.9em;\">
+                    {tools_display}
+                </div>
+            </div>
+        """
+
     def _repr_html_(self) -> str:
         """
         Rich HTML representation for notebooks with enhanced diagnostics.
@@ -2725,6 +3051,9 @@ class ChatBot:
 
         # Create a comprehensive diagnostic display with safe string formatting
         try:
+            # Get tools display section (only if tools are enabled)
+            tools_section = self._get_tools_display_section(config)
+
             html = f"""
         <div style="padding: 20px; border: 2px solid #2E86AB; border-radius: 8px; background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
             <h3 style="color: #2E86AB; margin-top: 0; display: flex; align-items: center;">
@@ -2751,11 +3080,10 @@ class ChatBot:
                         <div style="margin: 4px 0; color: #212529;"><strong>Name:</strong> {config.get("name", "Unnamed Bot") or "Unnamed Bot"}</div>
                         <div style="margin: 4px 0; color: #212529;"><strong>Persona:</strong> {config.get("persona", "None") or "None"}</div>
                         <div style="margin: 4px 0; color: #212529;"><strong>Constraints:</strong> {len(config.get("avoid_topics", []))} topic(s)</div>
-                        <div style="margin: 4px 0; color: #212529;"><strong>Tools:</strong> {len(config.get("tools", []))} enabled</div>
                     </div>
                 </div>
             </div>
-
+            {tools_section}
             <div style="margin: 15px 0;">
                 <h4 style="color: #495057; margin-bottom: 8px; font-size: 1em;">📝 System Prompt ({len(system_prompt)} characters)</h4>
                 <div style="background: #f1f3f4; color: #212529; padding: 12px; border-radius: 6px; font-family: 'Monaco', 'Menlo', monospace; font-size: 0.85em; max-height: 120px; overflow-y: auto; white-space: pre-wrap; border-left: 4px solid #fd7e14;">{system_prompt}</div>
