@@ -64,7 +64,7 @@ def test_max_tokens_validation():
 def test_tools_configuration():
     """Test tools configuration."""
     bot = ChatBot()
-    tools = ["web_search", "calculator"]
+    tools = ["calculate", "text_stats"]
     bot.tools(tools)
 
     config = bot.get_config()
