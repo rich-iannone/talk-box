@@ -1021,9 +1021,7 @@ async def test_tool_integration():
     reset_observability()
 
     # Create a simple test tool
-    @tb.talk_box_tool(
-        name="integration_test_tool", description="A test tool for integration testing"
-    )
+    @tb.tool(name="integration_test_tool", description="A test tool for integration testing")
     def test_tool(context: tb.ToolContext, value: int) -> tb.ToolResult:
         if value < 0:
             raise ValueError("Value must be positive")

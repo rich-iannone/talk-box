@@ -145,7 +145,7 @@ class TestToolFileLoading:
         """Test error when Python file contains no decorated tools."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as temp_file:
             temp_file.write("""
-# This Python file has no @talk_box_tool decorated functions
+# This Python file has no @tool decorated functions
 def regular_function():
     return "not a tool"
             """)

@@ -61,9 +61,6 @@ from talk_box.tools import (
     tool,
 )
 
-# Create alias
-talk_box_tool = tool
-
 # Make key classes available at package level
 __all__ = [
     # Core classes
@@ -98,8 +95,7 @@ __all__ = [
     "TestResults",
     "PathwayTestResults",
     # Tool Box
-    "talk_box_tool",
-    "tool",  # Shorter alias for talk_box_tool
+    "tool",
     "ToolCategory",
     "ToolContext",
     "ToolResult",

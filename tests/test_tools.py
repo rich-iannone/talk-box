@@ -1085,7 +1085,7 @@ class TestToolIntegration:
     def test_simple_tool_registration(self):
         """Test that tools can be registered and retrieved."""
 
-        @tb.talk_box_tool(
+        @tb.tool(
             name="test_math",
             description="Perform basic math operations",
             category=tb.ToolCategory.DATA,
@@ -1121,7 +1121,7 @@ class TestToolIntegration:
     async def test_tool_execution_direct(self):
         """Test direct tool execution without ChatBot."""
 
-        @tb.talk_box_tool(name="greeting_tool")
+        @tb.tool(name="greeting_tool")
         def greeting_tool(context: ToolContext, name: str, formal: bool = False) -> ToolResult:
             """Generate greetings."""
             if formal:
@@ -1152,11 +1152,11 @@ class TestToolIntegration:
         """Test ChatBot tool configuration methods."""
 
         # Create tools for testing
-        @tb.talk_box_tool(name="config_test_tool_1", description="First configuration test tool")
+        @tb.tool(name="config_test_tool_1", description="First configuration test tool")
         def tool1(context: ToolContext) -> ToolResult:
             return ToolResult(data="tool1_result")
 
-        @tb.talk_box_tool(name="config_test_tool_2", description="Second configuration test tool")
+        @tb.tool(name="config_test_tool_2", description="Second configuration test tool")
         def tool2(context: ToolContext) -> ToolResult:
             return ToolResult(data="tool2_result")
 
@@ -1217,7 +1217,7 @@ class TestToolIntegration:
     def test_tool_error_handling(self):
         """Test tool error handling and recovery."""
 
-        @tb.talk_box_tool(name="error_test_tool")
+        @tb.tool(name="error_test_tool")
         def error_tool(context: ToolContext, should_fail: bool) -> ToolResult:
             """Tool that can fail on demand."""
             if should_fail:
@@ -1243,7 +1243,7 @@ class TestToolIntegration:
     async def test_tool_context_functionality(self):
         """Test ToolContext features and data flow."""
 
-        @tb.talk_box_tool(name="context_test_tool")
+        @tb.tool(name="context_test_tool")
         def context_tool(context: ToolContext, test_param: str) -> ToolResult:
             """Tool that uses context data."""
             conversation_data = {
@@ -1290,7 +1290,7 @@ class TestToolIntegration:
         # Configure observability
         tb.configure_debug_mode(tb.ObservabilityLevel.DETAILED)
 
-        @tb.talk_box_tool(name="observability_test_tool")
+        @tb.tool(name="observability_test_tool")
         def obs_tool(context: ToolContext, value: int) -> ToolResult:
             """Tool for testing observability."""
             return ToolResult(data=value * 2, metadata={"doubled": True})
@@ -1436,7 +1436,7 @@ class TestChatBotToolIntegration:
     def test_chatbot_with_custom_and_builtin_tools(self):
         """Test ChatBot with mix of custom and built-in tools using unified API."""
 
-        @tb.talk_box_tool(name="custom_greeter", description="Custom greeting tool")
+        @tb.tool(name="custom_greeter", description="Custom greeting tool")
         def greeter(context: ToolContext, name: str) -> ToolResult:
             return ToolResult(data=f"Hello, {name}!")
 
@@ -1493,9 +1493,7 @@ class TestToolRegistryManagement:
         initial_count = len(initial_tools)
 
         # Register a new tool
-        @tb.talk_box_tool(
-            name="registry_test_tool", description="A test tool for registry operations"
-        )
+        @tb.tool(name="registry_test_tool", description="A test tool for registry operations")
         def test_tool(context: ToolContext) -> ToolResult:
             return ToolResult(data="test")
 
@@ -1511,13 +1509,11 @@ class TestToolRegistryManagement:
     def test_tool_categories(self):
         """Test tool categorization."""
 
-        @tb.talk_box_tool(
-            name="util_tool", description="Utility test tool", category=tb.ToolCategory.SYSTEM
-        )
+        @tb.tool(name="util_tool", description="Utility test tool", category=tb.ToolCategory.SYSTEM)
         def util_tool(context: ToolContext) -> ToolResult:
             return ToolResult(data="utility")
 
-        @tb.talk_box_tool(
+        @tb.tool(
             name="data_tool",
             description="Data analysis test tool",
             category=tb.ToolCategory.ANALYSIS,
@@ -1539,7 +1535,7 @@ class TestToolRegistryManagement:
     def test_duplicate_tool_handling(self):
         """Test handling of duplicate tool registrations."""
 
-        @tb.talk_box_tool(name="duplicate_test", description="First test tool")
+        @tb.tool(name="duplicate_test", description="First test tool")
         def first_tool(context: ToolContext) -> ToolResult:
             return ToolResult(data="first")
 
@@ -1547,7 +1543,7 @@ class TestToolRegistryManagement:
         first_registered = registry.get_tool("duplicate_test")
 
         # Register tool with same name
-        @tb.talk_box_tool(name="duplicate_test", description="Second test tool")
+        @tb.tool(name="duplicate_test", description="Second test tool")
         def second_tool(context: ToolContext) -> ToolResult:
             return ToolResult(data="second")
 
@@ -1586,7 +1582,7 @@ class TestUnifiedToolsAPI:
         """Test adding custom tools by TalkBoxTool objects."""
 
         # Create a custom tool
-        @tb.talk_box_tool(name="test_custom_tool", description="A test tool")
+        @tb.tool(name="test_custom_tool", description="A test tool")
         def custom_tool(context: tb.ToolContext, message: str) -> tb.ToolResult:
             return tb.ToolResult(data=f"Processed: {message}")
 
@@ -1604,7 +1600,7 @@ class TestUnifiedToolsAPI:
         """Test adding mix of built-in and custom tools."""
 
         # Create a custom tool
-        @tb.talk_box_tool(name="mixed_test_tool", description="A mixed test tool")
+        @tb.tool(name="mixed_test_tool", description="A mixed test tool")
         def mixed_tool(context: tb.ToolContext, value: int) -> tb.ToolResult:
             return tb.ToolResult(data=value * 2)
 
@@ -1632,11 +1628,11 @@ class TestUnifiedToolsAPI:
     def test_tools_chaining(self):
         """Test that tools() can be chained to add more tools."""
 
-        @tb.talk_box_tool(name="chain_tool_1", description="First chain tool")
+        @tb.tool(name="chain_tool_1", description="First chain tool")
         def chain_tool_1(context: tb.ToolContext) -> tb.ToolResult:
             return tb.ToolResult(data="tool1")
 
-        @tb.talk_box_tool(name="chain_tool_2", description="Second chain tool")
+        @tb.tool(name="chain_tool_2", description="Second chain tool")
         def chain_tool_2(context: tb.ToolContext) -> tb.ToolResult:
             return tb.ToolResult(data="tool2")
 
@@ -1708,7 +1704,7 @@ class TestUnifiedToolsAPI:
     def test_tools_duplicate_handling(self):
         """Test that duplicate tools are handled correctly."""
 
-        @tb.talk_box_tool(name="duplicate_test_tool", description="Duplicate test")
+        @tb.tool(name="duplicate_test_tool", description="Duplicate test")
         def duplicate_tool(context: tb.ToolContext) -> tb.ToolResult:
             return tb.ToolResult(data="duplicate")
 

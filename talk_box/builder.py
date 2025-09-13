@@ -1883,7 +1883,7 @@ class ChatBot:
                     print(f"Warning: Failed to register custom tool '{tool_item.name}': {e}")
 
             elif hasattr(tool_item, "_talk_box_tool"):
-                # Function decorated with @talk_box_tool
+                # Function decorated with @tb.tool
                 tool_obj = tool_item._talk_box_tool
                 try:
                     # Tool should already be registered by the decorator, but ensure it's there
