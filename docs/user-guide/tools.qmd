@@ -583,7 +583,7 @@ During development, you need detailed visibility into what your tools are doing,
 import talk_box as tb
 
 # Create debugger with Rich UI
-debugger = tb.ToolDebugger(use_rich=True)
+debugger = tb.ToolDebugger()
 
 # Enable debug mode
 bot = (
