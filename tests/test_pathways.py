@@ -3,7 +3,6 @@ import talk_box as tb
 from talk_box.pathways import StateType
 
 
-# Basic instantiation tests
 def test_state_method_invalid_type():
     """Test .state() method with invalid type raises error."""
     with pytest.raises(ValueError, match="Invalid state type"):
@@ -379,3 +378,75 @@ def test_pathway_prompt_generation():
     assert "customer_welcomed" in prompt
     assert "issue_type" in prompt
     assert "urgency_level" in prompt
+
+
+def test_constructor_with_completion_criteria():
+    """Test that completion_criteria can be passed to constructor."""
+
+    # Test with string
+    pathway1 = tb.Pathways(
+        title="Test Pathway",
+        desc="Test description",
+        activation="Test activation",
+        completion_criteria="Single completion criterion",
+    )
+
+    data1 = pathway1._build()
+    assert data1["completion_criteria"] == ["Single completion criterion"]
+
+    # Test with list
+    pathway2 = tb.Pathways(
+        title="Test Pathway",
+        desc="Test description",
+        activation="Test activation",
+        completion_criteria=["Criterion 1", "Criterion 2"],
+    )
+
+    data2 = pathway2._build()
+    assert data2["completion_criteria"] == ["Criterion 1", "Criterion 2"]
+
+    # Test with None (default)
+    pathway3 = tb.Pathways(title="Test Pathway", desc="Test description")
+
+    data3 = pathway3._build()
+    assert data3["completion_criteria"] == []
+
+
+def test_constructor_with_fallback_strategy():
+    """Test that fallback_strategy can be passed to constructor."""
+
+    # Test with string
+    pathway1 = tb.Pathways(
+        title="Test Pathway",
+        desc="Test description",
+        activation="Test activation",
+        fallback_strategy="Test fallback strategy",
+    )
+
+    data1 = pathway1._build()
+    assert data1["fallback_strategy"] == "Test fallback strategy"
+
+    # Test with None (default)
+    pathway2 = tb.Pathways(title="Test Pathway", desc="Test description")
+
+    data2 = pathway2._build()
+    assert data2["fallback_strategy"] is None
+
+
+def test_complete_constructor():
+    """Test constructor with all parameters."""
+
+    pathway = tb.Pathways(
+        title="Complete Test",
+        desc="Full test of constructor",
+        activation=["Activation 1", "Activation 2"],
+        completion_criteria=["Complete 1", "Complete 2"],
+        fallback_strategy="Fallback approach",
+    )
+
+    data = pathway._build()
+    assert data["title"] == "Complete Test"
+    assert data["description"] == "Full test of constructor"
+    assert data["activation_conditions"] == ["Activation 1", "Activation 2"]
+    assert data["completion_criteria"] == ["Complete 1", "Complete 2"]
+    assert data["fallback_strategy"] == "Fallback approach"
