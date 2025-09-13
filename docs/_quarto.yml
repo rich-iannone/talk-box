@@ -54,6 +54,7 @@ website:
           - user-guide/chatbot-basics.qmd
           - user-guide/model-selection.qmd
           - user-guide/file-attachments.qmd
+          - user-guide/tools.qmd
       - section: "Prompt Engineering"
         contents:
           - user-guide/prompt-engineering-guide.qmd
