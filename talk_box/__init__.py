@@ -15,7 +15,12 @@ __email__ = "riannone@me.com"
 from talk_box.attachments import AttachmentMetadata, Attachments
 from talk_box.builder import BuilderTypes, ChatBot
 from talk_box.builtin_tools import get_builtin_tool, load_selected_tools, load_tool_box
-from talk_box.conversation import Conversation, Message
+from talk_box.conversation import (
+    Conversation,
+    Message,
+    ToolEnabledConversation,
+    create_tool_conversation,
+)
 from talk_box.pathways import Pathways
 from talk_box.presets import Preset, PresetManager, PresetNames
 from talk_box.prompt_builder import (
@@ -65,6 +70,8 @@ __all__ = [
     "ChatBot",
     "Conversation",
     "Message",
+    "ToolEnabledConversation",
+    "create_tool_conversation",
     # File attachments
     "Attachments",
     "AttachmentMetadata",
