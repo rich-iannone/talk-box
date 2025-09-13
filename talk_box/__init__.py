@@ -14,6 +14,7 @@ __email__ = "riannone@me.com"
 # Core imports for easy access
 from talk_box.attachments import AttachmentMetadata, Attachments
 from talk_box.builder import BuilderTypes, ChatBot
+from talk_box.builtin_tools import get_builtin_tool, load_selected_tools, load_tool_box
 from talk_box.conversation import Conversation, Message
 from talk_box.pathways import Pathways
 from talk_box.presets import Preset, PresetManager, PresetNames
@@ -34,6 +35,32 @@ from talk_box.testing import (
     autotest_avoid_topics,
     autotest_pathways,
 )
+from talk_box.tool_debugging import (
+    ToolDebugger,
+    configure_debug_mode,
+    debug_dashboard,
+    debug_errors,
+    debug_tool,
+    export_debug_report,
+    live_monitor,
+)
+from talk_box.tool_observability import (
+    ObservabilityLevel,
+    ToolObserver,
+    configure_observability,
+    get_global_observer,
+)
+from talk_box.tools import (
+    TalkBoxTool,
+    ToolCategory,
+    ToolContext,
+    ToolResult,
+    get_global_registry,
+    tool,
+)
+
+# Create backward compatibility alias
+talk_box_tool = tool
 
 # Make key classes available at package level
 __all__ = [
@@ -66,4 +93,27 @@ __all__ = [
     # Testing classes
     "TestResults",
     "PathwayTestResults",
+    # Tool Box
+    "talk_box_tool",
+    "tool",  # Shorter alias for talk_box_tool
+    "ToolCategory",
+    "ToolContext",
+    "ToolResult",
+    "get_global_registry",
+    "load_tool_box",
+    "get_builtin_tool",
+    "load_selected_tools",
+    # Tool Observability
+    "ObservabilityLevel",
+    "ToolObserver",
+    "configure_observability",
+    "get_global_observer",
+    # Tool Debugging
+    "ToolDebugger",
+    "configure_debug_mode",
+    "debug_dashboard",
+    "debug_errors",
+    "debug_tool",
+    "export_debug_report",
+    "live_monitor",
 ]
