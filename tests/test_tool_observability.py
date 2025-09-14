@@ -821,6 +821,9 @@ def test_basic_observability():
 
 def test_metrics_aggregation():
     """Test that metrics are properly aggregated."""
+    from talk_box.tool_observability import reset_observability
+
+    reset_observability()
     observer = tb.get_global_observer()
 
     # Execute multiple operations
