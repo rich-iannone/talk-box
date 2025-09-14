@@ -1,0 +1,968 @@
+---
+title: "Tool System"
+---
+
+The Talk Box tool system provides a powerful way to extend your AI assistants with custom functionality and pre-built utilities. This guide covers everything from creating your first tool to advanced observability and debugging techniques.
+
+## Quick Start
+
+The fastest way to get started with Talk Box tools is to use the built-in collection that handles common tasks, then gradually add your own custom tools as your needs grow. This section walks you through the essential patterns: using pre-built tools for immediate functionality, creating simple custom tools for your specific needs, and combining both approaches to build powerful AI assistants.
+
+### Using Built-in Tools
+
+Talk Box comes with a comprehensive collection of ready-to-use tools that handle the most common tasks you encounter when building AI assistants. These tools have been carefully designed and tested to work reliably in production environments, covering everything from mathematical calculations and text processing to data validation and network operations. Using built-in tools is the fastest way to get started and add immediate functionality to your AI assistant without writing any code:
+
+Here's an example where we add specific built-in tools using their names:
+
+```{python}
+import talk_box as tb
+
+bot = tb.ChatBot().tools(["calculate", "validate_email", "current_time"]).model("gpt-4")
+
+bot
+```
+
+<br>
+
+Notice how the HTML representation now shows a dedicated **Tools** section that displays the actual tool names rather than just showing "Tools: 3 enabled". This makes it much easier to see exactly which capabilities are available to your ChatBot.
+
+Or add all built-in tools at once:
+
+```{python}
+bot = tb.ChatBot().tools("all").model("gpt-4")
+
+bot
+```
+
+### Creating Custom Tools
+
+While built-in tools provide excellent coverage for common tasks, the real power of Talk Box comes from creating custom tools tailored to your specific domain and business logic. Custom tools allow you to integrate your existing systems, APIs, and business processes directly into your AI assistant's capabilities. The `@tb.tool` decorator makes this process straightforward, automatically handling parameter validation, error management, and integration with the Talk Box ecosystem. Let's start with a simple example to demonstrate the basic pattern:
+
+```{python}
+import talk_box as tb
+
+@tb.tool
+def say_hello(name: str) -> str:
+    """Simple tool that says hello."""
+    return f"Hello, {name}!"
+
+# Use with ChatBot
+bot = tb.ChatBot().tools([say_hello]).model("gpt-4")
+
+bot
+```
+
+<br>
+
+For more control over your tool's behavior, use the full decorator syntax:
+
+```{python}
+import talk_box as tb
+
+@tb.tool(
+    name="greet_user",
+    description="Generate a personalized greeting"
+)
+def greet_user(name: str, time_of_day: str = "day") -> tb.ToolResult:
+    greeting = f"Good {time_of_day}, {name}! How can I help you today?"
+    return tb.ToolResult(data=greeting)
+
+# Use with ChatBot
+bot = tb.ChatBot().tools([greet_user]).model("gpt-4")
+```
+
+#### Decorator Forms: `@tb.tool` vs `@tb.tool(...)`
+
+There are two equivalent ways to declare a tool:
+
+1. **Bare form.** Quickest path for when you don't need extra metadata:
+
+   ```python
+   @tb.tool
+   def say_hello(name: str) -> str:
+       """Simple greeting."""
+       return f"Hello, {name}!"
+   ```
+
+2. **Configured form.** Supply explicit metadata or options:
+
+   ```python
+   @tb.tool(
+       name="greet_user",
+       description="Generate a personalized greeting",
+       examples=["greet_user('Ada','morning') -> Good morning, Ada!"],
+       timeout_seconds=5,
+       tags=["greeting", "demo"],
+   )
+   def greet_user(name: str, time_of_day: str = "day") -> str:
+       return f"Good {time_of_day}, {name}!"
+   ```
+
+Both forms *register* the function immediately in the global tool registry when the module is imported. Registration alone does not make the tool active for a specific `ChatBot`. To actually enable it for a bot, you must still pass the function to `.tools([...])`:
+
+```python
+bot = tb.ChatBot().tools([say_hello, greet_user]).model("gpt-4")
+```
+
+Why two steps?
+
+- **Registration**: makes the tool discoverable globally.
+- **Attachment**: explicitly scopes which tools a particular bot can use (avoids accidental capability leakage).
+
+If you prefer name-based inclusion for built-ins you can mix forms:
+
+```python
+bot = tb.ChatBot().tools([
+    say_hello,          # custom (registered by decorator)
+    "calculate",        # built-in by name
+    greet_user,         # another custom
+]).model("gpt-4")
+```
+
+Future convenience helpers may allow adding custom tools by name; for now, pass the function object for custom tools and string names for built-ins.
+
+### Mixing Custom and Built-in Tools
+
+One of the most powerful aspects of Talk Box is the ability to seamlessly combine your custom business logic with the comprehensive library of built-in utilities. This hybrid approach lets you focus on implementing domain-specific functionality while leveraging proven, tested tools for common operations like data validation, calculations, and text processing. The unified `.tools()` API handles both custom and built-in tools identically, making it easy to create sophisticated AI assistants that blend your unique requirements with general-purpose capabilities:
+
+```python
+import talk_box as tb
+
+@tb.tool(name="check_inventory", description="Check product stock")
+def check_inventory(product_id: str) -> tb.ToolResult:
+    # Your business logic here
+    stock = {"product": product_id, "quantity": 42, "available": True}
+    return tb.ToolResult(data=stock)
+
+# Mix custom tools with built-in ones
+bot = (
+    tb.ChatBot()
+    .tools([
+        check_inventory,     # Custom tool (function)
+        "calculate",         # Built-in tool (string name)
+        "validate_email",    # Built-in tool (string name)
+    ])
+    .model("gpt-4")
+)
+```
+
+## What Is a Tool?
+
+A tool is a Python function plus structured metadata that the ChatBot is allowed to call to accomplish a user goal. Think of it as a safe, self‑describing capability boundary:
+
+- Code the model can invoke (your function)
+- A name & description the model reads to decide when to use it
+- A parameter schema inferred from your signature
+- A standardized result object (`ToolResult`) so the rest of the system can observe, debug, and chain outputs
+
+If a function is not attached via `.tools(...)`, it is invisible to the model—even if it is registered globally. This explicit opt‑in prevents accidental capability leakage.
+
+### Mental Model: Registration vs Attachment
+
+| Phase | What Happens | Trigger | Scope | Purpose |
+|-------|--------------|---------|-------|---------|
+| Registration | Function is wrapped & stored in the global registry | Import time when `@tb.tool` decorator executes | Global process | Discoverability & inspection |
+| Attachment | Specific tools chosen for a bot instance | Calling `ChatBot().tools([...])` | That bot only | Capability authorization |
+
+Guideline: Treat the registry like a catalog and `.tools([...])` like a firewall rule list. Only attach what each assistant truly needs.
+
+## Core Concepts
+
+Now that you've seen the basics of using and creating tools, let's dive deeper into the fundamental concepts that power the Talk Box tool system. Understanding these core building blocks will help you design more effective tools, leverage advanced features, and troubleshoot issues when they arise. These concepts form the foundation for everything from simple utility functions to complex business integrations.
+
+### Tool Anatomy
+
+When you create a tool with the `@tb.tool` decorator, Talk Box automatically handles the technical details for you. However, it's helpful to understand what's happening behind the scenes. Every tool, whether built-in or custom, has three essential components:
+
+1. **Metadata**: name, description, and parameter schema that help the AI understand what the tool does
+2. **Context**: runtime information about the conversation and execution environment
+3. **Implementation**: the actual logic that processes inputs and returns results
+
+Here's how these components work together in a practical tool that needs runtime context information:
+
+```{python}
+import talk_box as tb
+
+@tb.tool(
+    name="format_currency",
+    description="Format a number as currency with proper symbols and decimal places"
+)
+def format_currency(context: tb.ToolContext, amount: float, currency: str = "USD") -> tb.ToolResult:
+    # Access context information when you need it
+    timestamp = context.timestamp
+
+    # Implement the tool logic
+    symbols = {"USD": "$", "EUR": "€", "GBP": "£"}
+    symbol = symbols.get(currency, currency)
+    formatted = f"{symbol}{amount:,.2f}"
+
+    # Return structured result
+    return tb.ToolResult(
+        data=formatted,
+        metadata={
+            "original_amount": amount,
+            "currency": currency,
+            "formatted_at": timestamp
+        }
+    )
+```
+
+The `context` parameter is completely optional. Only include it in your function signature when your tool actually needs runtime information like timestamps, user IDs, or observability features. Talk Box automatically detects whether your function expects context and only passes it when needed.
+
+This structure ensures that tools are predictable, debuggable, and provide rich information back to both the AI and your application.
+
+Let's explore each of these components in detail to understand how they work and how you can leverage them effectively in your own tools.
+
+### Tool Context
+
+The `ToolContext` provides access to runtime information:
+
+```python
+import talk_box as tb
+
+@tb.tool(name="context_example", description="Show context usage")
+def context_example(context: tb.ToolContext, message: str) -> tb.ToolResult:
+    # Access conversation metadata
+    user_id = context.conversation_id
+    timestamp = context.timestamp
+
+    # Access observability (if enabled)
+    if context.observer:
+        context.observer.log("Processing message", {"length": len(message)})
+
+    return tb.ToolResult(
+        data=f"Message '{message}' processed at {timestamp}",
+        metadata={"user": user_id, "message_length": len(message)}
+    )
+```
+
+The `ToolContext` becomes valuable when you need to build tools that are aware of their environment. For example:
+
+- **User-specific behavior**: a customer service tool might look up different data based on which user is asking
+- **Conversation continuity**: tools can reference previous interactions or maintain state across multiple calls
+- **Security and auditing**: track who used which tools and when for compliance or debugging
+- **Personalization**: adjust tool behavior based on user preferences or conversation history
+- **Performance monitoring**: log tool usage patterns to optimize your AI assistant's performance
+
+Without context, tools operate in isolation. With context, they become intelligent components that can adapt to their environment and provide richer, more personalized experiences.
+
+The following table summarizes what you can access from `context` inside a tool.
+
+| Name | Type | Description |
+|------|------|-------------|
+| `conversation_id` | `str | None` | Identifier of the active conversation (if provided). |
+| `user_id` | `str | None` | Identifier of the end user (for personalization / logging). |
+| `session_id` | `str | None` | Session or application run identifier (multi-request grouping). |
+| `conversation_history` | `list[dict]` | Prior messages (role/content dicts); use `get_last_messages()` for slices. |
+| `user_metadata` | `dict` | Arbitrary user data; preferences often under `user_metadata['preferences']`. |
+| `tool_registry` | `ToolRegistry | None` | Registry instance; inspect or look up other tools if needed. |
+| `extra` | `dict` | Extension bag for app-specific values you inject. |
+| `get_last_messages(n=5)` | method | Return the last `n` conversation messages (safe if history empty). |
+| `get_user_preference(key, default=None)` | method | Convenience lookup from `user_metadata['preferences']`. |
+
+Here's a minimal pattern inside a tool:
+
+```python
+@tb.tool(name="inspect_context", description="Show context essentials")
+def inspect_context(context: tb.ToolContext) -> tb.ToolResult:
+    summary = {
+        "user": context.user_id,
+        "last_messages": context.get_last_messages(2),
+        "has_registry": context.tool_registry is not None,
+        "created_at": context.timestamp.isoformat(),
+    }
+    return tb.ToolResult(data=summary, display_format="json")
+```
+
+### Tool Results
+
+Tools **must** return `ToolResult` objects to maintain consistency, reliability, and rich communication with the AI system. Here's how to leverage `ToolResult` effectively:
+
+```python
+import talk_box as tb
+
+@tb.tool(name="rich_result", description="Return rich result data")
+def rich_result(context: tb.ToolContext, query: str) -> tb.ToolResult:
+    return tb.ToolResult(
+        data={
+            "answer": f"Result for: {query}",
+            "confidence": 0.95,
+            "sources": ["source1", "source2"]
+        },
+        metadata={
+            "processing_time": 0.123,
+            "model_used": "analysis-v2"
+        },
+        success=True
+    )
+```
+
+While it might seem simpler to return plain strings or dictionaries, the `ToolResult` structure provides many advantages that make your AI assistant more robust and intelligent. The `ToolResult` object serves as a standardized contract between your tools and the Talk Box system, ensuring that results are predictable, debuggable, and provide rich context back to both the AI and your application. This structured approach enables advanced features like error handling, observability, metadata tracking, and success/failure indicators that would be impossible with simple return values.
+
+All of this matters for the following reasons:
+
+- **Structured Communication**: the AI receives consistent, predictable data formats regardless of which tool was called, making it easier to process and act on results.
+
+- **Rich Metadata**: beyond the core data, you can include processing times, confidence scores, source information, and other contextual details that help the AI make better decisions.
+
+- **Error Handling**: built-in success/failure indicators and error messages allow the AI to gracefully handle problems and potentially retry with different approaches.
+
+- **Observability**: the standardized format enables comprehensive monitoring, debugging, and performance analysis across all your tools.
+
+Plain returns are auto-coerced for convenience, but adopting `ToolResult` early unlocks richer debugging, consistent downstream handling, and clearer model feedback.
+
+## Available Built-in Tools
+
+Talk Box comes with a comprehensive collection of built-in tools that handle common tasks. These tools are production-ready and follow best practices for error handling, performance, and usability. You can use them immediately without any setup or configuration.
+
+The Talk Box Tool Box includes these built-in tools:
+
+### Math and Calculations
+
+- **`calculate`**: perform mathematical calculations
+- **`convert_case`**: convert text between different cases (upper, lower, title, etc.)
+
+### Text and Data Processing
+
+- **`text_stats`**: get statistics about text (word count, character count, etc.)
+- **`json_formatter`**: format and validate JSON data
+- **`base64_encode`**: encode/decode base64 strings
+- **`url_encode`**: URL encode/decode strings
+
+### Validation and Utilities
+
+- **`validate_email`**: validate email address formats
+- **`generate_uuid`**: generate UUID strings
+- **`current_time`**: get current date and time information
+- **`hash_text`**: generate hashes (MD5, SHA256, etc.) of text
+
+### Network and Communication
+
+- **`ping_host`**: check if a host is reachable
+- **`whois_lookup`**: look up domain registration information
+
+View all available tools:
+
+```{python}
+import talk_box as tb
+
+# Load the tool box first to make tools available
+tb.load_tool_box()
+
+# Get the global registry to see what tools are available
+registry = tb.get_global_registry()
+all_tools = registry.get_all_tools()
+
+# Filter for built-in tools (those with "tool_box" in tags)
+builtin_tools = [tool for tool in all_tools if tool.tags and "tool_box" in tool.tags]
+print(f"Built-in tools available ({len(builtin_tools)}):")
+for tool in builtin_tools:
+    print(f"  - {tool.name}: {tool.description}")
+```
+
+### Exploring Built-in Tool Details
+
+You can inspect the internals of any built-in tool to understand its parameters, description, and functionality:
+
+```{python}
+# Get detailed information about a specific tool
+calc_tool = tb.get_builtin_tool("calculate")
+print(f"Name: {calc_tool.name}")
+print(f"Description: {calc_tool.description}")
+print(f"Category: {calc_tool.category}")
+```
+
+```{python}
+# Explore the email validator tool
+email_tool = tb.get_builtin_tool("validate_email")
+print(f"Name: {email_tool.name}")
+print(f"Description: {email_tool.description}")
+print(f"Category: {email_tool.category}")
+print(f"Tags: {email_tool.tags}")
+```
+
+```{python}
+# See what categories are available and tools in each
+registry = tb.get_global_registry()
+
+# Load the tool box first
+tb.load_tool_box()
+
+# Now explore by category using the actual categories
+data_tools = registry.get_tools_by_category(tb.ToolCategory.DATA)
+web_tools = registry.get_tools_by_category(tb.ToolCategory.WEB)
+
+print("Data processing tools:")
+for tool in data_tools[:3]:  # Show first 3 to keep output manageable
+    print(f"  - {tool.name}: {tool.description}")
+
+print("\nWeb-related tools:")
+for tool in web_tools:
+    print(f"  - {tool.name}: {tool.description}")
+```
+
+These built-in tools provide immediate functionality and can be combined with your custom tools to create powerful AI assistants. The tools are organized by category to help you find the right functionality for your use case.
+
+## Understanding the Global Registry
+
+Talk Box uses a global registry to manage all available tools in your application. This registry acts as a central repository that keeps track of both built-in tools and any custom tools you create with the `@tb.tool` decorator. Understanding how this registry works is essential for effectively managing your tool ecosystem.
+
+### How the Registry Works
+
+When you use the `@tb.tool` decorator, your tool is automatically registered in the global registry, making it available for use by any ChatBot in your application:
+
+```python
+import talk_box as tb
+
+@tb.tool(name="my_custom_tool")
+def my_custom_tool(context: tb.ToolContext, input_data: str) -> tb.ToolResult:
+    return tb.ToolResult(data=f"Processed: {input_data}")
+
+# Tool is now automatically available in the global registry
+registry = tb.get_global_registry()
+print("Available tools:", [tool.name for tool in registry.get_all_tools()])
+```
+
+Built-in tools are also loaded into the global registry when you first use them via the `.tools()` method. This creates a unified system where all tools are managed consistently.
+
+### Managing the Registry
+
+You can inspect and manage the global registry directly when needed:
+
+```{python}
+import talk_box as tb
+
+# Get the global registry
+registry = tb.get_global_registry()
+
+# See all registered tools
+all_tools = registry.get_all_tools()
+print(f"Total tools registered: {len(all_tools)}")
+```
+
+```{python}
+# Get tools by category using actual enum values
+data_tools = registry.get_tools_by_category(tb.ToolCategory.DATA)
+custom_tools = registry.get_tools_by_category(tb.ToolCategory.CUSTOM)
+
+print("Data tools:", [t.name for t in data_tools[:3]])  # Show first 3
+print("Custom tools:", [t.name for t in custom_tools])
+```
+
+```{python}
+# Check if a specific tool exists
+calc_tool = registry.get_tool("calculate")
+if calc_tool:
+    print(f"Calculator tool: {calc_tool.description}")
+else:
+    print("Calculator tool not found")
+```
+
+### When to Clear the Registry
+
+In certain scenarios, you might want to start with a clean slate by clearing the global registry. This is particularly useful for:
+
+- **Testing environments** where you want isolated tool sets
+- **Specialized applications** that only need specific custom tools
+- **Multi-tenant systems** where different contexts need different tool sets
+
+```python
+import talk_box as tb
+
+# Clear all tools from the registry
+tb.clear_global_registry()
+
+# Now only register the tools you specifically need
+@tb.tool(name="specialized_tool")
+def specialized_tool(context: tb.ToolContext) -> tb.ToolResult:
+    return tb.ToolResult(data="Specialized functionality")
+
+# This bot will only have access to your custom tool
+bot = tb.ChatBot().tools([specialized_tool]).model("gpt-4")
+```
+
+Understanding the global registry helps you make informed decisions about tool management and ensures you have full control over what capabilities are available in your AI assistant.
+
+## Tool Selection Strategies
+
+Choosing the right combination of tools depends on your application's needs. Talk Box supports three main strategies for tool selection, each optimized for different scenarios. Consider your specific requirements for control, functionality, and development speed when selecting an approach.
+
+### 1. Custom Tools Only (Domain-Specific)
+
+Best for specialized applications where you need full control:
+
+```python
+import talk_box as tb
+
+# Start with a clean slate and remove all built-in tools
+tb.clear_global_registry()
+
+@tb.tool(name="process_order", description="Process customer order")
+def process_order(context: tb.ToolContext, order_data: dict) -> tb.ToolResult:
+    # Your business logic
+    return tb.ToolResult(data={"order_id": "12345", "status": "processed"})
+
+@tb.tool(name="check_inventory", description="Check product availability")
+def check_inventory(context: tb.ToolContext, product_id: str) -> tb.ToolResult:
+    # Your inventory logic
+    return tb.ToolResult(data={"available": True, "quantity": 42})
+
+# Bot with only your custom tools
+bot = tb.ChatBot().tools([process_order, check_inventory]).model("gpt-4")
+```
+
+### 2. Selective Built-in Tools (Recommended)
+
+Cherry-pick useful built-in tools for your use case:
+
+```python
+# E-commerce assistant example
+bot = (
+    tb.ChatBot()
+    .tools([
+        process_order,       # Custom business logic
+        check_inventory,     # Custom inventory system
+        "calculate",         # Built-in: price calculations
+        "validate_email",    # Built-in: customer emails
+        "current_time",      # Built-in: order timestamps
+        "generate_uuid",     # Built-in: order IDs
+    ])
+    .model("gpt-4")
+)
+```
+
+### 3. All Built-in Tools (Quick Prototyping)
+
+Load all built-in tools for experimentation:
+
+```python
+# Get everything,  useful for exploration
+bot = tb.ChatBot().tools("all").model("gpt-4")
+```
+
+Each strategy has its own benefits: custom-only provides maximum control and minimal dependencies, selective built-in offers the best balance of functionality and specificity, while loading all tools gives you maximum capability for experimentation and rapid prototyping.
+
+## Advanced Tool Features
+
+Beyond basic tool creation and usage, Talk Box provides advanced features for monitoring, debugging, and organizing tools in production environments. These capabilities help you build robust, maintainable AI systems with full visibility into tool behavior.
+
+### Tool Observability (Advanced)
+
+Understanding how your tools behave in production is critical for maintaining reliable AI assistants. Talk Box's observability system provides comprehensive monitoring capabilities, tracking everything from execution times and success rates to detailed performance metrics and error patterns. This visibility helps you identify bottlenecks, optimize performance, and ensure your tools are working as expected under real-world conditions. Here's how to set up monitoring for your tools:
+
+```python
+import talk_box as tb
+
+# Create observer with metrics tracking
+observer = tb.ToolObserver(
+    track_performance=True,
+    track_usage=True,
+    track_errors=True
+)
+
+# Create bot with observability
+bot = (
+    tb.ChatBot()
+    .tools(["calculate", "validate_email", my_custom_tool])
+    .observer(observer)
+    .model("gpt-4")
+)
+
+# After running conversations, get metrics
+metrics = observer.get_metrics()
+print(f"Tool calls: {metrics.total_calls}")
+print(f"Average execution time: {metrics.avg_execution_time}")
+print(f"Error rate: {metrics.error_rate}")
+```
+
+### Tool Debugging (Advanced)
+
+During development, you need detailed visibility into what your tools are doing, how they're being called, and what data they're processing. Talk Box's debugging system provides rich, real-time insights into tool execution with beautiful console output, detailed parameter inspection, and comprehensive execution traces. This makes it much easier to identify issues, understand tool behavior, and optimize your implementations. Here's how to enable debugging for your development workflow:
+
+```python
+import talk_box as tb
+
+# Create debugger with Rich UI
+debugger = tb.ToolDebugger()
+
+# Enable debug mode
+bot = (
+    tb.ChatBot()
+    .tools([my_tool])
+    .debugger(debugger)
+    .model("gpt-4")
+)
+
+# Debugger will show real-time execution info
+# Export debug reports
+debugger.export_debug_report("debug_session.json")
+```
+
+### Tool Categories and Organization (Advanced)
+
+As your AI assistant grows more sophisticated and incorporates more tools, organizing them becomes essential for maintainability and discoverability. Talk Box automatically categorizes tools based on their functionality, making it easy to find related tools, manage subsets of functionality, and understand what capabilities are available in your system. This organizational system is particularly valuable when building complex AI assistants that need different tool sets for different contexts or user roles:
+
+```python
+import talk_box as tb
+
+registry = tb.get_global_registry()
+
+# Tools are automatically categorized
+data_tools = registry.get_tools_by_category(tb.ToolCategory.DATA)
+web_tools = registry.get_tools_by_category(tb.ToolCategory.WEB)
+system_tools = registry.get_tools_by_category(tb.ToolCategory.SYSTEM)
+
+print("Data tools:", [t.name for t in data_tools[:3]])  # Show first 3
+print("Web tools:", [t.name for t in web_tools])
+print("System tools:", [t.name for t in system_tools])
+```
+
+These advanced features provide the foundation for building enterprise-grade AI applications with proper monitoring, debugging capabilities, and organized tool management.
+
+### Error Handling in Tools
+
+Robust error handling is the foundation of reliable AI assistants that can gracefully handle unexpected situations and provide helpful feedback to users. In production environments, tools will encounter invalid inputs, network failures, missing resources, and other error conditions that need to be handled elegantly. Well-designed error handling not only prevents crashes but also guides the AI toward alternative approaches and helps users understand what went wrong and how to fix it. Always anticipate potential failure modes and provide meaningful error messages to help both the AI and end users understand what went wrong.
+
+Here's how to implement comprehensive error handling in your tools:
+
+```python
+import talk_box as tb
+
+@tb.tool(name="safe_divide", description="Safely divide two numbers")
+def safe_divide(context: tb.ToolContext, a: float, b: float) -> tb.ToolResult:
+    try:
+        if b == 0:
+            return tb.ToolResult(
+                data=None,
+                error="Division by zero is not allowed",
+                success=False
+            )
+
+        result = a / b
+        return tb.ToolResult(
+            data=result,
+            metadata={"operation": "division", "inputs": [a, b]},
+            success=True
+        )
+
+    except Exception as e:
+        return tb.ToolResult(
+            data=None,
+            error=f"Calculation error: {str(e)}",
+            success=False
+        )
+```
+
+Proper error handling makes your tools more reliable and provides better user experiences. The AI can use error information to suggest alternatives or ask for corrected input.
+
+## Best Practices
+
+Following these best practices will help you create tools that are reliable, maintainable, and effective in production environments. These guidelines are based on experience building AI systems at scale.
+
+### 1. Tool Design
+
+Each tool should do one thing well. Having well-written descriptions help to make a tool's purpose obvious to the LLM. When it comes to parameter names and their types, be descriptive with those. Here's an example of what to do and what *not* to do:
+
+```python
+import talk_box as tb
+
+# Good: Focused, clear purpose
+@tb.tool(
+    name="validate_credit_card",
+    description="Validate credit card number using Luhn algorithm"
+)
+def validate_credit_card(context: tb.ToolContext, card_number: str) -> tb.ToolResult:
+    # Implementation...
+    pass
+
+# Avoid: Too broad, unclear purpose
+@tb.tool(name="process_payment", description="Handle payments")
+def process_payment(context: tb.ToolContext, **kwargs) -> tb.ToolResult:
+    # Too many responsibilities
+    pass
+```
+
+### 2. Parameter Design
+
+Well-designed parameters are crucial for creating tools that are both powerful and easy for AI models to use correctly. The way you structure your parameters directly impacts how effectively the AI can understand what inputs are needed, what formats are expected, and how to validate the data before processing. For complex data structures, using clear validation patterns and providing helpful error messages when parameters are malformed will make your tools much more reliable and user-friendly.
+
+Here's how to design robust parameter validation for complex data:
+
+```python
+import talk_box as tb
+
+@tb.tool(
+    name="create_user_profile",
+    description="Create a new user profile with validation"
+)
+def create_user_profile(context: tb.ToolContext, user_data: dict) -> tb.ToolResult:
+    # user_data should be: {"name": str, "email": str, "age": int}
+    required_fields = ["name", "email", "age"]
+
+    for field in required_fields:
+        if field not in user_data:
+            return tb.ToolResult(
+                data=None,
+                error=f"Missing required field: {field}",
+                success=False
+            )
+
+    # Validation and processing...
+    return tb.ToolResult(data={"profile_id": "12345", "created": True})
+```
+
+### 3. Performance Considerations
+
+Here are a few ways to keep perference in mind when creating tools:
+
+- keep tool execution fast (< 1 second when possible)
+- use async patterns for I/O operations
+- cache expensive computations
+- provide progress feedback for long operations
+
+```python
+import asyncio
+import talk_box as tb
+
+@tb.tool(name="fetch_data", description="Fetch data from API")
+async def fetch_data(context: tb.ToolContext, url: str) -> tb.ToolResult:
+    try:
+        # Use async HTTP client
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=5.0)
+            return tb.ToolResult(data=response.json())
+    except Exception as e:
+        return tb.ToolResult(data=None, error=str(e), success=False)
+```
+
+These performance considerations become critical as your AI assistant scales to handle more users and more complex operations. Async patterns are especially important for tools that need to make network requests or access databases.
+
+### 4. Testing Tools
+
+Comprehensive testing ensures your tools work correctly across different scenarios and edge cases, from happy path executions to error conditions and boundary cases. Testing custom tools is especially important because they often integrate with external systems, process user data, or handle business-critical operations. Talk Box provides specialized testing utilities to make this process straightforward, including mock contexts, parameter validation helpers, and result verification tools.
+
+Here's how to implement thorough testing for your custom tools:
+
+```python
+import pytest
+import talk_box as tb
+
+def test_greet_user():
+    context = tb.MockToolContext()
+    result = greet_user(context, name="Alice", time_of_day="morning")
+
+    assert result.success
+    assert "Good morning, Alice" in result.data
+    assert result.error is None
+
+# Use the testing utilities
+def test_with_utilities():
+    # Test tool execution
+    result = tb.test_tool(greet_user, name="Bob")
+    assert result.success
+
+    # Test parameter validation
+    with pytest.raises(ValueError):
+        tb.test_tool(greet_user)  # Missing required 'name' parameter
+```
+
+Regular testing helps catch issues early and ensures your tools continue to work as expected when you make changes to your codebase or update dependencies.
+
+## Tool Advertising: The Key to Effective Tool Usage
+
+The most critical aspect of successful tool integration is **explicitly advertising your tools in the system prompt**. Think of the system prompt as an attention mechanism: if you don't tell the LLM about available tools and when to use them, it will often attempt to answer questions using its training data instead of leveraging your carefully crafted tools.
+
+This section demonstrates how to create system prompts that effectively direct the LLM's attention to your tools, ensuring they are used appropriately and consistently.
+
+### The Attention Problem
+
+Without proper tool advertising, LLMs exhibit these problematic behaviors:
+
+- **Tool Blindness**: ignoring available tools and attempting to answer from training data
+- **Inconsistent Usage**: sometimes using tools, sometimes not, leading to unpredictable behavior
+- **Incorrect Tool Selection**: choosing the wrong tool for a task when multiple options exist
+- **Missed Opportunities**: failing to combine tools effectively for complex workflows
+
+The solution is to explicitly guide the LLM's attention using structured system prompts that clearly advertise available tools and their intended usage patterns. Here are practical examples that show how to do this effectively.
+
+### Customer Service Bot: Explicit Tool Advertising
+
+This example demonstrates how to create a customer service assistant that reliably uses tools for order management and customer verification. The key is explicitly directing the AI's attention to each tool and when to use it.
+
+```{python}
+import talk_box as tb
+
+@tb.tool(name="lookup_order", description="Look up customer order")
+def lookup_order(context: tb.ToolContext, order_id: str) -> tb.ToolResult:
+    # Your order lookup logic
+    return tb.ToolResult(data={"order_id": order_id, "status": "shipped"})
+
+@tb.tool(name="process_refund", description="Process customer refund")
+def process_refund(context: tb.ToolContext, order_id: str, reason: str) -> tb.ToolResult:
+    # Your refund logic
+    return tb.ToolResult(data={"refund_id": "RF12345", "amount": 99.99})
+
+system_prompt = (
+    tb.PromptBuilder()
+    .persona(
+        "helpful customer service assistant",
+        "resolving customer issues efficiently and professionally"
+    )
+    .task_context(
+        "use tools to handle customer inquiries about orders, process refunds, and verify info"
+    )
+    .focus_on(
+        "using the appropriate tools for each customer request to provide accurate assistance"
+    )
+    .structured_section("Tool Usage Guidelines", [
+        "use lookup_order to find customer order information",
+        "use process_refund for approved refund requests",
+        "always verify customer email addresses using validate_email",
+        "include timestamps using current_time for all transactions",
+        "generate reference numbers with generate_uuid when needed"
+    ])
+)
+
+bot = (
+    tb.ChatBot()
+    .system_prompt(system_prompt)
+    .tools([
+        lookup_order,
+        process_refund,
+        "validate_email",    # For customer verification
+        "current_time",      # For timestamps
+        "generate_uuid",     # For reference numbers
+    ])
+    .model("gpt-4")
+)
+
+bot
+```
+
+<br>
+
+This example uses clear, action-oriented guidance in the `"Tool Usage Guidelines"` section to explicitly map user requests to specific tools. The prompt uses imperative language (`"use lookup_order to find"`, `"always verify"`) to make tool usage feel mandatory rather than optional. By listing each tool with its specific trigger condition, the AI knows exactly when to reach for each capability, preventing it from attempting to answer order questions from memory or providing generic customer service responses.
+
+### Content Analysis Bot: Tool-First Approach
+
+This content analysis bot demonstrates how to ensure AI models consistently use specialized analysis tools rather than relying on their training data for text processing tasks. The approach emphasizes workflow-based tool advertising.
+
+```{python}
+import talk_box as tb
+
+@tb.tool(name="sentiment_analysis", description="Analyze text sentiment")
+def sentiment_analysis(context: tb.ToolContext, text: str) -> tb.ToolResult:
+    # Your sentiment analysis logic
+    return tb.ToolResult(data={"sentiment": "positive", "confidence": 0.85})
+
+system_prompt = (
+    tb.PromptBuilder()
+    .persona(
+        "content analysis expert", "text processing and deriving actionable insights"
+    )
+    .task_context(
+        "analyze text content for sentiment, statistics, and patterns using analysis tools"
+    )
+    .focus_on(
+        "providing thorough analysis with clear confidence indicators and structured results"
+    )
+    .structured_section("Analysis Workflow", [
+        "use sentiment_analysis to determine emotional tone of text",
+        "use text_stats to provide detailed metrics about text content",
+        "format all results as structured JSON using to_json",
+        "use generate_uuid to create unique identifiers for analysis sessions",
+    ])
+    .output_format(
+        "provide confidence scores and supporting evidence in structured JSON format"
+    )
+)
+
+bot = (
+    tb.ChatBot()
+    .system_prompt(system_prompt)
+    .tools([
+        sentiment_analysis,
+        "text_stats",     # Text metrics
+        "to_json",        # Structure results
+        "generate_uuid",  # Unique identifiers
+    ])
+    .model("gpt-4")
+)
+
+bot
+```
+
+<br>
+
+This example uses a workflow-based approach to tool advertising, organizing tools into logical sequences (`"Analysis Workflow"`) that mirror how a human expert would approach text analysis. The prompt establishes the persona as a `"content analysis expert"` and then immediately directs attention to tool-based processing. The inclusion of output formatting requirements (`"structured JSON format"`) reinforces that all results must flow through the `to_json` tool, creating a consistent pattern of tool dependency that prevents the AI from providing unstructured responses.
+
+### Data Processing Bot: Enforcing Tool Usage
+
+This data processing example shows how to create an AI assistant that never attempts manual data manipulation, instead requiring all operations to go through validated, auditable tools. The strategy focuses on workflow enforcement and transparency requirements.
+
+```{python}
+import talk_box as tb
+
+@tb.tool(name="clean_dataset", description="Clean and validate dataset")
+def clean_dataset(context: tb.ToolContext, data: list) -> tb.ToolResult:
+    # Your data cleaning logic
+    cleaned = [item for item in data if item is not None]
+    return tb.ToolResult(
+        data=cleaned,
+        metadata={"original_count": len(data), "cleaned_count": len(cleaned)}
+    )
+
+system_prompt = (
+    tb.PromptBuilder()
+    .persona("data processing specialist", "cleaning, validation, and statistical analysis")
+    .task_context(
+        "use tools to clean data, perform calculations, and ensure data quality"
+    )
+    .focus_on(
+        "maintaining data integrity while reporting on all transformations and quality metrics."
+    )
+    .structured_section("Data Processing Workflow", [
+        "use clean_dataset to remove null values and validate data quality",
+        "use calculate for statistical analysis and data summaries",
+        "use sort_list for organizing data collections when needed"
+    ])
+    .output_format(
+        "format all output as JSON using to_json, including metadata about transformations"
+    )
+    .critical_constraint(
+        "always report data quality metrics before and after processing to ensure transparency"
+    )
+)
+
+bot = (
+    tb.ChatBot()
+    .system_prompt(system_prompt)
+    .tools([
+        clean_dataset,
+        "calculate",   # Statistical calculations
+        "to_json",     # Format results
+        "sort_list",   # Organize data collections
+    ])
+    .model("gpt-4")
+)
+
+bot
+```
+
+<br>
+
+This example demonstrates enforcement-oriented tool advertising, using constraints and workflow requirements to make tool usage inevitable. The `"Data Processing Workflow"` section creates a mandatory sequence where each step depends on a specific tool, while the `.critical_constraint()` method adds an accountability layer that requires transparency reporting. The persona as a `"data processing specialist"` combined with explicit workflow steps ensures the AI understands that manual data processing would be unprofessional and error-prone, making tool usage the only acceptable approach.
+
+## Conclusion
+
+The Talk Box tool system provides a comprehensive foundation for building powerful AI assistants that can integrate with your existing systems and business logic. From simple utility functions to complex domain-specific operations, tools extend your AI's capabilities beyond what's possible with language models alone.
+
+Here are some key takeaways for successful tool integration:
+
+- **Start simple**: begin with built-in tools for common tasks, then add custom tools as needed
+- **Design thoughtfully**: create focused tools with clear purposes, robust error handling, and comprehensive testing
+- **Advertise effectively**: use structured system prompts to guide your AI toward consistent tool usage
+- **Monitor and optimize**: leverage observability features to understand tool performance and usage patterns
+- **Scale systematically**: use the global registry and categorization system to manage growing tool ecosystems
+
+Whether you're building a content analysis system or a data processing pipeline, the combination of well-designed tools and thoughtful system prompts will determine your success. Focus on creating reliable, focused tools and guiding your AI to use them effectively.

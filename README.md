@@ -336,6 +336,105 @@ support_bot = (
 - **Error Recovery**: Handle unexpected situations with defined fallback strategies
 - **Scalability**: Manage complex multi-step processes that would be overwhelming without structure
 
+## Powerful Tool System
+
+Extend your AI assistants with custom functionality and pre-built utilities using Talk Box's unified tools API.
+
+### Creating Custom Tools
+
+Define tools with the simple `@tb.tool` decorator:
+
+```python
+import talk_box as tb
+
+@tb.tool(name="process_order", description="Process customer order")
+def process_order(context: tb.ToolContext, customer_id: str, items: list) -> tb.ToolResult:
+    total = sum(item['price'] * item['quantity'] for item in items)
+    return tb.ToolResult(data={
+        "order_id": f"ORD{hash(customer_id)%10000:04d}",
+        "total": total,
+        "status": "confirmed"
+    })
+
+@tb.tool(name="check_inventory", description="Check product availability")
+def check_inventory(context: tb.ToolContext, product_id: str) -> tb.ToolResult:
+    available = {"PROD001": 50, "PROD002": 25, "PROD003": 0}.get(product_id, 0)
+    return tb.ToolResult(data={"available": available, "in_stock": available > 0})
+```
+
+### Unified Tools API
+
+Mix custom tools with built-in utilities using a single, clean API:
+
+```python
+# E-commerce assistant with mixed tools
+bot = (
+    tb.ChatBot()
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("helpful e-commerce assistant", "order processing and customer service")
+        .task_context("help customers with orders, inventory checks, and account management using available tools")
+        .focus_on("using appropriate tools for each customer request to provide accurate, real-time information")
+        .structured_section("Tool Usage Guidelines", [
+            "use check_inventory to verify product availability before processing orders",
+            "use process_order to handle customer purchase requests",
+            "use validate_email for customer account verification",
+            "use current_time for timestamps and delivery estimates",
+            "use generate_uuid for creating reference numbers",
+            "use calculate for pricing, taxes, and totals"
+        ])
+        .output_format("always use tools when handling specific requests like orders or inventory checks")
+    )
+    .tools([
+        process_order,       # Custom business logic
+        check_inventory,     # Custom inventory system
+        "calculate",         # Built-in: math calculations
+        "validate_email",    # Built-in: email validation
+        "current_time",      # Built-in: timestamps
+        "generate_uuid",     # Built-in: unique IDs
+    ])
+    .model("gpt-4")
+)
+
+# Customer service conversation
+response = bot.chat("""
+I'd like to order 2 units of PROD001 and 3 units of PROD002.
+My customer ID is CUST12345.
+""")
+```
+
+### Built-in Tool Library
+
+Talk Box includes ready-to-use tools: `calculate`, `text_stats`, `validate_email`, `current_time`, `generate_uuid`, and more.
+
+```python
+# Load all built-in tools
+bot = tb.ChatBot().tools("all").model("gpt-4")
+```
+
+### Tool Observability & Debugging
+
+Monitor and debug tool performance with built-in observability:
+
+```python
+# Create observer and debugger
+observer = tb.ToolObserver(track_performance=True, track_usage=True)
+debugger = tb.ToolDebugger()
+
+# Bot with monitoring
+bot = (
+    tb.ChatBot()
+    .tools([process_order, check_inventory, "calculate"])
+    .observer(observer)
+    .debugger(debugger)
+    .model("gpt-4")
+)
+
+# Analyze performance
+metrics = observer.get_metrics()
+debugger.export_debug_report("debug_session.json")
+```
+
 ## Domain-Specific Vocabulary
 
 Ensure AI systems correctly understand specialized terminology with professional glossaries:
@@ -378,10 +477,10 @@ health_bot = (
 
 **Key Benefits of Domain Vocabulary:**
 
-- **Semantic Consistency**: Prevent misinterpretation of terms with different meanings across industries
-- **Multilingual Support**: Handle international contexts with proper translations and synonyms
-- **Professional Standards**: Align AI communication with industry-specific terminology
-- **Context Boundaries**: Establish clear domain-specific definitions to prevent confusion
+- **Semantic Consistency**: prevent misinterpretation of terms with different meanings across industries
+- **Multilingual Support**: handle international contexts with proper translations and synonyms
+- **Professional Standards**: align AI communication with industry-specific terminology
+- **Context Boundaries**: establish clear domain-specific definitions to prevent confusion
 
 ## Pre-configured Engineering Templates
 

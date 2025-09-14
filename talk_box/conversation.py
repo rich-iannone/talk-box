@@ -1,7 +1,10 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from .tools import TalkBoxTool, ToolContext, ToolRegistry
 
 
 @dataclass
@@ -846,3 +849,119 @@ class Conversation:
 
         html_parts.append("</div>")
         return "".join(html_parts)
+
+
+class ToolEnabledConversation(Conversation):
+    """
+    Extended Conversation class with integrated Tool Box support.
+
+    Enables conversations to automatically use tools when appropriate,
+    with rich context passing and result integration.
+    """
+
+    def __init__(
+        self,
+        conversation_id: Optional[str] = None,
+        tool_registry: Optional["ToolRegistry"] = None,
+        auto_tools: bool = True,
+        tool_confirmation: bool = False,
+    ):
+        super().__init__(conversation_id=conversation_id)
+        # Import here to avoid circular imports
+        from .tools import get_global_registry
+
+        self.tool_registry = tool_registry or get_global_registry()
+        self.auto_tools = auto_tools
+        self.tool_confirmation = tool_confirmation
+        self.tool_call_history: List[Dict[str, Any]] = []
+
+    def create_tool_context(
+        self,
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        extra_metadata: Optional[Dict[str, Any]] = None,
+    ) -> "ToolContext":
+        """Create a rich ToolContext from the conversation state."""
+        # Import here to avoid circular imports
+        from .tools import ToolContext
+
+        # Extract conversation history
+        history = [
+            {
+                "role": msg.role,
+                "content": msg.content,
+                "timestamp": msg.timestamp.isoformat(),
+                "metadata": msg.metadata,
+            }
+            for msg in self.messages
+        ]
+
+        # Create context with conversation information
+        return ToolContext(
+            conversation_id=self.conversation_id,
+            user_id=user_id,
+            session_id=session_id,
+            conversation_history=history,
+            user_metadata=extra_metadata or {},
+            tool_registry=self.tool_registry,
+            extra={"conversation": self},
+        )
+
+    def get_available_tools(self, category: Optional[str] = None) -> List["TalkBoxTool"]:
+        """Get tools available for this conversation."""
+        if category:
+            from .tools import ToolCategory
+
+            try:
+                cat_enum = ToolCategory(category.lower())
+                return self.tool_registry.get_tools_by_category(cat_enum)
+            except ValueError:
+                return []
+        return self.tool_registry.get_all_tools()
+
+    def add_tool_call_message(
+        self,
+        tool_name: str,
+        parameters: Dict[str, Any],
+        result: Any,
+        success: bool = True,
+        error: Optional[str] = None,
+    ) -> Message:
+        """Add a tool call result as a message to the conversation."""
+        metadata = {
+            "tool_name": tool_name,
+            "parameters": parameters,
+            "success": success,
+            "tool_call_id": len(self.tool_call_history),
+        }
+
+        if error:
+            metadata["error"] = error
+
+        # Record in tool call history
+        self.tool_call_history.append(
+            {
+                "tool_name": tool_name,
+                "parameters": parameters,
+                "result": result,
+                "success": success,
+                "error": error,
+                "timestamp": datetime.now(),  # Current time
+            }
+        )
+
+        # Create message content
+        if success:
+            content = f"Tool '{tool_name}' executed successfully with result: {result}"
+        else:
+            content = f"Tool '{tool_name}' failed: {error}"
+
+        # Add message to conversation
+        tool_message = self.add_message(content=content, role="function", metadata=metadata)
+        return tool_message
+
+
+# Convenience functions for easy integration
+def create_tool_conversation() -> ToolEnabledConversation:
+    """Create a new conversation with tool support."""
+    return ToolEnabledConversation()

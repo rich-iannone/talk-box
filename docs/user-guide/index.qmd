@@ -64,6 +64,7 @@ Professional behavior templates for common use cases like customer support, tech
 
 - [ChatBot Basics](chatbot-basics.qmd): core concepts and first steps
 - [Model Selection](model-selection.qmd): choosing the right AI model
+- [Tool System Guide](tools.qmd): comprehensive guide to creating and using tools
 
 ### Prompt Engineering
 
