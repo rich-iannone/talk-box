@@ -663,7 +663,7 @@ def get_builtin_tool(name: str):
         return tool
 
     # If tool not in registry, load the full Tool Box to register all tools
-    # This is necessary because @talk_box_tool decorators register tools lazily
+    # This is necessary because @tool decorators register tools lazily
     load_tool_box()
 
     # Now try again
