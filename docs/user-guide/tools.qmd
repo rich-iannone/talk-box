@@ -10,7 +10,7 @@ The fastest way to get started with Talk Box tools is to use the built-in collec
 
 ### Using Built-in Tools
 
-Talk Box comes with a comprehensive collection of ready-to-use tools that handle the most common tasks you'll encounter when building AI assistants. These tools have been carefully designed and tested to work reliably in production environments, covering everything from mathematical calculations and text processing to data validation and network operations. Using built-in tools is the fastest way to get started and add immediate functionality to your AI assistant without writing any code:
+Talk Box comes with a comprehensive collection of ready-to-use tools that handle the most common tasks you encounter when building AI assistants. These tools have been carefully designed and tested to work reliably in production environments, covering everything from mathematical calculations and text processing to data validation and network operations. Using built-in tools is the fastest way to get started and add immediate functionality to your AI assistant without writing any code:
 
 Here's an example where we add specific built-in tools using their names:
 
@@ -315,7 +315,7 @@ Plain returns are auto-coerced for convenience, but adopting `ToolResult` early 
 
 Talk Box comes with a comprehensive collection of built-in tools that handle common tasks. These tools are production-ready and follow best practices for error handling, performance, and usability. You can use them immediately without any setup or configuration.
 
-Talk Box includes these built-in tools:
+The Talk Box Tool Box includes these built-in tools:
 
 ### Math and Calculations
 
@@ -768,11 +768,26 @@ def test_with_utilities():
 
 Regular testing helps catch issues early and ensures your tools continue to work as expected when you make changes to your codebase or update dependencies.
 
-## Examples and Use Cases
+## Tool Advertising: The Key to Effective Tool Usage
 
-These practical examples demonstrate how to combine custom tools with built-in utilities to create specialized AI assistants for common business scenarios. Each example shows a complete implementation you can adapt for your needs.
+The most critical aspect of successful tool integration is **explicitly advertising your tools in the system prompt**. Think of the system prompt as an attention mechanism: if you don't tell the LLM about available tools and when to use them, it will often attempt to answer questions using its training data instead of leveraging your carefully crafted tools.
 
-### Customer Service Bot
+This section demonstrates how to create system prompts that effectively direct the LLM's attention to your tools, ensuring they are used appropriately and consistently.
+
+### The Attention Problem
+
+Without proper tool advertising, LLMs exhibit these problematic behaviors:
+
+- **Tool Blindness**: ignoring available tools and attempting to answer from training data
+- **Inconsistent Usage**: sometimes using tools, sometimes not, leading to unpredictable behavior
+- **Incorrect Tool Selection**: choosing the wrong tool for a task when multiple options exist
+- **Missed Opportunities**: failing to combine tools effectively for complex workflows
+
+The solution is to explicitly guide the LLM's attention using structured system prompts that clearly advertise available tools and their intended usage patterns. Here are practical examples that show how to do this effectively.
+
+### Customer Service Bot: Explicit Tool Advertising
+
+This example demonstrates how to create a customer service assistant that reliably uses tools for order management and customer verification. The key is explicitly directing the AI's attention to each tool and when to use it.
 
 ```{python}
 import talk_box as tb
@@ -787,7 +802,6 @@ def process_refund(context: tb.ToolContext, order_id: str, reason: str) -> tb.To
     # Your refund logic
     return tb.ToolResult(data={"refund_id": "RF12345", "amount": 99.99})
 
-# Build comprehensive system prompt
 system_prompt = (
     tb.PromptBuilder()
     .persona(
@@ -809,7 +823,6 @@ system_prompt = (
     ])
 )
 
-# Customer service bot
 bot = (
     tb.ChatBot()
     .system_prompt(system_prompt)
@@ -826,7 +839,13 @@ bot = (
 bot
 ```
 
-### Content Analysis Bot
+<br>
+
+This example uses clear, action-oriented guidance in the `"Tool Usage Guidelines"` section to explicitly map user requests to specific tools. The prompt uses imperative language (`"use lookup_order to find"`, `"always verify"`) to make tool usage feel mandatory rather than optional. By listing each tool with its specific trigger condition, the AI knows exactly when to reach for each capability, preventing it from attempting to answer order questions from memory or providing generic customer service responses.
+
+### Content Analysis Bot: Tool-First Approach
+
+This content analysis bot demonstrates how to ensure AI models consistently use specialized analysis tools rather than relying on their training data for text processing tasks. The approach emphasizes workflow-based tool advertising.
 
 ```{python}
 import talk_box as tb
@@ -836,8 +855,6 @@ def sentiment_analysis(context: tb.ToolContext, text: str) -> tb.ToolResult:
     # Your sentiment analysis logic
     return tb.ToolResult(data={"sentiment": "positive", "confidence": 0.85})
 
-
-# Build analysis-focused system prompt
 system_prompt = (
     tb.PromptBuilder()
     .persona(
@@ -860,7 +877,6 @@ system_prompt = (
     )
 )
 
-# Content analysis bot
 bot = (
     tb.ChatBot()
     .system_prompt(system_prompt)
@@ -876,7 +892,13 @@ bot = (
 bot
 ```
 
-### Data Processing Bot
+<br>
+
+This example uses a workflow-based approach to tool advertising, organizing tools into logical sequences (`"Analysis Workflow"`) that mirror how a human expert would approach text analysis. The prompt establishes the persona as a `"content analysis expert"` and then immediately directs attention to tool-based processing. The inclusion of output formatting requirements (`"structured JSON format"`) reinforces that all results must flow through the `to_json` tool, creating a consistent pattern of tool dependency that prevents the AI from providing unstructured responses.
+
+### Data Processing Bot: Enforcing Tool Usage
+
+This data processing example shows how to create an AI assistant that never attempts manual data manipulation, instead requiring all operations to go through validated, auditable tools. The strategy focuses on workflow enforcement and transparency requirements.
 
 ```{python}
 import talk_box as tb
@@ -890,7 +912,6 @@ def clean_dataset(context: tb.ToolContext, data: list) -> tb.ToolResult:
         metadata={"original_count": len(data), "cleaned_count": len(cleaned)}
     )
 
-# Build data processing system prompt
 system_prompt = (
     tb.PromptBuilder()
     .persona("data processing specialist", "cleaning, validation, and statistical analysis")
@@ -913,7 +934,6 @@ system_prompt = (
     )
 )
 
-# Data processing bot
 bot = (
     tb.ChatBot()
     .system_prompt(system_prompt)
@@ -929,18 +949,20 @@ bot = (
 bot
 ```
 
-These examples demonstrate patterns you can apply across different domains. The key is combining domain-specific custom tools with appropriate built-in utilities to create AI assistants that are both powerful and reliable.
+<br>
+
+This example demonstrates enforcement-oriented tool advertising, using constraints and workflow requirements to make tool usage inevitable. The `"Data Processing Workflow"` section creates a mandatory sequence where each step depends on a specific tool, while the `.critical_constraint()` method adds an accountability layer that requires transparency reporting. The persona as a `"data processing specialist"` combined with explicit workflow steps ensures the AI understands that manual data processing would be unprofessional and error-prone, making tool usage the only acceptable approach.
 
 ## Conclusion
 
-The Talk Box tool system provides a powerful and flexible foundation for extending AI assistants with custom functionality. The unified `.tools()` API makes it easy to work with both custom and built-in tools, while the observability and debugging features help you build robust, production-ready AI assistants.
+The Talk Box tool system provides a comprehensive foundation for building powerful AI assistants that can integrate with your existing systems and business logic. From simple utility functions to complex domain-specific operations, tools extend your AI's capabilities beyond what's possible with language models alone.
 
-Key takeaways:
+Here are some key takeaways for successful tool integration:
 
-- start with built-in tools for common tasks, add custom tools for domain-specific needs
-- use the unified `.tools()` API for consistent tool management
-- implement proper error handling and testing for production reliability
-- leverage observability features to monitor and optimize tool performance
-- follow best practices for maintainable, scalable tool development
+- **Start simple**: begin with built-in tools for common tasks, then add custom tools as needed
+- **Design thoughtfully**: create focused tools with clear purposes, robust error handling, and comprehensive testing
+- **Advertise effectively**: use structured system prompts to guide your AI toward consistent tool usage
+- **Monitor and optimize**: leverage observability features to understand tool performance and usage patterns
+- **Scale systematically**: use the global registry and categorization system to manage growing tool ecosystems
 
-With these tools and techniques, you can create AI assistants that seamlessly integrate with your existing systems and workflows, providing users with powerful, reliable automated assistance.
+Whether you're building a content analysis system or a data processing pipeline, the combination of well-designed tools and thoughtful system prompts will determine your success. Focus on creating reliable, focused tools and guiding your AI to use them effectively.
