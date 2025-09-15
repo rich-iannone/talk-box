@@ -1866,7 +1866,9 @@ class Pathways:
                     border_style = "solid"
 
                 # Add a unique ID for connecting lines
-                unique_id = f"node-{diagram_id}-{node_id or 'unknown'}-{hash(node['label']) % 10000}"
+                unique_id = (
+                    f"node-{diagram_id}-{node_id or 'unknown'}-{hash(node['label']) % 10000}"
+                )
 
                 # Enhanced styling with better visual indicators
                 additional_styles = ""
@@ -1982,8 +1984,12 @@ class Pathways:
             # Create SVG overlay for connection lines
             svg_connections = ""
             for parent_id, child_id in all_connections:
-                parent_node_id = f"node-{diagram_id}-{parent_id}-{hash(nodes[parent_id]['label']) % 10000}"
-                child_node_id = f"node-{diagram_id}-{child_id}-{hash(nodes[child_id]['label']) % 10000}"
+                parent_node_id = (
+                    f"node-{diagram_id}-{parent_id}-{hash(nodes[parent_id]['label']) % 10000}"
+                )
+                child_node_id = (
+                    f"node-{diagram_id}-{child_id}-{hash(nodes[child_id]['label']) % 10000}"
+                )
 
                 svg_connections += f"""
                     <path class="connection-line"
@@ -2014,7 +2020,7 @@ class Pathways:
                     window.pathwayDiagramManager = {{
                         diagrams: new Map(),
                         initialized: false,
-                        
+
                         // Register a diagram with its update function
                         register: function(diagramId, updateFunction) {{
                             this.diagrams.set(diagramId, updateFunction);
@@ -2023,19 +2029,19 @@ class Pathways:
                                 setTimeout(updateFunction, 10);
                             }}
                         }},
-                        
+
                         // Initialize all diagrams
                         init: function() {{
                             if (this.initialized) return;
                             this.initialized = true;
-                            
+
                             // Update all registered diagrams
                             this.updateAll();
-                            
+
                             // Set up single global event listeners
                             window.addEventListener('resize', () => this.updateAll());
                         }},
-                        
+
                         // Update all registered diagrams
                         updateAll: function() {{
                             this.diagrams.forEach((updateFunction, diagramId) => {{
@@ -2047,7 +2053,7 @@ class Pathways:
                             }});
                         }}
                     }};
-                    
+
                     // Initialize when DOM is ready
                     if (document.readyState === 'loading') {{
                         document.addEventListener('DOMContentLoaded', () => {{
@@ -2068,7 +2074,7 @@ class Pathways:
                     connections.forEach(line => {{
                         const fromId = line.getAttribute('data-from');
                         const toId = line.getAttribute('data-to');
-                        
+
                         // Use scoped selection to ensure we get elements from the right diagram
                         const fromElement = diagram.querySelector(`#${{fromId}}`);
                         const toElement = diagram.querySelector(`#${{toId}}`);
