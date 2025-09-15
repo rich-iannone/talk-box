@@ -1898,29 +1898,66 @@ class Pathways:
                     {additional_styles}
                 ">{node["label"]}</div>"""
 
+            # Calculate proper levels for nodes, handling reconvergence
+            def calculate_node_levels():
+                """Calculate the optimal level for each node, ensuring reconvergence points are placed correctly."""
+                node_levels = {}
+
+                def get_max_parent_level(node_id):
+                    """Get the maximum level of all parent nodes."""
+                    if node_id == start_node_id:
+                        return 0
+
+                    parent_nodes = parents.get(node_id, [])
+                    if not parent_nodes:
+                        return 0
+
+                    max_level = 0
+                    for parent_id in parent_nodes:
+                        if parent_id in node_levels:
+                            max_level = max(max_level, node_levels[parent_id] + 1)
+                        else:
+                            # Recursively calculate parent level
+                            parent_level = get_max_parent_level(parent_id)
+                            node_levels[parent_id] = parent_level
+                            max_level = max(max_level, parent_level + 1)
+
+                    return max_level
+
+                # Calculate levels for all nodes
+                for node_id in nodes:
+                    if node_id not in node_levels:
+                        node_levels[node_id] = get_max_parent_level(node_id)
+
+                return node_levels
+
+            # Get optimal levels for all nodes
+            level_nodes = calculate_node_levels()
+
+            # Group nodes by their calculated levels
+            levels_dict = {}
+            max_level = 0
+            for node_id, level in level_nodes.items():
+                if level not in levels_dict:
+                    levels_dict[level] = []
+                levels_dict[level].append(node_id)
+                max_level = max(max_level, level)
+
             # Build the flowchart level by level with connecting lines
             result_html = ""
-            visited = set()
-            current_level = [start_node_id]
             all_connections = []  # Store connections for drawing lines
-            level_nodes = {}  # Track which nodes are in which level
 
-            level_counter = 0
-            while current_level:
+            for level_counter in range(max_level + 1):
+                if level_counter not in levels_dict:
+                    continue
+
                 level_html = f'<div class="pathway-level" data-level="{level_counter}" style="display: flex; justify-content: center; align-items: center; margin: 25px 0; flex-wrap: nowrap; position: relative; min-width: max-content;">'
-                next_level = []
-                nodes_processed_this_level = 0
 
-                for node_id in current_level:
-                    if node_id in visited or node_id not in nodes:
+                for node_id in levels_dict[level_counter]:
+                    if node_id not in nodes:
                         continue
 
-                    visited.add(node_id)
                     node = nodes[node_id]
-                    nodes_processed_this_level += 1
-
-                    # Track level for this node
-                    level_nodes[node_id] = level_counter
 
                     # Check if this is a reconvergence point
                     is_reconvergence = len(parents.get(node_id, [])) > 1
@@ -1928,8 +1965,8 @@ class Pathways:
                     # Check if this is a final state (no outgoing connections)
                     is_final_state = len(adjacency.get(node_id, [])) == 0
 
-                    # Don't apply reconvergence styling to final states
-                    use_reconvergence_style = is_reconvergence and not is_final_state
+                    # Apply reconvergence styling to all reconvergence points (including final states)
+                    use_reconvergence_style = is_reconvergence
 
                     # Add the node box with ID
                     level_html += create_node_box(node, use_reconvergence_style, node_id)
@@ -1937,21 +1974,10 @@ class Pathways:
                     # Store connections to children for drawing lines later
                     children = adjacency.get(node_id, [])
                     for child_id in children:
-                        if child_id not in visited:
-                            all_connections.append((node_id, child_id))
-                            next_level.append(child_id)
+                        all_connections.append((node_id, child_id))
 
                 level_html += "</div>"
-
-                # Add this level if we processed any nodes
-                if nodes_processed_this_level > 0:
-                    result_html += level_html
-
-                # Remove duplicates and prepare next level
-                current_level = list(
-                    dict.fromkeys(next_level)
-                )  # Remove duplicates while preserving order
-                level_counter += 1
+                result_html += level_html
 
             # Create SVG overlay for connection lines
             svg_connections = ""
