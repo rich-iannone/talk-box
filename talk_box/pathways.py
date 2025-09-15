@@ -1744,12 +1744,36 @@ class Pathways:
 
             # Color scheme for different state types
             colors = {
-                "collect": {"bg": "#E8F5E8", "border": "#4CAF50", "text": "#2E7D32"},
-                "tool": {"bg": "#E8F0FF", "border": "#2196F3", "text": "#1565C0"},
-                "summary": {"bg": "#FFF9E8", "border": "#FF9800", "text": "#F57C00"},
-                "decision": {"bg": "#F3E5F5", "border": "#9C27B0", "text": "#7B1FA2"},
-                "chat": {"bg": "#E3F2FD", "border": "#03A9F4", "text": "#0277BD"},
-                "unknown": {"bg": "#FFE8E8", "border": "#F44336", "text": "#C62828"},
+                "chat": {
+                    "bg": "#E0F7FA",
+                    "border": "#00ACC1",
+                    "text": "#006064",
+                },  # Teal - communication
+                "collect": {
+                    "bg": "#E8F5E8",
+                    "border": "#4CAF50",
+                    "text": "#2E7D32",
+                },  # Green - gathering
+                "tool": {
+                    "bg": "#FFF3E0",
+                    "border": "#FF9800",
+                    "text": "#E65100",
+                },  # Orange - work/action
+                "decision": {
+                    "bg": "#FFEBEE",
+                    "border": "#F44336",
+                    "text": "#C62828",
+                },  # Red - critical thinking
+                "summary": {
+                    "bg": "#F3E5F5",
+                    "border": "#9C27B0",
+                    "text": "#4A148C",
+                },  # Purple - conclusion
+                "unknown": {
+                    "bg": "#F5F5F5",
+                    "border": "#9E9E9E",
+                    "text": "#424242",
+                },  # Gray - unknown
             }
 
             def create_node_box(node, is_reconvergence=False, node_id=None):
@@ -1804,10 +1828,10 @@ class Pathways:
 
                     # Check if this is a reconvergence point
                     is_reconvergence = len(parents.get(node_id, [])) > 1
-                    
+
                     # Check if this is a final state (no outgoing connections)
                     is_final_state = len(adjacency.get(node_id, [])) == 0
-                    
+
                     # Don't apply reconvergence styling to final states
                     use_reconvergence_style = is_reconvergence and not is_final_state
 
@@ -2073,14 +2097,14 @@ class Pathways:
                     align-items: center;
                     gap: 8px;
                     padding: 8px 12px;
-                    background: #E3F2FD;
-                    color: #0277BD;
+                    background: #E0F7FA;
+                    color: #006064;
                     border-radius: 8px;
                     font-weight: 600;
-                    border: 1px solid #90caf9;
+                    border: 1px solid #00ACC1;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 ">
-                    <span style="width: 12px; height: 12px; background: #03A9F4; border-radius: 50%; flex-shrink: 0;"></span>
+                    <span style="width: 12px; height: 12px; background: #00ACC1; border-radius: 50%; flex-shrink: 0;"></span>
                     Chat
                 </div>
                 <div style="
@@ -2092,7 +2116,7 @@ class Pathways:
                     color: #2E7D32;
                     border-radius: 8px;
                     font-weight: 600;
-                    border: 1px solid #c8e6c9;
+                    border: 1px solid #4CAF50;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 ">
                     <span style="width: 12px; height: 12px; background: #4CAF50; border-radius: 50%; flex-shrink: 0;"></span>
@@ -2103,14 +2127,14 @@ class Pathways:
                     align-items: center;
                     gap: 8px;
                     padding: 8px 12px;
-                    background: #E8F0FF;
-                    color: #1565C0;
+                    background: #FFF3E0;
+                    color: #E65100;
                     border-radius: 8px;
                     font-weight: 600;
-                    border: 1px solid #bbdefb;
+                    border: 1px solid #FF9800;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 ">
-                    <span style="width: 12px; height: 12px; background: #2196F3; border-radius: 50%; flex-shrink: 0;"></span>
+                    <span style="width: 12px; height: 12px; background: #FF9800; border-radius: 50%; flex-shrink: 0;"></span>
                     Tool
                 </div>
                 <div style="
@@ -2118,14 +2142,14 @@ class Pathways:
                     align-items: center;
                     gap: 8px;
                     padding: 8px 12px;
-                    background: #F3E5F5;
-                    color: #7B1FA2;
+                    background: #FFEBEE;
+                    color: #C62828;
                     border-radius: 8px;
                     font-weight: 600;
-                    border: 1px solid #ce93d8;
+                    border: 1px solid #F44336;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 ">
-                    <span style="width: 12px; height: 12px; background: #9C27B0; border-radius: 50%; flex-shrink: 0;"></span>
+                    <span style="width: 12px; height: 12px; background: #F44336; border-radius: 50%; flex-shrink: 0;"></span>
                     Decision
                 </div>
                 <div style="
@@ -2133,14 +2157,14 @@ class Pathways:
                     align-items: center;
                     gap: 8px;
                     padding: 8px 12px;
-                    background: #FFF9E8;
-                    color: #F57C00;
+                    background: #F3E5F5;
+                    color: #4A148C;
                     border-radius: 8px;
                     font-weight: 600;
-                    border: 1px solid #ffe0b2;
+                    border: 1px solid #9C27B0;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 ">
-                    <span style="width: 12px; height: 12px; background: #FF9800; border-radius: 50%; flex-shrink: 0;"></span>
+                    <span style="width: 12px; height: 12px; background: #9C27B0; border-radius: 50%; flex-shrink: 0;"></span>
                     Summary
                 </div>
             </div>
