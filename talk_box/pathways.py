@@ -1759,8 +1759,6 @@ class Pathways:
                 is_start = node.get("is_start", False)
 
                 border_width = "3px" if is_start else "2px"
-                start_indicator = " 🚀" if is_start else ""
-                reconvergence_indicator = " ⚡" if is_reconvergence else ""
 
                 # Add a unique ID for connecting lines
                 unique_id = f"node-{node_id or 'unknown'}-{hash(node['label']) % 10000}"
@@ -1778,7 +1776,7 @@ class Pathways:
                     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
                     position: relative;
                     {"border-style: dashed; background: linear-gradient(45deg, " + color["bg"] + " 25%, transparent 25%, transparent 50%, " + color["bg"] + " 50%, " + color["bg"] + " 75%, transparent 75%, transparent); background-size: 8px 8px;" if is_reconvergence else ""}
-                ">{node["label"]}{start_indicator}{reconvergence_indicator}</div>"""
+                ">{node["label"]}</div>"""
 
             # Build the flowchart level by level with connecting lines
             result_html = ""
@@ -2039,75 +2037,6 @@ class Pathways:
                 ">{self._description}</p>
             </div>
 
-            <!-- Stats -->
-            <div style="
-                display: flex;
-                gap: 20px;
-                margin-bottom: 25px;
-                font-size: 0.9em;
-                color: #666;
-                flex-wrap: wrap;
-                justify-content: center;
-            ">
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 8px 12px;
-                    background: #f8f9fa;
-                    border-radius: 8px;
-                    border: 1px solid #e9ecef;
-                ">
-                    <strong style="color: #2c3e50;">States:</strong>
-                    <span style="
-                        background: #007bff;
-                        color: white;
-                        padding: 4px 8px;
-                        border-radius: 6px;
-                        font-weight: 600;
-                        font-size: 0.9em;
-                    ">{len(pathway_data["nodes"])}</span>
-                </div>
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 8px 12px;
-                    background: #f8f9fa;
-                    border-radius: 8px;
-                    border: 1px solid #e9ecef;
-                ">
-                    <strong style="color: #2c3e50;">Transitions:</strong>
-                    <span style="
-                        background: #28a745;
-                        color: white;
-                        padding: 4px 8px;
-                        border-radius: 6px;
-                        font-weight: 600;
-                        font-size: 0.9em;
-                    ">{len(pathway_data["edges"])}</span>
-                </div>
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 8px 12px;
-                    background: #f8f9fa;
-                    border-radius: 8px;
-                    border: 1px solid #e9ecef;
-                ">
-                    <strong style="color: #2c3e50;">Start:</strong>
-                    <span style="
-                        background: #6f42c1;
-                        color: white;
-                        padding: 4px 8px;
-                        border-radius: 6px;
-                        font-weight: 600;
-                        font-size: 0.9em;
-                    ">{pathway_data["metadata"]["start_state"].replace("_", " ").title()}</span>
-                </div>
-            </div>
-
             <!-- Tree-based Flow Visualization -->
             <div id="{diagram_id}" style="
                 background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -2117,13 +2046,6 @@ class Pathways:
                 border: 1px solid #dee2e6;
                 overflow-x: auto;
             ">
-                <div style="
-                    text-align: center;
-                    margin-bottom: 25px;
-                    color: #495057;
-                    font-weight: 600;
-                    font-size: 1.1em;
-                ">🔄 Pathway Flow</div>
                 <div class="flowchart">
                     {flowchart_structure}
                 </div>
