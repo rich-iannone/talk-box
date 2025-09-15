@@ -520,7 +520,7 @@ class Pathways:
 
         return self
 
-    def _infer_state_type(self, new_type: str) -> None:
+    def _infer_state_type(self, new_type: str, strength: str = "weak") -> None:
         """
         Infer and update state type based on method usage.
 
@@ -528,6 +528,9 @@ class Pathways:
         ----------
         new_type
             The type being inferred from method usage.
+        strength
+            How strong the inference is: "weak" (preserve chat unless strong evidence),
+            "strong" (always infer unless explicitly set).
         """
         if not self._current_state_name or self._current_state_name not in self._states:
             return
@@ -563,8 +566,20 @@ class Pathways:
             )
             return
 
-        # Update state type if it's still default "chat" or matches
-        if current_state.state_type.value in ["chat", new_type]:
+        # Conservative inference: only change from "chat" if we have strong evidence
+        # or if the current type already matches
+        should_update = False
+
+        if current_state.state_type.value == new_type:
+            # Already the suggested type
+            should_update = True
+        elif current_state.state_type.value == "chat":
+            # Change from chat based on evidence strength
+            if strength in ["strong", "moderate"]:
+                should_update = True
+            # For weak evidence, preserve chat (conversational flows are common)
+
+        if should_update:
             state_type_map = {
                 "chat": StateType.CHAT,
                 "collect": StateType.COLLECT,
@@ -655,8 +670,8 @@ class Pathways:
         print(pathway)
         ```
         """
-        # Infer state type as "collect"
-        self._infer_state_type("collect")
+        # Moderate inference: required() suggests collect but allows explicit override
+        self._infer_state_type("collect", strength="moderate")
 
         # Convert string to list if needed
         if isinstance(info_types, str):
@@ -760,6 +775,16 @@ class Pathways:
 
         if self._current_state_name in self._states:
             self._states[self._current_state_name].optional_info.extend(info_types)
+
+            # Smart inference: if state has both required and optional, it's likely collect
+            current_state = self._states[self._current_state_name]
+            required_count = len(current_state.required_info)
+            optional_count = len(current_state.optional_info)
+
+            # Strong signal: both required and optional items suggest structured collection
+            if required_count > 0 and optional_count > 0:
+                self._infer_state_type("collect", strength="strong")
+
         return self
 
     def tools(self, tool_names: Union[str, List[str]]) -> "Pathways":
@@ -851,8 +876,8 @@ class Pathways:
         print(pathway)
         ```
         """
-        # Infer state type as "tool"
-        self._infer_state_type("tool")
+        # Strong inference: tools() strongly suggests tool state
+        self._infer_state_type("tool", strength="strong")
 
         # Convert string to list if needed
         if isinstance(tool_names, str):
@@ -1126,7 +1151,8 @@ class Pathways:
         ```
         """
         # Infer state type as "decision"
-        self._infer_state_type("decision")
+        # Strong inference: branch_on() strongly suggests decision state
+        self._infer_state_type("decision", strength="strong")
 
         if self._current_state_name:
             self._transitions.append(
@@ -1230,6 +1256,26 @@ class Pathways:
             )
         return self
 
+    def _apply_final_state_inference(self):
+        """Apply automatic type inference for final states (states with no outgoing transitions)."""
+        # Find states with no outgoing transitions
+        states_with_outgoing = set()
+        for transition in self._transitions:
+            states_with_outgoing.add(transition.from_state)
+
+        final_states = []
+        for state_name in self._states:
+            if state_name not in states_with_outgoing:
+                final_states.append(state_name)
+
+        # Apply summary inference to final states
+        for state_name in final_states:
+            state = self._states[state_name]
+            # Only apply if the state is still CHAT (default) - this means no explicit type was set
+            # and no other inference has been applied yet
+            if state.state_type == StateType.CHAT:
+                state.state_type = StateType.SUMMARY
+
     def _build(self) -> Dict[str, Any]:
         """
         Internal method to build the complete pathway specification.
@@ -1242,6 +1288,9 @@ class Pathways:
         Dict[str, Any]
             Complete pathway specification ready for prompt integration
         """
+        # Apply final state inference before building
+        self._apply_final_state_inference()
+
         return {
             "title": self.title,
             "description": self._description,
@@ -1353,7 +1402,7 @@ class Pathways:
             transitions_from[from_state].append(transition)
             transitions_to[to_state].append(transition)
 
-        # Flow guidance - show states with clear branching structure
+        # Flow guidance showing states with clear branching structure
         lines.append("Flow guidance:")
 
         # Helper function to format a single state
@@ -1466,3 +1515,853 @@ class Pathways:
         )
 
         return "\n".join(lines)
+
+    def visualize(self, title: str = None, filename: str = None, auto_open: bool = True) -> str:
+        """
+        Create an HTML visualization of this pathway and save to file.
+
+        This method generates a flowchart diagram showing all states, transitions, and
+        branching logic using pure HTML/CSS. The visualization includes:
+
+        - Color-coded boxes based on state type (collect, tool, decision, summary)
+        - Clear flow arrows showing progression
+        - Reconvergence indicators for states with multiple parents
+        - Professional styling with hover effects
+
+        Parameters
+        ----------
+        title : str, optional
+            Title for the visualization page. If None, uses the pathway title.
+        filename : str, optional
+            Name for the HTML file (without extension). If None, uses "pathway_visualization".
+        auto_open : bool, default True
+            Whether to automatically open the visualization in the default browser.
+
+        Returns
+        -------
+        str
+            Path to the generated HTML file
+
+        Examples
+        --------
+        Create and display a pathway visualization:
+
+        ```python
+        import talk_box as tb
+
+        # Create a pathway
+        pathway = (
+            tb.Pathways(
+                title="Customer Support",
+                desc="Handle customer inquiries efficiently"
+            )
+            .state("intake: gather customer information")
+            .next_state("triage")
+            .state("triage: determine support type")
+            .branch_on("Technical issue", id="tech_support")
+            .branch_on("Billing question", id="billing")
+            .state("tech_support: resolve technical problems")
+            .tools(["diagnostic_tool"])
+            .next_state("completion")
+            .state("billing: handle billing inquiries")
+            .next_state("completion")
+            .state("completion: wrap up and follow up", type="summary")
+        )
+
+        # Generate and open visualization
+        pathway.visualize()  # Opens in browser automatically
+
+        # Save to specific file without opening
+        pathway.visualize(filename="my_pathway", auto_open=False)
+        ```
+        """
+        import os
+        import webbrowser
+        from pathlib import Path
+
+        if title is None:
+            title = f"Pathway Visualization: {self.title}"
+
+        if filename is None:
+            filename = "pathway_visualization"
+
+        # Create output directory
+        output_dir = Path("pathway_visualizations")
+        output_dir.mkdir(exist_ok=True)
+
+        # Generate HTML content using the same visualization as _repr_html_
+        # but wrapped in a full HTML page
+        flowchart_content = self._repr_html_()
+
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            line-height: 1.6;
+        }}
+        .container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+        }}
+        h1 {{
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }}
+        .description {{
+            text-align: center;
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 40px;
+            font-style: italic;
+        }}
+        .visualization {{
+            margin: 20px 0;
+        }}
+        .footer {{
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+            font-size: 0.9em;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{title}</h1>
+        <div class="description">{self._description}</div>
+        <div class="visualization">
+            {flowchart_content}
+        </div>
+        <div class="footer">
+            Generated by Talk Box Pathways • Flowchart Visualization
+        </div>
+    </div>
+</body>
+</html>"""
+
+        # Save to file
+        output_path = output_dir / f"{filename}.html"
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+        # Open in browser if requested
+        if auto_open:
+            webbrowser.open(f"file://{os.path.abspath(output_path)}")
+
+        return str(output_path)
+
+    def _extract_pathway_data(self):
+        """Extract pathway data for visualization (self-contained)."""
+        nodes = []
+        edges = []
+        processed_states = set()
+
+        # Get all states from the pathway
+        all_states = set(self._states.keys())
+
+        # Add states referenced in transitions
+        for transition in self._transitions:
+            all_states.add(transition.from_state)
+            all_states.add(transition.to_state)
+
+        # Create nodes
+        for state_name in all_states:
+            if state_name in processed_states:
+                continue
+
+            processed_states.add(state_name)
+
+            # Get state object if it exists
+            state_obj = self._states.get(state_name)
+
+            # Determine state type
+            state_type = "unknown"
+            if state_obj:
+                if hasattr(state_obj, "state_type"):
+                    # Convert enum to string
+                    if hasattr(state_obj.state_type, "value"):
+                        state_type = state_obj.state_type.value.lower()
+                    elif hasattr(state_obj.state_type, "name"):
+                        state_type = state_obj.state_type.name.lower()
+                    else:
+                        state_type = str(state_obj.state_type).lower()
+
+                    # Preserve state types for accurate visualization
+                    if state_type == "chat":
+                        state_type = "chat"
+                    elif state_type == "collect":
+                        state_type = "collect"
+                    elif state_type == "tool":
+                        state_type = "tool"
+                    elif state_type == "decision":
+                        state_type = "decision"
+                    elif state_type == "summary":
+                        state_type = "summary"
+                elif hasattr(state_obj, "type"):
+                    state_type = str(state_obj.type).lower()
+
+            # Detect special state characteristics
+            is_undefined = state_obj is None  # Referenced but never defined
+            is_final = False
+
+            # Check if this is a final state (no outgoing transitions)
+            outgoing_transitions = [t for t in self._transitions if t.from_state == state_name]
+            if len(outgoing_transitions) == 0 and state_name != self._start_state:
+                is_final = True
+                # Auto-infer final states as summary if not explicitly typed and not undefined
+                if not is_undefined and state_type == "unknown" and state_obj:
+                    state_type = "summary"
+
+            # Create node
+            node = {
+                "id": state_name,
+                "label": state_name.replace("_", " ").title(),
+                "state_type": state_type,
+                "is_start": state_name == self._start_state,
+                "is_final": is_final,
+                "is_undefined": is_undefined,
+            }
+
+            # Add description if available
+            if state_obj and hasattr(state_obj, "description"):
+                node["description"] = state_obj.description
+
+            nodes.append(node)
+
+        # Create edges from transitions
+        for transition in self._transitions:
+            edge = {"from": transition.from_state, "to": transition.to_state}
+
+            # Add transition label if available
+            if hasattr(transition, "condition") and transition.condition:
+                edge["label"] = str(transition.condition)
+
+            edges.append(edge)
+
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "metadata": {
+                "start_state": self._start_state,
+                "total_states": len(nodes),
+                "total_transitions": len(edges),
+            },
+        }
+
+    def _repr_html_(self) -> str:
+        """
+        Generate HTML representation for notebook display.
+
+        This method is automatically called when a Pathways object is displayed in a notebook,
+        providing an inline visualization.
+
+        Returns
+        -------
+        str
+            HTML content with embedded pathway visualization
+        """
+        import uuid
+
+        # Extract pathway data
+        pathway_data = self._extract_pathway_data()
+
+        # Create unique ID for this diagram
+        diagram_id = f"pathway-{uuid.uuid4().hex[:8]}"
+
+        # Build a visual flowchart representation instead of a strict tree
+        def build_flowchart_html(pathway_data, diagram_id):
+            """Build a flowchart-style visualization that handles reconvergence clearly."""
+            nodes = {n["id"]: n for n in pathway_data["nodes"]}
+            edges = pathway_data["edges"]
+
+            # Find start node
+            start_node_id = pathway_data["metadata"]["start_state"]
+
+            # Build adjacency lists
+            adjacency = {}  # node -> children
+            parents = {}  # node -> parents
+
+            for edge in edges:
+                # Forward edges (node -> children)
+                if edge["from"] not in adjacency:
+                    adjacency[edge["from"]] = []
+                adjacency[edge["from"]].append(edge["to"])
+
+                # Backward edges (node -> parents)
+                if edge["to"] not in parents:
+                    parents[edge["to"]] = []
+                parents[edge["to"]].append(edge["from"])
+
+            # Color scheme for different state types
+            colors = {
+                "chat": {
+                    "bg": "#E0F7FA",
+                    "border": "#00ACC1",
+                    "text": "#006064",
+                },  # Teal - communication
+                "collect": {
+                    "bg": "#E8F5E8",
+                    "border": "#4CAF50",
+                    "text": "#2E7D32",
+                },  # Green - gathering
+                "tool": {
+                    "bg": "#FFF3E0",
+                    "border": "#FF9800",
+                    "text": "#E65100",
+                },  # Orange - work/action
+                "decision": {
+                    "bg": "#FFEBEE",
+                    "border": "#F44336",
+                    "text": "#C62828",
+                },  # Red - critical thinking
+                "summary": {
+                    "bg": "#F3E5F5",
+                    "border": "#9C27B0",
+                    "text": "#4A148C",
+                },  # Purple - conclusion
+                "unknown": {
+                    "bg": "#F5F5F5",
+                    "border": "#9E9E9E",
+                    "text": "#424242",
+                },  # Gray - unknown
+            }
+
+            def create_node_box(node, is_reconvergence=False, node_id=None):
+                """Create a styled box for a pathway node."""
+                state_type = node.get("state_type", "unknown")
+                color = colors.get(state_type, colors["unknown"])
+                is_start = node.get("is_start", False)
+                is_final = node.get("is_final", False)
+                is_undefined = node.get("is_undefined", False)
+
+                # Enhanced border styling for special states
+                if is_start:
+                    border_width = "3px"
+                    border_style = "solid"
+                elif is_undefined:
+                    border_width = "3px"  # Make undefined states more prominent
+                    border_style = "dashed"  # Clear visual indicator of missing definition
+                elif is_final:
+                    border_width = "2px"
+                    border_style = "double"  # Double border for final states
+                else:
+                    border_width = "2px"
+                    border_style = "solid"
+
+                # Add a unique ID for connecting lines
+                unique_id = (
+                    f"node-{diagram_id}-{node_id or 'unknown'}-{hash(node['label']) % 10000}"
+                )
+
+                # Enhanced styling with better visual indicators
+                additional_styles = ""
+                if is_reconvergence:
+                    additional_styles += f"background: linear-gradient(45deg, {color['bg']} 25%, transparent 25%, transparent 50%, {color['bg']} 50%, {color['bg']} 75%, transparent 75%, transparent); background-size: 8px 8px;"
+
+                if is_undefined:
+                    # Make undefined states more visually distinct
+                    additional_styles += (
+                        "box-shadow: 0 0 8px rgba(255, 0, 0, 0.3), 0 2px 6px rgba(0,0,0,0.1);"
+                    )
+                elif is_final:
+                    # Subtle glow for final states
+                    additional_styles += (
+                        f"box-shadow: 0 0 6px {color['border']}30, 0 2px 6px rgba(0,0,0,0.1);"
+                    )
+
+                return f"""<div id="{unique_id}" class="pathway-node" style="
+                    background: {color["bg"]};
+                    border: {border_width} {border_style} {color["border"]};
+                    border-radius: 8px;
+                    padding: 12px 16px;
+                    margin: 8px;
+                    color: {color["text"]};
+                    font-weight: 500;
+                    text-align: center;
+                    min-width: 140px;
+                    position: relative;
+                    {additional_styles}
+                ">{node["label"]}</div>"""
+
+            # Calculate proper levels for nodes, handling reconvergence
+            def calculate_node_levels():
+                """Calculate the optimal level for each node, ensuring reconvergence points are placed correctly."""
+                node_levels = {}
+
+                def get_max_parent_level(node_id):
+                    """Get the maximum level of all parent nodes."""
+                    if node_id == start_node_id:
+                        return 0
+
+                    parent_nodes = parents.get(node_id, [])
+                    if not parent_nodes:
+                        return 0
+
+                    max_level = 0
+                    for parent_id in parent_nodes:
+                        if parent_id in node_levels:
+                            max_level = max(max_level, node_levels[parent_id] + 1)
+                        else:
+                            # Recursively calculate parent level
+                            parent_level = get_max_parent_level(parent_id)
+                            node_levels[parent_id] = parent_level
+                            max_level = max(max_level, parent_level + 1)
+
+                    return max_level
+
+                # Calculate levels for all nodes
+                for node_id in nodes:
+                    if node_id not in node_levels:
+                        node_levels[node_id] = get_max_parent_level(node_id)
+
+                return node_levels
+
+            # Get optimal levels for all nodes
+            level_nodes = calculate_node_levels()
+
+            # Group nodes by their calculated levels
+            levels_dict = {}
+            max_level = 0
+            for node_id, level in level_nodes.items():
+                if level not in levels_dict:
+                    levels_dict[level] = []
+                levels_dict[level].append(node_id)
+                max_level = max(max_level, level)
+
+            # Build the flowchart level by level with connecting lines
+            result_html = ""
+            all_connections = []  # Store connections for drawing lines
+
+            for level_counter in range(max_level + 1):
+                if level_counter not in levels_dict:
+                    continue
+
+                level_html = f'<div class="pathway-level" data-level="{level_counter}" style="display: flex; justify-content: center; align-items: center; margin: 25px 0; flex-wrap: nowrap; position: relative; min-width: max-content;">'
+
+                for node_id in levels_dict[level_counter]:
+                    if node_id not in nodes:
+                        continue
+
+                    node = nodes[node_id]
+
+                    # Check if this is a reconvergence point
+                    is_reconvergence = len(parents.get(node_id, [])) > 1
+
+                    # Check if this is a final state (no outgoing connections)
+                    is_final_state = len(adjacency.get(node_id, [])) == 0
+
+                    # Apply reconvergence styling to all reconvergence points (including final states)
+                    use_reconvergence_style = is_reconvergence
+
+                    # Add the node box with ID
+                    level_html += create_node_box(node, use_reconvergence_style, node_id)
+
+                    # Store connections to children for drawing lines later
+                    children = adjacency.get(node_id, [])
+                    for child_id in children:
+                        all_connections.append((node_id, child_id))
+
+                level_html += "</div>"
+                result_html += level_html
+
+            # Create SVG overlay for connection lines
+            svg_connections = ""
+            for parent_id, child_id in all_connections:
+                parent_node_id = (
+                    f"node-{diagram_id}-{parent_id}-{hash(nodes[parent_id]['label']) % 10000}"
+                )
+                child_node_id = (
+                    f"node-{diagram_id}-{child_id}-{hash(nodes[child_id]['label']) % 10000}"
+                )
+
+                svg_connections += f"""
+                    <path class="connection-line"
+                          data-from="{parent_node_id}"
+                          data-to="{child_node_id}"
+                          stroke="#667eea"
+                          stroke-width="2"
+                          fill="none"
+                          marker-end="url(#{diagram_id}-arrowhead)"
+                          style="opacity: 0.7;">
+                    </path>"""
+
+            # Add connection lines with SVG
+            connections_svg = f"""
+            <svg class="pathway-connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+                <defs>
+                    <marker id="{diagram_id}-arrowhead" markerWidth="10" markerHeight="7"
+                            refX="0" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#667eea" />
+                    </marker>
+                </defs>
+                {svg_connections}
+            </svg>
+
+            <script>
+                // Initialize pathway diagram manager if not already exists
+                if (!window.pathwayDiagramManager) {{
+                    window.pathwayDiagramManager = {{
+                        diagrams: new Map(),
+                        initialized: false,
+
+                        // Register a diagram with its update function
+                        register: function(diagramId, updateFunction) {{
+                            this.diagrams.set(diagramId, updateFunction);
+                            // If the manager is already initialized, immediately update this diagram
+                            if (this.initialized) {{
+                                setTimeout(updateFunction, 10);
+                            }}
+                        }},
+
+                        // Initialize all diagrams
+                        init: function() {{
+                            if (this.initialized) return;
+                            this.initialized = true;
+
+                            // Update all registered diagrams
+                            this.updateAll();
+
+                            // Set up single global event listeners
+                            window.addEventListener('resize', () => this.updateAll());
+                        }},
+
+                        // Update all registered diagrams
+                        updateAll: function() {{
+                            this.diagrams.forEach((updateFunction, diagramId) => {{
+                                try {{
+                                    updateFunction();
+                                }} catch (error) {{
+                                    console.warn(`Failed to update diagram ${{diagramId}}:`, error);
+                                }}
+                            }});
+                        }}
+                    }};
+
+                    // Initialize when DOM is ready
+                    if (document.readyState === 'loading') {{
+                        document.addEventListener('DOMContentLoaded', () => {{
+                            window.pathwayDiagramManager.init();
+                        }});
+                    }} else {{
+                        // DOM already loaded
+                        window.pathwayDiagramManager.init();
+                    }}
+                }}
+
+                // Function to update connection lines for this specific diagram
+                function updateConnections_{diagram_id.replace("-", "_")}() {{
+                    const diagram = document.getElementById('{diagram_id}');
+                    if (!diagram) return;
+
+                    const connections = diagram.querySelectorAll('.connection-line');
+                    connections.forEach(line => {{
+                        const fromId = line.getAttribute('data-from');
+                        const toId = line.getAttribute('data-to');
+
+                        // Use scoped selection to ensure we get elements from the right diagram
+                        const fromElement = diagram.querySelector(`#${{fromId}}`);
+                        const toElement = diagram.querySelector(`#${{toId}}`);
+
+                        if (fromElement && toElement) {{
+                            const diagramRect = diagram.getBoundingClientRect();
+                            const fromRect = fromElement.getBoundingClientRect();
+                            const toRect = toElement.getBoundingClientRect();
+                            const svgRect = line.closest('svg').getBoundingClientRect();
+
+                            const fromX = fromRect.left + fromRect.width / 2 - svgRect.left;
+                            const fromY = fromRect.bottom - svgRect.top;
+                            const toX = toRect.left + toRect.width / 2 - svgRect.left;
+                            // Stop the line 10 pixels before the box to leave space for the arrowhead
+                            const toY = toRect.top - svgRect.top - 10;
+
+                            // Create smooth curved connection
+                            const midY = fromY + (toY - fromY) / 2;
+                            const controlOffset = Math.abs(toY - fromY) * 0.3;
+
+                            const path = `M${{fromX}},${{fromY}} C${{fromX}},${{fromY + controlOffset}} ${{toX}},${{toY - controlOffset}} ${{toX}},${{toY}}`;
+                            line.setAttribute('d', path);
+                        }}
+                    }});
+                }}
+
+                // Register this diagram with the manager
+                window.pathwayDiagramManager.register('{diagram_id}', updateConnections_{diagram_id.replace("-", "_")});
+            </script>"""
+
+            # Wrap result in a positioned container with unique ID
+            result_html = f"""
+            <div id="{diagram_id}" style="position: relative; margin: 20px 0;">
+                {result_html}
+                {connections_svg}
+            </div>"""
+
+            return (
+                result_html if result_html else "<p>No pathway structure found</p>"
+            )  # Create the flowchart HTML
+
+        flowchart_structure = build_flowchart_html(pathway_data, diagram_id)
+
+        # Create inline HTML with tree-based visualization
+        html_content = f"""
+        <div style="
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            border: 1px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 15px 0;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 100%;
+        ">
+            <!-- Embedded CSS for tree visualization -->
+            <style>
+                #{diagram_id} .tree ul {{
+                    position: relative;
+                    padding: 1em 0;
+                    white-space: nowrap;
+                    margin: 0 auto;
+                    text-align: center;
+                }}
+
+                #{diagram_id} .tree ul::after {{
+                    content: '';
+                    display: table;
+                    clear: both;
+                }}
+
+                #{diagram_id} .tree li {{
+                    display: inline-block;
+                    vertical-align: top;
+                    text-align: center;
+                    list-style-type: none;
+                    position: relative;
+                    padding: 1em .5em 0 .5em;
+                }}
+
+                #{diagram_id} .tree li::before,
+                #{diagram_id} .tree li::after {{
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    right: 50%;
+                    border-top: 2px solid #667eea;
+                    width: 50%;
+                    height: 1em;
+                }}
+
+                #{diagram_id} .tree li::after {{
+                    right: auto;
+                    left: 50%;
+                    border-left: 2px solid #667eea;
+                }}
+
+                #{diagram_id} .tree li:only-child::after,
+                #{diagram_id} .tree li:only-child::before {{
+                    display: none;
+                }}
+
+                #{diagram_id} .tree li:only-child {{
+                    padding-top: 0;
+                }}
+
+                #{diagram_id} .tree li:first-child::before,
+                #{diagram_id} .tree li:last-child::after {{
+                    border: 0 none;
+                }}
+
+                #{diagram_id} .tree li:last-child::before {{
+                    border-right: 2px solid #667eea;
+                    border-radius: 0 5px 0 0;
+                }}
+
+                #{diagram_id} .tree li:first-child::after {{
+                    border-radius: 5px 0 0 0;
+                }}
+
+                #{diagram_id} .tree ul ul::before {{
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 50%;
+                    border-left: 2px solid #667eea;
+                    width: 0;
+                    height: 1em;
+                }}
+
+                #{diagram_id} .tree li a:hover + ul li::after,
+                #{diagram_id} .tree li a:hover + ul li::before,
+                #{diagram_id} .tree li a:hover + ul::before,
+                #{diagram_id} .tree li a:hover + ul ul::before {{
+                    border-color: #e9453f;
+                }}
+            </style>            <!-- Header -->
+            <div style="
+                display: flex;
+                align-items: center;
+                margin-bottom: 18px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #e1e5e9;
+            ">
+                <div style="
+                    width: 12px;
+                    height: 12px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 50%;
+                    margin-right: 15px;
+                    flex-shrink: 0;
+                "></div>
+                <h3 style="
+                    margin: 0;
+                    color: #2c3e50;
+                    font-size: 1.6em;
+                    font-weight: 700;
+                    line-height: 1.2;
+                ">{self.title}</h3>
+            </div>
+
+            <!-- Description -->
+            <div style="margin-bottom: 20px;">
+                <p style="
+                    margin: 0;
+                    color: #555;
+                    font-size: 1em;
+                    line-height: 1.6;
+                    font-style: italic;
+                ">{self._description}</p>
+            </div>
+
+            <!-- Tree-based Flow Visualization -->
+            <div id="{diagram_id}" style="
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-radius: 10px;
+                padding: 30px;
+                margin: 20px 0;
+                border: 1px solid #dee2e6;
+                overflow-x: auto;
+                overflow-y: visible;
+            ">
+                <div class="flowchart" style="min-width: max-content;">
+                    {flowchart_structure}
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div style="
+                display: flex;
+                gap: 12px;
+                margin-top: 20px;
+                font-size: 0.85em;
+                flex-wrap: nowrap;
+                justify-content: center;
+                overflow-x: auto;
+            ">
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #E0F7FA;
+                    color: #006064;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #00ACC1;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #00ACC1; border-radius: 50%; flex-shrink: 0;"></span>
+                    Chat
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #E8F5E8;
+                    color: #2E7D32;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #4CAF50;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #4CAF50; border-radius: 50%; flex-shrink: 0;"></span>
+                    Collect
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #FFF3E0;
+                    color: #E65100;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #FF9800;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #FF9800; border-radius: 50%; flex-shrink: 0;"></span>
+                    Tool
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #FFEBEE;
+                    color: #C62828;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #F44336;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #F44336; border-radius: 50%; flex-shrink: 0;"></span>
+                    Decision
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #F3E5F5;
+                    color: #4A148C;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #9C27B0;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #9C27B0; border-radius: 50%; flex-shrink: 0;"></span>
+                    Summary
+                </div>
+            </div>
+
+            <!-- Footer Note -->
+            <div style="
+                text-align: center;
+                margin-top: 20px;
+                padding-top: 15px;
+                border-top: 1px solid #e9ecef;
+                color: #6c757d;
+                font-size: 0.8em;
+                font-style: italic;
+            ">
+                💡 Use <code>.visualize()</code> to save detailed pathway diagrams
+            </div>
+        </div>
+        """
+
+        return html_content
