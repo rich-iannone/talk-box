@@ -1786,7 +1786,7 @@ class Pathways:
         diagram_id = f"pathway-{uuid.uuid4().hex[:8]}"
 
         # Build a visual flowchart representation instead of a strict tree
-        def build_flowchart_html(pathway_data):
+        def build_flowchart_html(pathway_data, diagram_id):
             """Build a flowchart-style visualization that handles reconvergence clearly."""
             nodes = {n["id"]: n for n in pathway_data["nodes"]}
             edges = pathway_data["edges"]
@@ -1866,7 +1866,7 @@ class Pathways:
                     border_style = "solid"
 
                 # Add a unique ID for connecting lines
-                unique_id = f"node-{node_id or 'unknown'}-{hash(node['label']) % 10000}"
+                unique_id = f"node-{diagram_id}-{node_id or 'unknown'}-{hash(node['label']) % 10000}"
 
                 # Enhanced styling with better visual indicators
                 additional_styles = ""
@@ -1982,8 +1982,8 @@ class Pathways:
             # Create SVG overlay for connection lines
             svg_connections = ""
             for parent_id, child_id in all_connections:
-                parent_node_id = f"node-{parent_id}-{hash(nodes[parent_id]['label']) % 10000}"
-                child_node_id = f"node-{child_id}-{hash(nodes[child_id]['label']) % 10000}"
+                parent_node_id = f"node-{diagram_id}-{parent_id}-{hash(nodes[parent_id]['label']) % 10000}"
+                child_node_id = f"node-{diagram_id}-{child_id}-{hash(nodes[child_id]['label']) % 10000}"
 
                 svg_connections += f"""
                     <path class="connection-line"
@@ -1992,7 +1992,7 @@ class Pathways:
                           stroke="#667eea"
                           stroke-width="2"
                           fill="none"
-                          marker-end="url(#arrowhead)"
+                          marker-end="url(#{diagram_id}-arrowhead)"
                           style="opacity: 0.7;">
                     </path>"""
 
@@ -2000,7 +2000,7 @@ class Pathways:
             connections_svg = f"""
             <svg class="pathway-connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
                 <defs>
-                    <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                    <marker id="{diagram_id}-arrowhead" markerWidth="10" markerHeight="7"
                             refX="0" refY="3.5" orient="auto">
                         <polygon points="0 0, 10 3.5, 0 7" fill="#667eea" />
                     </marker>
@@ -2009,16 +2009,72 @@ class Pathways:
             </svg>
 
             <script>
-                // Function to update connection lines
-                function updateConnections() {{
-                    const connections = document.querySelectorAll('.connection-line');
+                // Initialize pathway diagram manager if not already exists
+                if (!window.pathwayDiagramManager) {{
+                    window.pathwayDiagramManager = {{
+                        diagrams: new Map(),
+                        initialized: false,
+                        
+                        // Register a diagram with its update function
+                        register: function(diagramId, updateFunction) {{
+                            this.diagrams.set(diagramId, updateFunction);
+                            // If the manager is already initialized, immediately update this diagram
+                            if (this.initialized) {{
+                                setTimeout(updateFunction, 10);
+                            }}
+                        }},
+                        
+                        // Initialize all diagrams
+                        init: function() {{
+                            if (this.initialized) return;
+                            this.initialized = true;
+                            
+                            // Update all registered diagrams
+                            this.updateAll();
+                            
+                            // Set up single global event listeners
+                            window.addEventListener('resize', () => this.updateAll());
+                        }},
+                        
+                        // Update all registered diagrams
+                        updateAll: function() {{
+                            this.diagrams.forEach((updateFunction, diagramId) => {{
+                                try {{
+                                    updateFunction();
+                                }} catch (error) {{
+                                    console.warn(`Failed to update diagram ${{diagramId}}:`, error);
+                                }}
+                            }});
+                        }}
+                    }};
+                    
+                    // Initialize when DOM is ready
+                    if (document.readyState === 'loading') {{
+                        document.addEventListener('DOMContentLoaded', () => {{
+                            window.pathwayDiagramManager.init();
+                        }});
+                    }} else {{
+                        // DOM already loaded
+                        window.pathwayDiagramManager.init();
+                    }}
+                }}
+
+                // Function to update connection lines for this specific diagram
+                function updateConnections_{diagram_id.replace("-", "_")}() {{
+                    const diagram = document.getElementById('{diagram_id}');
+                    if (!diagram) return;
+
+                    const connections = diagram.querySelectorAll('.connection-line');
                     connections.forEach(line => {{
                         const fromId = line.getAttribute('data-from');
                         const toId = line.getAttribute('data-to');
-                        const fromElement = document.getElementById(fromId);
-                        const toElement = document.getElementById(toId);
+                        
+                        // Use scoped selection to ensure we get elements from the right diagram
+                        const fromElement = diagram.querySelector(`#${{fromId}}`);
+                        const toElement = diagram.querySelector(`#${{toId}}`);
 
                         if (fromElement && toElement) {{
+                            const diagramRect = diagram.getBoundingClientRect();
                             const fromRect = fromElement.getBoundingClientRect();
                             const toRect = toElement.getBoundingClientRect();
                             const svgRect = line.closest('svg').getBoundingClientRect();
@@ -2039,17 +2095,13 @@ class Pathways:
                     }});
                 }}
 
-                // Update connections when page loads and resizes
-                document.addEventListener('DOMContentLoaded', updateConnections);
-                window.addEventListener('resize', updateConnections);
-
-                // Update after a short delay to ensure layout is complete
-                setTimeout(updateConnections, 100);
+                // Register this diagram with the manager
+                window.pathwayDiagramManager.register('{diagram_id}', updateConnections_{diagram_id.replace("-", "_")});
             </script>"""
 
-            # Wrap result in a positioned container
+            # Wrap result in a positioned container with unique ID
             result_html = f"""
-            <div style="position: relative; margin: 20px 0;">
+            <div id="{diagram_id}" style="position: relative; margin: 20px 0;">
                 {result_html}
                 {connections_svg}
             </div>"""
@@ -2058,7 +2110,7 @@ class Pathways:
                 result_html if result_html else "<p>No pathway structure found</p>"
             )  # Create the flowchart HTML
 
-        flowchart_structure = build_flowchart_html(pathway_data)
+        flowchart_structure = build_flowchart_html(pathway_data, diagram_id)
 
         # Create inline HTML with tree-based visualization
         html_content = f"""
