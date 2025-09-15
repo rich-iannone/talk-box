@@ -1262,13 +1262,13 @@ class Pathways:
         states_with_outgoing = set()
         for transition in self._transitions:
             states_with_outgoing.add(transition.from_state)
-        
+
         final_states = []
         for state_name in self._states:
             if state_name not in states_with_outgoing:
                 final_states.append(state_name)
-        
-        # Apply summary inference to final states 
+
+        # Apply summary inference to final states
         for state_name in final_states:
             state = self._states[state_name]
             # Only apply if the state is still CHAT (default) - this means no explicit type was set
@@ -1290,7 +1290,7 @@ class Pathways:
         """
         # Apply final state inference before building
         self._apply_final_state_inference()
-        
+
         return {
             "title": self.title,
             "description": self._description,
@@ -1717,12 +1717,26 @@ class Pathways:
                 elif hasattr(state_obj, "type"):
                     state_type = str(state_obj.type).lower()
 
+            # Detect special state characteristics
+            is_undefined = state_obj is None  # Referenced but never defined
+            is_final = False
+
+            # Check if this is a final state (no outgoing transitions)
+            outgoing_transitions = [t for t in self._transitions if t.from_state == state_name]
+            if len(outgoing_transitions) == 0 and state_name != self._start_state:
+                is_final = True
+                # Auto-infer final states as summary if not explicitly typed and not undefined
+                if not is_undefined and state_type == "unknown" and state_obj:
+                    state_type = "summary"
+
             # Create node
             node = {
                 "id": state_name,
                 "label": state_name.replace("_", " ").title(),
                 "state_type": state_type,
                 "is_start": state_name == self._start_state,
+                "is_final": is_final,
+                "is_undefined": is_undefined,
             }
 
             # Add description if available
@@ -1834,15 +1848,45 @@ class Pathways:
                 state_type = node.get("state_type", "unknown")
                 color = colors.get(state_type, colors["unknown"])
                 is_start = node.get("is_start", False)
+                is_final = node.get("is_final", False)
+                is_undefined = node.get("is_undefined", False)
 
-                border_width = "3px" if is_start else "2px"
+                # Enhanced border styling for special states
+                if is_start:
+                    border_width = "3px"
+                    border_style = "solid"
+                elif is_undefined:
+                    border_width = "3px"  # Make undefined states more prominent
+                    border_style = "dashed"  # Clear visual indicator of missing definition
+                elif is_final:
+                    border_width = "2px"
+                    border_style = "double"  # Double border for final states
+                else:
+                    border_width = "2px"
+                    border_style = "solid"
 
                 # Add a unique ID for connecting lines
                 unique_id = f"node-{node_id or 'unknown'}-{hash(node['label']) % 10000}"
 
+                # Enhanced styling with better visual indicators
+                additional_styles = ""
+                if is_reconvergence:
+                    additional_styles += f"background: linear-gradient(45deg, {color['bg']} 25%, transparent 25%, transparent 50%, {color['bg']} 50%, {color['bg']} 75%, transparent 75%, transparent); background-size: 8px 8px;"
+
+                if is_undefined:
+                    # Make undefined states more visually distinct
+                    additional_styles += (
+                        "box-shadow: 0 0 8px rgba(255, 0, 0, 0.3), 0 2px 6px rgba(0,0,0,0.1);"
+                    )
+                elif is_final:
+                    # Subtle glow for final states
+                    additional_styles += (
+                        f"box-shadow: 0 0 6px {color['border']}30, 0 2px 6px rgba(0,0,0,0.1);"
+                    )
+
                 return f"""<div id="{unique_id}" class="pathway-node" style="
                     background: {color["bg"]};
-                    border: {border_width} solid {color["border"]};
+                    border: {border_width} {border_style} {color["border"]};
                     border-radius: 8px;
                     padding: 12px 16px;
                     margin: 8px;
@@ -1850,9 +1894,8 @@ class Pathways:
                     font-weight: 500;
                     text-align: center;
                     min-width: 140px;
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
                     position: relative;
-                    {"border-style: dashed; background: linear-gradient(45deg, " + color["bg"] + " 25%, transparent 25%, transparent 50%, " + color["bg"] + " 50%, " + color["bg"] + " 75%, transparent 75%, transparent); background-size: 8px 8px;" if is_reconvergence else ""}
+                    {additional_styles}
                 ">{node["label"]}</div>"""
 
             # Build the flowchart level by level with connecting lines
