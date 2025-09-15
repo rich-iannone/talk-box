@@ -1804,9 +1804,15 @@ class Pathways:
 
                     # Check if this is a reconvergence point
                     is_reconvergence = len(parents.get(node_id, [])) > 1
+                    
+                    # Check if this is a final state (no outgoing connections)
+                    is_final_state = len(adjacency.get(node_id, [])) == 0
+                    
+                    # Don't apply reconvergence styling to final states
+                    use_reconvergence_style = is_reconvergence and not is_final_state
 
                     # Add the node box with ID
-                    level_html += create_node_box(node, is_reconvergence, node_id)
+                    level_html += create_node_box(node, use_reconvergence_style, node_id)
 
                     # Store connections to children for drawing lines later
                     children = adjacency.get(node_id, [])
@@ -2067,6 +2073,21 @@ class Pathways:
                     align-items: center;
                     gap: 8px;
                     padding: 8px 12px;
+                    background: #E3F2FD;
+                    color: #0277BD;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #90caf9;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #03A9F4; border-radius: 50%; flex-shrink: 0;"></span>
+                    Chat
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
                     background: #E8F5E8;
                     color: #2E7D32;
                     border-radius: 8px;
@@ -2075,7 +2096,7 @@ class Pathways:
                     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 ">
                     <span style="width: 12px; height: 12px; background: #4CAF50; border-radius: 50%; flex-shrink: 0;"></span>
-                    Collect States
+                    Collect
                 </div>
                 <div style="
                     display: flex;
@@ -2090,22 +2111,7 @@ class Pathways:
                     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 ">
                     <span style="width: 12px; height: 12px; background: #2196F3; border-radius: 50%; flex-shrink: 0;"></span>
-                    Tool States
-                </div>
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 8px 12px;
-                    background: #FFF9E8;
-                    color: #F57C00;
-                    border-radius: 8px;
-                    font-weight: 600;
-                    border: 1px solid #ffe0b2;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                ">
-                    <span style="width: 12px; height: 12px; background: #FF9800; border-radius: 50%; flex-shrink: 0;"></span>
-                    Summary States
+                    Tool
                 </div>
                 <div style="
                     display: flex;
@@ -2120,7 +2126,22 @@ class Pathways:
                     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 ">
                     <span style="width: 12px; height: 12px; background: #9C27B0; border-radius: 50%; flex-shrink: 0;"></span>
-                    Decision States
+                    Decision
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #FFF9E8;
+                    color: #F57C00;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #ffe0b2;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #FF9800; border-radius: 50%; flex-shrink: 0;"></span>
+                    Summary
                 </div>
             </div>
 
