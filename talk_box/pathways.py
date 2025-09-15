@@ -1752,7 +1752,7 @@ class Pathways:
                 "unknown": {"bg": "#FFE8E8", "border": "#F44336", "text": "#C62828"},
             }
 
-            def create_node_box(node, is_reconvergence=False):
+            def create_node_box(node, is_reconvergence=False, node_id=None):
                 """Create a styled box for a pathway node."""
                 state_type = node.get("state_type", "unknown")
                 color = colors.get(state_type, colors["unknown"])
@@ -1762,7 +1762,10 @@ class Pathways:
                 start_indicator = " 🚀" if is_start else ""
                 reconvergence_indicator = " ⚡" if is_reconvergence else ""
 
-                return f"""<div style="
+                # Add a unique ID for connecting lines
+                unique_id = f"node-{node_id or 'unknown'}-{hash(node['label']) % 10000}"
+
+                return f"""<div id="{unique_id}" class="pathway-node" style="
                     background: {color["bg"]};
                     border: {border_width} solid {color["border"]};
                     border-radius: 8px;
@@ -1773,16 +1776,20 @@ class Pathways:
                     text-align: center;
                     min-width: 140px;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+                    position: relative;
                     {"border-style: dashed; background: linear-gradient(45deg, " + color["bg"] + " 25%, transparent 25%, transparent 50%, " + color["bg"] + " 50%, " + color["bg"] + " 75%, transparent 75%, transparent); background-size: 8px 8px;" if is_reconvergence else ""}
                 ">{node["label"]}{start_indicator}{reconvergence_indicator}</div>"""
 
-            # Build the flowchart level by level
+            # Build the flowchart level by level with connecting lines
             result_html = ""
             visited = set()
             current_level = [start_node_id]
+            all_connections = []  # Store connections for drawing lines
+            level_nodes = {}  # Track which nodes are in which level
 
+            level_counter = 0
             while current_level:
-                level_html = '<div style="display: flex; justify-content: center; align-items: center; margin: 15px 0; flex-wrap: wrap;">'
+                level_html = f'<div class="pathway-level" data-level="{level_counter}" style="display: flex; justify-content: center; align-items: center; margin: 25px 0; flex-wrap: wrap; position: relative;">'
                 next_level = []
                 nodes_processed_this_level = 0
 
@@ -1794,16 +1801,20 @@ class Pathways:
                     node = nodes[node_id]
                     nodes_processed_this_level += 1
 
+                    # Track level for this node
+                    level_nodes[node_id] = level_counter
+
                     # Check if this is a reconvergence point
                     is_reconvergence = len(parents.get(node_id, [])) > 1
 
-                    # Add the node box
-                    level_html += create_node_box(node, is_reconvergence)
+                    # Add the node box with ID
+                    level_html += create_node_box(node, is_reconvergence, node_id)
 
-                    # Add children to next level
+                    # Store connections to children for drawing lines later
                     children = adjacency.get(node_id, [])
                     for child_id in children:
                         if child_id not in visited:
+                            all_connections.append((node_id, child_id))
                             next_level.append(child_id)
 
                 level_html += "</div>"
@@ -1812,17 +1823,85 @@ class Pathways:
                 if nodes_processed_this_level > 0:
                     result_html += level_html
 
-                    # Add arrows between levels if there's a next level
-                    remaining_nodes = [n for n in next_level if n not in visited]
-                    if remaining_nodes:
-                        result_html += """<div style="text-align: center; color: #667eea; font-size: 1.5em; margin: 5px 0;">
-                            ↓
-                        </div>"""
-
                 # Remove duplicates and prepare next level
                 current_level = list(
                     dict.fromkeys(next_level)
                 )  # Remove duplicates while preserving order
+                level_counter += 1
+
+            # Create SVG overlay for connection lines
+            svg_connections = ""
+            for parent_id, child_id in all_connections:
+                parent_node_id = f"node-{parent_id}-{hash(nodes[parent_id]['label']) % 10000}"
+                child_node_id = f"node-{child_id}-{hash(nodes[child_id]['label']) % 10000}"
+
+                svg_connections += f"""
+                    <path class="connection-line"
+                          data-from="{parent_node_id}"
+                          data-to="{child_node_id}"
+                          stroke="#667eea"
+                          stroke-width="2"
+                          fill="none"
+                          marker-end="url(#arrowhead)"
+                          style="opacity: 0.7;">
+                    </path>"""
+
+            # Add connection lines with SVG
+            connections_svg = f"""
+            <svg class="pathway-connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                            refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#667eea" />
+                    </marker>
+                </defs>
+                {svg_connections}
+            </svg>
+
+            <script>
+                // Function to update connection lines
+                function updateConnections() {{
+                    const connections = document.querySelectorAll('.connection-line');
+                    connections.forEach(line => {{
+                        const fromId = line.getAttribute('data-from');
+                        const toId = line.getAttribute('data-to');
+                        const fromElement = document.getElementById(fromId);
+                        const toElement = document.getElementById(toId);
+
+                        if (fromElement && toElement) {{
+                            const fromRect = fromElement.getBoundingClientRect();
+                            const toRect = toElement.getBoundingClientRect();
+                            const svgRect = line.closest('svg').getBoundingClientRect();
+
+                            const fromX = fromRect.left + fromRect.width / 2 - svgRect.left;
+                            const fromY = fromRect.bottom - svgRect.top;
+                            const toX = toRect.left + toRect.width / 2 - svgRect.left;
+                            const toY = toRect.top - svgRect.top;
+
+                            // Create smooth curved connection
+                            const midY = fromY + (toY - fromY) / 2;
+                            const controlOffset = Math.abs(toY - fromY) * 0.3;
+
+                            const path = `M${{fromX}},${{fromY}} C${{fromX}},${{fromY + controlOffset}} ${{toX}},${{toY - controlOffset}} ${{toX}},${{toY}}`;
+                            line.setAttribute('d', path);
+                        }}
+                    }});
+                }}
+
+                // Update connections when page loads and resizes
+                document.addEventListener('DOMContentLoaded', updateConnections);
+                window.addEventListener('resize', updateConnections);
+
+                // Update after a short delay to ensure layout is complete
+                setTimeout(updateConnections, 100);
+            </script>"""
+
+            # Wrap result in a positioned container
+            result_html = f"""
+            <div style="position: relative; margin: 20px 0;">
+                {result_html}
+                {connections_svg}
+            </div>"""
 
             return (
                 result_html if result_html else "<p>No pathway structure found</p>"
