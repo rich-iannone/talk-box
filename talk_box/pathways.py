@@ -1851,7 +1851,7 @@ class Pathways:
             <svg class="pathway-connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
                 <defs>
                     <marker id="arrowhead" markerWidth="10" markerHeight="7"
-                            refX="9" refY="3.5" orient="auto">
+                            refX="0" refY="3.5" orient="auto">
                         <polygon points="0 0, 10 3.5, 0 7" fill="#667eea" />
                     </marker>
                 </defs>
@@ -1876,7 +1876,8 @@ class Pathways:
                             const fromX = fromRect.left + fromRect.width / 2 - svgRect.left;
                             const fromY = fromRect.bottom - svgRect.top;
                             const toX = toRect.left + toRect.width / 2 - svgRect.left;
-                            const toY = toRect.top - svgRect.top;
+                            // Stop the line 10 pixels before the box to leave space for the arrowhead
+                            const toY = toRect.top - svgRect.top - 10;
 
                             // Create smooth curved connection
                             const midY = fromY + (toY - fromY) / 2;
