@@ -1353,7 +1353,7 @@ class Pathways:
             transitions_from[from_state].append(transition)
             transitions_to[to_state].append(transition)
 
-        # Flow guidance - show states with clear branching structure
+        # Flow guidance showing states with clear branching structure
         lines.append("Flow guidance:")
 
         # Helper function to format a single state
@@ -1466,3 +1466,673 @@ class Pathways:
         )
 
         return "\n".join(lines)
+
+    def visualize(self, title: str = None, filename: str = None, auto_open: bool = True) -> str:
+        """
+        Create an HTML visualization of this pathway and save to file.
+
+        This method generates a flowchart diagram showing all states, transitions, and
+        branching logic using pure HTML/CSS. The visualization includes:
+
+        - Color-coded boxes based on state type (collect, tool, decision, summary)
+        - Clear flow arrows showing progression
+        - Reconvergence indicators for states with multiple parents
+        - Professional styling with hover effects
+
+        Parameters
+        ----------
+        title : str, optional
+            Title for the visualization page. If None, uses the pathway title.
+        filename : str, optional
+            Name for the HTML file (without extension). If None, uses "pathway_visualization".
+        auto_open : bool, default True
+            Whether to automatically open the visualization in the default browser.
+
+        Returns
+        -------
+        str
+            Path to the generated HTML file
+
+        Examples
+        --------
+        Create and display a pathway visualization:
+
+        ```python
+        import talk_box as tb
+
+        # Create a pathway
+        pathway = (
+            tb.Pathways(
+                title="Customer Support",
+                desc="Handle customer inquiries efficiently"
+            )
+            .state("intake: gather customer information")
+            .next_state("triage")
+            .state("triage: determine support type")
+            .branch_on("Technical issue", id="tech_support")
+            .branch_on("Billing question", id="billing")
+            .state("tech_support: resolve technical problems")
+            .tools(["diagnostic_tool"])
+            .next_state("completion")
+            .state("billing: handle billing inquiries")
+            .next_state("completion")
+            .state("completion: wrap up and follow up", type="summary")
+        )
+
+        # Generate and open visualization
+        pathway.visualize()  # Opens in browser automatically
+
+        # Save to specific file without opening
+        pathway.visualize(filename="my_pathway", auto_open=False)
+        ```
+        """
+        import os
+        import webbrowser
+        from pathlib import Path
+
+        if title is None:
+            title = f"Pathway Visualization: {self.title}"
+
+        if filename is None:
+            filename = "pathway_visualization"
+
+        # Create output directory
+        output_dir = Path("pathway_visualizations")
+        output_dir.mkdir(exist_ok=True)
+
+        # Generate HTML content using the same visualization as _repr_html_
+        # but wrapped in a full HTML page
+        flowchart_content = self._repr_html_()
+
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            line-height: 1.6;
+        }}
+        .container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+        }}
+        h1 {{
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }}
+        .description {{
+            text-align: center;
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 40px;
+            font-style: italic;
+        }}
+        .visualization {{
+            margin: 20px 0;
+        }}
+        .footer {{
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+            font-size: 0.9em;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{title}</h1>
+        <div class="description">{self._description}</div>
+        <div class="visualization">
+            {flowchart_content}
+        </div>
+        <div class="footer">
+            Generated by Talk Box Pathways • Flowchart Visualization
+        </div>
+    </div>
+</body>
+</html>"""
+
+        # Save to file
+        output_path = output_dir / f"{filename}.html"
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+        # Open in browser if requested
+        if auto_open:
+            webbrowser.open(f"file://{os.path.abspath(output_path)}")
+
+        return str(output_path)
+
+    def _extract_pathway_data(self):
+        """Extract pathway data for visualization (self-contained)."""
+        nodes = []
+        edges = []
+        processed_states = set()
+
+        # Get all states from the pathway
+        all_states = set(self._states.keys())
+
+        # Add states referenced in transitions
+        for transition in self._transitions:
+            all_states.add(transition.from_state)
+            all_states.add(transition.to_state)
+
+        # Create nodes
+        for state_name in all_states:
+            if state_name in processed_states:
+                continue
+
+            processed_states.add(state_name)
+
+            # Get state object if it exists
+            state_obj = self._states.get(state_name)
+
+            # Determine state type
+            state_type = "unknown"
+            if state_obj:
+                if hasattr(state_obj, "state_type"):
+                    # Convert enum to string
+                    if hasattr(state_obj.state_type, "value"):
+                        state_type = state_obj.state_type.value.lower()
+                    elif hasattr(state_obj.state_type, "name"):
+                        state_type = state_obj.state_type.name.lower()
+                    else:
+                        state_type = str(state_obj.state_type).lower()
+
+                    # Map state types to our visualization categories
+                    if state_type == "chat":
+                        state_type = "collect"
+                    elif state_type == "tool":
+                        state_type = "tool"
+                    elif state_type == "summary":
+                        state_type = "summary"
+                elif hasattr(state_obj, "type"):
+                    state_type = str(state_obj.type).lower()
+
+            # Create node
+            node = {
+                "id": state_name,
+                "label": state_name.replace("_", " ").title(),
+                "state_type": state_type,
+                "is_start": state_name == self._start_state,
+            }
+
+            # Add description if available
+            if state_obj and hasattr(state_obj, "description"):
+                node["description"] = state_obj.description
+
+            nodes.append(node)
+
+        # Create edges from transitions
+        for transition in self._transitions:
+            edge = {"from": transition.from_state, "to": transition.to_state}
+
+            # Add transition label if available
+            if hasattr(transition, "condition") and transition.condition:
+                edge["label"] = str(transition.condition)
+
+            edges.append(edge)
+
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "metadata": {
+                "start_state": self._start_state,
+                "total_states": len(nodes),
+                "total_transitions": len(edges),
+            },
+        }
+
+    def _repr_html_(self) -> str:
+        """
+        Generate HTML representation for notebook display.
+
+        This method is automatically called when a Pathways object is displayed in a notebook,
+        providing an inline visualization.
+
+        Returns
+        -------
+        str
+            HTML content with embedded pathway visualization
+        """
+        import uuid
+
+        # Extract pathway data
+        pathway_data = self._extract_pathway_data()
+
+        # Create unique ID for this diagram
+        diagram_id = f"pathway-{uuid.uuid4().hex[:8]}"
+
+        # Build a visual flowchart representation instead of a strict tree
+        def build_flowchart_html(pathway_data):
+            """Build a flowchart-style visualization that handles reconvergence clearly."""
+            nodes = {n["id"]: n for n in pathway_data["nodes"]}
+            edges = pathway_data["edges"]
+
+            # Find start node
+            start_node_id = pathway_data["metadata"]["start_state"]
+
+            # Build adjacency lists
+            adjacency = {}  # node -> children
+            parents = {}  # node -> parents
+
+            for edge in edges:
+                # Forward edges (node -> children)
+                if edge["from"] not in adjacency:
+                    adjacency[edge["from"]] = []
+                adjacency[edge["from"]].append(edge["to"])
+
+                # Backward edges (node -> parents)
+                if edge["to"] not in parents:
+                    parents[edge["to"]] = []
+                parents[edge["to"]].append(edge["from"])
+
+            # Color scheme for different state types
+            colors = {
+                "collect": {"bg": "#E8F5E8", "border": "#4CAF50", "text": "#2E7D32"},
+                "tool": {"bg": "#E8F0FF", "border": "#2196F3", "text": "#1565C0"},
+                "summary": {"bg": "#FFF9E8", "border": "#FF9800", "text": "#F57C00"},
+                "decision": {"bg": "#F3E5F5", "border": "#9C27B0", "text": "#7B1FA2"},
+                "chat": {"bg": "#E3F2FD", "border": "#03A9F4", "text": "#0277BD"},
+                "unknown": {"bg": "#FFE8E8", "border": "#F44336", "text": "#C62828"},
+            }
+
+            def create_node_box(node, is_reconvergence=False):
+                """Create a styled box for a pathway node."""
+                state_type = node.get("state_type", "unknown")
+                color = colors.get(state_type, colors["unknown"])
+                is_start = node.get("is_start", False)
+
+                border_width = "3px" if is_start else "2px"
+                start_indicator = " 🚀" if is_start else ""
+                reconvergence_indicator = " ⚡" if is_reconvergence else ""
+
+                return f"""<div style="
+                    background: {color["bg"]};
+                    border: {border_width} solid {color["border"]};
+                    border-radius: 8px;
+                    padding: 12px 16px;
+                    margin: 8px;
+                    color: {color["text"]};
+                    font-weight: 500;
+                    text-align: center;
+                    min-width: 140px;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+                    {"border-style: dashed; background: linear-gradient(45deg, " + color["bg"] + " 25%, transparent 25%, transparent 50%, " + color["bg"] + " 50%, " + color["bg"] + " 75%, transparent 75%, transparent); background-size: 8px 8px;" if is_reconvergence else ""}
+                ">{node["label"]}{start_indicator}{reconvergence_indicator}</div>"""
+
+            # Build the flowchart level by level
+            result_html = ""
+            visited = set()
+            current_level = [start_node_id]
+
+            while current_level:
+                level_html = '<div style="display: flex; justify-content: center; align-items: center; margin: 15px 0; flex-wrap: wrap;">'
+                next_level = []
+                nodes_processed_this_level = 0
+
+                for node_id in current_level:
+                    if node_id in visited or node_id not in nodes:
+                        continue
+
+                    visited.add(node_id)
+                    node = nodes[node_id]
+                    nodes_processed_this_level += 1
+
+                    # Check if this is a reconvergence point
+                    is_reconvergence = len(parents.get(node_id, [])) > 1
+
+                    # Add the node box
+                    level_html += create_node_box(node, is_reconvergence)
+
+                    # Add children to next level
+                    children = adjacency.get(node_id, [])
+                    for child_id in children:
+                        if child_id not in visited:
+                            next_level.append(child_id)
+
+                level_html += "</div>"
+
+                # Add this level if we processed any nodes
+                if nodes_processed_this_level > 0:
+                    result_html += level_html
+
+                    # Add arrows between levels if there's a next level
+                    remaining_nodes = [n for n in next_level if n not in visited]
+                    if remaining_nodes:
+                        result_html += """<div style="text-align: center; color: #667eea; font-size: 1.5em; margin: 5px 0;">
+                            ↓
+                        </div>"""
+
+                # Remove duplicates and prepare next level
+                current_level = list(
+                    dict.fromkeys(next_level)
+                )  # Remove duplicates while preserving order
+
+            return (
+                result_html if result_html else "<p>No pathway structure found</p>"
+            )  # Create the flowchart HTML
+
+        flowchart_structure = build_flowchart_html(pathway_data)
+
+        # Create inline HTML with tree-based visualization
+        html_content = f"""
+        <div style="
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            border: 1px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 15px 0;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 100%;
+        ">
+            <!-- Embedded CSS for tree visualization -->
+            <style>
+                #{diagram_id} .tree ul {{
+                    position: relative;
+                    padding: 1em 0;
+                    white-space: nowrap;
+                    margin: 0 auto;
+                    text-align: center;
+                }}
+
+                #{diagram_id} .tree ul::after {{
+                    content: '';
+                    display: table;
+                    clear: both;
+                }}
+
+                #{diagram_id} .tree li {{
+                    display: inline-block;
+                    vertical-align: top;
+                    text-align: center;
+                    list-style-type: none;
+                    position: relative;
+                    padding: 1em .5em 0 .5em;
+                }}
+
+                #{diagram_id} .tree li::before,
+                #{diagram_id} .tree li::after {{
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    right: 50%;
+                    border-top: 2px solid #667eea;
+                    width: 50%;
+                    height: 1em;
+                }}
+
+                #{diagram_id} .tree li::after {{
+                    right: auto;
+                    left: 50%;
+                    border-left: 2px solid #667eea;
+                }}
+
+                #{diagram_id} .tree li:only-child::after,
+                #{diagram_id} .tree li:only-child::before {{
+                    display: none;
+                }}
+
+                #{diagram_id} .tree li:only-child {{
+                    padding-top: 0;
+                }}
+
+                #{diagram_id} .tree li:first-child::before,
+                #{diagram_id} .tree li:last-child::after {{
+                    border: 0 none;
+                }}
+
+                #{diagram_id} .tree li:last-child::before {{
+                    border-right: 2px solid #667eea;
+                    border-radius: 0 5px 0 0;
+                }}
+
+                #{diagram_id} .tree li:first-child::after {{
+                    border-radius: 5px 0 0 0;
+                }}
+
+                #{diagram_id} .tree ul ul::before {{
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 50%;
+                    border-left: 2px solid #667eea;
+                    width: 0;
+                    height: 1em;
+                }}
+
+                #{diagram_id} .tree li a:hover + ul li::after,
+                #{diagram_id} .tree li a:hover + ul li::before,
+                #{diagram_id} .tree li a:hover + ul::before,
+                #{diagram_id} .tree li a:hover + ul ul::before {{
+                    border-color: #e9453f;
+                }}
+            </style>            <!-- Header -->
+            <div style="
+                display: flex;
+                align-items: center;
+                margin-bottom: 18px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #e1e5e9;
+            ">
+                <div style="
+                    width: 12px;
+                    height: 12px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 50%;
+                    margin-right: 15px;
+                    flex-shrink: 0;
+                "></div>
+                <h3 style="
+                    margin: 0;
+                    color: #2c3e50;
+                    font-size: 1.6em;
+                    font-weight: 700;
+                    line-height: 1.2;
+                ">{self.title}</h3>
+            </div>
+
+            <!-- Description -->
+            <div style="margin-bottom: 20px;">
+                <p style="
+                    margin: 0;
+                    color: #555;
+                    font-size: 1em;
+                    line-height: 1.6;
+                    font-style: italic;
+                ">{self._description}</p>
+            </div>
+
+            <!-- Stats -->
+            <div style="
+                display: flex;
+                gap: 20px;
+                margin-bottom: 25px;
+                font-size: 0.9em;
+                color: #666;
+                flex-wrap: wrap;
+                justify-content: center;
+            ">
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    border: 1px solid #e9ecef;
+                ">
+                    <strong style="color: #2c3e50;">States:</strong>
+                    <span style="
+                        background: #007bff;
+                        color: white;
+                        padding: 4px 8px;
+                        border-radius: 6px;
+                        font-weight: 600;
+                        font-size: 0.9em;
+                    ">{len(pathway_data["nodes"])}</span>
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    border: 1px solid #e9ecef;
+                ">
+                    <strong style="color: #2c3e50;">Transitions:</strong>
+                    <span style="
+                        background: #28a745;
+                        color: white;
+                        padding: 4px 8px;
+                        border-radius: 6px;
+                        font-weight: 600;
+                        font-size: 0.9em;
+                    ">{len(pathway_data["edges"])}</span>
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    border: 1px solid #e9ecef;
+                ">
+                    <strong style="color: #2c3e50;">Start:</strong>
+                    <span style="
+                        background: #6f42c1;
+                        color: white;
+                        padding: 4px 8px;
+                        border-radius: 6px;
+                        font-weight: 600;
+                        font-size: 0.9em;
+                    ">{pathway_data["metadata"]["start_state"].replace("_", " ").title()}</span>
+                </div>
+            </div>
+
+            <!-- Tree-based Flow Visualization -->
+            <div id="{diagram_id}" style="
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-radius: 10px;
+                padding: 30px;
+                margin: 20px 0;
+                border: 1px solid #dee2e6;
+                overflow-x: auto;
+            ">
+                <div style="
+                    text-align: center;
+                    margin-bottom: 25px;
+                    color: #495057;
+                    font-weight: 600;
+                    font-size: 1.1em;
+                ">🔄 Pathway Flow</div>
+                <div class="flowchart">
+                    {flowchart_structure}
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div style="
+                display: flex;
+                gap: 12px;
+                margin-top: 20px;
+                font-size: 0.85em;
+                flex-wrap: wrap;
+                justify-content: center;
+            ">
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #E8F5E8;
+                    color: #2E7D32;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #c8e6c9;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #4CAF50; border-radius: 50%; flex-shrink: 0;"></span>
+                    Collect States
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #E8F0FF;
+                    color: #1565C0;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #bbdefb;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #2196F3; border-radius: 50%; flex-shrink: 0;"></span>
+                    Tool States
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #FFF9E8;
+                    color: #F57C00;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #ffe0b2;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #FF9800; border-radius: 50%; flex-shrink: 0;"></span>
+                    Summary States
+                </div>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #F3E5F5;
+                    color: #7B1FA2;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    border: 1px solid #ce93d8;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                ">
+                    <span style="width: 12px; height: 12px; background: #9C27B0; border-radius: 50%; flex-shrink: 0;"></span>
+                    Decision States
+                </div>
+            </div>
+
+            <!-- Footer Note -->
+            <div style="
+                text-align: center;
+                margin-top: 20px;
+                padding-top: 15px;
+                border-top: 1px solid #e9ecef;
+                color: #6c757d;
+                font-size: 0.8em;
+                font-style: italic;
+            ">
+                💡 Use <code>.visualize()</code> to save detailed pathway diagrams
+            </div>
+        </div>
+        """
+
+        return html_content
