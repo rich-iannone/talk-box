@@ -520,7 +520,7 @@ class Pathways:
 
         return self
 
-    def _infer_state_type(self, new_type: str) -> None:
+    def _infer_state_type(self, new_type: str, strength: str = "weak") -> None:
         """
         Infer and update state type based on method usage.
 
@@ -528,6 +528,9 @@ class Pathways:
         ----------
         new_type
             The type being inferred from method usage.
+        strength
+            How strong the inference is: "weak" (preserve chat unless strong evidence),
+            "strong" (always infer unless explicitly set).
         """
         if not self._current_state_name or self._current_state_name not in self._states:
             return
@@ -563,8 +566,20 @@ class Pathways:
             )
             return
 
-        # Update state type if it's still default "chat" or matches
-        if current_state.state_type.value in ["chat", new_type]:
+        # Conservative inference: only change from "chat" if we have strong evidence
+        # or if the current type already matches
+        should_update = False
+
+        if current_state.state_type.value == new_type:
+            # Already the suggested type
+            should_update = True
+        elif current_state.state_type.value == "chat":
+            # Change from chat based on evidence strength
+            if strength in ["strong", "moderate"]:
+                should_update = True
+            # For weak evidence, preserve chat (conversational flows are common)
+
+        if should_update:
             state_type_map = {
                 "chat": StateType.CHAT,
                 "collect": StateType.COLLECT,
@@ -655,8 +670,8 @@ class Pathways:
         print(pathway)
         ```
         """
-        # Infer state type as "collect"
-        self._infer_state_type("collect")
+        # Moderate inference: required() suggests collect but allows explicit override
+        self._infer_state_type("collect", strength="moderate")
 
         # Convert string to list if needed
         if isinstance(info_types, str):
@@ -760,6 +775,16 @@ class Pathways:
 
         if self._current_state_name in self._states:
             self._states[self._current_state_name].optional_info.extend(info_types)
+
+            # Smart inference: if state has both required and optional, it's likely collect
+            current_state = self._states[self._current_state_name]
+            required_count = len(current_state.required_info)
+            optional_count = len(current_state.optional_info)
+
+            # Strong signal: both required and optional items suggest structured collection
+            if required_count > 0 and optional_count > 0:
+                self._infer_state_type("collect", strength="strong")
+
         return self
 
     def tools(self, tool_names: Union[str, List[str]]) -> "Pathways":
@@ -851,8 +876,8 @@ class Pathways:
         print(pathway)
         ```
         """
-        # Infer state type as "tool"
-        self._infer_state_type("tool")
+        # Strong inference: tools() strongly suggests tool state
+        self._infer_state_type("tool", strength="strong")
 
         # Convert string to list if needed
         if isinstance(tool_names, str):
@@ -1126,7 +1151,8 @@ class Pathways:
         ```
         """
         # Infer state type as "decision"
-        self._infer_state_type("decision")
+        # Strong inference: branch_on() strongly suggests decision state
+        self._infer_state_type("decision", strength="strong")
 
         if self._current_state_name:
             self._transitions.append(
@@ -1230,6 +1256,26 @@ class Pathways:
             )
         return self
 
+    def _apply_final_state_inference(self):
+        """Apply automatic type inference for final states (states with no outgoing transitions)."""
+        # Find states with no outgoing transitions
+        states_with_outgoing = set()
+        for transition in self._transitions:
+            states_with_outgoing.add(transition.from_state)
+        
+        final_states = []
+        for state_name in self._states:
+            if state_name not in states_with_outgoing:
+                final_states.append(state_name)
+        
+        # Apply summary inference to final states 
+        for state_name in final_states:
+            state = self._states[state_name]
+            # Only apply if the state is still CHAT (default) - this means no explicit type was set
+            # and no other inference has been applied yet
+            if state.state_type == StateType.CHAT:
+                state.state_type = StateType.SUMMARY
+
     def _build(self) -> Dict[str, Any]:
         """
         Internal method to build the complete pathway specification.
@@ -1242,6 +1288,9 @@ class Pathways:
         Dict[str, Any]
             Complete pathway specification ready for prompt integration
         """
+        # Apply final state inference before building
+        self._apply_final_state_inference()
+        
         return {
             "title": self.title,
             "description": self._description,
@@ -1654,11 +1703,15 @@ class Pathways:
                     else:
                         state_type = str(state_obj.state_type).lower()
 
-                    # Map state types to our visualization categories
+                    # Preserve state types for accurate visualization
                     if state_type == "chat":
+                        state_type = "chat"
+                    elif state_type == "collect":
                         state_type = "collect"
                     elif state_type == "tool":
                         state_type = "tool"
+                    elif state_type == "decision":
+                        state_type = "decision"
                     elif state_type == "summary":
                         state_type = "summary"
                 elif hasattr(state_obj, "type"):
