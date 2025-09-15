@@ -203,6 +203,8 @@ support_pathway = (
 support_pathway
 ```
 
+Branching logic enables pathways to handle diverse user scenarios while maintaining a structured approach. By defining conditions for each branch, you can create intelligent routing that adapts conversations to specific user needs while also ensuring consistent outcomes.
+
 ## Error Handling with Fallbacks
 
 Use `.fallback()` to handle situations where normal flow doesn't work:
@@ -252,9 +254,11 @@ problem_solving_pathway = (
 problem_solving_pathway
 ```
 
+This fallback pattern is essential for creating robust pathways that gracefully handle real-world complexity. By defining clear escalation paths, you ensure that conversations never reach dead ends, maintaining user confidence even when standard approaches fail.
+
 ## Using Pathways with `ChatBot`
 
-Integrate pathways into your chatbot for structured conversations:
+Once you've designed a pathway, you'll want to integrate it with a `ChatBot` to enable structured conversations in practice. Pathways work seamlessly with the `ChatBot` class through the `PromptBuilder` system, automatically providing the AI model with clear guidance about conversation flow, state transitions, and information requirements.
 
 ```{python}
 # Create your pathway
@@ -399,11 +403,16 @@ This pattern demonstrates how different conversation branches can merge back int
 
 ### Progressive Disclosure
 
-Reveal complexity gradually:
+Progressive disclosure is a design principle that presents information and options incrementally, starting with the most essential elements and gradually revealing more advanced features as users demonstrate readiness or express specific needs. This approach prevents cognitive overload while ensuring power users can access sophisticated capabilities when required.
 
-```{python}
+In pathway design, progressive disclosure helps you create conversation flows that feel natural and approachable to beginners while providing depth for experienced users. Instead of overwhelming users with all possible options upfront, you guide them through a logical progression from basic to advanced configurations.
+
+```python
 complex_pathway = (
-    tb.Pathways(title="System Configuration", desc="...")
+    tb.Pathways(
+        title="System Configuration",
+        desc="Progressive disclosure pathway"
+    )
     .state("basic: basic setup")
     .required(["essential settings configured"])
     .next_state("intermediate")
@@ -421,11 +430,9 @@ complex_pathway = (
     .state("completion: finalize setup")
     .success_condition("System is fully configured and tested")
 )
-
-complex_pathway
 ```
 
-Progressive disclosure prevents cognitive overload by introducing complexity incrementally as users demonstrate readiness or express specific needs. The pathway starts with essential configuration that every user requires, then presents intermediate options that some users might want to customize. Only when users explicitly indicate they need advanced features does the pathway branch into expert-level configuration. This approach respects different user sophistication levels and prevents beginners from being overwhelmed by options they don't understand or need, while still providing power users with the advanced capabilities they seek.
+This example demonstrates the progressive disclosure pattern in action: starting with basic setup that everyone needs, moving to intermediate configuration with optional customizations, and only branching to advanced features when users explicitly request them.
 
 ## Pathway Visualization
 
