@@ -1787,7 +1787,7 @@ class Pathways:
 
             level_counter = 0
             while current_level:
-                level_html = f'<div class="pathway-level" data-level="{level_counter}" style="display: flex; justify-content: center; align-items: center; margin: 25px 0; flex-wrap: wrap; position: relative;">'
+                level_html = f'<div class="pathway-level" data-level="{level_counter}" style="display: flex; justify-content: center; align-items: center; margin: 25px 0; flex-wrap: nowrap; position: relative; min-width: max-content;">'
                 next_level = []
                 nodes_processed_this_level = 0
 
@@ -2045,8 +2045,9 @@ class Pathways:
                 margin: 20px 0;
                 border: 1px solid #dee2e6;
                 overflow-x: auto;
+                overflow-y: visible;
             ">
-                <div class="flowchart">
+                <div class="flowchart" style="min-width: max-content;">
                     {flowchart_structure}
                 </div>
             </div>
@@ -2057,8 +2058,9 @@ class Pathways:
                 gap: 12px;
                 margin-top: 20px;
                 font-size: 0.85em;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
                 justify-content: center;
+                overflow-x: auto;
             ">
                 <div style="
                     display: flex;
