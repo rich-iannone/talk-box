@@ -1,14 +1,5 @@
 ---
 title: "React Chat Interface"
-subtitle: "Modern web-based chat with Talk Box"
-format:
-  html:
-    code-fold: false
-    code-tools: true
-    toc: true
-    toc-depth: 3
-execute:
-  eval: false
 ---
 
 # React Chat Interface
