@@ -179,13 +179,14 @@ Get Talk Box installed and understand the fundamentals before diving into advanc
 
 - [Installation](installation.qmd): set up Talk Box and dependencies
 
-### Building with PromptBuilder
+### Prompt Engineering
 
-Master the research-backed prompt engineering system that makes Talk Box special. This is where you'll see the biggest improvement in your AI responses, from basic prompts to advanced features like domain vocabulary and conversation pathways.
+Master the research-backed prompt engineering system that makes Talk Box great. This is where you'll see the biggest improvement in your AI responses, from basic prompts to advanced features like domain vocabulary, conversational pathways, and tool use.
 
-- [PromptBuilder](prompt-builder.qmd): **Start here!** Learn the research-backed prompt engineering that makes Talk Box special
+- [PromptBuilder](prompt-builder.qmd): start here and learn the research-backed prompt engineering that makes Talk Box so very special
 - [Domain Vocabulary](vocabulary.qmd): professional terminology management with multilingual support
-- [Building Conversation Pathways](pathways.qmd): intelligent conversation flow guidance
+- [Conversational Pathways](pathways.qmd): intelligent conversation flow guidance
+- [Tool System](tools.qmd): comprehensive guide to creating and using tools
 
 ### Core Concepts
 
@@ -193,19 +194,13 @@ Understand the fundamental building blocks of Talk Box chatbots and how to confi
 
 - [ChatBot Basics](chatbot-basics.qmd): core concepts and basic configuration
 - [Model Selection](model-selection.qmd): choosing the right AI model
-- [React Chat Integration](react-chat.qmd): building chat interfaces
-
-### Advanced Features
-
-Extend your chatbots with file handling capabilities and custom tools for specialized workflows.
-
 - [File Attachments](file-attachments.qmd): working with documents and files
-- [Tool System Guide](tools.qmd): comprehensive guide to creating and using tools
+- [React Chat Interface](react-chat.qmd): building chat interfaces
 
 ### Testing & Validation
 
 Ensure your chatbots behave appropriately and meet your quality standards with built-in testing tools.
 
-- [Testing Topic Avoidance](testing-avoid-topics.qmd): ensuring your chatbots behave appropriately
+- [Compliance for Avoiding Topics](testing-avoid-topics.qmd): ensuring your chatbots behave appropriately
 
 Each section builds on the previous ones, so you'll develop a comprehensive understanding of how to create production-ready conversational AI systems with Talk Box.

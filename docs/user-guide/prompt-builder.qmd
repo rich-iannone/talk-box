@@ -76,21 +76,25 @@ These methods ensure the AI maintains focus on what matters most and organizes i
 For more sophisticated prompt engineering, these methods provide fine-grained control over AI attention and behavior.
 
 **`focus_on(specific_aspects)`** directs attention to particular areas:
+
 ```python
 .focus_on("Identifying single points of failure and performance bottlenecks")
 ```
 
 **`constraint(requirement, priority)`** adds constraints with priority levels:
+
 ```python
 .constraint("Prefer open-source solutions when possible", priority="medium")
 ```
 
 **`avoid_topics(topics)`** explicitly excludes certain topics or approaches:
+
 ```python
 .avoid_topics(["Deprecated frameworks", "Vendor lock-in solutions"])
 ```
 
 **`example(sample_output)`** shows the AI exactly what kind of output you want:
+
 ```python
 .example("""
 ## Service: User Authentication
@@ -102,95 +106,125 @@ For more sophisticated prompt engineering, these methods provide fine-grained co
 
 These advanced methods help you create highly specialized prompts for complex professional scenarios.
 
-## Best Practices for Effective Prompts
+## Complete Example: Building a Professional Prompt
 
-Following proven patterns helps you create consistently effective prompts that produce high-quality AI responses.
+Here's a comprehensive example that demonstrates all the PromptBuilder methods working together to create a sophisticated AI assistant:
 
-### Create Specific Personas
+```{python}
+import talk_box as tb
 
-Vague personas produce generic responses, while specific personas with clear expertise produce focused, expert-level analysis:
+# Build a comprehensive security architecture consultant
+security_architect = (
+    tb.PromptBuilder()
 
-```python
-# Generic persona - produces generic advice
-.persona("developer", "coding")
+    # Foundation methods -----
+    .persona(
+        "senior security architect",
+        "enterprise security design and threat modeling"
+    )
+    .task_context("design secure architecture for financial services application")
+    .core_analysis([
+        "threat modeling and attack surface analysis",
+        "security controls and defense in depth",
+        "compliance requirements (PCI DSS, SOX, GDPR)",
+        "performance impact of security measures",
+    ])
 
-# Specific persona - produces expert analysis
-.persona("senior Python developer", "API design and database optimization")
+    # Structure and control methods -----
+    .critical_constraint("must achieve PCI DSS Level 1 compliance")
+    .output_format([
+        "**THREAT ANALYSIS**: attack vectors and risk assessment",
+        "**SECURITY ARCHITECTURE**: controls and implementation strategy",
+        "**COMPLIANCE MAPPING**: requirements and evidence documentation",
+        "**PERFORMANCE IMPACT**: security overhead and optimization",
+    ])
+    .final_emphasis(
+        "security decisions must be justified with threat models and business risk"
+    )
+
+    # Advanced methods -----
+    .focus_on("zero-trust architecture principles and data protection")
+    .constraint("prefer industry-standard solutions over custom implementations")
+    .avoid_topics([
+        "deprecated cryptographic standards",
+        "unsupported legacy protocols"
+    ])
+    .example(
+        input_example="review the authentication system for our payment processing API",
+        output_example="""
+**THREAT ANALYSIS**: Session hijacking via weak JWT implementation
+**SECURITY ARCHITECTURE**: Implement JWT with short expiry + refresh tokens
+**COMPLIANCE MAPPING**: Satisfies PCI DSS 8.2 (multi-factor authentication)
+**PERFORMANCE IMPACT**: 5ms token validation overhead, minimal impact
+""",
+    )
+)
 ```
 
-### Use Clear Task Context
+We can preview the generated prompt by using `print()`:
 
-Task context should be specific enough to guide the AI toward the right type of analysis:
-
-```python
-# Too generic - unclear what help is needed
-.task_context("Help with code")
-
-# Specific and actionable - clear scope and objective
-.task_context("Optimize Django API endpoints for 10x traffic increase")
+```{python}
+print(security_architect)
 ```
 
-### Structure Output Effectively
+Now let's create the chatbot with `ChatBot`, supplying it with our structured prompt.
 
-Well-structured output formats help the AI organize its analysis and make responses more actionable:
-
-```python
-# Minimal structure - may produce scattered analysis
-.output_format(["Analysis", "Recommendations"])
-
-# Clear structure with specific expectations
-.output_format([
-    "**CURRENT STATE ANALYSIS**: What's working and what isn't",
-    "**OPTIMIZATION OPPORTUNITIES**: Ranked by impact vs effort",
-    "**IMPLEMENTATION PLAN**: Step-by-step with timelines"
-])
+```{python}
+bot = (
+    tb.ChatBot()
+    .model("gpt-4-turbo")
+    .temperature(0.3)
+    .system_prompt(security_architect)
+)
 ```
 
-### Make Final Emphasis Count
-
-Final emphasis should provide specific, actionable guidance rather than generic encouragement:
+Finally, we can use the fully-configured chatbot.
 
 ```python
-# Weak - doesn't provide useful guidance
-.final_emphasis("Do a good job")
+# Use the expert assistant
+response = bot.chat("Design the authentication architecture for our payment processing system")
 
-# Specific - provides concrete direction
-.final_emphasis("Focus on solutions that can be implemented this sprint")
+# Print out the content of the last conversation message
+print(response.get_last_message().content)
 ```
 
-These patterns help you create prompts that consistently produce professional-quality analysis and recommendations.
+This example shows how all the `PromptBuilder` methods work together to create a sophisticated AI assistant that provides expert-level analysis with consistent structure and quality.
 
 ## Testing and Debugging Prompts
 
-Effective prompt engineering requires testing and iteration. PromptBuilder provides tools to help you understand and improve your prompts.
+Effective prompt engineering requires testing and iteration. `PromptBuilder` provides tools to help you understand and improve your prompts.
 
-### Preview Prompt Structure
+### Preview Your Prompt
 
-Use `preview_structure()` to understand how your prompt will be organized before building it:
+The easiest way to see what your `PromptBuilder` creates is to print it directly:
 
-```python
+```{python}
 builder = (
     tb.PromptBuilder()
     .persona("data scientist", "machine learning and statistics")
-    .core_analysis(["Data quality", "Model performance", "Business impact"])
+    .core_analysis(["data quality", "model performance", "business impact"])
 )
 
-# Preview the structure before building
+# Preview the generated prompt
+print(builder)
+```
 
-## Why PromptBuilder Works Better
+This shows you the complete structured prompt that will be sent to the AI model. You can then use the `builder` object directly as a system prompt since `PromptBuilder` objects can be passed directly to `ChatBot`.
+
+## Why `PromptBuilder` Works Better
 
 Traditional prompting often fails because it ignores how AI models process information. AI models use attention mechanisms that have distinct patterns: they front-load importance, cluster related concepts, lose focus when information is scattered, and pay special attention to the end of prompts.
 
-PromptBuilder automatically structures your prompts to leverage these patterns, resulting in consistently better responses.
+`PromptBuilder` automatically structures your prompts to leverage these patterns, resulting in consistently better responses.
 
-### Traditional vs PromptBuilder Comparison
+### Traditional vs `PromptBuilder` Comparison
 
 Here's a real example showing the difference:
 
 ```python
 import talk_box as tb
 
-# Traditional approach - often produces generic feedback
+# Traditional approach: often produces generic feedback
 bot = tb.ChatBot().model("gpt-4-turbo")
 response = bot.chat("""
 Review this Python code for security issues, performance problems,
@@ -198,7 +232,7 @@ and code quality. Make sure to check for SQL injection, memory leaks,
 and other issues. Also suggest improvements.
 """)
 
-# PromptBuilder approach - expert-level analysis
+# PromptBuilder approach: expert-level analysis
 security_expert = (
     tb.PromptBuilder()
     .persona("senior security engineer", "application security and code review")
@@ -223,162 +257,17 @@ bot = tb.ChatBot().model("gpt-4-turbo").system_prompt(security_expert)
 response = bot.chat("Review this authentication middleware...")
 ```
 
-The PromptBuilder version produces thorough, well-organized analysis that catches subtle issues and provides actionable recommendations because it works with the AI model's attention patterns rather than against them.
-
-## How AI Attention Mechanisms Work
-
-Understanding the science behind PromptBuilder helps you create even better prompts. AI models process text through attention mechanisms that have predictable patterns, not unlike human cognitive patterns.
-
-### Front-Loading Critical Information
-
-AI models allocate maximum attention to the beginning of prompts. This primacy bias means that critical context should come first, not buried in the middle or end of instructions.
-
-```python
-# Poor: Critical context buried
-prompt = """
-Please analyze this code and look at various aspects like performance,
-security, maintainability, and other factors. By the way, this is for
-a financial application handling sensitive customer data, so security
-is really critical and you should focus on that first.
-"""
-
-# Better: Critical context front-loaded
-financial_reviewer = (
-    tb.PromptBuilder()
-    .task_context("CRITICAL: Financial application handling sensitive customer data")
-    .critical_constraint("Security vulnerabilities are the highest priority concern")
-    .core_analysis([
-        "Security vulnerabilities (customer data at risk)",
-        "Performance issues",
-        "Maintainability concerns"
-    ])
-)
-```
-
-When you front-load critical information, the AI maintains focus on what matters most throughout its analysis.
-
-### Clustering Related Concepts
-
-AI attention works best when related instructions are grouped together. Scattered instructions force the model to constantly refocus, leading to inconsistent analysis.
-
-```python
-# Poor: Scattered instructions
-prompt = """
-Check for SQL injection. Also look at variable names and see if they're clear.
-Performance might be an issue too. Make sure error handling is good. Are there
-any security issues with authentication? Use clear headings in your response.
-"""
-
-# Better: Clustered by domain
-security_expert = (
-    tb.PromptBuilder()
-    .structured_section("Security Analysis", [
-        "SQL injection vulnerabilities",
-        "Authentication security flaws",
-        "Data exposure risks"
-    ])
-    .structured_section("Code Quality Analysis", [
-        "Variable naming clarity",
-        "Error handling robustness",
-        "Performance optimization opportunities"
-    ])
-    .structured_section("Output Requirements", [
-        "Use clear section headings",
-        "Prioritize security issues first"
-    ])
-)
-```
-
-Clustering allows the AI to maintain focused attention on each domain, resulting in more comprehensive analysis.
-
-### Using Recency Bias Effectively
-
-AI models pay special attention to the end of prompts. This recency bias makes final emphasis particularly powerful for ensuring your most important guidance influences the analysis.
-
-```python
-# Without final emphasis - can trail off
-basic_reviewer = (
-    tb.PromptBuilder()
-    .persona("security engineer", "application security review")
-    .core_analysis(["security vulnerabilities", "code quality"])
-)
-
-# With final emphasis - maintains focus
-focused_reviewer = (
-    tb.PromptBuilder()
-    .persona("security engineer", "application security review")
-    .core_analysis(["security vulnerabilities", "code quality"])
-    .final_emphasis("This handles customer financial data. Err on the side of extreme caution for any security concerns.")
-)
-```
-
-The final emphasis ensures your most important guidance influences the AI's conclusions and recommendations.
-
-## Three Ways to Use PromptBuilder
-
-PromptBuilder offers flexibility in how you integrate it into your applications. Choose the approach that best fits your use case.
-
-### Direct PromptBuilder Class
-
-Best for reusable templates and when you want full control over prompt construction:
-
-```python
-import talk_box as tb
-
-# Create a reusable template
-data_analyst = (
-    tb.PromptBuilder()
-    .persona("senior data analyst", "business intelligence and statistical analysis")
-    .task_context("Analysis of quarterly business data with actionable insights")
-    .core_analysis([
-        "Sales trends and seasonal patterns",
-        "Customer segment performance",
-        "Revenue growth opportunities",
-        "Market share analysis"
-    ])
-    .critical_constraint("All insights must be backed by statistical evidence")
-    .output_format([
-        "**EXECUTIVE SUMMARY**: Top 3 insights in 2 sentences each",
-        "**KEY TRENDS**: Statistical analysis with confidence levels",
-        "**REVENUE OPPORTUNITIES**: Ranked by potential impact",
-        "**RECOMMENDATIONS**: Specific, actionable next steps"
-    ])
-    .final_emphasis("Focus on insights that drive immediate business decisions")
-)
-
-# Use the template across multiple bots
-primary_analyst = tb.ChatBot().model("gpt-4-turbo").system_prompt(data_analyst)
-backup_analyst = tb.ChatBot().model("claude-3-opus").system_prompt(data_analyst)
-```
-
-This approach gives you maximum flexibility and reusability across different chatbot instances.
-
-### Pre-configured Templates
-
-For common scenarios, PromptBuilder includes specialized templates that you can use directly:
-
-```python
-import talk_box as tb
-
-# Use built-in expert templates
-architectural_expert = tb.PromptBuilder(tb.BuilderTypes.ARCHITECTURAL)
-security_expert = tb.PromptBuilder(tb.BuilderTypes.CODE_REVIEW)
-debugging_expert = tb.PromptBuilder(tb.BuilderTypes.DEBUGGING)
-
-bot = tb.ChatBot().model("gpt-4-turbo").system_prompt(security_expert)
-```
-
-These templates provide professionally crafted prompts for common use cases while still allowing customization.
+The `PromptBuilder` version produces thorough, well-organized analysis that catches subtle issues and provides actionable recommendations because it works with the AI model's attention patterns rather than against them.
 
 ## Real-World Professional Examples
 
-Professional applications of PromptBuilder demonstrate how structured prompts consistently outperform traditional approaches across different domains.
+Here are some professional applications of `PromptBuilder`, demonstrating how structured prompts consistently outperform traditional approaches across different domains.
 
 ### Technical Documentation Specialist
 
-Creating developer documentation requires balancing completeness with usability. This PromptBuilder configuration focuses the AI on practical, actionable documentation:
+Creating developer documentation requires balancing completeness with usability. This `PromptBuilder` configuration focuses the AI on practical, actionable documentation:
 
-```python
+```{python}
 docs_expert = (
     tb.PromptBuilder()
     .persona("technical writing specialist", "developer documentation and API guides")
@@ -396,24 +285,10 @@ docs_expert = (
         "**TROUBLESHOOTING**: Common issues and solutions",
         "**BEST PRACTICES**: Performance and security recommendations"
     ])
-    .example("""
-## Quick Start
-```python
-# Install the package
-pip install example-api
-
-# Basic usage - this example works immediately
-from example_api import Client
-client = Client(api_key="your-key")
-result = client.get_data({"query": "test"})
-print(result.json())
-```
-""")
     .final_emphasis("Documentation quality is measured by developer success, not completeness")
 )
 
-bot = tb.ChatBot().model("gpt-4-turbo").system_prompt(docs_expert)
-response = bot.chat("Document the user authentication API endpoints")
+print(docs_expert)
 ```
 
 This configuration produces documentation that developers actually use because it prioritizes practical examples and common use cases over exhaustive technical details.
@@ -422,39 +297,28 @@ This configuration produces documentation that developers actually use because i
 
 Product managers need to transform user requests into clear development specifications. This PromptBuilder helps bridge the gap between user needs and technical implementation:
 
-```python
+```{python}
 product_expert = (
     tb.PromptBuilder()
     .persona("senior product manager", "requirements analysis and user experience design")
-    .task_context("Transform user requests into clear, actionable development requirements")
+    .task_context("transform user requests into clear, actionable development requirements")
     .core_analysis([
-        "User needs and pain points behind the request",
-        "Technical feasibility and implementation complexity",
-        "Business impact and success metrics",
-        "Dependencies and integration requirements"
+        "user needs and pain points behind the request",
+        "technical feasibility and implementation complexity",
+        "business impact and success metrics",
+        "dependencies and integration requirements"
     ])
-    .critical_constraint("All requirements must be testable and measurable")
+    .critical_constraint("all requirements must be testable and measurable")
     .output_format([
-        "**USER STORIES**: Clear acceptance criteria with examples",
-        "**TECHNICAL REQUIREMENTS**: Architecture and implementation notes",
-        "**SUCCESS METRICS**: How to measure if this solves the problem",
-        "**RISKS AND DEPENDENCIES**: Potential blockers and mitigation plans"
+        "**USER STORIES**: clear acceptance criteria with examples",
+        "**TECHNICAL REQUIREMENTS**: architecture and implementation notes",
+        "**SUCCESS METRICS**: how to measure if this solves the problem",
+        "**RISKS AND DEPENDENCIES**: potential blockers and mitigation plans"
     ])
-    .example("""
-**User Story**: As a customer, I want to save items to a wishlist so I can purchase them later
-
-**Acceptance Criteria**:
-Users can add/remove items with one click
-Wishlist persists across devices and sessions
-Users can share wishlist links with others
-Items show current price and availability
-
-**Success Metrics**:
-25% increase in return user conversion
-15% increase in average order value
-""")
-    .final_emphasis("Focus on solving real user problems, not just implementing features")
+    .final_emphasis("focus on solving real user problems, not just implementing features")
 )
+
+print(product_expert)
 ```
 
 The structured analysis ensures that both user needs and technical constraints are properly considered in the requirements.
@@ -463,131 +327,96 @@ The structured analysis ensures that both user needs and technical constraints a
 
 Strategic analysis requires balancing multiple complex factors while maintaining focus on actionable outcomes. This configuration guides the AI through comprehensive business analysis:
 
-```python
+```{python}
 strategy_expert = (
     tb.PromptBuilder()
     .persona("senior business strategy consultant", "market analysis and strategic planning")
-    .task_context("Strategic analysis and recommendations for business growth")
+    .task_context("strategic analysis and recommendations for business growth")
     .core_analysis([
-        "Market opportunities and competitive landscape",
-        "Revenue model optimization and scalability",
-        "Operational efficiency and cost structure",
-        "Risk assessment and mitigation strategies"
+        "market opportunities and competitive landscape",
+        "revenue model optimization and scalability",
+        "operational efficiency and cost structure",
+        "risk assessment and mitigation strategies"
     ])
-    .critical_constraint("All recommendations must include financial impact projections")
+    .critical_constraint("all recommendations must include financial impact projections")
     .output_format([
-        "**STRATEGIC OPPORTUNITIES**: Market gaps and growth potential",
-        "**FINANCIAL IMPACT**: Revenue projections and cost analysis",
-        "**IMPLEMENTATION ROADMAP**: Phased approach with milestones",
-        "**RISK MITIGATION**: Potential challenges and contingency plans"
+        "**STRATEGIC OPPORTUNITIES**: market gaps and growth potential",
+        "**FINANCIAL IMPACT**: revenue projections and cost analysis",
+        "**IMPLEMENTATION ROADMAP**: phased approach with milestones",
+        "**RISK MITIGATION**: potential challenges and contingency plans"
     ])
     .constraint("prefer data-driven insights over opinions")
     .final_emphasis("focus on actionable strategies that can be implemented within 90 days")
 )
+
+print(strategy_expert)
 ```
 
-## Essential PromptBuilder Methods
+## Best Practices for Effective Prompts
 
-### Foundation Methods (Start Here)
+Following proven patterns helps you create consistently effective prompts that produce high-quality AI responses.
 
-**`persona(role, expertise)`** - Define the AI's identity and expertise
-```python
-.persona("senior DevOps engineer", "cloud infrastructure and automation")
-```
+### Create Specific Personas
 
-**`task_context(description)`** - Clearly state the task objective
-```python
-.task_context("design a scalable microservices architecture for high-traffic e-commerce")
-```
-
-**`core_analysis(focus_areas)`** - Key areas for the AI to analyze
-```python
-.core_analysis([
-    "scalability and performance under load",
-    "security and data protection",
-    "cost optimization and resource efficiency",
-    "monitoring and observability"
-])
-```
-
-### Structure & Control Methods
-
-**`critical_constraint(requirement)`** - Non-negotiable requirements
-```python
-.critical_constraint("must comply with PCI DSS standards for payment processing")
-```
-
-**`output_format(structure)`** - Organize the response format
-```python
-.output_format([
-    "**ARCHITECTURE OVERVIEW**: High-level system design",
-    "**PERFORMANCE STRATEGY**: Scaling and optimization approach",
-    "**SECURITY IMPLEMENTATION**: Protection mechanisms and protocols",
-    "**MONITORING SETUP**: Observability and alerting strategy"
-])
-```
-
-**`final_emphasis(reminder)`** - End-of-prompt guidance (leverages recency bias)
-```python
-.final_emphasis("prioritize security and reliability over clever optimizations")
-```
-
-### Advanced Methods
-
-**`focus_on(specific_aspects)`** - Direct attention to specific areas
-```python
-.focus_on("identifying single points of failure and performance bottlenecks")
-```
-
-**`constraint(requirement, priority)`** - Additional constraints with priority
-```python
-.constraint("prefer open-source solutions when possible", priority="medium")
-```
-
-**`avoid_topics(topics)`** - Topics to explicitly avoid
-```python
-.avoid_topics(["deprecated frameworks", "vendor lock-in solutions"])
-```
-
-**`example(sample_output)`** - Show desired output style
-```python
-.example("""
-## Service: User Authentication
-**Technology**: FastAPI + Redis + PostgreSQL
-**Scaling**: Horizontal with load balancer
-**Security**: JWT tokens with refresh rotation
-""")
-```
-
-## Pro Tips for Better Results
-
-### 1. Start with Strong Personas
+Vague personas produce generic responses, while specific personas with clear expertise produce focused, expert-level analysis:
 
 ```python
-# ❌ Vague
+# Generic persona: produces generic advice
 .persona("developer", "coding")
 
-# ✅ Specific
+# Specific persona: produces expert analysis
 .persona("senior Python developer", "API design and database optimization")
 ```
 
-### 2. Use Clear Task Context
+### Front-Load Critical Information
+
+AI models allocate maximum attention to the beginning of prompts. This primacy bias means that critical context should come first, not buried in the middle or end of instructions.
 
 ```python
-# ❌ Generic
-.task_context("help with code")
+# Poor: Critical context buried
+prompt = """
+Please analyze this code and look at various aspects like performance,
+security, maintainability, and other factors. By the way, this is for
+a financial application handling sensitive customer data, so security
+is really critical and you should focus on that first.
+"""
 
-# ✅ Specific
-.task_context("optimize Django API endpoints for 10x traffic increase")
+# Better: Critical context front-loaded
+financial_reviewer = (
+    tb.PromptBuilder()
+    .task_context("CRITICAL: financial application handling sensitive customer data")
+    .critical_constraint("security vulnerabilities are the highest priority concern")
+    .core_analysis([
+        "security vulnerabilities (customer data at risk)",
+        "performance issues",
+        "maintainability concerns"
+    ])
+)
 ```
 
-### 3. Structure Your Output Format
+When you front-load critical information, the AI maintains focus on what matters most throughout its analysis.
+
+### Use Clear Task Context
+
+Task context should be specific enough to guide the AI toward the right type of analysis:
 
 ```python
-# ❌ No structure
-.output_format(["analysis", "recommendations"])
+# Too generic: unclear what help is needed
+.task_context("Help with code")
 
-# ✅ Clear structure with emojis and expectations
+# Specific and actionable: clear scope and objective
+.task_context("Optimize Django API endpoints for 10x traffic increase")
+```
+
+### Structure Output Effectively
+
+Well-structured output formats help the AI organize its analysis and make responses more actionable:
+
+```python
+# Minimal structure: may produce scattered analysis
+.output_format(["Analysis", "Recommendations"])
+
+# Clear structure with specific expectations
 .output_format([
     "**CURRENT STATE ANALYSIS**: What's working and what isn't",
     "**OPTIMIZATION OPPORTUNITIES**: Ranked by impact vs effort",
@@ -595,44 +424,40 @@ strategy_expert = (
 ])
 ```
 
-### 4. Use Final Emphasis Effectively
+### Make Final Emphasis Count
+
+Final emphasis should provide specific, actionable guidance rather than generic encouragement:
 
 ```python
-# ❌ Weak
+# Weak: doesn't provide useful guidance
 .final_emphasis("do a good job")
 
-# ✅ Specific guidance
+# Specific: provides concrete direction
 .final_emphasis("focus on solutions that can be implemented this sprint")
 ```
 
-## Debugging Your Prompts
-
-Use `preview_structure()` to see how your prompt will be organized:
+AI models pay special attention to the end of prompts. This recency bias makes final emphasis particularly powerful for ensuring your most important guidance influences the analysis.
 
 ```python
-builder = (
+# Without final emphasis: can trail off
+basic_reviewer = (
     tb.PromptBuilder()
-    .persona("data scientist", "machine learning and statistics")
-    .core_analysis(["data quality", "model performance", "business impact"])
+    .persona("security engineer", "application security review")
+    .core_analysis(["security vulnerabilities", "code quality"])
 )
 
-# Preview before building
-structure = builder.preview_structure()
-print(f"Estimated tokens: {structure['estimated_tokens']}")
-print(f"Sections: {len(structure['structured_sections'])}")
-for section in structure['structured_sections']:
-    print(f"- {section['title']}: {section['priority']}")
-
-# The builder object can be used directly as a prompt
+# With final emphasis: maintains focus
+focused_reviewer = (
+    tb.PromptBuilder()
+    .persona("security engineer", "application security review")
+    .core_analysis(["security vulnerabilities", "code quality"])
+    .final_emphasis("this handles customer financial data so err on the side of extreme caution for any security concerns.")
+)
 ```
 
-This preview helps you understand token usage and section organization before committing to a prompt structure.
+The final emphasis ensures your most important guidance influences the AI's conclusions and recommendations.
 
-## Advanced Patterns and Common Mistakes
-
-Understanding common pitfalls helps you avoid ineffective prompts that waste time and produce poor results.
-
-### Avoiding Information Overload
+### Avoid Information Overload
 
 AI attention has limits, similar to human working memory. Too many simultaneous instructions cause attention drift:
 
@@ -641,9 +466,9 @@ AI attention has limits, similar to human working memory. Too many simultaneous 
 overloaded_prompt = (
     tb.PromptBuilder()
     .core_analysis([
-        "Security vulnerabilities", "Performance bottlenecks", "Code maintainability",
-        "Variable naming", "Function design", "Error handling", "Logging practices",
-        "Memory usage", "CPU efficiency", "Network optimization", "Database queries"
+        "security vulnerabilities", "performance bottlenecks", "code maintainability",
+        "variable naming", "function design", "error handling", "logging practices",
+        "memory usage", "CPU efficiency", "network optimization", "database queries"
     ])
 )
 
@@ -651,19 +476,51 @@ overloaded_prompt = (
 focused_prompt = (
     tb.PromptBuilder()
     .structured_section("Security Analysis", [
-        "Authentication and authorization flaws",
-        "Input validation and injection attacks",
-        "Data exposure and encryption issues"
+        "authentication and authorization flaws",
+        "input validation and injection attacks",
+        "data exposure and encryption issues"
     ])
     .structured_section("Performance Analysis", [
-        "Algorithm efficiency and complexity",
-        "Database query optimization",
-        "Memory usage and garbage collection"
+        "algorithm efficiency and complexity",
+        "database query optimization",
+        "memory usage and garbage collection"
     ])
 )
 ```
 
-### Maintaining Clear Priorities
+AI attention works best when related instructions are grouped together. Scattered instructions force the model to constantly refocus, leading to inconsistent analysis.
+
+```python
+# Poor: Scattered instructions
+prompt = """
+Check for SQL injection. Also look at variable names and see if they're clear.
+Performance might be an issue too. Make sure error handling is good. Are there
+any security issues with authentication? Use clear headings in your response.
+"""
+
+# Better: Clustered by domain
+security_expert = (
+    tb.PromptBuilder()
+    .structured_section("Security Analysis", [
+        "SQL injection vulnerabilities",
+        "authentication security flaws",
+        "data exposure risks"
+    ])
+    .structured_section("Code Quality Analysis", [
+        "variable naming clarity",
+        "error handling robustness",
+        "performance optimization opportunities"
+    ])
+    .structured_section("Output Requirements", [
+        "use clear section headings",
+        "prioritize security issues first"
+    ])
+)
+```
+
+Clustering allows the AI to maintain focused attention on each domain, resulting in more comprehensive analysis.
+
+### Maintain Clear Priorities
 
 Conflicting instructions confuse AI models and produce inconsistent results:
 
@@ -677,27 +534,19 @@ Keep your response brief and to the point.
 # Better: Clear priorities
 clear_prompt = (
     tb.PromptBuilder()
-    .task_context("Comprehensive security analysis with prioritized findings")
+    .task_context("comprehensive security analysis with prioritized findings")
     .core_analysis([
-        "Critical security vulnerabilities (highest priority)",
-        "Important performance issues (medium priority)",
-        "Code quality improvements (lower priority)"
+        "critical security vulnerabilities (highest priority)",
+        "important performance issues (medium priority)",
+        "code quality improvements (lower priority)"
     ])
 )
 ```
 
 Clear priorities help the AI allocate attention appropriately and produce more useful results.
 
-## The PromptBuilder Advantage
-
-PromptBuilder consistently produces better AI responses because it works with attention mechanisms rather than against them. By understanding and applying attention patterns, you get more thorough analysis, better organization, consistent quality, and expert-level insights.
-
-The key insight is that structure matters more than words. The goal isn't to write longer prompts but to write prompts that are organized to work with how AI models actually process information.
-
 ## Next Steps
 
-Ready to put PromptBuilder to work? Start with the foundation methods and gradually incorporate advanced features as your needs become more sophisticated.
+Ready to put `PromptBuilder` to work? Start with the foundation methods and gradually incorporate advanced features as your needs become more sophisticated.
 
-For domain-specific applications, explore Domain Vocabulary for professional terminology management and Conversation Pathways for intelligent conversation flow guidance. These advanced features build on PromptBuilder's attention-optimized foundation to create even more sophisticated AI assistants.
-
-
+For domain-specific applications, explore domain `Vocabulary` for professional terminology management and conversational `Pathways` for intelligent conversation flow guidance. These advanced features build on `PromptBuilder`'s attention-optimized foundation to create even more sophisticated AI assistants.

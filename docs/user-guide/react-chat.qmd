@@ -2,15 +2,13 @@
 title: "React Chat Interface"
 ---
 
-# React Chat Interface
-
 Talk Box provides a modern, responsive React-based chat interface that offers the same simplicity as the traditional browser interface while providing a polished, professional user experience.
 
 ## Quick Start
 
 The React chat interface works exactly like the traditional `bot.show("browser")` method, but with a modern React frontend:
 
-```{python}
+```python
 import talk_box as tb
 
 # Create and configure a chatbot
@@ -123,7 +121,7 @@ Once you have Node.js installed, everything else is handled automatically:
 
 ### Basic Chatbot
 
-```{python}
+```python
 import talk_box as tb
 
 # Simple chatbot with minimal configuration
@@ -133,7 +131,7 @@ bot.show("react")
 
 ### Technical Assistant
 
-```{python}
+```python
 import talk_box as tb
 
 # Technical programming assistant
@@ -153,10 +151,16 @@ bot.show("react")
 
 ### Creative Writing Partner
 
-```{python}
+```python
 import talk_box as tb
 
-# Creative writing assistant
+# Creative writing assistant with structured prompt
+writing_prompt = (
+    tb.PromptBuilder()
+    .persona("You are a creative writing partner who helps with storytelling, character development, and plot ideas")
+    .avoid_topics(["politics", "religion"])
+)
+
 bot = (
     tb.ChatBot(
         name="WriteBot",
@@ -164,8 +168,7 @@ bot = (
     )
     .model("gpt-4")
     .temperature(0.8)
-    .persona("You are a creative writing partner who helps with storytelling, character development, and plot ideas")
-    .avoid_topics(["politics", "religion"])
+    .system_prompt(writing_prompt)
 )
 
 bot.show("react")
@@ -175,7 +178,7 @@ bot.show("react")
 
 The React interface fully supports complex system prompts built with `PromptBuilder`:
 
-```{python}
+```python
 import talk_box as tb
 
 # Advanced system prompt with PromptBuilder
@@ -207,7 +210,7 @@ bot.show("react")
 
 You can configure API keys using environment variables or `.env` files:
 
-```{python}
+```python
 import os
 import talk_box as tb
 
@@ -227,7 +230,7 @@ bot.show("react")
 
 For better security and convenience, use a `.env` file. **Important**: You must explicitly load the `.env` file in your script:
 
-```{python}
+```python
 # First, create a .env file in your project directory:
 # OPENAI_API_KEY=your-actual-api-key-here
 # ANTHROPIC_API_KEY=your-anthropic-key-here
@@ -289,7 +292,7 @@ All standard Talk Box configuration methods work with the React interface:
 
 ### Temperature and Creativity
 
-```{python}
+```python
 bot.temperature(0.1)         # Very focused and deterministic
 bot.temperature(0.7)         # Balanced creativity
 bot.temperature(1.2)         # Highly creative and varied
@@ -297,7 +300,7 @@ bot.temperature(1.2)         # Highly creative and varied
 
 ### Presets
 
-```{python}
+```python
 bot.preset("helpful")           # General helpful assistant
 bot.preset("technical_advisor") # Technical problem solving
 bot.preset("creative_writer")   # Creative writing assistance
@@ -324,7 +327,7 @@ npm run dev
 
 **Then use the interface:**
 
-```{python}
+```python
 # Bot will detect running servers automatically
 bot.show("react")
 ```
