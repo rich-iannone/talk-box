@@ -2,21 +2,58 @@
 title: "Introduction"
 ---
 
-Talk Box is a comprehensive Python framework for building and deploying attention-optimized conversational AI chatbots. Whether you're building customer support bots, technical advisors, or creative writing assistants, Talk Box provides the tools you need to create intelligent, context-aware chatbots with minimal code.
+Talk Box is a comprehensive Python framework for building and deploying attention-optimized conversational AI chatbots. What makes Talk Box special is its **PromptBuilder** system—a research-backed approach to creating prompts that work with how AI models actually process information.
 
-## Why Talk Box?
+## The PromptBuilder Advantage
 
-**Attention-Optimized Prompts**: built on modern prompt engineering research, Talk Box uses attention patterns and cognitive principles to create more effective prompts that improve AI response quality.
+Instead of treating AI prompts like human instructions, Talk Box's `PromptBuilder` creates structured prompts based on cognitive psychology and attention mechanism research. This leads to consistently better AI responses:
 
-**Simple but Powerful**: start with a single line of code, then scale to complex multi-turn conversations with advanced prompt engineering techniques.
+```python
+import talk_box as tb
 
-**Fluent API**: chainable configuration methods make it easy to build exactly the chatbot you need without boilerplate code.
+# Traditional approach - okay results
+bot = tb.ChatBot().model("gpt-4-turbo")
+response = bot.chat("Review this code for security issues and performance")
 
-**Conversation Management**: automatic message history, context windows, and conversation state management so you can focus on your application logic.
+# PromptBuilder approach - significantly better results
+structured_bot = (tb.ChatBot()
+    .model("gpt-4-turbo")
+    .prompt_builder()
+    .persona("senior security engineer", "performance optimization specialist")
+    .task_context("Critical production code review for financial application")
+    .core_analysis([
+        "Security vulnerabilities (SQL injection, XSS, authentication flaws)",
+        "Performance bottlenecks and optimization opportunities",
+        "Code maintainability and architectural concerns"
+    ])
+    .critical_constraint("Zero tolerance for security vulnerabilities")
+    .output_format([
+        "🚨 **CRITICAL SECURITY ISSUES**: Must fix before deployment",
+        "⚡ **PERFORMANCE OPTIMIZATIONS**: Impact and implementation difficulty",
+        "🏗️ **ARCHITECTURE RECOMMENDATIONS**: Long-term improvements"
+    ])
+    .final_emphasis("Prioritize security over performance. Flag anything suspicious.")
+)
 
-## Quick Start
+response = structured_bot.chat("Review this authentication middleware...")
+```
 
-Get up and running in just a few lines:
+The PromptBuilder version consistently produces more thorough, better-organized, and more actionable responses because it works with the AI model's attention patterns.
+
+## Why Structure Beats Words
+
+Research shows that **how you organize information** matters more than the specific words you use. AI models process prompts through attention mechanisms that:
+
+- **Front-load critical information** (primacy bias)
+- **Group related concepts** for better understanding
+- **Lose focus** when instructions are scattered
+- **Respond to hierarchical structure** better than flat text
+
+PromptBuilder automatically structures your prompts to leverage these patterns.
+
+## Quick Start: Two Ways to Use Talk Box
+
+### Simple Chatbots (Perfect for getting started)
 
 ```python
 import talk_box as tb
@@ -34,21 +71,40 @@ conversation = bot.chat("How do I optimize Python code for performance?")
 print(conversation.get_last_message().content)
 ```
 
-## Core Concepts
+### Structured PromptBuilder (The power-user way)
+
+```python
+import talk_box as tb
+
+# Build an expert system with structured prompts
+expert = (tb.ChatBot()
+    .model("gpt-4-turbo")
+    .prompt_builder()
+    .persona("senior Python performance engineer")
+    .task_context("Code optimization consultation")
+    .focus_on(["algorithmic efficiency", "memory usage", "I/O bottlenecks"])
+    .constraint("Provide specific, actionable recommendations with code examples")
+    .output_format(["Analysis", "Specific Optimizations", "Code Examples"])
+)
+
+response = expert.chat("How do I optimize Python code for performance?")
+```
+
+The PromptBuilder approach gives you more control, better results, and repeatable quality.
+
+## Core Components
+
+### 📝 PromptBuilder: The Heart of Talk Box
+
+Create attention-optimized prompts using research-backed cognitive psychology principles. This is what makes Talk Box special—turn mediocre AI responses into expert-level analysis and assistance.
 
 ### 🤖 ChatBot: Your Configuration Hub
 
-The main entry point for creating chatbots. Configure models, behaviors, and parameters with a
-chainable API.
+The main entry point for creating chatbots. Configure models, behaviors, and parameters with a chainable API. Works great standalone or with PromptBuilder.
 
-### 💬 Conversation: Message Management
+### 💬 Conversation: Smart Message Management
 
-Automatic conversation history with multi-turn context. Every chat interaction returns a
-`Conversation` object with full message history.
-
-### 📝 PromptBuilder: Advanced Prompt Engineering
-
-Create attention-optimized prompts using research-backed techniques for improved AI performance.
+Automatic conversation history with multi-turn context. Every chat interaction returns a `Conversation` object with full message history and intelligent context management.
 
 ### 🎭 Presets: Instant Specialization
 
@@ -57,24 +113,32 @@ Professional behavior templates for common use cases like customer support, tech
 ## What's In This Guide
 
 ### Getting Started
-
 - [Installation](installation.qmd): set up Talk Box and dependencies
 
-### Core Concepts
+### PromptBuilder: The Heart of Talk Box
+- [PromptBuilder](prompt-builder.qmd): **Start here!** Learn the research-backed prompt engineering that makes Talk Box special
+- [Prompt Engineering Guide](prompt-engineering-guide.qmd): deeper dive into the science behind effective prompts
 
-- [ChatBot Basics](chatbot-basics.qmd): core concepts and first steps
+### Advanced Prompt Engineering
+- [Domain Vocabulary](vocabulary.qmd): professional terminology management with multilingual support
+- [Building Conversation Pathways](pathways.qmd): intelligent conversation flow guidance
+
+### Core Concepts
+- [ChatBot Basics](chatbot-basics.qmd): core concepts and basic configuration
 - [Model Selection](model-selection.qmd): choosing the right AI model
+- [React Chat Integration](react-chat.qmd): building chat interfaces
+
+### Advanced Features
+- [File Attachments](file-attachments.qmd): working with documents and files
 - [Tool System Guide](tools.qmd): comprehensive guide to creating and using tools
 
-### Prompt Engineering
-
-- [Prompt Engineering Guide](prompt-engineering-guide.qmd): the science behind effective prompts
-- [PromptBuilder](prompt-builder.qmd): building attention-optimized prompts
-- [Domain Vocabulary](vocabulary.qmd): professional terminology management with multilingual support
+### Testing & Validation
+- [Testing Topic Avoidance](testing-avoid-topics.qmd): ensuring your chatbots behave appropriately
 
 ---
 
-## Need Help?
+## Ready to Build Better Chatbots?
 
-- 📚 [API Reference](/reference/index.qmd): complete function and class documentation
-- 🐛 [GitHub Issues](https://github.com/rich-iannone/talk-box/issues): report bugs and request features
+👉 **New users**: Start with [PromptBuilder](prompt-builder.qmd) to see what makes Talk Box special
+📚 **Reference**: [Complete API documentation](/reference/index.qmd)
+🐛 **Issues**: [GitHub Issues](https://github.com/rich-iannone/talk-box/issues) for bugs and feature requests

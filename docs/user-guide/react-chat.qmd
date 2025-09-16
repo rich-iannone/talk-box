@@ -206,7 +206,6 @@ bot = (
             "PRÁCTICA: Conversation prompts for next lesson",
         ])
         .final_emphasis("Encourage progress and build confidence through positive reinforcement")
-        .build()
     )
 )
 

@@ -96,7 +96,6 @@ wellness_prompt = (
         "and maintain healthy, productive lifestyles. Stay firmly within this domain and "
         "redirect any entertainment or gaming discussions to productive alternatives."
     )
-    .build()
 )
 
 wellness_bot = wellness_bot.system_prompt(wellness_prompt)
@@ -266,7 +265,6 @@ prompt = (
         "You must not provide advice in prohibited domains. "
         "Always redirect to appropriate professionals."
     )
-    .build()
 )
 ```
 
