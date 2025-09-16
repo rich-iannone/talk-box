@@ -56,8 +56,8 @@ website:
         contents:
           - user-guide/chatbot-basics.qmd
           - user-guide/model-selection.qmd
-          - user-guide/react-chat.qmd
           - user-guide/file-attachments.qmd
+          - user-guide/react-chat.qmd
       - section: "Testing & Validation"
         contents:
           - user-guide/testing-avoid-topics.qmd
