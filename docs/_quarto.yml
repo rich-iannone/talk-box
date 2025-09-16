@@ -33,8 +33,6 @@ website:
         href: index.qmd
       - text: "User Guide"
         file: user-guide/index.qmd
-      - text: "Examples"
-        href: examples.qmd
       - href: reference/index.qmd
         text: API Reference
     right:
