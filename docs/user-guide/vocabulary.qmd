@@ -1,5 +1,5 @@
 ---
-title: "Domain Vocabulary: Professional Terminology Management"
+title: "Domain Vocabulary"
 ---
 
 The `VocabularyTerm` class enables AI systems to correctly understand and use specialized terminology within specific business, technical, or professional contexts. By providing explicit definitions and multilingual support, vocabulary terms ensure consistent interpretation of domain-specific language that might otherwise be misunderstood.

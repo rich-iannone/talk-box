@@ -179,16 +179,11 @@ Get Talk Box installed and understand the fundamentals before diving into advanc
 
 - [Installation](installation.qmd): set up Talk Box and dependencies
 
-### PromptBuilder: The Heart of Talk Box
+### Building with PromptBuilder
 
-Master the research-backed prompt engineering system that makes Talk Box special. This is where you'll see the biggest improvement in your AI responses.
+Master the research-backed prompt engineering system that makes Talk Box special. This is where you'll see the biggest improvement in your AI responses, from basic prompts to advanced features like domain vocabulary and conversation pathways.
 
 - [PromptBuilder](prompt-builder.qmd): **Start here!** Learn the research-backed prompt engineering that makes Talk Box special
-
-### Advanced Prompt Engineering
-
-Take your prompts to the next level with specialized features for domain expertise and conversation management.
-
 - [Domain Vocabulary](vocabulary.qmd): professional terminology management with multilingual support
 - [Building Conversation Pathways](pathways.qmd): intelligent conversation flow guidance
 

@@ -1,16 +1,16 @@
 ---
-title: "PromptBuilder: The Heart of Talk Box"
+title: "PromptBuilder"
 ---
 
-PromptBuilder transforms how you write AI prompts by applying cognitive psychology research about attention mechanisms. Instead of treating prompts like human instructions, PromptBuilder creates structured prompts that work with how AI models actually process information.
+The `PromptBuilder` class changes the way that LLM system prompts are written. Instead of treating prompts like human instructions, `PromptBuilder` creates structured prompts that work with how AI models actually process information.
 
-## Why PromptBuilder Works Better
+## Why `PromptBuilder` Works Better
 
 Traditional prompting often fails because it ignores how AI models process information. AI models use attention mechanisms that have distinct patterns: they front-load importance, cluster related concepts, lose focus when information is scattered, and pay special attention to the end of prompts.
 
-PromptBuilder automatically structures your prompts to leverage these patterns, resulting in consistently better responses.
+`PromptBuilder` automatically structures your prompts to leverage these patterns, resulting in consistently better responses.
 
-## Essential PromptBuilder Methods
+## Essential `PromptBuilder` Methods
 
 Understanding the core methods helps you build more effective prompts. PromptBuilder provides methods that map to different aspects of attention-optimized prompt construction.
 
@@ -19,22 +19,25 @@ Understanding the core methods helps you build more effective prompts. PromptBui
 These methods establish the basic context and identity for your AI assistant.
 
 **`persona(role, expertise)`** defines who the AI should be and what expertise it brings:
+
 ```python
 .persona("senior DevOps engineer", "cloud infrastructure and automation")
 ```
 
 **`task_context(description)`** clearly states what the AI should accomplish:
+
 ```python
-.task_context("Design a scalable microservices architecture for high-traffic e-commerce")
+.task_context("design a scalable microservices architecture for high-traffic e-commerce")
 ```
 
 **`core_analysis(focus_areas)`** specifies the key areas the AI should analyze:
+
 ```python
 .core_analysis([
-    "Scalability and performance under load",
-    "Security and data protection",
-    "Cost optimization and resource efficiency",
-    "Monitoring and observability"
+    "scalability and performance under load",
+    "security and data protection",
+    "cost optimization and resource efficiency",
+    "monitoring and observability"
 ])
 ```
 
@@ -45,8 +48,9 @@ These foundation methods work together to establish clear identity, purpose, and
 These methods help you control how the AI organizes and constrains its analysis.
 
 **`critical_constraint(requirement)`** establishes non-negotiable requirements:
+
 ```python
-.critical_constraint("Must comply with PCI DSS standards for payment processing")
+.critical_constraint("must comply with PCI DSS standards for payment processing")
 ```
 
 **`output_format(structure)`** organizes how the response should be structured:
@@ -60,8 +64,9 @@ These methods help you control how the AI organizes and constrains its analysis.
 ```
 
 **`final_emphasis(reminder)`** provides end-of-prompt guidance that leverages recency bias:
+
 ```python
-.final_emphasis("Prioritize security and reliability over clever optimizations")
+.final_emphasis("prioritize security and reliability over clever optimizations")
 ```
 
 These methods ensure the AI maintains focus on what matters most and organizes its output effectively.

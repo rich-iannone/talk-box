@@ -46,22 +46,18 @@ website:
         contents:
           - user-guide/index.qmd
           - user-guide/installation.qmd
-      - section: "PromptBuilder"
+      - section: "Prompt Engineering"
         contents:
           - user-guide/prompt-builder.qmd
-      - section: "Advanced Prompt Engineering"
-        contents:
           - user-guide/vocabulary.qmd
           - user-guide/pathways.qmd
+          - user-guide/tools.qmd
       - section: "Core Concepts"
         contents:
           - user-guide/chatbot-basics.qmd
           - user-guide/model-selection.qmd
           - user-guide/react-chat.qmd
-      - section: "Advanced Features"
-        contents:
           - user-guide/file-attachments.qmd
-          - user-guide/tools.qmd
       - section: "Testing & Validation"
         contents:
           - user-guide/testing-avoid-topics.qmd
