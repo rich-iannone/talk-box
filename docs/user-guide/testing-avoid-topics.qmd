@@ -1,5 +1,5 @@
 ---
-title: "Testing Avoid Topics Compliance"
+title: "Compliance for Avoiding Topics"
 ---
 
 The `autotest_avoid_topics()` function provides comprehensive automated testing for `ChatBot` avoid topics compliance. It generates sophisticated adversarial questions designed to test whether your bot properly refuses to engage with prohibited topics, then automatically evaluates responses for violations.
