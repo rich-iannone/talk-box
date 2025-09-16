@@ -143,11 +143,3 @@ pip install talk-box[dev]
 ```bash
 pip install talk-box[all]
 ```
-
----
-
-## Getting Help
-
-- 📚 [Full API Documentation](/reference/index.qmd)
-- 💬 [GitHub Discussions](https://github.com/rich-iannone/talk-box/discussions)
-- 🐛 [Report Issues](https://github.com/rich-iannone/talk-box/issues)

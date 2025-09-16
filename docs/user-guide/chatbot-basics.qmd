@@ -217,8 +217,7 @@ Provide concrete, actionable recommendations with code examples.
 prompt = (tb.ChatBot().prompt_builder()
     .persona("software architect", "microservices and distributed systems")
     .core_analysis(["scalability", "security", "maintainability"])
-    .output_format(["concrete recommendations", "code examples"])
-    .build())
+    .output_format(["concrete recommendations", "code examples"]))
 
 structured_bot = tb.ChatBot().system_prompt(prompt)
 ```

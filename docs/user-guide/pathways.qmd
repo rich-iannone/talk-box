@@ -1,8 +1,8 @@
 ---
-title: "Building Conversation Pathways"
+title: "Conversational Pathways"
 ---
 
-Pathways provide intelligent conversation flow guidance while maintaining the flexibility to adapt to natural conversation patterns. Think of them as guardrails rather than rigid state machines—they help LLMs provide consistent and thorough assistance while remaining responsive to user needs.
+Pathways provide intelligent conversation flow guidance while maintaining the flexibility to adapt to natural conversation patterns. Think of them as guardrails rather than rigid state machines. They help LLMs provide consistent and thorough assistance while remaining responsive to user needs.
 
 ## What Are Pathways?
 
