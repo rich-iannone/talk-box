@@ -56,10 +56,10 @@ These methods help you control how the AI organizes and constrains its analysis.
 **`output_format(structure)`** organizes how the response should be structured:
 ```python
 .output_format([
-    "**ARCHITECTURE OVERVIEW**: High-level system design",
-    "**PERFORMANCE STRATEGY**: Scaling and optimization approach",
-    "**SECURITY IMPLEMENTATION**: Protection mechanisms and protocols",
-    "**MONITORING SETUP**: Observability and alerting strategy"
+    "**ARCHITECTURE OVERVIEW**: high-level system design",
+    "**PERFORMANCE STRATEGY**: scaling and optimization approach",
+    "**SECURITY IMPLEMENTATION**: protection mechanisms and protocols",
+    "**MONITORING SETUP**: observability and alerting strategy"
 ])
 ```
 
@@ -84,7 +84,7 @@ For more sophisticated prompt engineering, these methods provide fine-grained co
 **`constraint(requirement, priority)`** adds constraints with priority levels:
 
 ```python
-.constraint("Prefer open-source solutions when possible", priority="medium")
+.constraint("prefer open-source solutions when possible", priority="medium")
 ```
 
 **`avoid_topics(topics)`** explicitly excludes certain topics or approaches:
@@ -93,10 +93,12 @@ For more sophisticated prompt engineering, these methods provide fine-grained co
 .avoid_topics(["Deprecated frameworks", "Vendor lock-in solutions"])
 ```
 
-**`example(sample_output)`** shows the AI exactly what kind of output you want:
+**`example(input_example, output_example)`** shows the AI exactly what kind of input/output pattern you want:
 
 ```python
-.example("""
+.example(
+    input_example="design authentication service for e-commerce platform",
+    output_example="""
 ## Service: User Authentication
 **Technology**: FastAPI + Redis + PostgreSQL
 **Scaling**: Horizontal with load balancer
@@ -236,21 +238,21 @@ and other issues. Also suggest improvements.
 security_expert = (
     tb.PromptBuilder()
     .persona("senior security engineer", "application security and code review")
-    .task_context("Critical security and performance review for production deployment")
+    .task_context("critical security and performance review for production deployment")
     .core_analysis([
-        "Security vulnerabilities (SQL injection, XSS, authentication flaws)",
-        "Performance bottlenecks and memory issues",
-        "Code architecture and maintainability",
-        "Testing coverage and edge cases"
+        "security vulnerabilities (SQL injection, XSS, authentication flaws)",
+        "performance bottlenecks and memory issues",
+        "code architecture and maintainability",
+        "testing coverage and edge cases"
     ])
     .critical_constraint("Zero tolerance for security vulnerabilities")
     .output_format([
-        "**CRITICAL SECURITY ISSUES**: Must fix before deployment",
-        "**PERFORMANCE OPTIMIZATIONS**: Impact and implementation effort",
-        "**CODE QUALITY IMPROVEMENTS**: Maintainability enhancements",
-        "**TESTING RECOMMENDATIONS**: Coverage gaps and test cases"
+        "**CRITICAL SECURITY ISSUES**: must fix before deployment",
+        "**PERFORMANCE OPTIMIZATIONS**: impact and implementation effort",
+        "**CODE QUALITY IMPROVEMENTS**: maintainability enhancements",
+        "**TESTING RECOMMENDATIONS**: coverage gaps and test cases"
     ])
-    .final_emphasis("Prioritize security over performance. Flag anything suspicious.")
+    .final_emphasis("prioritize security over performance. Flag anything suspicious.")
 )
 
 bot = tb.ChatBot().model("gpt-4-turbo").system_prompt(security_expert)
@@ -271,21 +273,21 @@ Creating developer documentation requires balancing completeness with usability.
 docs_expert = (
     tb.PromptBuilder()
     .persona("technical writing specialist", "developer documentation and API guides")
-    .task_context("Create documentation that developers actually use and understand")
+    .task_context("create documentation that developers actually use and understand")
     .core_analysis([
-        "Clear, actionable explanations with working examples",
-        "Common use cases and integration patterns",
-        "Error handling and troubleshooting guides",
-        "Performance considerations and best practices"
+        "clear, actionable explanations with working examples",
+        "common use cases and integration patterns",
+        "error handling and troubleshooting guides",
+        "performance considerations and best practices"
     ])
-    .critical_constraint("Every code example must be tested and functional")
+    .critical_constraint("every code example must be tested and functional")
     .output_format([
-        "**QUICK START**: Working example that runs immediately",
-        "**COMPLETE REFERENCE**: All parameters and options explained",
-        "**TROUBLESHOOTING**: Common issues and solutions",
-        "**BEST PRACTICES**: Performance and security recommendations"
+        "**QUICK START**: working example that runs immediately",
+        "**COMPLETE REFERENCE**: all parameters and options explained",
+        "**TROUBLESHOOTING**: common issues and solutions",
+        "**BEST PRACTICES**: performance and security recommendations"
     ])
-    .final_emphasis("Documentation quality is measured by developer success, not completeness")
+    .final_emphasis("documentation quality is measured by developer success, not completeness")
 )
 
 print(docs_expert)
@@ -414,13 +416,13 @@ Well-structured output formats help the AI organize its analysis and make respon
 
 ```python
 # Minimal structure: may produce scattered analysis
-.output_format(["Analysis", "Recommendations"])
+.output_format(["analysis", "recommendations"])
 
 # Clear structure with specific expectations
 .output_format([
-    "**CURRENT STATE ANALYSIS**: What's working and what isn't",
-    "**OPTIMIZATION OPPORTUNITIES**: Ranked by impact vs effort",
-    "**IMPLEMENTATION PLAN**: Step-by-step with timelines"
+    "**CURRENT STATE ANALYSIS**: what's working and what isn't",
+    "**OPTIMIZATION OPPORTUNITIES**: ranked by impact vs effort",
+    "**IMPLEMENTATION PLAN**: step-by-step with timelines"
 ])
 ```
 
