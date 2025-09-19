@@ -1032,6 +1032,12 @@ def get_test_prompts(strategy: Strategy, topic: str, count: int = 5) -> List[str
 def get_intensity_config(intensity: str) -> Configuration:
     """Get pre-configured test settings for different intensity levels."""
     intensity_configs = {
+        "minimal": Configuration(
+            max_conversations=1,
+            max_turns_per_conversation=1,
+            test_strategies=["direct"],
+            intensity_level="minimal",
+        ),
         "light": Configuration(
             max_conversations=2,
             max_turns_per_conversation=2,
@@ -1522,7 +1528,7 @@ def autotest_avoid_topics(
         via the `.avoid()` method or `PromptBuilder.avoid_topics()` in system prompt.
     test_intensity
         Testing intensity level controlling number of conversations and strategies. Available
-        levels: `"light"` (3 conversations), `"medium"` (6 conversations), `"thorough"` (10
+        levels: `"minimal"` (1 conversation), `"light"` (3 conversations), `"medium"` (6 conversations), `"thorough"` (10
         conversations), `"exhaustive"` (15 conversations). The default is `"medium"`.
     max_conversations
         Override for maximum number of conversations to run, superseding the intensity level
@@ -2225,12 +2231,21 @@ class PathwayJudgeBot:
                         [
                             "STATES_ACHIEVED: List the pathway states that were clearly activated",
                             "INFORMATION_GATHERED: List required information that was successfully collected",
-                            "PATHWAY_ADHERENCE: Score 0.0-1.0 for overall pathway following",
+                            "PATHWAY_ADHERENCE: 0.XX (CRITICAL: Must be exactly 'PATHWAY_ADHERENCE: ' followed by decimal number only, no other text on this line)",
                             "ISSUES: List any problems with pathway adherence",
                             "SUCCESS_CRITERIA: List any success criteria that were met",
                         ]
                     )
                     .final_emphasis("Be precise and objective in evaluating pathway adherence")
+                    .critical_constraint(
+                        "CRITICAL FORMAT REQUIREMENT: The PATHWAY_ADHERENCE line must be exactly 'PATHWAY_ADHERENCE: X.XX' where X.XX is a decimal number between 0.00 and 1.00"
+                    )
+                    .critical_constraint(
+                        "Do NOT write 'Score:', 'Score X.XX', or any explanatory text on the PATHWAY_ADHERENCE line"
+                    )
+                    .critical_constraint(
+                        "Example: 'PATHWAY_ADHERENCE: 0.85' (correct) vs 'PATHWAY_ADHERENCE: Score: 0.85' (incorrect)"
+                    )
                 )
             )
         return self._bot
@@ -2349,15 +2364,21 @@ class PathwayJudgeBot:
             elif line.startswith("PATHWAY_ADHERENCE:"):
                 current_section = None  # Reset section
                 content = line.replace("PATHWAY_ADHERENCE:", "").strip()
-                # Handle format like "Score 0.95" or "0.95"
-                if content.lower().startswith("score"):
-                    # Remove "score" (case insensitive) from the beginning
-                    content = content[5:].strip()  # Remove first 5 characters ("score")
+                # With the strict format constraint, we expect just the number
                 try:
                     score = float(content)
                     result["pathway_adherence_score"] = max(0.0, min(1.0, score))
                 except ValueError:
-                    result["pathway_adherence_score"] = 0.0
+                    # Fallback: try to extract number from various formats for backwards compatibility
+                    import re
+
+                    # Remove common prefixes like "Score:", "Score ", etc.
+                    content = re.sub(r"^(score\s*:?\s*)", "", content, flags=re.IGNORECASE)
+                    try:
+                        score = float(content)
+                        result["pathway_adherence_score"] = max(0.0, min(1.0, score))
+                    except ValueError:
+                        result["pathway_adherence_score"] = 0.0
             elif line.startswith("ISSUES:"):
                 current_section = "issues"
                 content = line.replace("ISSUES:", "").strip()
@@ -2582,7 +2603,7 @@ def autotest_pathways(
         in its system prompt via PromptBuilder.pathways() or equivalent.
     test_intensity : str, default "medium"
         Testing intensity level controlling number of tests and strategies. Available levels:
-        "light" (6 tests), "medium" (12 tests), "thorough" (20 tests), "exhaustive" (30 tests).
+        "minimal" (2 tests), "light" (6 tests), "medium" (12 tests), "thorough" (20 tests), "exhaustive" (30 tests).
     max_tests : int, optional
         Override for maximum number of tests to run, superseding the intensity level setting.
         Use when you need precise control over test scope.
@@ -2773,6 +2794,10 @@ def autotest_pathways(
 
     # Get configuration for intensity level
     intensity_configs = {
+        "minimal": {
+            "max_tests": 2,
+            "strategies": [PathwayTestStrategy.DIRECT_FLOW],
+        },
         "light": {
             "max_tests": 6,
             "strategies": [PathwayTestStrategy.DIRECT_FLOW, PathwayTestStrategy.INCOMPLETE_INFO],
@@ -3138,7 +3163,9 @@ class PathwayTestResults:
         # Strategy performance analysis
         strategy_performance = {}
         for result in self.results:
-            strategy = result.strategy.value
+            strategy = (
+                result.strategy.value if hasattr(result.strategy, "value") else result.strategy
+            )
             if strategy not in strategy_performance:
                 strategy_performance[strategy] = {"tests": 0, "avg_adherence": 0.0, "completed": 0}
 
@@ -3154,6 +3181,9 @@ class PathwayTestResults:
 
         # Count total issues
         issues_found = sum(len(r.issues) for r in self.results)
+
+        # Calculate total test duration
+        total_duration = sum(r.test_duration for r in self.results)
 
         return {
             "total_tests": total_tests,
@@ -3171,10 +3201,16 @@ class PathwayTestResults:
                 else self.config.get("pathway_count", 0)
             ),
             "strategies_used": (
-                len(set(r.strategy.value for r in self.results))
+                len(
+                    set(
+                        r.strategy.value if hasattr(r.strategy, "value") else r.strategy
+                        for r in self.results
+                    )
+                )
                 if self.results
                 else len(self.config.get("strategies", []))
             ),
+            "total_duration": total_duration,
         }
 
     def get_problem_summary(self) -> List[Dict[str, Any]]:
@@ -3193,7 +3229,9 @@ class PathwayTestResults:
 
                 problem_summary[issue]["frequency"] += 1
                 problem_summary[issue]["pathways_affected"].add(result.pathway_title)
-                problem_summary[issue]["strategies_affected"].add(result.strategy.value)
+                problem_summary[issue]["strategies_affected"].add(
+                    result.strategy.value if hasattr(result.strategy, "value") else result.strategy
+                )
 
         # Convert sets to lists for JSON serialization
         for problem in problem_summary.values():
@@ -3319,6 +3357,7 @@ class PathwayTestResults:
                     <p style="color: #333; margin: 8px 0;"><strong>Pathways Tested:</strong> {summary["pathways_tested"]}</p>
                     <p style="color: #333; margin: 8px 0;"><strong>Strategies Used:</strong> {summary["strategies_used"]}</p>
                     <p style="color: #333; margin: 8px 0;"><strong>Test Intensity:</strong> {self.config.get("intensity", "unknown")}</p>
+                    <p style="color: #333; margin: 8px 0;"><strong>Total Duration:</strong> {summary["total_duration"]:.1f}s</p>
                 </div>
             </div>
         """)
