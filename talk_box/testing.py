@@ -2755,44 +2755,7 @@ def autotest_pathways(
     analysis and reporting capabilities suitable for professional development and deployment
     workflows.
     """
-    # Extract pathway specifications from the target bot
-    pathway_specs = _extract_pathway_specs_from_bot(target_bot)
-
-    if not pathway_specs:
-        raise ValueError(
-            "Target bot has no pathway specifications configured. "
-            "Use PromptBuilder().pathways(pathway_spec) in your system prompt or "
-            "ensure pathways are properly defined in the bot configuration."
-        )
-
-    # Check for API key availability for testing (show helpful warning if missing)
-    import os
-
-    api_keys_available = bool(os.getenv("OPENAI_API_KEY")) or bool(os.getenv("ANTHROPIC_API_KEY"))
-    if not api_keys_available:
-        if verbose:
-            print("⚠️  Warning: No API keys found (OPENAI_API_KEY or ANTHROPIC_API_KEY).")
-            print(
-                "   Pathway testing requires API access to generate scenarios and evaluate results."
-            )
-            print("   Tests may fail or return empty results without valid API credentials.")
-            print()
-
-        # Return meaningful results when no API access is available
-        test_config = {
-            "intensity": test_intensity,
-            "max_tests": 0,
-            "strategies": [],
-            "pathway_count": len(pathway_specs),
-            "judge_model": str(judge_model) if judge_model else "default",
-            "target_bot": target_bot,
-            "pathway_specs": pathway_specs,
-            "api_error": "No API keys available for testing. Set OPENAI_API_KEY or ANTHROPIC_API_KEY environment variable.",
-        }
-
-        return PathwayTestResults([], test_config)
-
-    # Get configuration for intensity level
+    # Validate test intensity first (before any expensive operations)
     intensity_configs = {
         "minimal": {
             "max_tests": 2,
@@ -2833,6 +2796,45 @@ def autotest_pathways(
     # Override max tests if specified
     if max_tests is not None:
         config["max_tests"] = max_tests
+
+    # Extract pathway specifications from the target bot
+    pathway_specs = _extract_pathway_specs_from_bot(target_bot)
+
+    if not pathway_specs:
+        raise ValueError(
+            "Target bot has no pathway specifications configured. "
+            "Use PromptBuilder().pathways(pathway_spec) in your system prompt or "
+            "ensure pathways are properly defined in the bot configuration."
+        )
+
+    # Check for API key availability for testing (show helpful warning if missing)
+    import os
+
+    api_keys_available = bool(os.getenv("OPENAI_API_KEY")) or bool(os.getenv("ANTHROPIC_API_KEY"))
+    if not api_keys_available:
+        if verbose:
+            print("⚠️  Warning: No API keys found (OPENAI_API_KEY or ANTHROPIC_API_KEY).")
+            print(
+                "   Pathway testing requires API access to generate scenarios and evaluate results."
+            )
+            print("   Tests may fail or return empty results without valid API credentials.")
+            print()
+
+        # Return meaningful results when no API access is available
+        test_config = {
+            "intensity": test_intensity,
+            "max_tests": 0,
+            "strategies": [],
+            "pathway_count": len(pathway_specs),
+            "judge_model": str(judge_model) if judge_model else "default",
+            "target_bot": target_bot,
+            "pathway_specs": pathway_specs,
+            "api_error": "No API keys available for testing. Set OPENAI_API_KEY or ANTHROPIC_API_KEY environment variable.",
+        }
+
+        return PathwayTestResults([], test_config)
+
+    # Configuration already validated and set above
 
     # Create tester and judge bots
     target_config = getattr(target_bot, "_config", {})
