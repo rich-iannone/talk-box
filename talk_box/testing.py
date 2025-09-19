@@ -3143,17 +3143,53 @@ class PathwayTestResults:
             len(all_achieved_states) / len(all_expected_states) if all_expected_states else 0.0
         )
 
-        # Pathway-specific coverage
+        # Collect detailed test results for individual display
+        detailed_test_results = []
+        strategy_counters = {}
+
+        for result in self.results:
+            if result.completed:
+                strategy = (
+                    result.strategy.value if hasattr(result.strategy, "value") else result.strategy
+                )
+
+                # Track test numbers per strategy
+                if strategy not in strategy_counters:
+                    strategy_counters[strategy] = 0
+                strategy_counters[strategy] += 1
+
+                detailed_test_results.append(
+                    {
+                        "pathway": result.pathway_title,
+                        "strategy": strategy,
+                        "test_number": strategy_counters[strategy],
+                        "total_strategy_tests": None,  # Will be filled in after counting
+                        "duration": result.test_duration,
+                        "adherence_score": result.pathway_adherence_score,
+                    }
+                )
+
+        # Fill in total test counts per strategy
+        for test_result in detailed_test_results:
+            test_result["total_strategy_tests"] = strategy_counters[test_result["strategy"]]
+
+        # Calculate pathway-level summaries for backward compatibility
         pathway_coverage = {}
         for result in self.results:
             pathway = result.pathway_title
             if pathway not in pathway_coverage:
-                pathway_coverage[pathway] = {"tests": 0, "avg_adherence": 0.0, "completed": 0}
+                pathway_coverage[pathway] = {
+                    "tests": 0,
+                    "avg_adherence": 0.0,
+                    "completed": 0,
+                    "scores": [],
+                }
 
             pathway_coverage[pathway]["tests"] += 1
             if result.completed:
                 pathway_coverage[pathway]["completed"] += 1
                 pathway_coverage[pathway]["avg_adherence"] += result.pathway_adherence_score
+                pathway_coverage[pathway]["scores"].append(result.pathway_adherence_score)
 
         # Average the pathway scores
         for pathway_data in pathway_coverage.values():
@@ -3194,6 +3230,7 @@ class PathwayTestResults:
             "state_coverage": state_coverage,
             "pathway_coverage": pathway_coverage,
             "strategy_performance": strategy_performance,
+            "detailed_test_results": detailed_test_results,
             "issues_found": issues_found,
             "pathways_tested": (
                 len(set(r.pathway_title for r in self.results))
@@ -3354,7 +3391,6 @@ class PathwayTestResults:
                 </div>
                 <div style="flex: 1;">
                     <h3 style="color: #495057; margin-bottom: 10px;">🎯 Test Coverage</h3>
-                    <p style="color: #333; margin: 8px 0;"><strong>Pathways Tested:</strong> {summary["pathways_tested"]}</p>
                     <p style="color: #333; margin: 8px 0;"><strong>Strategies Used:</strong> {summary["strategies_used"]}</p>
                     <p style="color: #333; margin: 8px 0;"><strong>Test Intensity:</strong> {self.config.get("intensity", "unknown")}</p>
                     <p style="color: #333; margin: 8px 0;"><strong>Total Duration:</strong> {summary["total_duration"]:.1f}s</p>
@@ -3362,56 +3398,65 @@ class PathwayTestResults:
             </div>
         """)
 
-        # Adherence distribution
-        distribution = self.get_adherence_distribution()
-        html_parts.append("""
-            <h3 style="color: #495057;">📈 Adherence Score Distribution</h3>
-            <div style="display: flex; gap: 10px; margin: 15px 0;">
-        """)
+        # Individual test results table - no adherence distribution section
 
-        for category, count in distribution.items():
-            if count > 0:
-                html_parts.append(f"""
-                    <div style="background: rgba(233, 236, 239, 0.8); padding: 8px 12px; border-radius: 4px; border-left: 4px solid #007bff; color: #333;">
-                        <strong>{category}:</strong> {count}
-                    </div>
-                """)
-
-        html_parts.append("</div>")
-
-        # Pathway-specific results
-        if summary["pathway_coverage"]:
+        # Individual test results table - one row per test
+        if summary.get("detailed_test_results"):
             html_parts.append("""
-                <h3 style="color: #34495e;">🛤️ Pathway Performance</h3>
+                <h3 style="color: #34495e;">🛤️ Test Results</h3>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
                         <thead>
                             <tr style="background: rgba(233, 236, 239, 0.8);">
-                                <th style="padding: 12px; text-align: left; border: 1px solid #adb5bd; color: #333;">Pathway</th>
-                                <th style="padding: 12px; text-align: center; border: 1px solid #adb5bd; color: #333;">Tests</th>
-                                <th style="padding: 12px; text-align: center; border: 1px solid #adb5bd; color: #333;">Completed</th>
-                                <th style="padding: 12px; text-align: center; border: 1px solid #adb5bd; color: #333;">Avg Adherence</th>
+                                <th style="padding: 12px; text-align: left; border: 1px solid #adb5bd; color: #333;">Strategy</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #adb5bd; color: #333;">Test</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #adb5bd; color: #333;">Duration</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #adb5bd; color: #333;">Adherence Score</th>
                             </tr>
                         </thead>
                         <tbody>
             """)
 
-            for pathway, data in summary["pathway_coverage"].items():
+            # Add individual test rows
+            total_duration = 0
+            all_scores = []
+
+            for test_result in summary["detailed_test_results"]:
                 adherence_color = (
                     "green"
-                    if data["avg_adherence"] >= 0.8
+                    if test_result["adherence_score"] >= 0.8
                     else "orange"
-                    if data["avg_adherence"] >= 0.6
+                    if test_result["adherence_score"] >= 0.6
                     else "red"
                 )
+
                 html_parts.append(f"""
                     <tr>
-                        <td style="padding: 10px; border: 1px solid #adb5bd; color: #333;"><strong>{pathway}</strong></td>
-                        <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: #333;">{data["tests"]}</td>
-                        <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: #333;">{data["completed"]}</td>
-                        <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: {adherence_color}; font-weight: bold;">{data["avg_adherence"]:.1%}</td>
+                        <td style="padding: 10px; border: 1px solid #adb5bd; color: #333;">{test_result["strategy"]}</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: #333; font-family: monospace;">{test_result["test_number"]} / {test_result["total_strategy_tests"]}</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: #333; font-family: monospace;">{test_result["duration"]:.1f}s</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: {adherence_color}; font-weight: bold; font-family: monospace;">{test_result["adherence_score"]:.2f}</td>
                     </tr>
                 """)
+
+                total_duration += test_result["duration"]
+                all_scores.append(test_result["adherence_score"])
+
+            # Calculate overall average
+            overall_avg = sum(all_scores) / len(all_scores) if all_scores else 0.0
+            overall_color = (
+                "green" if overall_avg >= 0.8 else "orange" if overall_avg >= 0.6 else "red"
+            )
+
+            # Add overall average row
+            html_parts.append(f"""
+                <tr style="background: rgba(233, 236, 239, 0.5); border-top: 2px solid #adb5bd;">
+                    <td style="padding: 10px; border: 1px solid #adb5bd; color: #333; font-weight: bold; font-style: italic;">OVERALL AVERAGE:</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: #333; font-style: italic;">—</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: #333; font-family: monospace; font-weight: bold;">{total_duration:.1f}s</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: {overall_color}; font-weight: bold; font-size: 1.1em; font-family: monospace;">{overall_avg:.2f}</td>
+                </tr>
+            """)
 
             html_parts.append("</tbody></table></div>")
 
