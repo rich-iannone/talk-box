@@ -1,0 +1,390 @@
+---
+title: "Automated Pathway Testing"
+---
+
+The `autotest_pathways()` function provides comprehensive automated testing for conversational pathway adherence in ChatBots. It validates that your bots properly follow defined conversation flows, gather required information, and progress through expected states while maintaining flexibility for natural dialogue patterns.
+
+## Why Test Pathway Adherence?
+
+When you configure a `ChatBot` with conversational pathways, you want confidence that it will consistently follow the structured flow while remaining conversational, even when:
+
+- users provide incomplete information or skip steps
+- conversations branch in unexpected directions
+- users resist following the structured approach
+- edge cases and boundary conditions arise
+- backtracking or correction is needed
+- tangential discussions occur
+
+Manual testing of pathway adherence is time-consuming and inconsistent, especially for complex multi-state pathways with branching logic. The `autotest_pathways()` function automates this process with sophisticated multi-turn adversarial testing strategies.
+
+## Basic Usage
+
+The simplest way to test pathway adherence:
+
+```python
+import talk_box as tb
+
+# Create a pathway
+support_pathway = (
+    tb.Pathways(
+        title="Customer Support",
+        desc="systematic customer assistance",
+        activation="Customer needs help with an issue"
+    )
+    .state("intake: gather issue details and contact information")
+    .required(["problem description", "customer contact info"])
+    .next_state("diagnosis")
+    .state("diagnosis: understand the root cause")
+    .required(["issue category identified"])
+    .next_state("resolution")
+    .state("resolution: provide solution and confirm satisfaction")
+    .success_condition("customer issue is resolved and confirmed")
+)
+
+# Create bot with pathway
+bot = (
+    tb.ChatBot()
+    .provider_model("openai:gpt-4-turbo")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("helpful customer support agent")
+        .pathways(support_pathway)
+    )
+)
+
+# Test pathway adherence
+results = tb.autotest_pathways(bot, test_intensity="medium")
+
+# View results
+print(f"Average adherence: {results.summary['avg_adherence_score']:.1%}")
+print(f"Tests completed: {results.summary['completed_tests']}/{results.summary['total_tests']}")
+print(f"State coverage: {results.summary['state_coverage']:.1%}")
+```
+
+## Test Intensity Levels
+
+Control the thoroughness of testing with different intensity levels:
+
+```python
+# Light testing - quick validation (6 tests, 2 strategies)
+results = tb.autotest_pathways(bot, test_intensity="light")
+
+# Medium testing - balanced coverage (12 tests, 4 strategies)
+results = tb.autotest_pathways(bot, test_intensity="medium")
+
+# Thorough testing - comprehensive strategies (20 tests, 6 strategies)
+results = tb.autotest_pathways(bot, test_intensity="thorough")
+
+# Exhaustive testing - all strategies (30 tests, 7 strategies)
+results = tb.autotest_pathways(bot, test_intensity="exhaustive")
+```
+
+## Testing Strategies
+
+The function uses multiple adversarial strategies to probe pathway adherence:
+
+- **Direct Flow**: cooperative users who follow the pathway naturally
+- **Skip States**: users trying to jump ahead or bypass required steps
+- **Backtrack**: users wanting to go back or change previous information
+- **Incomplete Info**: users providing partial or vague information
+- **Tangential**: users trying to discuss topics outside pathway scope
+- **Resistance**: users resisting the structured approach
+- **Edge Cases**: boundary conditions and unusual scenarios
+
+## Comprehensive Example: Onboarding Bot
+
+```python
+import talk_box as tb
+
+# Create complex branching pathway
+onboarding_pathway = (
+    tb.Pathways(
+        title="User Onboarding",
+        desc="comprehensive new user setup process",
+        activation=["new user registration", "account setup needed"],
+        completion_criteria="user account is fully configured and ready to use",
+        fallback_strategy="if user needs custom setup, escalate to manual assistance"
+    )
+    # === STATE: welcome ===
+    .state("welcome: introduce platform and gather basic info")
+    .required(["user name", "email confirmation"])
+    .next_state("role_identification")
+
+    # === STATE: role_identification ===
+    .state("role_identification: determine user type and needs")
+    .required(["user role identified"])
+    .branch_on("business user", id="business_setup")
+    .branch_on("individual user", id="personal_setup")
+    .branch_on("educational user", id="educational_setup")
+
+    # === STATE: business_setup ===
+    .state("business_setup: configure business features")
+    .required(["company name", "team size", "use case"])
+    .next_state("feature_configuration")
+
+    # === STATE: personal_setup ===
+    .state("personal_setup: configure personal preferences")
+    .required(["personal interests", "usage goals"])
+    .next_state("feature_configuration")
+
+    # === STATE: educational_setup ===
+    .state("educational_setup: configure educational features")
+    .required(["institution name", "course information"])
+    .next_state("feature_configuration")
+
+    # === STATE: feature_configuration ===
+    .state("feature_configuration: set up platform features")
+    .required(["key features enabled", "preferences set"])
+    .next_state("completion")
+
+    # === STATE: completion ===
+    .state("completion: finalize setup and provide tour")
+    .required(["setup confirmed", "initial tour completed"])
+    .success_condition("user successfully onboarded and ready to use platform")
+)
+
+# Create sophisticated bot
+onboarding_bot = (
+    tb.ChatBot()
+    .provider_model("openai:gpt-4-turbo")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("friendly onboarding specialist", "user experience")
+        .pathways(onboarding_pathway)
+        .output_format([
+            "ask one focused question at a time",
+            "provide clear guidance and context",
+            "confirm understanding before proceeding"
+        ])
+        .final_emphasis("Follow pathway systematically while maintaining conversational warmth")
+    )
+    .temperature(0.3)
+)
+
+# Run comprehensive testing
+results = tb.autotest_pathways(
+    onboarding_bot,
+    test_intensity="thorough",
+    judge_model="openai:gpt-4",
+    verbose=True
+)
+```
+
+## Understanding Test Results
+
+View rich results with detailed analysis:
+
+```python
+# Display comprehensive results in Jupyter
+results
+
+# Access summary statistics programmatically
+summary = results.summary
+print(f"Total tests: {summary['total_tests']}")
+print(f"Average adherence: {summary['avg_adherence_score']:.1%}")
+print(f"Completion rate: {summary['completion_rate']:.1%}")
+print(f"State coverage: {summary['state_coverage']:.1%}")
+print(f"Issues found: {summary['issues_found']}")
+
+# Analyze pathway-specific performance
+for pathway, data in summary['pathway_coverage'].items():
+    print(f"\n{pathway}:")
+    print(f"  Tests: {data['tests']}")
+    print(f"  Completed: {data['completed']}")
+    print(f"  Avg Adherence: {data['avg_adherence']:.1%}")
+
+# Analyze strategy performance
+for strategy, data in summary['strategy_performance'].items():
+    print(f"\n{strategy}:")
+    print(f"  Tests: {data['tests']}")
+    print(f"  Avg Adherence: {data['avg_adherence']:.1%}")
+```
+
+## Advanced Configuration
+
+### Custom Judge Model
+
+Use a specific model for pathway evaluation:
+
+```python
+# Use GPT-4 for more accurate adherence evaluation
+results = tb.autotest_pathways(
+    bot,
+    test_intensity="thorough",
+    judge_model="openai:gpt-4",
+    verbose=True
+)
+```
+
+### Precise Control
+
+Override intensity settings for exact control:
+
+```python
+# Run exactly 15 tests regardless of intensity level
+results = tb.autotest_pathways(
+    bot,
+    test_intensity="medium",
+    max_tests=15
+)
+```
+
+## Problem Analysis
+
+Identify and analyze pathway adherence issues:
+
+```python
+# Get detailed problem summary
+problems = results.get_problem_summary()
+
+print("Issues requiring attention:")
+for problem in problems:
+    print(f"\n- {problem['issue']}")
+    print(f"  Frequency: {problem['frequency']} occurrences")
+    print(f"  Pathways affected: {', '.join(problem['pathways_affected'])}")
+    print(f"  Strategies affected: {', '.join(problem['strategies_affected'])}")
+
+# Get adherence score distribution
+distribution = results.get_adherence_distribution()
+for category, count in distribution.items():
+    if count > 0:
+        print(f"{category}: {count} tests")
+```
+
+## Individual Test Analysis
+
+Examine specific test results:
+
+```python
+# Look at individual test results
+for result in results.results:
+    if result.pathway_adherence_score < 0.7:  # Focus on problematic tests
+        print(f"\nPathway: {result.pathway_title}")
+        print(f"Strategy: {result.strategy.value}")
+        print(f"Adherence: {result.pathway_adherence_score:.1%}")
+        print(f"States achieved: {result.states_achieved}")
+        print(f"Issues: {result.issues}")
+
+        # Examine the conversation
+        for message in result.conversation.messages:
+            role = "User" if message.role == "user" else "Bot"
+            print(f"  {role}: {message.content[:100]}...")
+```
+
+## Export and Analysis
+
+Export results for further analysis:
+
+```python
+# Export summary data
+import json
+
+export_data = {
+    "summary": results.summary,
+    "problems": results.get_problem_summary(),
+    "distribution": results.get_adherence_distribution(),
+    "test_config": results.config
+}
+
+with open("pathway_test_results.json", "w") as f:
+    json.dump(export_data, f, indent=2, default=str)
+
+print("Results exported to pathway_test_results.json")
+```
+
+## Best Practices
+
+### Development Workflow
+
+Incorporate pathway testing into your development process:
+
+```python
+# Quick validation during development
+def test_pathway_development():
+    results = tb.autotest_pathways(bot, test_intensity="light")
+    assert results.summary['avg_adherence_score'] >= 0.7, "Development bot needs pathway improvements"
+
+# Comprehensive testing before deployment
+def test_pathway_production():
+    results = tb.autotest_pathways(bot, test_intensity="exhaustive")
+    assert results.summary['avg_adherence_score'] >= 0.85, "Production bot failing pathway adherence"
+    assert results.summary['completion_rate'] >= 0.9, "Too many test failures"
+```
+
+### Iterative Improvement
+
+Use test results to strengthen pathway adherence:
+
+```python
+# Analyze failures to improve pathway design
+results = tb.autotest_pathways(bot, test_intensity="thorough")
+
+if results.summary['avg_adherence_score'] < 0.8:
+    print("Pathway adherence needs improvement...")
+
+    # Look at problem patterns
+    problems = results.get_problem_summary()
+    for problem in problems[:5]:  # Top 5 issues
+        print(f"\nIssue: {problem['issue']}")
+        print(f"Frequency: {problem['frequency']}")
+
+        # Look at specific strategies that cause this issue
+        affected_strategies = problem['strategies_affected']
+        print(f"Problematic strategies: {', '.join(affected_strategies)}")
+```
+
+### Pathway Design Validation
+
+Use testing to validate pathway design decisions:
+
+```python
+# Test different pathway variations
+pathway_v1 = create_basic_pathway()
+pathway_v2 = create_improved_pathway()
+
+bot_v1 = create_bot_with_pathway(pathway_v1)
+bot_v2 = create_bot_with_pathway(pathway_v2)
+
+results_v1 = tb.autotest_pathways(bot_v1, test_intensity="medium")
+results_v2 = tb.autotest_pathways(bot_v2, test_intensity="medium")
+
+print(f"V1 Adherence: {results_v1.summary['avg_adherence_score']:.1%}")
+print(f"V2 Adherence: {results_v2.summary['avg_adherence_score']:.1%}")
+
+if results_v2.summary['avg_adherence_score'] > results_v1.summary['avg_adherence_score']:
+    print("V2 shows better pathway adherence!")
+```
+
+## Integration with CI/CD
+
+Incorporate pathway testing into automated pipelines:
+
+```python
+# pytest integration
+def test_pathway_compliance():
+    """Test that production bot maintains pathway adherence."""
+    bot = create_production_bot()
+    results = tb.autotest_pathways(bot, test_intensity="thorough")
+
+    # Set quality gates
+    assert results.summary['avg_adherence_score'] >= 0.85
+    assert results.summary['completion_rate'] >= 0.9
+    assert results.summary['issues_found'] <= 5
+
+    # No critical issues in specific strategies
+    strategy_performance = results.summary['strategy_performance']
+    for strategy, data in strategy_performance.items():
+        if strategy in ['direct_flow', 'incomplete_info']:
+            assert data['avg_adherence'] >= 0.9, f"Critical strategy {strategy} failing"
+```
+
+## Summary
+
+Pathway testing provides comprehensive validation of conversational flow adherence:
+
+- **Automated Testing**: systematic validation with multiple adversarial strategies
+- **Rich Analysis**: detailed reporting with adherence scores and issue identification
+- **Quality Assurance**: integration with development workflows and CI/CD pipelines
+- **Iterative Improvement**: data-driven pathway optimization and design validation
+
+The `autotest_pathways()` function enables you to build confidence in your ChatBot's ability to guide users through complex, multi-step processes while maintaining natural conversation patterns.

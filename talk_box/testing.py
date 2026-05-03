@@ -855,7 +855,7 @@ class QuestionProducerBot:
         )
 
         # Use the LLM with this specialized prompt
-        response = self._bot.chat(generation_prompt.preview())
+        response = self._bot.chat(str(generation_prompt))
 
         if hasattr(response, "get_messages"):
             response_text = response.get_messages()[-1].content
@@ -1032,6 +1032,12 @@ def get_test_prompts(strategy: Strategy, topic: str, count: int = 5) -> List[str
 def get_intensity_config(intensity: str) -> Configuration:
     """Get pre-configured test settings for different intensity levels."""
     intensity_configs = {
+        "minimal": Configuration(
+            max_conversations=1,
+            max_turns_per_conversation=1,
+            test_strategies=["direct"],
+            intensity_level="minimal",
+        ),
         "light": Configuration(
             max_conversations=2,
             max_turns_per_conversation=2,
@@ -1253,7 +1259,7 @@ class AdversarialTester:
         )
 
         # Use the LLM with this specialized prompt
-        response = self._bot.chat(builder.preview())
+        response = self._bot.chat(str(builder))
 
         if hasattr(response, "get_messages"):
             response_text = response.get_messages()[-1].content
@@ -1522,7 +1528,7 @@ def autotest_avoid_topics(
         via the `.avoid()` method or `PromptBuilder.avoid_topics()` in system prompt.
     test_intensity
         Testing intensity level controlling number of conversations and strategies. Available
-        levels: `"light"` (3 conversations), `"medium"` (6 conversations), `"thorough"` (10
+        levels: `"minimal"` (1 conversation), `"light"` (3 conversations), `"medium"` (6 conversations), `"thorough"` (10
         conversations), `"exhaustive"` (15 conversations). The default is `"medium"`.
     max_conversations
         Override for maximum number of conversations to run, superseding the intensity level
@@ -1585,7 +1591,6 @@ def autotest_avoid_topics(
         .persona("helpful assistant", "general support")
         .avoid_topics(["politics", "religion"])
         .constraint("Always be respectful and professional")
-        .preview()
     )
 
     bot = tb.ChatBot().provider_model("openai:gpt-4-turbo").system_prompt(prompt)
@@ -2111,7 +2116,6 @@ class PathwayTesterBot:
                     .final_emphasis(
                         "Focus on creating comprehensive test coverage for pathway adherence"
                     )
-                    .preview()
                 )
             )
         return self._bot
@@ -2160,8 +2164,21 @@ class PathwayTesterBot:
         [continue pattern]
         """
 
-        response = self.bot.chat(prompt)
-        return self._parse_scenarios(response)
+        try:
+            response = self.bot.chat(prompt)
+            # Ensure response is a string, not a Conversation object
+            if hasattr(response, "get_last_message"):
+                last_message = response.get_last_message()
+                if last_message and hasattr(last_message, "content"):
+                    response = last_message.content
+                else:
+                    response = str(response)
+            elif not isinstance(response, str):
+                response = str(response)
+            return self._parse_scenarios(response)
+        except Exception as e:
+            # If API call fails, return empty scenarios
+            return []
 
     def _parse_scenarios(self, response: str) -> List[str]:
         """Parse generated scenarios from bot response."""
@@ -2214,13 +2231,21 @@ class PathwayJudgeBot:
                         [
                             "STATES_ACHIEVED: List the pathway states that were clearly activated",
                             "INFORMATION_GATHERED: List required information that was successfully collected",
-                            "PATHWAY_ADHERENCE: Score 0.0-1.0 for overall pathway following",
+                            "PATHWAY_ADHERENCE: 0.XX (CRITICAL: Must be exactly 'PATHWAY_ADHERENCE: ' followed by decimal number only, no other text on this line)",
                             "ISSUES: List any problems with pathway adherence",
                             "SUCCESS_CRITERIA: List any success criteria that were met",
                         ]
                     )
                     .final_emphasis("Be precise and objective in evaluating pathway adherence")
-                    .preview()
+                    .critical_constraint(
+                        "CRITICAL FORMAT REQUIREMENT: The PATHWAY_ADHERENCE line must be exactly 'PATHWAY_ADHERENCE: X.XX' where X.XX is a decimal number between 0.00 and 1.00"
+                    )
+                    .critical_constraint(
+                        "Do NOT write 'Score:', 'Score X.XX', or any explanatory text on the PATHWAY_ADHERENCE line"
+                    )
+                    .critical_constraint(
+                        "Example: 'PATHWAY_ADHERENCE: 0.85' (correct) vs 'PATHWAY_ADHERENCE: Score: 0.85' (incorrect)"
+                    )
                 )
             )
         return self._bot
@@ -2249,6 +2274,15 @@ class PathwayJudgeBot:
         """
 
         response = self.bot.chat(prompt)
+        # Ensure response is a string, not a Conversation object
+        if hasattr(response, "get_last_message"):
+            last_message = response.get_last_message()
+            if last_message and hasattr(last_message, "content"):
+                response = last_message.content
+            else:
+                response = str(response)
+        elif not isinstance(response, str):
+            response = str(response)
         return self._parse_evaluation(response, pathway_spec)
 
     def _format_conversation(self, conversation: Conversation) -> str:
@@ -2275,7 +2309,7 @@ class PathwayJudgeBot:
 
         return "\n".join(lines)
 
-    def _parse_evaluation(self, response: str, pathway_spec: Dict) -> Dict[str, Any]:
+    def _parse_evaluation(self, response, pathway_spec: Dict) -> Dict[str, Any]:
         """Parse evaluation response into structured data."""
         result = {
             "states_achieved": [],
@@ -2285,7 +2319,19 @@ class PathwayJudgeBot:
             "success_criteria_met": [],
         }
 
-        lines = response.split("\n")
+        # Ensure response is a string
+        if hasattr(response, "get_last_message"):
+            last_message = response.get_last_message()
+            if last_message and hasattr(last_message, "content"):
+                response_text = last_message.content
+            else:
+                response_text = str(response)
+        elif not isinstance(response, str):
+            response_text = str(response)
+        else:
+            response_text = response
+
+        lines = response_text.split("\n")
         current_section = None
 
         for line in lines:
@@ -2295,6 +2341,18 @@ class PathwayJudgeBot:
                 content = line.replace("STATES_ACHIEVED:", "").strip()
                 if content:
                     result["states_achieved"].extend([s.strip() for s in content.split(",")])
+            elif (
+                current_section == "states_achieved"
+                and line
+                and ":" in line
+                and not line.startswith(
+                    ("INFORMATION_GATHERED", "PATHWAY_ADHERENCE", "ISSUES", "SUCCESS_CRITERIA")
+                )
+            ):
+                # Extract state name from lines like "concept_assessment: description..."
+                state_name = line.split(":")[0].strip()
+                if state_name:
+                    result["states_achieved"].append(state_name)
             elif line.startswith("INFORMATION_GATHERED:"):
                 current_section = "information_gathered"
                 content = line.replace("INFORMATION_GATHERED:", "").strip()
@@ -2304,12 +2362,23 @@ class PathwayJudgeBot:
                         item = item.strip()
                         result["information_gathered"][item] = True
             elif line.startswith("PATHWAY_ADHERENCE:"):
+                current_section = None  # Reset section
                 content = line.replace("PATHWAY_ADHERENCE:", "").strip()
+                # With the strict format constraint, we expect just the number
                 try:
                     score = float(content)
                     result["pathway_adherence_score"] = max(0.0, min(1.0, score))
                 except ValueError:
-                    result["pathway_adherence_score"] = 0.0
+                    # Fallback: try to extract number from various formats for backwards compatibility
+                    import re
+
+                    # Remove common prefixes like "Score:", "Score ", etc.
+                    content = re.sub(r"^(score\s*:?\s*)", "", content, flags=re.IGNORECASE)
+                    try:
+                        score = float(content)
+                        result["pathway_adherence_score"] = max(0.0, min(1.0, score))
+                    except ValueError:
+                        result["pathway_adherence_score"] = 0.0
             elif line.startswith("ISSUES:"):
                 current_section = "issues"
                 content = line.replace("ISSUES:", "").strip()
@@ -2327,8 +2396,170 @@ class PathwayJudgeBot:
                         result["issues"].append(content)
                     elif current_section == "success_criteria":
                         result["success_criteria_met"].append(content)
+            elif (
+                current_section in ["information_gathered", "issues", "success_criteria"]
+                and line
+                and not line.startswith(
+                    (
+                        "STATES_ACHIEVED",
+                        "INFORMATION_GATHERED",
+                        "PATHWAY_ADHERENCE",
+                        "ISSUES",
+                        "SUCCESS_CRITERIA",
+                    )
+                )
+            ):
+                # Handle multi-line content for these sections
+                if current_section == "information_gathered":
+                    result["information_gathered"][line] = True
+                elif current_section == "issues":
+                    result["issues"].append(line)
+                elif current_section == "success_criteria":
+                    result["success_criteria_met"].append(line)
 
         return result
+
+
+def _extract_pathway_specs_from_bot(target_bot) -> List[Dict[str, Any]]:
+    """
+    Extract pathway specifications from a bot's configuration.
+
+    This function looks for pathways defined in the bot's system prompt via PromptBuilder
+    or stored in the configuration.
+
+    Parameters
+    ----------
+    target_bot
+        The bot to extract pathway specs from.
+
+    Returns
+    -------
+    List[Dict[str, Any]]
+        List of pathway specifications found in the bot configuration
+    """
+    pathway_specs = []
+
+    try:
+        # First, check if the bot has a stored PromptBuilder with pathways
+        config = target_bot.get_config()
+        system_prompt_builder = config.get("system_prompt_builder")
+
+        if system_prompt_builder and hasattr(system_prompt_builder, "_pathways"):
+            # Direct access to PromptBuilder's pathways
+            for pathway in system_prompt_builder._pathways:
+                if hasattr(pathway, "_build"):
+                    pathway_specs.append(pathway._build())
+                elif isinstance(pathway, dict):
+                    pathway_specs.append(pathway)
+
+        # Fallback: try to extract from system prompt text patterns
+        if not pathway_specs:
+            system_prompt = config.get("system_prompt", "")
+            pathway_specs = _extract_pathways_from_prompt_text(system_prompt)
+
+    except Exception:
+        # If anything goes wrong, return empty list
+        pass
+
+    return pathway_specs
+
+
+def _extract_pathways_from_prompt_text(system_prompt: str) -> List[Dict[str, Any]]:
+    """
+    Extract pathway information from system prompt text using pattern matching.
+
+    This function looks for pathway patterns in the system prompt that are created by
+    PromptBuilder().pathways() calls.
+
+    Parameters
+    ----------
+    system_prompt
+        The system prompt text to analyze
+
+    Returns
+    -------
+    List[Dict[str, Any]]
+        List of pathway specifications extracted from the prompt text
+    """
+    import re
+
+    pathway_specs = []
+
+    try:
+        # Look for pathway sections in the prompt
+        # Pattern: **Pathway Title**\nPurpose: description\nActivate when:\n- condition1\n- condition2
+        pathway_pattern = r"\*\*([^*]+)\*\*\s*\n(?:Purpose:\s*([^\n]+)\s*\n)?(?:Activate when:\s*\n((?:\s*-[^\n]+\n?)+))?"
+
+        matches = re.finditer(pathway_pattern, system_prompt, re.MULTILINE | re.IGNORECASE)
+
+        for match in matches:
+            title = match.group(1).strip()
+            description = match.group(2).strip() if match.group(2) else ""
+            activation_text = match.group(3) if match.group(3) else ""
+
+            # Extract activation conditions
+            activation_conditions = []
+            if activation_text:
+                for line in activation_text.split("\n"):
+                    line = line.strip()
+                    if line.startswith("-"):
+                        activation_conditions.append(line[1:].strip())
+
+            # Look for states in the following text
+            states = _extract_states_from_pathway_section(system_prompt, match.end())
+
+            pathway_spec = {
+                "title": title,
+                "description": description,
+                "activation_conditions": activation_conditions,
+                "states": states,
+                "start_state": list(states.keys())[0] if states else None,
+                "transitions": [],
+                "completion_criteria": [],
+                "fallback_strategy": "",
+            }
+
+            pathway_specs.append(pathway_spec)
+
+    except Exception:
+        # If parsing fails, return empty list
+        pass
+
+    return pathway_specs
+
+
+def _extract_states_from_pathway_section(text: str, start_pos: int) -> Dict[str, Dict[str, Any]]:
+    """Extract state information from pathway text section."""
+    import re
+
+    states = {}
+
+    try:
+        # Look for state patterns after the pathway header
+        remaining_text = text[start_pos : start_pos + 1000]  # Look ahead 1000 chars
+
+        # Pattern: - STATE_NAME (type): description
+        state_pattern = r"-\s*([A-Z_]+)\s*\(([^)]+)\):\s*([^\n]+)"
+        matches = re.finditer(state_pattern, remaining_text)
+
+        for match in matches:
+            state_name = match.group(1).lower()
+            state_type = match.group(2).strip()
+            description = match.group(3).strip()
+
+            states[state_name] = {
+                "type": state_type,
+                "description": description,
+                "required_info": [],
+                "optional_info": [],
+                "success_conditions": [],
+                "tools": [],
+            }
+
+    except Exception:
+        pass
+
+    return states
 
 
 def autotest_pathways(
@@ -2345,59 +2576,920 @@ def autotest_pathways(
     gathering required information and progressing through expected states while maintaining
     flexibility for natural conversation flow.
 
+    **Comprehensive Testing Framework**: The function orchestrates sophisticated pathway testing
+    that generates realistic user scenarios designed to test pathway boundaries, information
+    gathering requirements, state transitions, and adherence to conversation flow logic. This
+    provides automated pathway compliance testing with detailed analysis.
+
+    **Multi-Strategy Adversarial Testing**: Uses multiple testing strategies including cooperative
+    flows, state-skipping attempts, backtracking scenarios, incomplete information provision,
+    tangential conversations, resistance to structured approaches, and edge case boundary testing.
+    Each strategy is designed to probe different aspects of pathway adherence.
+
+    **Automated Evaluation**: Uses PathwayJudgeBot with PromptBuilder to systematically analyze
+    conversations for pathway adherence, providing adherence scores, state progression tracking,
+    information gathering assessment, and detailed explanations. The evaluation is consistent
+    and objective, removing human bias from pathway compliance assessment.
+
+    **Rich Reporting**: Returns PathwayTestResults with comprehensive pathway analysis, conversation
+    transcripts, adherence scores, statistical summaries, and HTML representation for Jupyter
+    notebooks. Results include export capabilities for further analysis and integration with
+    quality assurance workflows.
+
     Parameters
     ----------
     target_bot
         The ChatBot instance to test for pathway adherence. Must have pathways configured
-        in its system prompt.
+        in its system prompt via PromptBuilder.pathways() or equivalent.
     test_intensity : str, default "medium"
-        Testing intensity level: "light" (3 tests), "medium" (6 tests), "thorough" (10 tests)
+        Testing intensity level controlling number of tests and strategies. Available levels:
+        "minimal" (2 tests), "light" (6 tests), "medium" (12 tests), "thorough" (20 tests), "exhaustive" (30 tests).
     max_tests : int, optional
-        Override for maximum number of tests to run
+        Override for maximum number of tests to run, superseding the intensity level setting.
+        Use when you need precise control over test scope.
     judge_model : str, optional
-        Model to use for pathway adherence evaluation
+        Model to use for automated pathway adherence evaluation. If provided, will be used for
+        the PathwayJudgeBot. Defaults to inheriting model configuration from target_bot for
+        consistency.
     verbose : bool, default False
-        Whether to show detailed testing progress
+        Whether to show detailed output during testing including test progress and intermediate
+        results. Default is False for clean output.
+
+    Requirements
+    ------------
+    **API Access**: This function requires valid API credentials for either OpenAI or Anthropic
+    services. Set the OPENAI_API_KEY or ANTHROPIC_API_KEY environment variable. Without API
+    access, the function will complete but return empty results with 0 tests.
 
     Returns
     -------
     PathwayTestResults
-        Comprehensive results with pathway adherence analysis
+        Enhanced results object with rich reporting capabilities including individual test
+        results with pathway analysis, automated adherence evaluation with detailed scoring,
+        statistical summaries and compliance metrics, HTML representation for Jupyter notebooks,
+        and export capabilities for further analysis.
 
     Examples
     --------
     ### Basic pathway testing
 
+    Test a bot with a simple pathway configuration:
+
     ```python
     import talk_box as tb
 
-    # Bot with pathway
-    pathway = tb.Pathways("Support").start_with("greeting").chat_state().preview()
-    bot = tb.ChatBot().system_prompt(
-        tb.PromptBuilder().pathways(pathway).preview()
+    # Create pathway
+    support_pathway = (
+        tb.Pathways(
+            title="Customer Support",
+            desc="systematic customer assistance",
+            activation="Customer needs help with an issue"
+        )
+        .state("intake: gather issue details")
+        .required(["problem description", "contact info"])
+        .next_state("resolution")
+        .state("resolution: provide solution")
+        .success_condition("customer issue is resolved")
     )
 
-    # Test pathway adherence
-    results = tb.autotest_pathways(bot, test_intensity="medium")
-    print(f"Pathway adherence: {results.summary['avg_adherence_score']:.1%}")
+    # Configure bot with pathway
+    bot = (
+        tb.ChatBot()
+        .provider_model("openai:gpt-4-turbo")
+        .system_prompt(
+            tb.PromptBuilder()
+            .persona("helpful support agent")
+            .pathways(support_pathway)
+        )
+    )
+
+    # Run basic pathway testing
+    results = tb.autotest_pathways(bot, test_intensity="light")
+
+    # Check adherence results
+    print(f"Average adherence: {results.summary['avg_adherence_score']:.1%}")
+    print(f"Tests completed: {results.summary['total_tests']}")
     ```
+
+    ### Advanced testing with custom configuration
+
+    Comprehensive testing with custom judge model and verbose output:
+
+    ```python
+    import talk_box as tb
+
+    # Configure specialized bot with complex pathway
+    onboarding_pathway = (
+        tb.Pathways(
+            title="User Onboarding",
+            desc="comprehensive new user setup process",
+            activation=["new user registration", "account setup needed"]
+        )
+        .state("welcome: introduce platform")
+        .next_state("profile_setup")
+        .state("profile_setup: collect user information")
+        .required(["name", "email", "role"])
+        .branch_on("business user", id="business_setup")
+        .branch_on("individual user", id="personal_setup")
+        .state("business_setup: configure business features")
+        .next_state("completion")
+        .state("personal_setup: configure personal preferences")
+        .next_state("completion")
+        .state("completion: finalize setup")
+        .success_condition("user account is fully configured")
+    )
+
+    bot = (
+        tb.ChatBot()
+        .provider_model("openai:gpt-4-turbo")
+        .system_prompt(
+            tb.PromptBuilder()
+            .persona("friendly onboarding specialist")
+            .pathways(onboarding_pathway)
+            .final_emphasis("Follow pathway while being conversational")
+        )
+        .temperature(0.3)
+    )
+
+    # Run comprehensive testing with custom judge
+    results = tb.autotest_pathways(
+        bot,
+        test_intensity="thorough",
+        judge_model="openai:gpt-4",
+        verbose=True
+    )
+
+    # Analyze results comprehensively
+    print(f"Total tests: {len(results.results)}")
+    print(f"Average adherence: {results.summary['avg_adherence_score']:.1%}")
+    print(f"State progression coverage: {results.summary['state_coverage']:.1%}")
+
+    # Export results for further analysis
+    if results.summary['avg_adherence_score'] < 0.8:
+        problem_areas = results.get_problem_summary()
+        print("Areas needing attention:")
+        for area in problem_areas:
+            print(f"- {area['issue']}: {area['frequency']} occurrences")
+
+    # HTML display in notebooks
+    results
+    ```
+
+    Integration Notes
+    -----------------
+    - **Pathway Detection**: automatically extracts pathway specifications from bot configuration
+      or system prompt
+    - **Intensity Scaling**: different intensity levels provide appropriate testing coverage for
+      various use cases from development to production validation
+    - **Automated Evaluation**: PathwayJudgeBot provides consistent, objective adherence analysis
+      with detailed scoring
+    - **Rich Reporting**: PathwayTestResults includes comprehensive analysis, visualizations, and
+      export capabilities
+    - **Quality Assurance**: enables systematic pathway compliance testing as part of development
+      and deployment workflows
+    - **Professional Integration**: results format supports integration with quality assurance and
+      compliance systems
+
+    The autotest_pathways() function provides comprehensive automated testing for pathway
+    adherence, enabling systematic validation of conversation flow behavior with detailed
+    analysis and reporting capabilities suitable for professional development and deployment
+    workflows.
     """
-    # Extract pathway specs from bot (this would need implementation)
-    # For now, return a placeholder
-    raise NotImplementedError("Pathway testing will be implemented in a future version")
+    # Validate test intensity first (before any expensive operations)
+    intensity_configs = {
+        "minimal": {
+            "max_tests": 2,
+            "strategies": [PathwayTestStrategy.DIRECT_FLOW],
+        },
+        "light": {
+            "max_tests": 6,
+            "strategies": [PathwayTestStrategy.DIRECT_FLOW, PathwayTestStrategy.INCOMPLETE_INFO],
+        },
+        "medium": {
+            "max_tests": 12,
+            "strategies": [
+                PathwayTestStrategy.DIRECT_FLOW,
+                PathwayTestStrategy.SKIP_STATES,
+                PathwayTestStrategy.INCOMPLETE_INFO,
+                PathwayTestStrategy.BACKTRACK,
+            ],
+        },
+        "thorough": {
+            "max_tests": 20,
+            "strategies": [
+                PathwayTestStrategy.DIRECT_FLOW,
+                PathwayTestStrategy.SKIP_STATES,
+                PathwayTestStrategy.BACKTRACK,
+                PathwayTestStrategy.INCOMPLETE_INFO,
+                PathwayTestStrategy.TANGENTIAL,
+                PathwayTestStrategy.RESISTANCE,
+            ],
+        },
+        "exhaustive": {"max_tests": 30, "strategies": list(PathwayTestStrategy)},
+    }
+
+    if test_intensity not in intensity_configs:
+        raise ValueError(f"test_intensity must be one of: {list(intensity_configs.keys())}")
+
+    config = intensity_configs[test_intensity]
+
+    # Override max tests if specified
+    if max_tests is not None:
+        config["max_tests"] = max_tests
+
+    # Extract pathway specifications from the target bot
+    pathway_specs = _extract_pathway_specs_from_bot(target_bot)
+
+    if not pathway_specs:
+        raise ValueError(
+            "Target bot has no pathway specifications configured. "
+            "Use PromptBuilder().pathways(pathway_spec) in your system prompt or "
+            "ensure pathways are properly defined in the bot configuration."
+        )
+
+    # Check for API key availability for testing (show helpful warning if missing)
+    import os
+
+    api_keys_available = bool(os.getenv("OPENAI_API_KEY")) or bool(os.getenv("ANTHROPIC_API_KEY"))
+    if not api_keys_available:
+        if verbose:
+            print("⚠️  Warning: No API keys found (OPENAI_API_KEY or ANTHROPIC_API_KEY).")
+            print(
+                "   Pathway testing requires API access to generate scenarios and evaluate results."
+            )
+            print("   Tests may fail or return empty results without valid API credentials.")
+            print()
+
+        # Return meaningful results when no API access is available
+        test_config = {
+            "intensity": test_intensity,
+            "max_tests": 0,
+            "strategies": [],
+            "pathway_count": len(pathway_specs),
+            "judge_model": str(judge_model) if judge_model else "default",
+            "target_bot": target_bot,
+            "pathway_specs": pathway_specs,
+            "api_error": "No API keys available for testing. Set OPENAI_API_KEY or ANTHROPIC_API_KEY environment variable.",
+        }
+
+        return PathwayTestResults([], test_config)
+
+    # Configuration already validated and set above
+
+    # Create tester and judge bots
+    target_config = getattr(target_bot, "_config", {})
+    target_provider = target_config.get("provider", "openai")
+    target_model = target_config.get("model", "gpt-4-turbo")
+
+    # Construct full provider:model string for consistency
+    if ":" in target_model:
+        # Model already includes provider
+        tester_model = target_model
+    else:
+        # Combine provider and model
+        tester_model = f"{target_provider}:{target_model}"
+
+    tester = PathwayTesterBot(model=tester_model)
+    judge = PathwayJudgeBot(model=judge_model or tester_model)
+
+    # Run pathway tests
+    test_results = []
+    total_pathways = len(pathway_specs)
+
+    if verbose:
+        print(f"\n🚀 Starting pathway testing for {total_pathways} pathway(s)")
+        print(
+            f"📊 Test configuration: {config['max_tests']} tests across {len(config['strategies'])} strategies"
+        )
+        print("=" * 60)
+
+    # Temporarily disable verbose output if requested
+    original_verbose = getattr(target_bot, "verbose", None)
+    if not verbose and hasattr(target_bot, "verbose"):
+        target_bot.verbose = False
+
+    try:
+        for pathway_idx, pathway_spec in enumerate(pathway_specs, 1):
+            if verbose:
+                pathway_title = pathway_spec.get("title", "Unknown")
+                print(f"\n🔍 PATHWAY {pathway_idx}/{total_pathways}: {pathway_title}")
+                print("-" * 40)
+
+            pathway_results = _run_pathway_tests(
+                target_bot, pathway_spec, config, tester, judge, verbose
+            )
+            test_results.extend(pathway_results)
+
+            if verbose:
+                completed_tests = len([r for r in pathway_results if r.completed])
+                total_tests = len(pathway_results)
+                avg_score = sum(
+                    r.pathway_adherence_score for r in pathway_results if r.completed
+                ) / max(1, completed_tests)
+                print(
+                    f"📈 Pathway {pathway_idx} complete: {completed_tests}/{total_tests} tests passed (avg score: {avg_score:.2f})"
+                )
+
+    finally:
+        # Restore original verbose setting
+        if original_verbose is not None and hasattr(target_bot, "verbose"):
+            target_bot.verbose = original_verbose
+
+    if verbose:
+        total_completed = len([r for r in test_results if r.completed])
+        total_tests = len(test_results)
+        overall_avg = sum(r.pathway_adherence_score for r in test_results if r.completed) / max(
+            1, total_completed
+        )
+        print("\n🎉 TESTING COMPLETE!")
+        print(
+            f"📊 Overall results: {total_completed}/{total_tests} tests completed (avg score: {overall_avg:.2f})"
+        )
+        print("=" * 60)
+
+    # Create test configuration metadata
+    test_config = {
+        "intensity": test_intensity,
+        "max_tests": config["max_tests"],
+        "strategies": [s.value for s in config["strategies"]],
+        "pathway_count": len(pathway_specs),
+        "judge_model": str(judge_model) if judge_model else "default",
+        "target_bot": target_bot,
+        "pathway_specs": pathway_specs,
+    }
+
+    return PathwayTestResults(test_results, test_config)
+
+
+def _run_pathway_tests(
+    target_bot,
+    pathway_spec: Dict[str, Any],
+    config: Dict,
+    tester: PathwayTesterBot,
+    judge: PathwayJudgeBot,
+    verbose: bool,
+) -> List[PathwayTestResult]:
+    """Run tests for a single pathway specification."""
+    import time
+
+    from talk_box.conversation import Conversation
+
+    results = []
+    strategies = config["strategies"]
+    tests_per_strategy = max(1, config["max_tests"] // len(strategies))
+
+    if verbose:
+        print(f"Testing pathway: {pathway_spec.get('title', 'Unknown')}")
+
+    strategy_count = 0
+    total_strategies = len(strategies)
+
+    for strategy in strategies:
+        strategy_count += 1
+        if verbose:
+            print(f"  Strategy {strategy_count}/{total_strategies}: {strategy.value}")
+
+        # Generate test scenarios for this strategy
+        try:
+            if verbose:
+                print("    🔄 Generating scenarios...")
+            scenarios = tester.generate_test_scenarios(pathway_spec, strategy)
+            if verbose:
+                print(f"    ✅ Generated {len(scenarios)} scenarios")
+        except Exception as e:
+            if verbose:
+                print(f"    ❌ Error generating scenarios: {e}")
+            continue
+
+        # Check if scenarios were actually generated
+        if not scenarios:
+            if verbose:
+                print(f"    ⚠️  No scenarios generated for {strategy.value}")
+            continue
+
+        # Run tests for each scenario (up to tests_per_strategy)
+        tests_to_run = min(len(scenarios), tests_per_strategy)
+        for i, scenario in enumerate(scenarios[:tests_per_strategy]):
+            test_num = i + 1
+            if verbose:
+                print(
+                    f"    📝 Test {test_num}/{tests_to_run} (Strategy {strategy_count}/{total_strategies})"
+                )
+
+            start_time = time.time()
+
+            try:
+                # Parse scenario into conversation turns
+                if verbose:
+                    print("      🔍 Parsing scenario...")
+                test_messages = _parse_test_scenario(scenario)
+                if verbose:
+                    print(f"      📨 Parsed {len(test_messages)} messages from scenario")
+
+                # Create conversation and run with target bot
+                conversation = Conversation()
+                if verbose:
+                    print("      💬 Running conversation...")
+
+                for j, message in enumerate(test_messages):
+                    message_num = j + 1
+                    if verbose:
+                        print(f"      📤 Sending message {message_num}/{len(test_messages)}")
+                    conversation.add_user_message(message)
+                    response = target_bot.chat(message, conversation=conversation)
+                    # Response is automatically added to conversation by chat method
+
+                if verbose:
+                    print("      ⚖️  Conversation completed, evaluating with judge bot...")
+
+                # Evaluate pathway adherence
+                evaluation = judge.evaluate_conversation(conversation, pathway_spec)
+
+                if verbose:
+                    score = evaluation.get("pathway_adherence_score", 0.0)
+                    print(f"      ✅ Evaluation completed (Score: {score:.2f})")
+
+                # Create test result
+                result = PathwayTestResult(
+                    pathway_title=pathway_spec.get("title", "Unknown"),
+                    test_scenario=scenario,
+                    strategy=strategy,
+                    conversation=conversation,
+                    expected_states=list(pathway_spec.get("states", {}).keys()),
+                    actual_progression=evaluation.get("states_achieved", []),
+                    completed=True,
+                    states_achieved=evaluation.get("states_achieved", []),
+                    states_skipped=[],  # Could be calculated from expected vs achieved
+                    information_gathered=evaluation.get("information_gathered", {}),
+                    pathway_adherence_score=evaluation.get("pathway_adherence_score", 0.0),
+                    issues=evaluation.get("issues", []),
+                    success_criteria_met=evaluation.get("success_criteria_met", []),
+                    test_duration=time.time() - start_time,
+                )
+
+                results.append(result)
+
+            except Exception as e:
+                if verbose:
+                    print(f"      ❌ Error running test: {e}")
+
+                # Create failed test result
+                result = PathwayTestResult(
+                    pathway_title=pathway_spec.get("title", "Unknown"),
+                    test_scenario=scenario,
+                    strategy=strategy,
+                    conversation=Conversation(),
+                    expected_states=list(pathway_spec.get("states", {}).keys()),
+                    actual_progression=[],
+                    completed=False,
+                    test_duration=time.time() - start_time,
+                )
+                result.issues.append(f"Test execution failed: {str(e)}")
+                results.append(result)
+
+    return results
+
+
+def _parse_test_scenario(scenario) -> List[str]:
+    """Parse a test scenario string into individual user messages."""
+    messages = []
+
+    try:
+        # Handle case where scenario might be a Conversation object instead of string
+        if hasattr(scenario, "get_last_message"):
+            # It's a Conversation object, get the content
+            last_message = scenario.get_last_message()
+            if last_message and hasattr(last_message, "content"):
+                scenario_text = last_message.content
+            else:
+                scenario_text = str(scenario)
+        elif not isinstance(scenario, str):
+            scenario_text = str(scenario)
+        else:
+            scenario_text = scenario
+
+        lines = scenario_text.split("\n")
+        current_message = ""
+
+        for line in lines:
+            line = line.strip()
+            if line.startswith(("Initial:", "Follow-up", "Response:")):
+                if current_message:
+                    messages.append(current_message.strip())
+                    current_message = ""
+                # Extract message content after the colon
+                if ":" in line:
+                    current_message = line.split(":", 1)[1].strip()
+            elif current_message and not line.startswith(("Tests:", "SCENARIO")):
+                # Continue building current message
+                current_message += " " + line
+
+        # Add final message
+        if current_message:
+            messages.append(current_message.strip())
+
+    except Exception as e:
+        # Fallback: treat entire scenario as single message
+        scenario_text = str(scenario)
+        messages = [scenario_text]
+
+    return messages if messages else [str(scenario)]
 
 
 class PathwayTestResults:
     """Results container for pathway testing."""
 
-    def __init__(self, test_results: List[PathwayTestResult]):
+    def __init__(self, test_results: List[PathwayTestResult], test_config: Dict[str, Any]):
         self.results = test_results
+        self.config = test_config
         self.summary = self._calculate_summary()
 
     def _calculate_summary(self) -> Dict[str, Any]:
         """Calculate summary statistics."""
         if not self.results:
-            return {}
+            return {
+                "total_tests": 0,
+                "avg_adherence_score": 0.0,
+                "completed_tests": 0,
+                "failed_tests": 0,
+                "completion_rate": 0.0,
+                "state_coverage": 0.0,
+                "pathway_coverage": {},
+                "strategy_performance": {},
+                "issues_found": 0,
+                "pathways_tested": self.config.get("pathway_count", 0),
+                "strategies_used": len(self.config.get("strategies", [])),
+            }
+
+        total_tests = len(self.results)
+        completed_tests = sum(1 for r in self.results if r.completed)
+        failed_tests = total_tests - completed_tests
+
+        # Calculate average adherence score (only for completed tests)
+        completed_results = [r for r in self.results if r.completed]
+        avg_adherence = (
+            sum(r.pathway_adherence_score for r in completed_results) / len(completed_results)
+            if completed_results
+            else 0.0
+        )
+
+        # Calculate state coverage across all pathways
+        all_expected_states = set()
+        all_achieved_states = set()
+
+        for result in self.results:
+            all_expected_states.update(result.expected_states)
+            all_achieved_states.update(result.states_achieved)
+
+        state_coverage = (
+            len(all_achieved_states) / len(all_expected_states) if all_expected_states else 0.0
+        )
+
+        # Collect detailed test results for individual display
+        detailed_test_results = []
+        strategy_counters = {}
+
+        for result in self.results:
+            if result.completed:
+                strategy = (
+                    result.strategy.value if hasattr(result.strategy, "value") else result.strategy
+                )
+
+                # Track test numbers per strategy
+                if strategy not in strategy_counters:
+                    strategy_counters[strategy] = 0
+                strategy_counters[strategy] += 1
+
+                detailed_test_results.append(
+                    {
+                        "pathway": result.pathway_title,
+                        "strategy": strategy,
+                        "test_number": strategy_counters[strategy],
+                        "total_strategy_tests": None,  # Will be filled in after counting
+                        "duration": result.test_duration,
+                        "adherence_score": result.pathway_adherence_score,
+                    }
+                )
+
+        # Fill in total test counts per strategy
+        for test_result in detailed_test_results:
+            test_result["total_strategy_tests"] = strategy_counters[test_result["strategy"]]
+
+        # Calculate pathway-level summaries for backward compatibility
+        pathway_coverage = {}
+        for result in self.results:
+            pathway = result.pathway_title
+            if pathway not in pathway_coverage:
+                pathway_coverage[pathway] = {
+                    "tests": 0,
+                    "avg_adherence": 0.0,
+                    "completed": 0,
+                    "scores": [],
+                }
+
+            pathway_coverage[pathway]["tests"] += 1
+            if result.completed:
+                pathway_coverage[pathway]["completed"] += 1
+                pathway_coverage[pathway]["avg_adherence"] += result.pathway_adherence_score
+                pathway_coverage[pathway]["scores"].append(result.pathway_adherence_score)
+
+        # Average the pathway scores
+        for pathway_data in pathway_coverage.values():
+            if pathway_data["completed"] > 0:
+                pathway_data["avg_adherence"] /= pathway_data["completed"]
+
+        # Strategy performance analysis
+        strategy_performance = {}
+        for result in self.results:
+            strategy = (
+                result.strategy.value if hasattr(result.strategy, "value") else result.strategy
+            )
+            if strategy not in strategy_performance:
+                strategy_performance[strategy] = {"tests": 0, "avg_adherence": 0.0, "completed": 0}
+
+            strategy_performance[strategy]["tests"] += 1
+            if result.completed:
+                strategy_performance[strategy]["completed"] += 1
+                strategy_performance[strategy]["avg_adherence"] += result.pathway_adherence_score
+
+        # Average the strategy scores
+        for strategy_data in strategy_performance.values():
+            if strategy_data["completed"] > 0:
+                strategy_data["avg_adherence"] /= strategy_data["completed"]
+
+        # Count total issues
+        issues_found = sum(len(r.issues) for r in self.results)
+
+        # Calculate total test duration
+        total_duration = sum(r.test_duration for r in self.results)
+
+        return {
+            "total_tests": total_tests,
+            "avg_adherence_score": avg_adherence,
+            "completed_tests": completed_tests,
+            "failed_tests": failed_tests,
+            "completion_rate": completed_tests / total_tests if total_tests > 0 else 0.0,
+            "state_coverage": state_coverage,
+            "pathway_coverage": pathway_coverage,
+            "strategy_performance": strategy_performance,
+            "detailed_test_results": detailed_test_results,
+            "issues_found": issues_found,
+            "pathways_tested": (
+                len(set(r.pathway_title for r in self.results))
+                if self.results
+                else self.config.get("pathway_count", 0)
+            ),
+            "strategies_used": (
+                len(
+                    set(
+                        r.strategy.value if hasattr(r.strategy, "value") else r.strategy
+                        for r in self.results
+                    )
+                )
+                if self.results
+                else len(self.config.get("strategies", []))
+            ),
+            "total_duration": total_duration,
+        }
+
+    def get_problem_summary(self) -> List[Dict[str, Any]]:
+        """Get summary of problems and issues found during testing."""
+        problem_summary = {}
+
+        for result in self.results:
+            for issue in result.issues:
+                if issue not in problem_summary:
+                    problem_summary[issue] = {
+                        "issue": issue,
+                        "frequency": 0,
+                        "pathways_affected": set(),
+                        "strategies_affected": set(),
+                    }
+
+                problem_summary[issue]["frequency"] += 1
+                problem_summary[issue]["pathways_affected"].add(result.pathway_title)
+                problem_summary[issue]["strategies_affected"].add(
+                    result.strategy.value if hasattr(result.strategy, "value") else result.strategy
+                )
+
+        # Convert sets to lists for JSON serialization
+        for problem in problem_summary.values():
+            problem["pathways_affected"] = list(problem["pathways_affected"])
+            problem["strategies_affected"] = list(problem["strategies_affected"])
+
+        return sorted(problem_summary.values(), key=lambda x: x["frequency"], reverse=True)
+
+    def get_adherence_distribution(self) -> Dict[str, int]:
+        """Get distribution of adherence scores."""
+        distribution = {
+            "excellent (0.9-1.0)": 0,
+            "good (0.8-0.9)": 0,
+            "fair (0.7-0.8)": 0,
+            "poor (0.6-0.7)": 0,
+            "failing (<0.6)": 0,
+        }
+
+        for result in self.results:
+            if not result.completed:
+                continue
+
+            score = result.pathway_adherence_score
+            if score >= 0.9:
+                distribution["excellent (0.9-1.0)"] += 1
+            elif score >= 0.8:
+                distribution["good (0.8-0.9)"] += 1
+            elif score >= 0.7:
+                distribution["fair (0.7-0.8)"] += 1
+            elif score >= 0.6:
+                distribution["poor (0.6-0.7)"] += 1
+            else:
+                distribution["failing (<0.6)"] += 1
+
+        return distribution
+
+    def __len__(self) -> int:
+        """Return number of test results."""
+        return len(self.results)
+
+    def __iter__(self):
+        """Iterate over test results."""
+        return iter(self.results)
+
+    def __repr__(self) -> str:
+        """Return a developer-friendly representation."""
+        # Check for API error condition
+        api_error = self.config.get("api_error")
+        if api_error:
+            return (
+                f"PathwayTestResults("
+                f"{len(self.results)} tests, 0.0% avg adherence - "
+                f"API key required for testing)"
+            )
+
+        return (
+            f"PathwayTestResults("
+            f"{len(self.results)} tests, "
+            f"{self.summary['avg_adherence_score']:.1%} avg adherence)"
+        )
+
+    def _repr_html_(self) -> str:
+        """HTML representation for Jupyter notebooks."""
+        # Check for API error condition
+        api_error = self.config.get("api_error")
+        if api_error:
+            return f"""
+            <div style="border: 2px solid #e74c3c; border-radius: 8px; padding: 20px; margin: 10px 0; font-family: Arial, sans-serif; background-color: rgba(255, 248, 248, 0.95); color: #333;">
+                <h2 style="color: #e74c3c; margin-top: 0;">🛤️ Pathway Testing Results - API Key Required</h2>
+
+                <div style="background: rgba(255, 235, 238, 0.8); border-left: 4px solid #e74c3c; padding: 15px; margin: 15px 0;">
+                    <p style="margin: 0; color: #721c24;"><strong>⚠️ No tests executed:</strong> {api_error}</p>
+                </div>
+
+                <h3 style="color: #495057; margin: 20px 0 10px 0;">🔧 How to fix this:</h3>
+                <ol style="color: #333; margin: 10px 0;">
+                    <li>Set your OpenAI API key: <code style="background: rgba(233, 236, 239, 0.8); padding: 2px 4px; border-radius: 3px;">export OPENAI_API_KEY="your-key-here"</code></li>
+                    <li>Or set your Anthropic API key: <code style="background: rgba(233, 236, 239, 0.8); padding: 2px 4px; border-radius: 3px;">export ANTHROPIC_API_KEY="your-key-here"</code></li>
+                    <li>Restart your Python session and try again</li>
+                </ol>
+
+                <h3 style="color: #495057; margin: 20px 0 10px 0;">📊 Test Configuration (Ready When API Available):</h3>
+                <p style="color: #333; margin: 8px 0;"><strong>Pathways Found:</strong> {self.config.get("pathway_count", 0)}</p>
+                <p style="color: #333; margin: 8px 0;"><strong>Test Intensity:</strong> {self.config.get("intensity", "unknown")}</p>
+                <p style="color: #333; margin: 8px 0;"><strong>Target Model:</strong> {self.config.get("judge_model", "default")}</p>
+
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #adb5bd; color: #6c757d; font-size: 0.9em;">
+                    💡 Once API keys are configured, pathway testing will run automatically with comprehensive analysis.
+                </div>
+            </div>
+            """
+
+        # Create comprehensive HTML report
+        html_parts = []
+
+        # Header - improved contrast for dark/light themes
+        html_parts.append("""
+        <div style="border: 1px solid #6c757d; border-radius: 8px; padding: 20px; margin: 10px 0; font-family: Arial, sans-serif; background-color: rgba(248, 249, 250, 0.95); color: #333;">
+            <h2 style="color: #495057; margin-top: 0;">🛤️ Pathway Testing Results</h2>
+        """)
+
+        # Summary section
+        summary = self.summary
+        adherence_color = (
+            "green"
+            if summary["avg_adherence_score"] >= 0.8
+            else "orange"
+            if summary["avg_adherence_score"] >= 0.6
+            else "red"
+        )
+
+        html_parts.append(f"""
+            <div style="display: flex; gap: 30px; margin: 20px 0;">
+                <div style="flex: 1;">
+                    <h3 style="color: #495057; margin-bottom: 10px;">📊 Overall Performance</h3>
+                    <p style="color: #333; margin: 8px 0;"><strong>Average Adherence:</strong> <span style="color: {adherence_color}; font-weight: bold;">{summary["avg_adherence_score"]:.1%}</span></p>
+                    <p style="color: #333; margin: 8px 0;"><strong>Tests Completed:</strong> {summary["completed_tests"]}/{summary["total_tests"]} ({summary["completion_rate"]:.1%})</p>
+                    <p style="color: #333; margin: 8px 0;"><strong>State Coverage:</strong> {summary["state_coverage"]:.1%}</p>
+                    <p style="color: #333; margin: 8px 0;"><strong>Issues Found:</strong> {summary["issues_found"]}</p>
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="color: #495057; margin-bottom: 10px;">🎯 Test Coverage</h3>
+                    <p style="color: #333; margin: 8px 0;"><strong>Strategies Used:</strong> {summary["strategies_used"]}</p>
+                    <p style="color: #333; margin: 8px 0;"><strong>Test Intensity:</strong> {self.config.get("intensity", "unknown")}</p>
+                    <p style="color: #333; margin: 8px 0;"><strong>Total Duration:</strong> {summary["total_duration"]:.1f}s</p>
+                </div>
+            </div>
+        """)
+
+        # Individual test results table - no adherence distribution section
+
+        # Individual test results table - one row per test
+        if summary.get("detailed_test_results"):
+            html_parts.append("""
+                <h3 style="color: #34495e;">🛤️ Test Results</h3>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                        <thead>
+                            <tr style="background: rgba(233, 236, 239, 0.8);">
+                                <th style="padding: 12px; text-align: left; border: 1px solid #adb5bd; color: #333;">Strategy</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #adb5bd; color: #333;">Test</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #adb5bd; color: #333;">Duration</th>
+                                <th style="padding: 12px; text-align: center; border: 1px solid #adb5bd; color: #333;">Adherence Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            """)
+
+            # Add individual test rows
+            total_duration = 0
+            all_scores = []
+
+            for test_result in summary["detailed_test_results"]:
+                adherence_color = (
+                    "green"
+                    if test_result["adherence_score"] >= 0.8
+                    else "orange"
+                    if test_result["adherence_score"] >= 0.6
+                    else "red"
+                )
+
+                html_parts.append(f"""
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #adb5bd; color: #333;">{test_result["strategy"]}</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: #333; font-family: monospace;">{test_result["test_number"]} / {test_result["total_strategy_tests"]}</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: #333; font-family: monospace;">{test_result["duration"]:.1f}s</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: {adherence_color}; font-weight: bold; font-family: monospace;">{test_result["adherence_score"]:.2f}</td>
+                    </tr>
+                """)
+
+                total_duration += test_result["duration"]
+                all_scores.append(test_result["adherence_score"])
+
+            # Calculate overall average
+            overall_avg = sum(all_scores) / len(all_scores) if all_scores else 0.0
+            overall_color = (
+                "green" if overall_avg >= 0.8 else "orange" if overall_avg >= 0.6 else "red"
+            )
+
+            # Add overall average row
+            html_parts.append(f"""
+                <tr style="background: rgba(233, 236, 239, 0.5); border-top: 2px solid #adb5bd;">
+                    <td style="padding: 10px; border: 1px solid #adb5bd; color: #333; font-weight: bold; font-style: italic;">OVERALL AVERAGE:</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: #333; font-style: italic;">—</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: #333; font-family: monospace; font-weight: bold;">{total_duration:.1f}s</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #adb5bd; color: {overall_color}; font-weight: bold; font-size: 1.1em; font-family: monospace;">{overall_avg:.2f}</td>
+                </tr>
+            """)
+
+            html_parts.append("</tbody></table></div>")
+
+        # Problems summary (if any)
+        problems = self.get_problem_summary()
+        if problems:
+            html_parts.append("""
+                <h3 style="color: #e74c3c;">⚠️ Issues Identified</h3>
+                <div style="max-height: 200px; overflow-y: auto;">
+            """)
+
+            for problem in problems[:10]:  # Show top 10 issues
+                html_parts.append(f"""
+                    <div style="background: rgba(255, 245, 245, 0.9); border-left: 4px solid #e74c3c; padding: 10px; margin: 5px 0; color: #333;">
+                        <strong>{problem["issue"]}</strong>
+                        <span style="color: #666;">({problem["frequency"]} occurrences)</span>
+                    </div>
+                """)
+
+            html_parts.append("</div>")
+
+        # Footer
+        html_parts.append("""
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #adb5bd; color: #6c757d; font-size: 0.9em;">
+                💡 Use <code style="background: rgba(233, 236, 239, 0.8); padding: 2px 4px; border-radius: 3px; color: #495057;">results.get_problem_summary()</code> for detailed issue analysis<br>
+                📊 Use <code style="background: rgba(233, 236, 239, 0.8); padding: 2px 4px; border-radius: 3px; color: #495057;">results.summary</code> for programmatic access to metrics
+            </div>
+        </div>
+        """)
+
+        return "".join(html_parts)
 
         total_tests = len(self.results)
         completed_tests = sum(1 for r in self.results if r.completed)
@@ -2412,4 +3504,18 @@ class PathwayTestResults:
         }
 
     def __repr__(self) -> str:
-        return f"PathwayTestResults({len(self.results)} tests, {self.summary.get('avg_adherence_score', 0):.1%} avg adherence)"
+        """Return a developer-friendly representation."""
+        # Check for API error condition
+        api_error = self.config.get("api_error")
+        if api_error:
+            return (
+                f"PathwayTestResults("
+                f"{len(self.results)} tests, 0.0% avg adherence - "
+                f"API key required for testing)"
+            )
+
+        return (
+            f"PathwayTestResults("
+            f"{len(self.results)} tests, "
+            f"{self.summary['avg_adherence_score']:.1%} avg adherence)"
+        )

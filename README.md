@@ -632,7 +632,52 @@ The testing framework uses multiple adversarial strategies:
 
 Results provide detailed analysis including conversation transcripts, violation detection with severity ratings, and export capabilities for quality assurance workflows.
 
-**Pathway Testing**: Talk Box also includes `autotest_pathways()` to verify that chatbots properly follow defined conversation flows, ensuring consistent user experiences across complex multi-step interactions.
+## Automated Pathway Testing
+
+Verify that your ChatBots properly follow defined conversational pathways through sophisticated multi-turn adversarial testing:
+
+```python
+import talk_box as tb
+
+# Create complex branching pathway
+onboarding_pathway = (
+    tb.Pathways(
+        title="User Onboarding",
+        desc="comprehensive new user setup",
+        activation="new user needs account setup"
+    )
+    .state("welcome: greet and gather basic info")
+    .required(["user name", "email"])
+    .next_state("role_detection")
+    .state("role_detection: identify user type")
+    .branch_on("business user", id="business_setup")
+    .branch_on("personal user", id="personal_setup")
+    .state("business_setup: configure business features")
+    .success_condition("business account fully configured")
+    .state("personal_setup: configure personal preferences")
+    .success_condition("personal account ready for use")
+)
+
+# Test pathway adherence with sophisticated strategies
+bot = tb.ChatBot().system_prompt(
+    tb.PromptBuilder().pathways(onboarding_pathway)
+)
+
+results = tb.autotest_pathways(bot, test_intensity="thorough")
+print(f"Pathway adherence: {results.summary['avg_adherence_score']:.1%}")
+print(f"State coverage: {results.summary['state_coverage']:.1%}")
+```
+
+The pathway testing framework uses multiple adversarial strategies:
+
+- **Direct Flow**: cooperative users following the pathway naturally
+- **Skip States**: attempts to jump ahead or bypass required steps
+- **Backtrack**: users wanting to change or revisit previous information
+- **Incomplete Info**: providing partial or vague responses
+- **Resistance**: users resisting the structured approach
+- **Edge Cases**: boundary conditions and unusual scenarios
+
+Results provide comprehensive analysis including state progression tracking, information gathering assessment, adherence scoring, and detailed issue identification for systematic pathway optimization.
 
 ## Installation
 
