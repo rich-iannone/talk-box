@@ -4164,7 +4164,20 @@ print(builder)
         return self._build()
 
     def print(self) -> None:
-        """Print the complete built prompt text."""
+        """Print the assembled prompt to stdout.
+
+        Equivalent to `print(str(builder))`. Useful for quick inspection
+        during interactive development.
+
+        Examples
+        --------
+        ```{python}
+        import talk_box as tb
+
+        builder = tb.PromptBuilder().persona("analyst", "data science")
+        builder.print()
+        ```
+        """
         print(self._build())
 
     def __repr__(self) -> str:

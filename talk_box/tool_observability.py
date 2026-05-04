@@ -186,7 +186,43 @@ class ToolObserver:
         user_id: Optional[str] = None,
         tags: Optional[Set[str]] = None,
     ) -> ToolExecution:
-        """Start tracking a tool execution."""
+        """Begin tracking a tool execution.
+
+        Call this before the tool runs. The returned `ToolExecution` record
+        is stored internally until `finish_execution()` is called with the
+        same `execution_id`.
+
+        Parameters
+        ----------
+        tool_name
+            Registered name of the tool being executed.
+        execution_id
+            A unique identifier for this execution (typically a UUID).
+        parameters
+            The parameters passed to the tool. Stored only at DETAILED or
+            DEBUG observability levels.
+        conversation_id
+            Optional conversation context identifier.
+        user_id
+            Optional user identifier for multi-tenant tracking.
+        tags
+            Optional set of string tags for categorization.
+
+        Returns
+        -------
+        ToolExecution | None
+            The execution record, or `None` when observability is disabled.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.tool_observability import ToolObserver
+
+        observer = ToolObserver()
+        execution = observer.start_execution("my_tool", "exec-001", {"q": "test"})
+        execution.tool_name
+        ```
+        """
         if self.level == ObservabilityLevel.NONE:
             return None
 
@@ -219,7 +255,45 @@ class ToolObserver:
         error_type: Optional[str] = None,
         memory_usage_mb: Optional[float] = None,
     ) -> Optional[ToolExecution]:
-        """Finish tracking a tool execution."""
+        """Complete a tracked tool execution and record its outcome.
+
+        Calculates duration, updates aggregated metrics, stores the
+        execution record, and notifies any registered listeners.
+
+        Parameters
+        ----------
+        execution_id
+            The same identifier passed to `start_execution()`.
+        status
+            The final status of the execution (e.g., `ToolStatus.SUCCESS`).
+        result_summary
+            Optional human-readable summary of the result. Stored only at
+            DETAILED or DEBUG levels.
+        error_message
+            Error description when `status` is `ToolStatus.ERROR`.
+        error_type
+            The exception class name (e.g., `"ValueError"`).
+        memory_usage_mb
+            Optional memory usage measurement in megabytes.
+
+        Returns
+        -------
+        ToolExecution | None
+            The completed execution record, or `None` if observability is
+            disabled or the execution_id was not found.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.tool_observability import ToolObserver
+        from talk_box.tools import ToolStatus
+
+        observer = ToolObserver()
+        observer.start_execution("my_tool", "exec-002", {})
+        result = observer.finish_execution("exec-002", ToolStatus.SUCCESS)
+        result.status.value
+        ```
+        """
         if self.level == ObservabilityLevel.NONE:
             return None
 
@@ -300,7 +374,34 @@ class ToolObserver:
                 self.logger.error(f"Listener notification failed: {e}")  # pragma: no cover
 
     def get_metrics(self, tool_name: Optional[str] = None) -> Dict[str, ToolMetrics]:
-        """Get metrics for tools."""
+        """Return aggregated metrics, optionally scoped to one tool.
+
+        Each tool that has been observed gets a `ToolMetrics` dataclass
+        tracking execution counts, success/error rates, and duration
+        statistics.
+
+        Parameters
+        ----------
+        tool_name
+            When provided, only metrics for this tool are returned.
+            When `None`, metrics for all observed tools are returned.
+
+        Returns
+        -------
+        Dict[str, ToolMetrics]
+            A dictionary mapping tool names to their `ToolMetrics` dataclass.
+            Empty dict if no data exists for the requested tool.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.tool_observability import ToolObserver
+
+        observer = ToolObserver()
+        metrics = observer.get_metrics()
+        len(metrics)
+        ```
+        """
         with self._lock:
             if tool_name:
                 return (
@@ -315,7 +416,38 @@ class ToolObserver:
         limit: Optional[int] = None,
         since: Optional[datetime] = None,
     ) -> List[ToolExecution]:
-        """Get execution records with filtering."""
+        """Retrieve stored execution records with optional filtering.
+
+        Results are sorted by start time, newest first.
+
+        Parameters
+        ----------
+        tool_name
+            Filter to executions of this tool only.
+        status
+            Filter to executions with this status.
+        limit
+            Maximum number of records to return.
+        since
+            Only return executions that started at or after this time.
+
+        Returns
+        -------
+        List[ToolExecution]
+            A list of matching execution records.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.tool_observability import ToolObserver
+        from talk_box.tools import ToolStatus
+
+        observer = ToolObserver()
+        observer.start_execution("tool_a", "e1", {})
+        observer.finish_execution("e1", ToolStatus.SUCCESS)
+        len(observer.get_executions())
+        ```
+        """
         with self._lock:
             executions = list(self._executions)
 
@@ -336,7 +468,33 @@ class ToolObserver:
         return executions
 
     def get_error_analysis(self, tool_name: Optional[str] = None) -> Dict[str, Any]:
-        """Get detailed error analysis."""
+        """Analyze error patterns across recorded executions.
+
+        Groups errors by type and message, identifies the most common
+        failure patterns, and returns the ten most recent error records
+        for inspection.
+
+        Parameters
+        ----------
+        tool_name
+            Scope analysis to this tool. When `None`, all tools are included.
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary with keys `"total_errors"`, `"error_types"`,
+            `"common_patterns"`, and `"recent_errors"`.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.tool_observability import ToolObserver
+
+        observer = ToolObserver()
+        analysis = observer.get_error_analysis()
+        analysis["total_errors"]
+        ```
+        """
         executions = self.get_executions(tool_name=tool_name, status=ToolStatus.ERROR)
 
         if not executions:
@@ -373,7 +531,29 @@ class ToolObserver:
         }
 
     def get_performance_summary(self) -> Dict[str, Any]:
-        """Get overall performance summary."""
+        """Return a high-level performance summary across all tools.
+
+        Aggregates metrics from every observed tool into a single
+        dictionary suitable for dashboards, logging, or quick health
+        checks.
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary with keys including `"total_executions"`,
+            `"success_rate"`, `"error_rate"`, `"avg_duration_ms"`,
+            `"tools_used"`, `"most_used_tools"`, and `"slowest_tools"`.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.tool_observability import ToolObserver
+
+        observer = ToolObserver()
+        summary = observer.get_performance_summary()
+        summary["total_executions"]
+        ```
+        """
         with self._lock:
             total_executions = sum(m.total_executions for m in self._metrics.values())
             successful_executions = sum(m.successful_executions for m in self._metrics.values())
@@ -442,7 +622,38 @@ class ToolObserver:
         self._listeners.add(callback)
 
     def export_data(self, format: str = "json") -> str:
-        """Export observability data for external analysis."""
+        """Export all observability data as a JSON string.
+
+        The exported data includes the performance summary, per-tool metrics,
+        up to 100 recent execution records, and the error analysis. Suitable
+        for ingestion by external monitoring systems or offline review.
+
+        Parameters
+        ----------
+        format
+            Output format. Currently only `"json"` is supported.
+
+        Returns
+        -------
+        str
+            A JSON-formatted string of observability data.
+
+        Raises
+        ------
+        ValueError
+            If an unsupported format is requested.
+
+        Examples
+        --------
+        ```{python}
+        import json
+        from talk_box.tool_observability import ToolObserver
+
+        observer = ToolObserver()
+        data = json.loads(observer.export_data())
+        list(data.keys())
+        ```
+        """
         if format != "json":
             raise ValueError("Only JSON format is currently supported")
 

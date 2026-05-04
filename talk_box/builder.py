@@ -385,10 +385,28 @@ class ChatBot:
         """
         Check the status of LLM integration and get setup help if needed.
 
+        Returns a dictionary indicating whether the LLM backend is active,
+        the current status string, and a help payload with troubleshooting
+        guidance when the integration is not enabled.
+
         Returns
         -------
         dict
-            Status information and setup instructions if needed
+            A dictionary with the following keys:
+
+            - `"enabled"` (bool): Whether the LLM is active.
+            - `"status"` (str): Human-readable status label.
+            - `"help"` (str | dict): Setup instructions or confirmation message.
+
+        Examples
+        --------
+        ```{python}
+        import talk_box as tb
+
+        bot = tb.ChatBot()
+        status = bot.check_llm_status()
+        status["enabled"]
+        ```
         """
         status = {
             "enabled": self._llm_enabled,
@@ -414,12 +432,25 @@ class ChatBot:
 
     def quick_start(self) -> str:
         """
-        Get a simple quick-start guide for using this ChatBot.
+        Get a quick-start guide tailored to this chatbot's current configuration.
+
+        The guide covers basic usage commands, configuration options, and the
+        chatbot's active settings (model, temperature, etc.).
 
         Returns
         -------
         str
-            Quick-start instructions tailored to current configuration
+            A multi-line guide string ready to print.
+
+        Examples
+        --------
+        ```{python}
+        import talk_box as tb
+
+        bot = tb.ChatBot().model("gpt-4")
+        guide = bot.quick_start()
+        "gpt-4" in guide
+        ```
         """
         llm_status = (
             "🟢 Ready for real AI chat!"
@@ -2057,7 +2088,34 @@ class ChatBot:
         return self._config["avoid"].copy()
 
     def persona(self, persona_description: str) -> "ChatBot":
-        """Set the persona for the chatbot."""
+        """Set a persona that shapes the chatbot's tone and behavior.
+
+        The persona string becomes the opening identity statement in the
+        constructed system prompt (e.g., "You are {persona_description}").
+        It occupies the highest-attention primacy position, so it strongly
+        influences all subsequent responses.
+
+        Parameters
+        ----------
+        persona_description
+            A natural-language description of who the chatbot should be.
+            Can range from a short role label (`"a helpful assistant"`) to
+            a multi-sentence character brief.
+
+        Returns
+        -------
+        ChatBot
+            The same instance for method chaining.
+
+        Examples
+        --------
+        ```{python}
+        import talk_box as tb
+
+        bot = tb.ChatBot().persona("a senior Python developer")
+        bot.get_config()["persona"]
+        ```
+        """
         self._config["persona"] = persona_description
         return self
 
@@ -2434,7 +2492,32 @@ class ChatBot:
         }
 
     def verbose(self, enabled: bool = True) -> "ChatBot":
-        """Enable or disable verbose output."""
+        """Enable or disable verbose diagnostic output during chat interactions.
+
+        When verbose mode is active the chatbot prints additional diagnostic
+        information (e.g., prompt construction details, model parameters) to
+        stdout during each call to `chat()` or `show()`.
+
+        Parameters
+        ----------
+        enabled
+            Set to `True` to turn on verbose output, `False` to silence it.
+            Defaults to `True`.
+
+        Returns
+        -------
+        ChatBot
+            The same instance for method chaining.
+
+        Examples
+        --------
+        ```{python}
+        import talk_box as tb
+
+        bot = tb.ChatBot().verbose()
+        bot.get_config()["verbose"]
+        ```
+        """
         self._config["verbose"] = enabled
         return self
 
@@ -3024,7 +3107,28 @@ class ChatBot:
         return self.chat(message, conversation=conversation)
 
     def create_chat_session(self):
-        """Create a chat session that can be used to launch browser interface."""
+        """Create a chat session backed by the configured LLM provider.
+
+        When *chatlas* is installed this returns a fully configured
+        `chatlas.Chat` instance ready for interactive use. If chatlas is
+        unavailable a lightweight `SimpleChatSession` fallback is returned
+        instead.
+
+        Returns
+        -------
+        chatlas.Chat | SimpleChatSession
+            A chat session object. The concrete type depends on whether
+            the chatlas package is installed.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        bot = tb.ChatBot().model("gpt-4")
+        session = bot.create_chat_session()
+        ```
+        """
         try:
             # Import here to avoid circular imports
             from talk_box._utils_chatlas import ChatlasAdapter
@@ -3377,7 +3481,29 @@ class ChatBot:
                 print(f"❌ Error: {e}")
 
     def get_config(self) -> dict[str, Any]:
-        """Get the current configuration."""
+        """Return a copy of the full chatbot configuration dictionary.
+
+        The returned dictionary includes all settings applied through the
+        fluent API (model, temperature, persona, tools, etc.). Because it is
+        a shallow copy, mutations do not affect the chatbot's internal state.
+
+        Returns
+        -------
+        dict[str, Any]
+            A copy of the configuration dictionary with keys such as
+            `"model"`, `"temperature"`, `"persona"`, `"tools"`,
+            `"verbose"`, and others.
+
+        Examples
+        --------
+        ```{python}
+        import talk_box as tb
+
+        bot = tb.ChatBot().model("gpt-4").temperature(0.2)
+        config = bot.get_config()
+        print(config["model"], config["temperature"])
+        ```
+        """
         return self._config.copy()
 
 

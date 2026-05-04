@@ -63,7 +63,21 @@ class ToolDebugger:
         self.observer = observer or get_global_observer()
 
     def show_performance_dashboard(self) -> None:
-        """Display a comprehensive performance dashboard."""
+        """Print a rich performance dashboard to the terminal.
+
+        Displays overall execution statistics (success rate, error rate,
+        average duration), the most-used tools, and the slowest tools
+        using Rich tables.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        debugger = tb.ToolDebugger()
+        debugger.show_performance_dashboard()
+        ```
+        """
         summary = self.observer.get_performance_summary()
 
         console.print(
@@ -107,7 +121,25 @@ class ToolDebugger:
             console.print(slow_table)
 
     def show_tool_details(self, tool_name: str) -> None:
-        """Show detailed information about a specific tool."""
+        """Print detailed metrics and recent executions for one tool.
+
+        Shows total executions, success/error rates, duration statistics,
+        and the five most recent execution records.
+
+        Parameters
+        ----------
+        tool_name
+            The registered name of the tool to inspect.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        debugger = tb.ToolDebugger()
+        debugger.show_tool_details("fetch_page")
+        ```
+        """
         metrics = self.observer.get_metrics(tool_name)
 
         if not metrics:
@@ -164,7 +196,26 @@ class ToolDebugger:
             console.print(exec_table)
 
     def show_error_analysis(self, tool_name: Optional[str] = None) -> None:
-        """Show detailed error analysis."""
+        """Print an error analysis report to the terminal.
+
+        Displays total error counts, breakdowns by error type, the most
+        common error messages, and a table of recent failures.
+
+        Parameters
+        ----------
+        tool_name
+            Scope the analysis to this tool. When `None`, all tools are
+            included.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        debugger = tb.ToolDebugger()
+        debugger.show_error_analysis()
+        ```
+        """
         analysis = self.observer.get_error_analysis(tool_name)
 
         title = f"Error Analysis: {tool_name}" if tool_name else "Global Error Analysis"
@@ -252,7 +303,31 @@ class ToolDebugger:
             console.print("\n[yellow]Monitoring stopped.[/yellow]")
 
     def export_debug_report(self, filename: Optional[str] = None) -> str:
-        """Export a comprehensive debug report."""
+        """Write a JSON debug report to disk.
+
+        The report contains the performance summary, per-tool metrics,
+        recent execution records, and error analysis.
+
+        Parameters
+        ----------
+        filename
+            Path for the output file. When `None`, a timestamped filename
+            in the current directory is generated automatically.
+
+        Returns
+        -------
+        str
+            The path of the written file.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        debugger = tb.ToolDebugger()
+        path = debugger.export_debug_report("debug.json")
+        ```
+        """
         if not filename:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"talk_box_debug_report_{timestamp}.json"

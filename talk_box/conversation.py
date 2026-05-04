@@ -678,48 +678,265 @@ class Conversation:
     def add_message(
         self, content: str, role: str, metadata: Optional[dict[str, Any]] = None
     ) -> Message:
-        """Add a new message to the conversation."""
+        """Append a message with the given role to the conversation.
+
+        Creates a new `Message` object, assigns a unique ID and timestamp,
+        and appends it to the internal message list. This is the low-level
+        method underlying the role-specific convenience methods
+        (`add_user_message`, `add_assistant_message`, `add_system_message`).
+
+        Parameters
+        ----------
+        content
+            The text content of the message.
+        role
+            The role of the sender (e.g., `"user"`, `"assistant"`, `"system"`).
+        metadata
+            Optional dictionary of extra data to attach to the message.
+
+        Returns
+        -------
+        Message
+            The newly created `Message` instance.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        msg = convo.add_message("Hello!", "user")
+        msg.role
+        ```
+        """
         message = Message(content=content, role=role, metadata=metadata or {})
         self.messages.append(message)
         return message
 
     def add_user_message(self, content: str, metadata: Optional[dict[str, Any]] = None) -> Message:
-        """Add a user message to the conversation."""
+        """Add a user-role message to the conversation.
+
+        Convenience wrapper around `add_message()` with `role="user"`.
+
+        Parameters
+        ----------
+        content
+            The text content of the message.
+        metadata
+            Optional dictionary of extra data to attach to the message.
+
+        Returns
+        -------
+        Message
+            The newly created `Message` instance.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        msg = convo.add_user_message("What is Python?")
+        msg.content
+        ```
+        """
         return self.add_message(content, "user", metadata)
 
     def add_assistant_message(
         self, content: str, metadata: Optional[dict[str, Any]] = None
     ) -> Message:
-        """Add an assistant message to the conversation."""
+        """Add an assistant-role message to the conversation.
+
+        Convenience wrapper around `add_message()` with `role="assistant"`.
+
+        Parameters
+        ----------
+        content
+            The text content of the message.
+        metadata
+            Optional dictionary of extra data to attach to the message.
+
+        Returns
+        -------
+        Message
+            The newly created `Message` instance.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        msg = convo.add_assistant_message("Python is a programming language.")
+        msg.role
+        ```
+        """
         return self.add_message(content, "assistant", metadata)
 
     def add_system_message(
         self, content: str, metadata: Optional[dict[str, Any]] = None
     ) -> Message:
-        """Add a system message to the conversation."""
+        """Add a system-role message to the conversation.
+
+        Convenience wrapper around `add_message()` with `role="system"`.
+
+        Parameters
+        ----------
+        content
+            The text content of the message.
+        metadata
+            Optional dictionary of extra data to attach to the message.
+
+        Returns
+        -------
+        Message
+            The newly created `Message` instance.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        msg = convo.add_system_message("You are a helpful assistant.")
+        msg.role
+        ```
+        """
         return self.add_message(content, "system", metadata)
 
     def get_messages(self, role: Optional[str] = None) -> list[Message]:
-        """Get all messages, optionally filtered by role."""
+        """Return messages, optionally filtered by role.
+
+        Returns a shallow copy of the internal message list so that
+        callers can iterate or slice freely without mutating conversation
+        state.
+
+        Parameters
+        ----------
+        role
+            When provided, only messages matching this role are returned.
+            When `None` (the default), all messages are returned.
+
+        Returns
+        -------
+        list[Message]
+            A list of matching `Message` objects (copy of the internal list).
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        convo.add_user_message("Hi")
+        convo.add_assistant_message("Hello!")
+        len(convo.get_messages(role="user"))
+        ```
+        """
         if role is None:
             return self.messages.copy()
         return [msg for msg in self.messages if msg.role == role]
 
     def get_last_message(self, role: Optional[str] = None) -> Optional[Message]:
-        """Get the last message, optionally filtered by role."""
+        """Return the most recent message, optionally filtered by role.
+
+        Useful for quickly inspecting the latest assistant response or
+        checking what the user last said without iterating the full history.
+
+        Parameters
+        ----------
+        role
+            When provided, returns the last message with this role.
+            When `None`, returns the last message regardless of role.
+
+        Returns
+        -------
+        Message | None
+            The last matching message, or `None` if the conversation is empty
+            (or no messages match the given role).
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        convo.add_user_message("First")
+        convo.add_assistant_message("Second")
+        convo.get_last_message().content
+        ```
+        """
         messages = self.get_messages(role)
         return messages[-1] if messages else None
 
     def clear_messages(self) -> None:
-        """Clear all messages from the conversation."""
+        """Remove all messages from the conversation.
+
+        Resets the message history to an empty state while preserving the
+        conversation ID, metadata, and context window settings.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        convo.add_user_message("Hello")
+        convo.clear_messages()
+        convo.get_message_count()
+        ```
+        """
         self.messages.clear()
 
     def set_context_window(self, max_length: int) -> None:
-        """Set the maximum context window length."""
+        """Limit how many recent messages `get_context_messages()` returns.
+
+        When working with LLMs that have limited context, setting a window
+        ensures only the most recent messages are sent, keeping token usage
+        under control while preserving conversational continuity.
+
+        Parameters
+        ----------
+        max_length
+            The maximum number of messages to include in the context window.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        for i in range(10):
+            convo.add_user_message(f"Message {i}")
+        convo.set_context_window(3)
+        len(convo.get_context_messages())
+        ```
+        """
         self.max_context_length = max_length
 
     def get_context_messages(self) -> list[Message]:
-        """Get messages within the context window."""
+        """Return messages within the configured context window.
+
+        If no context window has been set, all messages are returned.
+        Otherwise only the most recent `max_length` messages are included.
+
+        Returns
+        -------
+        list[Message]
+            The messages within the context window.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        for i in range(5):
+            convo.add_user_message(f"Msg {i}")
+        convo.set_context_window(2)
+        [m.content for m in convo.get_context_messages()]
+        ```
+        """
         if self.max_context_length is None:
             return self.messages.copy()
 
@@ -727,11 +944,52 @@ class Conversation:
         return self.messages[-self.max_context_length :]
 
     def get_message_count(self) -> int:
-        """Get the total number of messages."""
+        """Return the total number of messages in the conversation.
+
+        Equivalent to `len(conversation)` but available as an explicit
+        method for discoverability in the API reference.
+
+        Returns
+        -------
+        int
+            The message count.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        convo.add_user_message("Hi")
+        convo.add_assistant_message("Hello!")
+        convo.get_message_count()
+        ```
+        """
         return len(self.messages)
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert conversation to dictionary format."""
+        """Serialize the conversation to a plain dictionary.
+
+        The output is JSON-serializable and can be persisted or transmitted.
+        Use `from_dict()` to reconstruct the conversation later.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary with keys `"conversation_id"`, `"created_at"`,
+            `"metadata"`, `"max_context_length"`, and `"messages"`.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        convo.add_user_message("Test")
+        d = convo.to_dict()
+        list(d.keys())
+        ```
+        """
         return {
             "conversation_id": self.conversation_id,
             "created_at": self.created_at.isoformat(),
@@ -742,7 +1000,29 @@ class Conversation:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Conversation":
-        """Create a conversation from dictionary data."""
+        """Reconstruct a conversation from a dictionary produced by `to_dict()`.
+
+        Parameters
+        ----------
+        data
+            A dictionary with the structure produced by `to_dict()`.
+
+        Returns
+        -------
+        Conversation
+            A fully restored conversation with all messages and metadata.
+
+        Examples
+        --------
+        ```{python}
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        convo.add_user_message("Saved message")
+        restored = Conversation.from_dict(convo.to_dict())
+        restored.get_message_count()
+        ```
+        """
         conversation = cls(conversation_id=data["conversation_id"])
 
         # Set conversation properties

@@ -687,7 +687,32 @@ class TestResults:
         }
 
     def to_dataframe(self):
-        """Convert results to pandas DataFrame (requires pandas)."""
+        """Convert test results to a pandas `DataFrame`.
+
+        Each row represents one conversation test with columns for topic,
+        strategy, completion status, violation count, duration, timestamp,
+        and overall pass/fail status.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A DataFrame with one row per conversation result.
+
+        Raises
+        ------
+        ImportError
+            If pandas is not installed.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        results = tb.autotest_avoid_topics(bot, test_intensity="medium")
+        df = results.to_dataframe()
+        print(df.columns.tolist())
+        ```
+        """
         if not HAS_PANDAS:
             raise ImportError(
                 "pandas is required for to_dataframe(). Install with: pip install pandas"
@@ -710,7 +735,31 @@ class TestResults:
         return pd.DataFrame(data)
 
     def to_great_table(self):
-        """Create a Great Tables representation (requires great-tables)."""
+        """Create a styled Great Tables report from the test results.
+
+        Produces a `GT` table with a header, formatted numbers, color-coded
+        pass/fail status, and bold column labels.
+
+        Returns
+        -------
+        great_tables.GT
+            A configured Great Tables object ready for display or export.
+
+        Raises
+        ------
+        ImportError
+            If great-tables is not installed.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        results = tb.autotest_avoid_topics(bot, test_intensity="medium")
+        table = results.to_great_table()
+        table.save("report.html")
+        ```
+        """
         if not HAS_GREAT_TABLES:
             raise ImportError(
                 "great-tables is required for to_great_table(). Install with: pip install great-tables"
