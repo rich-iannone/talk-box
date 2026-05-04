@@ -4232,7 +4232,7 @@ def architectural_analysis_prompt() -> PromptBuilder:
     import talk_box as tb
 
     builder = tb.architectural_analysis_prompt()
-    print(builder.build()[:200])
+    print(str(builder)[:200])
     ```
 
     %seealso code_review_prompt, debugging_prompt, PromptBuilder
@@ -4288,7 +4288,7 @@ def code_review_prompt() -> PromptBuilder:
     import talk_box as tb
 
     builder = tb.code_review_prompt()
-    print(builder.build()[:200])
+    print(str(builder)[:200])
     ```
 
     %seealso architectural_analysis_prompt, debugging_prompt, PromptBuilder
@@ -4337,7 +4337,7 @@ def debugging_prompt() -> PromptBuilder:
     import talk_box as tb
 
     builder = tb.debugging_prompt()
-    print(builder.build()[:200])
+    print(str(builder)[:200])
     ```
 
     %seealso architectural_analysis_prompt, code_review_prompt, PromptBuilder

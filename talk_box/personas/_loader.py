@@ -90,7 +90,7 @@ class PersonaDefinition:
 
     ```python
     builder = persona.build_prompt_builder()
-    print(builder.build()[:200])
+    print(str(builder)[:200])
     ```
 
     %seealso get_persona, list_personas, persona_categories, PromptBuilder
