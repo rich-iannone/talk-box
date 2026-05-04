@@ -17,10 +17,9 @@ lint: ## Run ruff formatter and linter
 	@uv run ruff check --fix
 
 check:
-	pyright --pythonversion 3.9 talk_box
-	pyright --pythonversion 3.10 talk_box
 	pyright --pythonversion 3.11 talk_box
 	pyright --pythonversion 3.12 talk_box
+	pyright --pythonversion 3.13 talk_box
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -49,14 +48,10 @@ dist: clean ## builds source and wheel package
 	ls -l dist
 
 docs:
-	cd docs \
-	  && QUARTO_PYTHON=../.venv/bin/python ../.venv/bin/python -m quartodoc build \
-	  && QUARTO_PYTHON=../.venv/bin/python quarto render
+	great-docs build
 
-docs-build:
-	cd docs \
-	  && quartodoc build --verbose \
-	  && quarto render
+docs-preview:
+	great-docs preview
 
 install: dist ## install the package to the active Python's site-packages
 	python3 -m pip install --force-reinstall dist/talk_box*.whl
