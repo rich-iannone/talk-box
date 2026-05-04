@@ -2061,7 +2061,32 @@ class ChatBot:
         return self.tools(tool_names)
 
     def avoid(self, avoid_list: list[str]) -> "ChatBot":
-        """Set topics or behaviors to avoid."""
+        """Configure topics or behaviors the chatbot must refuse to engage with.
+
+        The avoid list feeds into both the system prompt (instructing the LLM
+        to decline requests on these topics) and the `autotest_avoid_topics()`
+        testing framework that validates compliance.
+
+        Parameters
+        ----------
+        avoid_list
+            A list of topic strings the chatbot should not discuss or assist
+            with (e.g., `["medical_advice", "legal_advice"]`).
+
+        Returns
+        -------
+        ChatBot
+            The same instance for method chaining.
+
+        Examples
+        --------
+        ```{python}
+        import talk_box as tb
+
+        bot = tb.ChatBot().avoid(["medical_advice", "financial_planning"])
+        bot.get_avoid_topics()
+        ```
+        """
         self._config["avoid"] = avoid_list.copy()
         return self
 
