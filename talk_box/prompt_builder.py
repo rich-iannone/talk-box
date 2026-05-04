@@ -464,7 +464,7 @@ class Priority(Enum):
             priority=tb.Priority.CRITICAL,
         )
     )
-    builder.get_section_count()
+    print(str(builder)[:100])
     ```
 
     %seealso PromptSection, PromptBuilder
