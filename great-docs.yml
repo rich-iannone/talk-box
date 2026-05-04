@@ -1,0 +1,194 @@
+# Great Docs Configuration
+# See https://posit-dev.github.io/great-docs/user-guide/03-configuration.html
+
+# Docstring Parser
+parser: numpy
+
+# Dynamic Introspection
+dynamic: true
+
+# Logo
+logo: assets/talk-box-logo.png
+
+# Author Information
+authors:
+  - name: Richard Iannone
+    role: Author, Maintainer
+    email: riannone@me.com
+    github: rich-iannone
+    orcid: 0000-0003-3925-190X
+
+# API Reference Structure
+reference:
+  - title: Getting Started
+    desc: Core classes for building AI assistants
+    contents:
+      - name: ChatBot
+        members: false
+      - name: Conversation
+        members: false
+      - Message
+
+  - title: ChatBot Methods
+    desc: Configuration and interaction methods for the ChatBot class
+    contents:
+      - ChatBot.model
+      - ChatBot.provider_model
+      - ChatBot.preset
+      - ChatBot.temperature
+      - ChatBot.max_tokens
+      - ChatBot.persona
+      - ChatBot.system_prompt
+      - ChatBot.get_system_prompt
+      - ChatBot.avoid
+      - ChatBot.get_avoid_topics
+      - ChatBot.tools
+      - ChatBot.add_tools
+      - ChatBot.verbose
+      - ChatBot.chat
+      - ChatBot.start_conversation
+      - ChatBot.continue_conversation
+      - ChatBot.show
+      - ChatBot.get_config_summary
+      - ChatBot.get_config
+      - ChatBot.prompt_builder
+      - ChatBot.structured_prompt
+      - ChatBot.chain_prompts
+      - ChatBot.check_llm_status
+      - ChatBot.quick_start
+      - ChatBot.create_chat_session
+
+  - title: Prompt Engineering
+    desc: Attention-optimized prompt construction
+    contents:
+      - name: PromptBuilder
+        members: false
+      - PromptBuilder.persona
+      - PromptBuilder.task_context
+      - PromptBuilder.focus_on
+      - PromptBuilder.critical_constraint
+      - PromptBuilder.constraint
+      - PromptBuilder.core_analysis
+      - PromptBuilder.structured_section
+      - PromptBuilder.avoid_topics
+      - PromptBuilder.output_format
+      - PromptBuilder.example
+      - PromptBuilder.final_emphasis
+      - PromptBuilder.vocabulary
+      - PromptBuilder.pathways
+      - PromptBuilder.print
+      - Priority
+      - PromptSection
+      - VocabularyTerm
+      - architectural_analysis_prompt
+      - code_review_prompt
+      - debugging_prompt
+
+  - title: Conversation Pathways
+    desc: State-machine conversation flows with branching and fallbacks
+    contents:
+      - name: Pathways
+        members: false
+      - Pathways.state
+      - Pathways.required
+      - Pathways.optional
+      - Pathways.tools
+      - Pathways.success_condition
+      - Pathways.next_state
+      - Pathways.branch_on
+      - Pathways.fallback
+      - Pathways.visualize
+
+  - title: Conversation Methods
+    desc: Methods for managing conversation history
+    contents:
+      - Conversation.add_message
+      - Conversation.add_user_message
+      - Conversation.add_assistant_message
+      - Conversation.add_system_message
+      - Conversation.get_messages
+      - Conversation.get_last_message
+      - Conversation.clear_messages
+      - Conversation.set_context_window
+      - Conversation.get_context_messages
+      - Conversation.get_message_count
+      - Conversation.to_dict
+      - Conversation.from_dict
+
+  - title: Presets
+    desc: Pre-configured behavior templates
+    contents:
+      - Preset
+      - PresetManager
+      - PresetNames
+
+  - title: File Attachments
+    desc: Multi-modal file handling for conversations
+    contents:
+      - name: Attachments
+        members: false
+      - Attachments.with_prompt
+      - Attachments.to_chat_contents
+      - Attachments.get_metadata
+      - Attachments.summary
+      - AttachmentMetadata
+
+  - title: Tools
+    desc: Tool registration, execution, and built-in utilities
+    contents:
+      - tool
+      - ToolCategory
+      - ToolContext
+      - ToolResult
+      - get_global_registry
+      - load_tool_box
+      - get_builtin_tool
+      - load_selected_tools
+
+  - title: Testing & Validation
+    desc: Automated testing for chatbot quality assurance
+    contents:
+      - autotest_avoid_topics
+      - autotest_pathways
+      - name: TestResults
+        members: false
+      - TestResults.to_dataframe
+      - TestResults.to_great_table
+      - PathwayTestResults
+      - ToolEnabledConversation
+      - create_tool_conversation
+
+  - title: Observability & Debugging
+    desc: Tool execution monitoring and debugging
+    contents:
+      - configure_observability
+      - ObservabilityLevel
+      - name: ToolObserver
+        members: false
+      - ToolObserver.start_execution
+      - ToolObserver.finish_execution
+      - ToolObserver.get_metrics
+      - ToolObserver.get_executions
+      - ToolObserver.get_error_analysis
+      - ToolObserver.get_performance_summary
+      - ToolObserver.export_data
+      - get_global_observer
+      - configure_debug_mode
+      - name: ToolDebugger
+        members: false
+      - ToolDebugger.show_performance_dashboard
+      - ToolDebugger.show_tool_details
+      - ToolDebugger.show_error_analysis
+      - ToolDebugger.export_debug_report
+      - debug_dashboard
+      - debug_errors
+      - debug_tool
+      - export_debug_report
+      - live_monitor
+
+# Site Settings
+site:
+  theme: flatly
+
+# Jupyter Kernel
+jupyter: python3
