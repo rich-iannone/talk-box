@@ -1039,6 +1039,70 @@ class ChatBot:
 
         return self
 
+    def persona_pack(self, name: str) -> "ChatBot":
+        """
+        Load a complete, production-ready persona configuration.
+
+        Personas are comprehensive assistant configurations that bundle an
+        attention-optimized system prompt, recommended models, tools, avoid topics,
+        temperature, and token limits into a single loadable pack. Each persona is
+        defined in YAML and tested for quality.
+
+        Unlike `preset()` (which sets tone/expertise/verbosity loosely),
+        `persona_pack()` builds a full `PromptBuilder`-based system prompt using
+        research-backed attention patterns (primacy bias, clustering, recency bias).
+
+        Parameters
+        ----------
+        name
+            The persona name (e.g., `"customer_support_tier1"`, `"code_reviewer"`).
+            Use `talk_box.personas.list_personas()` to see all available names.
+
+        Returns
+        -------
+        ChatBot
+            Returns self for method chaining.
+
+        Raises
+        ------
+        KeyError
+            If the persona name is not found.
+
+        Examples
+        --------
+        >>> import talk_box as tb
+        >>> bot = tb.ChatBot().persona_pack("code_reviewer")
+        >>> bot = tb.ChatBot().persona_pack("customer_support_tier1").model("ollama:llama4")
+        """
+        from talk_box.personas import get_persona
+
+        persona = get_persona(name)
+
+        # Build and set the attention-optimized system prompt via PromptBuilder
+        self.system_prompt(persona.build_prompt_builder())
+
+        # Set avoid topics
+        if persona.avoid_topics:
+            existing = self._config.get("avoid_topics") or []
+            self._config["avoid_topics"] = list(set(existing + persona.avoid_topics))
+
+        # Set temperature and max_tokens if persona defines them and user hasn't set them
+        if persona.temperature is not None and self._config.get("temperature") == 0.7:
+            self._config["temperature"] = persona.temperature
+        if persona.max_tokens is not None and self._config.get("max_tokens") is None:
+            self._config["max_tokens"] = persona.max_tokens
+
+        # Enable persona tools
+        if persona.tools:
+            existing_tools = self._config.get("tools") or []
+            self._config["tools"] = list(set(existing_tools + persona.tools))
+
+        # Store metadata for introspection
+        self._config["persona_pack"] = name
+        self._config["persona_definition"] = persona
+
+        return self
+
     def temperature(self, temp: float) -> "ChatBot":
         """
         Control the randomness and creativity level of chatbot responses.

@@ -19,6 +19,7 @@ from talk_box.conversation import (
     create_tool_conversation,
 )
 from talk_box.pathways import Pathways
+from talk_box.personas import PersonaDefinition, get_persona, list_personas, persona_categories
 from talk_box.presets import Preset, PresetManager, PresetNames
 from talk_box.prompt_builder import (
     Priority,
@@ -79,6 +80,11 @@ __all__ = [
     "architectural_analysis_prompt",
     "code_review_prompt",
     "debugging_prompt",
+    # Persona system
+    "PersonaDefinition",
+    "get_persona",
+    "list_personas",
+    "persona_categories",
     # Preset management
     "Preset",
     "PresetManager",
