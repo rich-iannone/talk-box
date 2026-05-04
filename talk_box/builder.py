@@ -435,7 +435,6 @@ class ChatBot:
 📝 Basic Usage:
    • bot.chat("Hello!")                 → Start a conversation
    • bot.show("browser")                → Launch browser chat interface
-   • bot.show("react")                  → Launch React chat interface
    • bot.show("help")                   → Show this guide again
 
 ⚙️ Configuration:
@@ -3090,7 +3089,7 @@ class ChatBot:
             </div>
 
             <div style="margin-top: 12px; font-size: 0.8em; color: #6c757d; text-align: center;">
-                💡 Use <strong>bot.show("browser")</strong> for chat • 🔍 Use <strong>bot.show("help")</strong> for guidance
+                💡 Use <strong>bot.show("help")</strong> for guidance
             </div>
         </div>
         """
@@ -3138,7 +3137,6 @@ class ChatBot:
             The type of interface to show:
 
             - `"browser"`: launch browser chat interface
-            - `"react"`: launch React chat interface
             - `"console"`: launch interactive console/terminal chat
             - `"config"`: display configuration summary in notebook
             - `"prompt"`: display the final system prompt
@@ -3152,7 +3150,6 @@ class ChatBot:
         >>> bot.show("help")        # Show quick-start guide (default)
         >>> bot.show("status")      # Check LLM integration status
         >>> bot.show("browser")     # Launch browser chat interface
-        >>> bot.show("react")       # Launch React chat interface
         >>> bot.show("console")     # Launch terminal chat interface
         >>> bot.show("config")      # Show configuration summary
         """
@@ -3276,31 +3273,11 @@ class ChatBot:
             # Display chatlas installation guide
             print(self.install_chatlas_help())
 
-        elif mode == "react":
-            # Try to enable React support and launch
-            try:
-                # Import and use React integration directly
-                from . import react_chat_integration
-
-                # Launch React chat interface directly
-                config = self.get_config_summary()
-                server = react_chat_integration.ReactChatServer(config)
-                server.launch()
-
-            except ImportError as e:
-                print("❌ React chat not available")
-                print("💡 To enable React chat, install React dependencies:")
-                print("   npm install (in the react-chat directory)")
-                print(f"   Error: {e}")
-            except Exception as e:
-                print(f"❌ Failed to launch React chat: {e}")
-                print("💡 Tip: Make sure React dev server is available")
-
         else:
             # Invalid mode
             print(f"❌ Invalid mode: '{mode}'")
             print(
-                "💡 Available modes: 'browser', 'console', 'config', 'prompt', 'help', 'status', 'install', 'react'"
+                "💡 Available modes: 'browser', 'console', 'config', 'prompt', 'help', 'status', 'install'"
             )
 
     def _simple_console_chat(self) -> None:
