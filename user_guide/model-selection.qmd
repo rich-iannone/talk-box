@@ -1,0 +1,308 @@
+---
+title: "Model Selection"
+---
+
+Selecting the appropriate AI model is crucial for achieving optimal performance, cost-effectiveness, and user experience in your Talk Box applications. This guide covers the key considerations and trade-offs for different model types and providers.
+
+## Model Overview
+
+Talk Box supports any model available through its `chatlas` backend, which covers 11 LLM providers. Here are the most commonly used models organized by capability tier:
+
+### Frontier Models (Best Reasoning)
+
+These models excel at complex tasks requiring deep analysis, nuanced understanding, and sophisticated outputs:
+
+```python
+import talk_box as tb
+
+# OpenAI
+bot = tb.ChatBot().model("gpt-4o")
+
+# Anthropic
+bot = tb.ChatBot().model("claude-sonnet-4-20250514")
+
+# Google
+bot = tb.ChatBot().model("gemini-pro")
+```
+
+### Fast & Efficient Models (Best Value)
+
+These models offer excellent performance for straightforward tasks at lower cost and latency:
+
+```python
+import talk_box as tb
+
+# OpenAI
+bot = tb.ChatBot().model("gpt-4o-mini")
+
+# Anthropic
+bot = tb.ChatBot().model("claude-haiku-3.5-20241022")
+
+# Google
+bot = tb.ChatBot().model("gemini-flash")
+```
+
+### Model Characteristics
+
+| Model | Reasoning | Speed | Cost | Context | Best For |
+|-------|-----------|-------|------|---------|----------|
+| **GPT-4o** | Excellent | Fast | Medium | 128K | General-purpose, multimodal, production apps |
+| **GPT-4o-mini** | Good | Very Fast | Low | 128K | High-volume tasks, simple interactions |
+| **Claude Sonnet 4** | Excellent | Medium | Medium | 200K | Long documents, detailed analysis, coding |
+| **Claude Haiku 3.5** | Good | Very Fast | Very Low | 200K | High-volume, cost-sensitive workloads |
+| **Gemini Pro** | Very Good | Medium | Medium | 1M | Multimodal, very long context |
+| **Gemini Flash** | Good | Very Fast | Low | 1M | Fast multimodal processing |
+
+## Practical Provider Selection
+
+### Choosing a Provider
+
+Each provider has different strengths. Here's a practical decision framework:
+
+**Choose OpenAI (GPT-4o)** when you need:
+
+- Excellent all-around performance
+- Strong multimodal capabilities (vision, audio)
+- Widest ecosystem support and tooling
+
+```python
+# Production chatbot with good balance
+bot = (
+    tb.ChatBot()
+    .model("gpt-4o")
+    .temperature(0.7)
+    .max_tokens(1500)
+)
+```
+
+**Choose Anthropic (Claude Sonnet 4)** when you need:
+
+- Long document analysis (200K context)
+- Careful, nuanced responses
+- Strong coding and analytical tasks
+
+```python
+# Document analysis with large context
+bot = (
+    tb.ChatBot()
+    .model("claude-sonnet-4-20250514")
+    .temperature(0.4)
+    .max_tokens(4000)
+)
+```
+
+**Choose Google (Gemini)** when you need:
+
+- Very long context (up to 1M tokens)
+- Fast, cost-effective multimodal processing
+- Integration with Google ecosystem
+
+```python
+# Long-context analysis
+bot = (
+    tb.ChatBot()
+    .model("gemini-pro")
+    .temperature(0.5)
+    .max_tokens(2000)
+)
+```
+
+### Using Provider-Prefixed Model Strings
+
+For explicit provider selection, use the `provider_model()` method:
+
+```python
+# Explicit provider specification
+bot = tb.ChatBot().provider_model("openai:gpt-4o")
+bot = tb.ChatBot().provider_model("anthropic:claude-sonnet-4-20250514")
+bot = tb.ChatBot().provider_model("google:gemini-pro")
+```
+
+### Task-Specific Recommendations
+
+Different tasks benefit from different model strengths:
+
+```python
+import talk_box as tb
+
+# Code review: needs strong reasoning
+code_bot = (
+    tb.ChatBot()
+    .model("gpt-4o")
+    .preset("technical_advisor")
+    .temperature(0.2)
+)
+
+# Creative writing: benefits from Claude's nuance
+writer_bot = (
+    tb.ChatBot()
+    .model("claude-sonnet-4-20250514")
+    .preset("creative_writer")
+    .temperature(0.8)
+)
+
+# Customer support: fast responses, lower cost
+support_bot = (
+    tb.ChatBot()
+    .model("gpt-4o-mini")
+    .preset("customer_support")
+    .temperature(0.4)
+)
+
+# Data analysis: structured thinking
+analyst_bot = (
+    tb.ChatBot()
+    .model("gpt-4o")
+    .preset("data_analyst")
+    .temperature(0.3)
+)
+```
+
+### Temperature Guidelines
+
+Temperature controls randomness in responses. Match it to your use case:
+
+| Temperature | Use Case | Example |
+|-------------|----------|---------|
+| 0.0–0.3 | Factual, analytical, code review | Technical advisory |
+| 0.4–0.6 | Balanced, conversational | Customer support |
+| 0.7–0.9 | Creative, varied responses | Creative writing |
+| 1.0+ | Maximum variety (use cautiously) | Brainstorming |
+
+## Local Models with Ollama
+
+Talk Box supports local models through Ollama, giving you privacy, zero API costs, and offline capability.
+
+### Setting Up Ollama
+
+1. Install Ollama from [ollama.ai](https://ollama.ai)
+2. Pull a model:
+
+```bash
+ollama pull llama3.1
+ollama pull mistral
+ollama pull codellama
+```
+
+3. Use with Talk Box:
+
+```python
+import talk_box as tb
+
+# Use a local Ollama model
+bot = tb.ChatBot().provider_model("ollama:llama3.1")
+
+# Or with specific configuration
+bot = (
+    tb.ChatBot()
+    .provider_model("ollama:mistral")
+    .temperature(0.7)
+    .max_tokens(2000)
+)
+
+response = bot.chat("Explain Python decorators")
+```
+
+### When to Use Local Models
+
+Local models are ideal when:
+
+- **Privacy is critical**: data never leaves your machine
+- **No internet required**: works completely offline
+- **Zero marginal cost**: no per-token API charges
+- **Development/testing**: iterate quickly without API rate limits
+
+Trade-offs to consider:
+
+- Generally lower capability than frontier cloud models
+- Require local GPU for good performance
+- Model sizes limited by your hardware RAM/VRAM
+
+### Recommended Local Models
+
+| Model | Size | Best For |
+|-------|------|----------|
+| `llama3.1` | 8B–70B | General purpose, good reasoning |
+| `mistral` | 7B | Fast, good for conversational tasks |
+| `codellama` | 7B–34B | Code generation and analysis |
+| `phi3` | 3.8B | Lightweight, runs on CPU |
+
+### Combining Local and Cloud Models
+
+A common pattern is using local models for development and cloud models for production:
+
+```python
+import os
+import talk_box as tb
+
+def create_bot(use_local: bool = False):
+    """Create a bot with local or cloud model based on environment."""
+    if use_local or os.getenv("USE_LOCAL_MODEL"):
+        return tb.ChatBot().provider_model("ollama:llama3.1")
+    else:
+        return tb.ChatBot().model("gpt-4o")
+
+# Development
+bot = create_bot(use_local=True)
+
+# Production
+bot = create_bot(use_local=False)
+```
+
+## Best Practices
+
+### 1. Start with GPT-4o or Claude Sonnet 4
+
+Begin with a frontier model to validate your application logic, then optimize for cost/speed:
+
+```python
+# Start here for development
+bot = tb.ChatBot().model("gpt-4o").temperature(0.7)
+```
+
+### 2. Match Model to Task Complexity
+
+Don't use frontier models for simple tasks:
+
+```python
+# Simple classification or routing → fast model
+router = tb.ChatBot().model("gpt-4o-mini").temperature(0.1)
+
+# Complex multi-step analysis → frontier model
+analyst = tb.ChatBot().model("gpt-4o").temperature(0.3)
+```
+
+### 3. Implement Fallbacks
+
+Always have a backup model for reliability:
+
+```python
+def chat_with_fallback(message: str, primary="gpt-4o", fallback="gpt-4o-mini"):
+    """Chat with automatic fallback on failure."""
+    try:
+        bot = tb.ChatBot().model(primary)
+        return bot.chat(message)
+    except Exception:
+        bot = tb.ChatBot().model(fallback)
+        return bot.chat(message)
+```
+
+### 4. Use Lower Temperature for Consistency
+
+Production applications benefit from lower temperature for predictable behavior:
+
+```python
+# Production: consistent, reliable responses
+production_bot = tb.ChatBot().model("gpt-4o").temperature(0.3)
+
+# Experimentation: varied, creative responses
+creative_bot = tb.ChatBot().model("gpt-4o").temperature(0.9)
+```
+
+## Key Takeaways
+
+- **GPT-4o** and **Claude Sonnet 4** are excellent defaults for most applications
+- **GPT-4o-mini** and **Claude Haiku 3.5** are best for high-volume, cost-sensitive workloads
+- **Ollama** provides local, private, zero-cost inference for development and privacy-sensitive use cases
+- Match temperature to your task: low for analytical, higher for creative
+- Always implement fallback strategies for production reliability
