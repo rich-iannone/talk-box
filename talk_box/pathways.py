@@ -191,7 +191,7 @@ class Pathways:
     sequentially, and specify what information each state needs to collect. Notice how each state
     builds naturally toward the goal of helping the user regain access to their account.
 
-    ```{python}
+    ```python
     import talk_box as tb
 
     simple_pathway = (
@@ -222,7 +222,7 @@ class Pathways:
     method. Notice how different support paths merge back to a common completion state, ensuring
     consistent wrap-up regardless of the support type provided.
 
-    ```{python}
+    ```python
     support_pathway = (
         tb.Pathways(
             title="Customer Support",
@@ -259,7 +259,7 @@ class Pathways:
     -------------------
     Once you've built a pathway, you can inspect it using different string representations:
 
-    ```{python}
+    ```python
     import talk_box as tb
 
     # Create a simple pathway
@@ -283,13 +283,13 @@ class Pathways:
 
     We can view the pathway in two ways, either as a brief summary by examining the object itself:
 
-    ```{python}
+    ```python
     pathway
     ```
 
     Or with `print()` for a more detailed view:
 
-    ```{python}
+    ```python
     print(pathway)
     ```
 
@@ -408,7 +408,7 @@ class Pathways:
         --------
         Complete pathway showing `.state()` method with both traditional and shorthand syntax:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Creating a complete product recommendation pathway
@@ -626,7 +626,7 @@ class Pathways:
         --------
         Complete pathway showing `.required()` defining essential information:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Creating a loan application pathway
@@ -720,7 +720,7 @@ class Pathways:
         --------
         Complete pathway showing `.optional()` enhancing outcomes without blocking progress:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Creating a travel booking pathway
@@ -825,7 +825,7 @@ class Pathways:
         --------
         Complete pathway showing `.tools()` enabling specific capabilities:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Creating a technical diagnosis pathway
@@ -925,7 +925,7 @@ class Pathways:
         --------
         Complete pathway showing `.success_condition()` defining clear completion criteria:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Creating a learning assessment pathway
@@ -1006,7 +1006,7 @@ class Pathways:
         --------
         Complete pathway showing `.next_state()` creating linear progression:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Creating a customer onboarding pathway
@@ -1096,7 +1096,7 @@ class Pathways:
         --------
         Complete pathway showing `.branch_on()` creating conditional routing:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Creating a healthcare triage pathway
@@ -1200,7 +1200,7 @@ class Pathways:
         --------
         Complete pathway showing `.fallback()` providing graceful error recovery:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Creating a complex problem-solving pathway with fallbacks
