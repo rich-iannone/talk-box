@@ -96,7 +96,7 @@ class VocabularyTerm:
 
     **SYNONYMS with language codes.** Alternative expressions users might use.
 
-    ```{python}
+    ```python
     import talk_box as tb
 
     recognition_term = tb.VocabularyTerm(
@@ -122,7 +122,7 @@ class VocabularyTerm:
 
     **TRANSLATIONS.** Official term names in different languages.
 
-    ```{python}
+    ```python
     standardization_term = tb.VocabularyTerm(
         term="Market Penetration Rate",
         definition="Percentage of target market currently using our services.",
@@ -145,7 +145,7 @@ class VocabularyTerm:
 
     **COMBINED.** Both official translations *and* alternative expressions.
 
-    ```{python}
+    ```python
     comprehensive_term = tb.VocabularyTerm(
         term="Customer Lifetime Value",
         definition="Total revenue expected from a customer relationship over time.",
@@ -189,7 +189,7 @@ class VocabularyTerm:
     `VocabularyTerm` object and then introduce it into a `PromptBuilder` via its `.vocabulary()`
     method.
 
-    ```{python}
+    ```python
     import talk_box as tb
 
     # Single term for customer success domain
@@ -216,7 +216,7 @@ class VocabularyTerm:
     This example shows how to define technical terminology for software development contexts using
     a list of `VocabularyTerm` objects.
 
-    ```{python}
+    ```python
     tech_vocab = [
         tb.VocabularyTerm(
             term="Blue-Green Deployment",
@@ -269,7 +269,7 @@ class VocabularyTerm:
     In this example, we create international vocabulary with language-aware synonyms for global
     operations of hotel management.
 
-    ```{python}
+    ```python
     room_types = [
         tb.VocabularyTerm(
             term="Ocean View Room",
@@ -305,7 +305,7 @@ class VocabularyTerm:
 
     Here's an example of defining medical and healthcare terminology with precision requirements.
 
-    ```{python}
+    ```python
     healthcare_vocab = [
         tb.VocabularyTerm(
             term="Electronic Health Record",
@@ -926,7 +926,7 @@ class PromptBuilder:
 
     Create a simple prompt with persona and task:
 
-    ```{python}
+    ```python
     import talk_box as tb
 
     prompt = (
@@ -940,7 +940,7 @@ class PromptBuilder:
 
     We can easily print the prompt that was generated for this task:
 
-    ```{python}
+    ```python
     print(prompt)
     ```
 
@@ -948,7 +948,7 @@ class PromptBuilder:
 
     It is possible to build a much more comprehensive analysis prompt with multiple sections:
 
-    ```{python}
+    ```python
 
     prompt = (
         tb.PromptBuilder()
@@ -980,7 +980,7 @@ class PromptBuilder:
 
     The generated prompt can be printed as follows:
 
-    ```{python}
+    ```python
     print(prompt)
     ```
 
@@ -988,7 +988,7 @@ class PromptBuilder:
 
     Create a specialized prompt for code reviews:
 
-    ```{python}
+    ```python
     prompt = (
         tb.PromptBuilder()
         .persona("senior developer", "code quality and best practices")
@@ -1015,7 +1015,7 @@ class PromptBuilder:
 
     We can look at the generated prompt:
 
-    ```{python}
+    ```python
     print(prompt)
     ```
     """
@@ -1106,7 +1106,7 @@ class PromptBuilder:
 
         Set a clear professional identity for the AI:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Simple role without specific expertise
@@ -1123,7 +1123,7 @@ class PromptBuilder:
 
         Combine role with specific area of expertise:
 
-        ```{python}
+        ```python
         # Specialized expertise within role
         builder = (
             tb.PromptBuilder()
@@ -1143,7 +1143,7 @@ class PromptBuilder:
 
         Use seniority indicators for complex tasks:
 
-        ```{python}
+        ```python
         # Senior-level role for complex analysis
         builder = (
             tb.PromptBuilder()
@@ -1158,7 +1158,7 @@ class PromptBuilder:
         We can create personas tailored to specific industries or domains. Here is one that is
         focused on healthcare domain expertise:
 
-        ```{python}
+        ```python
         healthcare_builder = (
             tb.PromptBuilder()
             .persona("healthcare data analyst", "clinical research")
@@ -1170,7 +1170,7 @@ class PromptBuilder:
 
         This is a specialized persona for the financial services industry:
 
-        ```{python}
+        ```python
         finance_builder = (
             tb.PromptBuilder()
             .persona("quantitative analyst", "risk management")
@@ -1182,7 +1182,7 @@ class PromptBuilder:
 
         This is a persona with educational technology expertise:
 
-        ```{python}
+        ```python
         edtech_builder = (
             tb.PromptBuilder()
             .persona("educational technologist", "learning analytics")
@@ -1196,7 +1196,7 @@ class PromptBuilder:
 
         Build comprehensive prompts with persona as the foundation:
 
-        ```{python}
+        ```python
         # Complete code review prompt with expert persona
         review_prompt = (
             tb.PromptBuilder()
@@ -1225,7 +1225,7 @@ class PromptBuilder:
 
         Subtle differences in personas can affect response characteristics:
 
-        ```{python}
+        ```python
         # Technical depth variation
         beginner_persona = (
             tb.PromptBuilder()
@@ -1236,7 +1236,7 @@ class PromptBuilder:
         print(beginner_persona)
         ```
 
-        ```{python}
+        ```python
         expert_persona = (
             tb.PromptBuilder()
             .persona("principal engineer", "API architecture")
@@ -1254,7 +1254,7 @@ class PromptBuilder:
         We can handle roles with multiple specializations. This persona has broad expertise
         combining multiple areas.
 
-        ```{python}
+        ```python
         fullstack_persona = (
             tb.PromptBuilder()
             .persona("full-stack architect", "web applications and cloud infrastructure")
@@ -1266,7 +1266,7 @@ class PromptBuilder:
 
         This is a research-focused persona with interdisciplinary expertise.
 
-        ```{python}
+        ```python
         research_persona = (
             tb.PromptBuilder()
             .persona("research scientist", "machine learning and cognitive psychology")
@@ -1280,7 +1280,7 @@ class PromptBuilder:
 
         Maintain consistent persona behavior in extended interactions:
 
-        ```{python}
+        ```python
         # Establish consistent technical writing persona
         technical_writer = (
             tb.PromptBuilder()
@@ -1345,7 +1345,7 @@ class PromptBuilder:
 
         Set a clear, focused task for the prompt:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Simple task context
@@ -1363,7 +1363,7 @@ class PromptBuilder:
         Use different priority levels for task positioning. Here is an example of a high priority
         task that is important but not critical:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("software architect")
@@ -1381,7 +1381,7 @@ class PromptBuilder:
 
         Create comprehensive task descriptions with clear boundaries:
 
-        ```{python}
+        ```python
         # Detailed task with specific scope
         builder = (
             tb.PromptBuilder()
@@ -1478,7 +1478,7 @@ class PromptBuilder:
 
         Ensure security remains the absolute priority across all considerations:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         builder = (
@@ -1508,7 +1508,7 @@ class PromptBuilder:
 
         Prioritize cost-effective solutions above all other considerations:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("operations consultant", "cost optimization and efficiency")
@@ -1536,7 +1536,7 @@ class PromptBuilder:
 
         Make user experience the paramount consideration in all decisions:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("UX designer", "user-centered product design")
@@ -1564,7 +1564,7 @@ class PromptBuilder:
 
         Prioritize learning effectiveness over all other educational considerations:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("instructional designer", "evidence-based learning design")
@@ -1592,7 +1592,7 @@ class PromptBuilder:
 
         Ensure regulatory compliance takes absolute precedence:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("compliance officer", "financial services regulation")
@@ -1620,7 +1620,7 @@ class PromptBuilder:
 
         Prioritize innovative solutions that provide competitive advantage:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("innovation strategist", "emerging technology adoption")
@@ -1648,7 +1648,7 @@ class PromptBuilder:
 
         Make product quality the overriding priority in all manufacturing decisions:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("quality engineer", "manufacturing excellence")
@@ -1746,7 +1746,7 @@ class PromptBuilder:
 
         Prioritize security considerations above all else:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Security-first code review
@@ -1769,7 +1769,7 @@ class PromptBuilder:
 
         Enforce strict output formatting requirements:
 
-        ```{python}
+        ```python
         # Structured response requirement
         builder = (
             tb.PromptBuilder()
@@ -1790,7 +1790,7 @@ class PromptBuilder:
 
         Set clear behavioral boundaries for sensitive topics:
 
-        ```{python}
+        ```python
         # Medical advice boundary
         builder = (
             tb.PromptBuilder()
@@ -1810,7 +1810,7 @@ class PromptBuilder:
 
         Define minimum quality standards for responses:
 
-        ```{python}
+        ```python
         # Production-ready focus
         builder = (
             tb.PromptBuilder()
@@ -1831,7 +1831,7 @@ class PromptBuilder:
 
         Layer multiple critical requirements in order of importance:
 
-        ```{python}
+        ```python
         # Hierarchical critical constraints
         builder = (
             tb.PromptBuilder()
@@ -1856,7 +1856,7 @@ class PromptBuilder:
 
         Handle urgent or time-critical requirements:
 
-        ```{python}
+        ```python
         # Emergency response scenario
         builder = (
             tb.PromptBuilder()
@@ -1878,7 +1878,7 @@ class PromptBuilder:
         Apply domain-specific requirements that cannot be compromised. In this example, we focus on
         healthcare data privacy:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("healthcare data engineer", "HIPAA compliance")
@@ -1894,7 +1894,7 @@ class PromptBuilder:
         You can use critical constraints alongside standard constraints. Here, we combine two
         `.constraint()` calls with a front-loaded critical constraint:
 
-        ```{python}
+        ```python
         # Comprehensive constraint strategy
         builder = (
             tb.PromptBuilder()
@@ -1984,7 +1984,7 @@ class PromptBuilder:
 
         Define core analytical requirements for architectural review:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         builder = (
@@ -2008,7 +2008,7 @@ class PromptBuilder:
 
         Structure mandatory security analysis dimensions:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security")
@@ -2030,7 +2030,7 @@ class PromptBuilder:
 
         Define analytical framework for code review:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code quality and best practices")
@@ -2053,7 +2053,7 @@ class PromptBuilder:
 
         Structure analytical requirements for ML model evaluation:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("data scientist", "machine learning and model evaluation")
@@ -2075,7 +2075,7 @@ class PromptBuilder:
 
         Define analytical framework for process improvement:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("business analyst", "process optimization")
@@ -2098,7 +2098,7 @@ class PromptBuilder:
 
         Structure comprehensive financial evaluation:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("financial analyst", "portfolio and risk management")
@@ -2207,7 +2207,7 @@ class PromptBuilder:
 
         Create a simple section with clear organization:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         # Single-item structured section
@@ -2228,7 +2228,7 @@ class PromptBuilder:
 
         Use list format for multiple related items:
 
-        ```{python}
+        ```python
         # Multi-item structured section
         builder = (
             tb.PromptBuilder()
@@ -2251,7 +2251,7 @@ class PromptBuilder:
 
         Create critical sections that must be addressed:
 
-        ```{python}
+        ```python
         # High-priority required section
         builder = (
             tb.PromptBuilder()
@@ -2276,7 +2276,7 @@ class PromptBuilder:
 
         Build comprehensive prompts with multiple organized sections:
 
-        ```{python}
+        ```python
         # Complex prompt with multiple structured sections
         builder = (
             tb.PromptBuilder()
@@ -2321,7 +2321,7 @@ class PromptBuilder:
         Create sections tailored to specific industries or contexts. Here's an example for
         healthcare:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("healthcare software architect", "HIPAA compliance")
@@ -2343,7 +2343,7 @@ class PromptBuilder:
 
         And here's one for finance:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("financial systems architect", "regulatory compliance")
@@ -2367,7 +2367,7 @@ class PromptBuilder:
 
         Structure performance-related requirements clearly:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("performance engineer", "web application optimization")
@@ -2400,7 +2400,7 @@ class PromptBuilder:
 
         Structure analytical requirements and methodologies:
 
-        ```{python}
+        ```python
         # Research analysis prompt
         builder = (
             tb.PromptBuilder()
@@ -2435,7 +2435,7 @@ class PromptBuilder:
 
         Combine different content formats within sections:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("technical writer", "API documentation")
@@ -2548,7 +2548,7 @@ class PromptBuilder:
 
         Add constraints that improve response quality and consistency:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         builder = (
@@ -2572,7 +2572,7 @@ class PromptBuilder:
 
         Guide implementation approaches and technical choices:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("senior software architect", "microservices")
@@ -2595,7 +2595,7 @@ class PromptBuilder:
 
         Shape the AI's communication style and approach:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code quality")
@@ -2619,7 +2619,7 @@ class PromptBuilder:
         Add domain or situation-specific requirements. In this example for a healthcare application,
         we focus on HIPAA compliance and patient privacy.
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("healthcare software architect", "HIPAA compliance")
@@ -2638,7 +2638,7 @@ class PromptBuilder:
         Group related constraints for comprehensive guidance. This example focuses on data analysis
         with multiple quality constraints:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("data scientist", "business analytics")
@@ -2662,7 +2662,7 @@ class PromptBuilder:
 
         Use standard constraints to complement critical requirements:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security")
@@ -2687,7 +2687,7 @@ class PromptBuilder:
         We can improve the structure and usability of responses by adding quality-focused
         constraints:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("technical documentation specialist")
@@ -2780,7 +2780,7 @@ class PromptBuilder:
         Avoid outdated or problematic technologies and approaches for a bot focused on modern
         software architecture:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         builder = (
@@ -2814,7 +2814,7 @@ class PromptBuilder:
 
         Avoid ethically questionable or short-term approaches when advising on business strategy:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("business consultant", "sustainable growth strategies")
@@ -2847,7 +2847,7 @@ class PromptBuilder:
 
         Avoid security through obscurity and weak practices:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("security engineer", "application security best practices")
@@ -2880,7 +2880,7 @@ class PromptBuilder:
 
         Avoid outdated or confusing learning approaches by specifying poor pedagogical practices:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("instructional designer", "modern programming education")
@@ -2914,7 +2914,7 @@ class PromptBuilder:
         Avoid problematic coding practices and shortcuts. For this example, we create a code review
         prompt that emphasizes constructive feedback while avoiding poor development practices:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "code quality and best practices")
@@ -3035,7 +3035,7 @@ class PromptBuilder:
         Define clear structure for analytical responses in code reviews with bullet points and
         summaries within the `.output_format()` method:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         builder = (
@@ -3062,7 +3062,7 @@ class PromptBuilder:
 
         Structure responses for business stakeholders with clear sections and prioritized findings:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("business analyst", "strategic planning")
@@ -3089,7 +3089,7 @@ class PromptBuilder:
 
         Structure comprehensive technical documentation with clear sections and examples:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("technical writer", "API documentation")
@@ -3117,7 +3117,7 @@ class PromptBuilder:
         Structure academic or research-style outputs with an output format that includes
         methodology, findings, and recommendations:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("research analyst", "data science")
@@ -3220,7 +3220,7 @@ Examples
 
 Demonstrate expected code review format and depth while providing constructive feedback:
 
-````{python}
+````python
 import talk_box as tb
 
 builder = (
@@ -3273,7 +3273,7 @@ print(builder)
 
 Demonstrate analytical depth and presentation style using structured findings and recommendations:
 
-````{python}
+````python
 builder = (
     tb.PromptBuilder()
     .persona("data scientist", "business analytics")
@@ -3319,7 +3319,7 @@ print(builder)
 Demonstrate strategic analysis format in business contexts with clear sections and actionable
 recommendations:
 
-````{python}
+````python
 builder = (
     tb.PromptBuilder()
     .persona("business consultant", "strategic planning")
@@ -3369,7 +3369,7 @@ print(builder)
 
 Show educational content format with clear learning objectives and hands-on exercises:
 
-````{python}
+````python
 builder = (
     tb.PromptBuilder()
     .persona("programming instructor", "Python education")
@@ -3432,7 +3432,7 @@ print(builder)
 
 Use multiple examples to show different scenarios and approaches within the same prompt:
 
-````{python}
+````python
 builder = (
     tb.PromptBuilder()
     .persona("senior developer", "code mentorship")
@@ -3537,7 +3537,7 @@ print(builder)
         Ensure security remains the primary consideration despite other requirements using the
         `.final_emphasis()` method:
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         builder = (
@@ -3570,7 +3570,7 @@ print(builder)
 
         Emphasize budget constraints in business analysis by placing cost considerations at the end:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("business consultant", "strategic planning")
@@ -3601,7 +3601,7 @@ print(builder)
 
         Prioritize educational value in technical feedback through the use of final emphasis:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("senior developer", "mentorship and code quality")
@@ -3633,7 +3633,7 @@ print(builder)
         Ensure UX considerations override technical preferences. This is particularly important in
         product management and design contexts:
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("product manager", "user experience and design")
@@ -3666,7 +3666,7 @@ print(builder)
         that the AI focuses on high-impact content rather than trying to address every possible
         issue.
 
-        ```{python}
+        ```python
         builder = (
             tb.PromptBuilder()
             .persona("content strategist", "editorial quality")
@@ -3733,7 +3733,7 @@ print(builder)
 
         This examples shows how to add a single vocabulary term to establish a domain context.
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         churn_term = tb.VocabularyTerm(
@@ -3759,7 +3759,7 @@ print(builder)
         Here's an example where we create an internationalized vocabulary with language-aware
         synonyms in the domain of global hotel management.
 
-        ```{python}
+        ```python
         import talk_box as tb
 
         room_types = [
@@ -3799,7 +3799,7 @@ print(builder)
         Define medical terminology with official translations (through the `translations=` attribute
         of `VocabularyTerm`) for international healthcare systems.
 
-        ```{python}
+        ```python
         healthcare_vocab = [
             tb.VocabularyTerm(
                 term="Electronic Health Record",
