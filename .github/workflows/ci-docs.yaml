@@ -6,34 +6,36 @@ on:
       - main
   pull_request:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 jobs:
   build-docs:
     name: "Build Docs"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install ".[docs]"
+
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
+
       - name: Build docs
-        run: |
-          make docs-build
+        run: great-docs build
+
       - name: Save docs artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: docs-html
-          path: docs/_site
+          path: great-docs/_site
 
   publish-docs:
     name: "Publish Docs"
@@ -41,23 +43,22 @@ jobs:
     needs: "build-docs"
     if: github.ref == 'refs/heads/main'
     permissions:
-      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: docs-html
-          path: docs/_site
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-      - name: Upload to GitHub Pages
-        uses: actions/upload-pages-artifact@v3
+          path: great-docs/_site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
         with:
-          path: docs/_site
+          path: great-docs/_site
+
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
