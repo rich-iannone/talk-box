@@ -118,7 +118,7 @@ Automatically inferred when using `.required()` or `.optional()`:
 .optional(["preferred technologies", "team size"])
 ```
 
-Collection states are perfect for systematic information gathering. When you specify what information is required or optional, the AI knows to ask questions and collect responses before moving forward.
+Collection states are ideal for systematic information gathering. When you specify what information is required or optional, the AI knows to ask questions and collect responses before moving forward.
 
 ### Decision States (`type="decision"`)
 
