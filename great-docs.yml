@@ -5,7 +5,7 @@
 parser: numpy
 
 # Dynamic Introspection
-dynamic: true
+dynamic: false
 
 # Logo
 logo: assets/talk-box-logo.png
