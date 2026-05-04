@@ -1,0 +1,245 @@
+---
+title: "Personas"
+---
+
+Personas are complete, production-ready assistant configurations bundled into a single YAML pack. Each persona includes an attention-optimized system prompt, recommended models, tools, avoid topics, and test queries — everything needed to deploy a high-quality AI assistant in a few lines of code.
+
+## Quick Start
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# Load a persona and start chatting
+bot = tb.ChatBot().persona_pack("code_reviewer")
+conversation = bot.chat("Review this function for issues")
+```
+
+That single `.persona_pack()` call configures:
+
+- A `PromptBuilder`-based system prompt using attention-optimized structure
+- Temperature and token limits tuned for the task
+- Avoid topics to keep the assistant on track
+- Tools appropriate for the role
+
+## Available Personas
+
+Talk Box ships with 23 personas across five categories.
+
+### Business
+
+| Persona | Description |
+|---------|-------------|
+| `customer_support_tier1` | Front-line support agent handling inquiries, troubleshooting, and escalation |
+| `sales_assistant` | Sales support for product positioning, objection handling, and lead qualification |
+| `hr_advisor` | HR guidance on policies, benefits, onboarding, and employee relations |
+| `financial_advisor` | Financial analysis, budgeting guidance, and investment education |
+| `legal_info` | General legal information with strong disclaimers (not legal advice) |
+| `meeting_facilitator` | Meeting planning, agenda creation, and follow-up action items |
+
+### Technical
+
+| Persona | Description |
+|---------|-------------|
+| `code_reviewer` | Thorough code review with security, correctness, and style feedback |
+| `debugging_assistant` | Systematic debugging through hypothesis testing and log analysis |
+| `security_analyst` | Security vulnerability assessment and remediation guidance |
+| `devops_engineer` | Infrastructure, CI/CD, containerization, and deployment guidance |
+| `api_designer` | RESTful API design, documentation, and best practices |
+| `technical_writer` | Technical documentation writing and information architecture |
+
+### Data
+
+| Persona | Description |
+|---------|-------------|
+| `data_analyst` | Data exploration, statistical analysis, and insight communication |
+| `sql_helper` | SQL query writing, optimization, and database design |
+| `data_viz_advisor` | Data visualization design, chart selection, and storytelling |
+| `ml_engineer` | Machine learning pipeline design, model selection, and evaluation |
+
+### Education
+
+| Persona | Description |
+|---------|-------------|
+| `tutor` | Adaptive tutoring using the Socratic method |
+| `quiz_master` | Interactive quiz creation and knowledge assessment |
+| `study_guide_creator` | Structured study materials and learning plans |
+
+### Creative
+
+| Persona | Description |
+|---------|-------------|
+| `writing_coach` | Writing improvement through feedback on clarity, structure, and voice |
+| `brainstorming_partner` | Creative ideation, lateral thinking, and concept development |
+| `content_strategist` | Content planning, audience analysis, and editorial strategy |
+| `ux_writer` | Microcopy, UI text, error messages, and user-facing content |
+
+## Discovering Personas
+
+```{python}
+#| eval: false
+from talk_box.personas import list_personas, persona_categories, get_persona
+
+# List all persona names
+names = list_personas()
+print(names)
+
+# Group by category
+categories = persona_categories()
+for cat, names in sorted(categories.items()):
+    print(f"{cat}: {names}")
+
+# Inspect a specific persona
+persona = get_persona("code_reviewer")
+print(persona.display_name)       # "Code Reviewer"
+print(persona.category)           # "technical"
+print(persona.description)        # One-line summary
+print(persona.recommended_models) # Model suggestions
+```
+
+## Using Personas with ChatBot
+
+### Basic Usage
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# The simplest way — persona handles everything
+bot = tb.ChatBot().persona_pack("customer_support_tier1")
+```
+
+### Overriding Settings
+
+You can override any persona setting by chaining additional configuration after `.persona_pack()`:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("code_reviewer")
+    .provider_model("ollama:codellama")  # Override the model
+    .temperature(0.0)                    # Override temperature
+    .avoid(["tabs vs spaces debates"])   # Add more avoid topics
+)
+```
+
+The persona sets defaults; anything you chain after it takes priority.
+
+### Viewing the Generated Prompt
+
+Every persona builds its system prompt through `PromptBuilder`, following the attention-optimized structure (persona first, constraints next, analysis in the middle, emphasis at the end):
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+bot = tb.ChatBot().persona_pack("code_reviewer")
+bot.show("prompt")
+```
+
+## Persona YAML Structure
+
+Each persona is a YAML file in `talk_box/personas/packs/`. Here's the structure:
+
+```yaml
+name: code_reviewer
+display_name: "Code Reviewer"
+category: technical
+description: "Senior code reviewer providing constructive feedback."
+
+# PromptBuilder fields (attention-optimized positions)
+persona_role: "senior software engineer and code review specialist"
+expertise: "code quality, design patterns, security vulnerabilities"
+
+task_context: >
+  You review code submissions and provide actionable feedback.
+
+critical_constraints:
+  - "Never approve code with known security vulnerabilities"
+  - "Always distinguish between must-fix and nice-to-have"
+
+constraints:
+  - "Be constructive — explain what's wrong AND how to fix it"
+  - "Prioritize: security > correctness > performance > style"
+
+core_analysis:
+  - "Check for security vulnerabilities"
+  - "Evaluate correctness and edge cases"
+  - "Assess readability and maintainability"
+
+output_format:
+  - "Organize feedback by severity: Critical, Important, Suggestion"
+  - "Include code examples for suggested changes"
+
+final_emphasis: >
+  The goal of code review is to improve code quality while
+  respecting the author.
+
+# ChatBot configuration
+avoid_topics:
+  - "personal criticism of the developer"
+
+tools:
+  - "text_stats"
+
+recommended_models:
+  - provider_model: "anthropic:claude-sonnet-4-20250514"
+    context: "Excellent at understanding code context"
+  - provider_model: "openai:gpt-4o"
+    context: "Strong code analysis across many languages"
+  - provider_model: "ollama:codellama"
+    context: "Local code review for sensitive codebases"
+
+temperature: 0.1
+max_tokens: 1500
+
+tags:
+  - code-review
+  - engineering
+
+test_queries:
+  - "Review this Python function for issues"
+  - "Is this SQL query vulnerable to injection?"
+```
+
+## Creating Custom Personas
+
+Write a YAML file following the structure above, then load it:
+
+```{python}
+#| eval: false
+from talk_box.personas import load_persona
+
+# Load from any path
+persona = load_persona("my_personas/onboarding_specialist.yaml")
+
+# Use its system prompt directly
+import talk_box as tb
+bot = tb.ChatBot().system_prompt(persona.build_system_prompt())
+```
+
+### Design Tips
+
+- **`persona_role` and `expertise`** go in the primacy position (start of the prompt). Be specific: "senior DevOps engineer" is better than "helpful assistant".
+- **`critical_constraints`** get the highest-attention placement. Use these for non-negotiable rules (safety, compliance, scope limits).
+- **`core_analysis`** defines what the persona focuses on. Keep it to 3--6 items.
+- **`final_emphasis`** goes in the recency position (end of prompt). Use it to reinforce the single most important behavior.
+- **`test_queries`** should cover the persona's core use cases and at least one edge case. These are used by automated testing to verify the persona works as expected.
+- **`recommended_models`** should include at least one cloud option and one local option (Ollama) when possible.
+
+## Personas vs. Presets
+
+Talk Box has two systems for configuring assistant behavior:
+
+| | Presets | Personas |
+|---|---------|----------|
+| **What it sets** | Tone, expertise, verbosity | Full system prompt, tools, models, constraints, tests |
+| **How it's defined** | Python `Preset` dataclass | YAML file with PromptBuilder fields |
+| **Prompt structure** | Simple text template | Attention-optimized via PromptBuilder |
+| **Testing** | None built-in | Test queries for automated validation |
+| **Best for** | Quick tone/style adjustments | Production-ready assistants |
+
+Presets are lightweight and good for prototyping. Personas are the recommended approach for any assistant you plan to deploy or share.
