@@ -24,12 +24,12 @@ class ModelRecommendation:
 
 @dataclass
 class PersonaDefinition:
-    """
-    Complete persona definition loaded from YAML.
+    """Represent a complete persona loaded from a YAML definition file.
 
     A persona bundles everything needed for a production AI assistant:
     system prompt configuration, recommended models, tools, avoid topics,
-    and test expectations.
+    and test expectations. Load personas with `get_persona()` or browse
+    the full catalog with `list_personas()`.
 
     Attributes
     ----------
@@ -74,6 +74,26 @@ class PersonaDefinition:
         Free-form tags for filtering and discovery.
     test_queries
         Sample queries for automated testing.
+
+    Examples
+    --------
+    Load a persona by name and inspect its fields:
+
+    ```python
+    import talk_box as tb
+
+    persona = tb.get_persona("python_mentor")
+    persona.display_name
+    ```
+
+    Build a `PromptBuilder` from a persona:
+
+    ```python
+    builder = persona.build_prompt_builder()
+    print(builder.build()[:200])
+    ```
+
+    %seealso get_persona, list_personas, persona_categories, PromptBuilder
     """
 
     name: str

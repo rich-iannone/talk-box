@@ -181,9 +181,10 @@ class Pathways:
     Examples
     --------
     The following examples demonstrate common pathway patterns that address different conversation
-    needs. The first shows a simple linear flow where states progress sequentially—ideal for
+    needs. The first shows a simple linear flow where states progress sequentially, ideal for
     straightforward processes. The second illustrates branching logic that routes users down
-    different paths before converging to a common endpoint—perfect for triage and support scenarios.
+    different paths before converging to a common endpoint, which is good for triage and support
+    scenarios.
 
     ### Simple Linear Flow
 
@@ -994,13 +995,13 @@ class Pathways:
         - **Decision State Restriction**: cannot be used with `type="decision"` states; use
         `.branch_on()` instead
         - **Forward Declaration**: target state must be defined later with `.state()`
-        - **Sequential Flow**: perfect for processes with a clear order
+        - **Sequential Flow**: useful for processes with a clear order
         - **Unconditional Movement**: for conditional logic, use `.branch_on()`
         - **Straightforward Routing**: creates sequential flows where each step naturally follows
         the previous
 
         The `.next_state()` method creates straightforward, sequential flows where each step
-        naturally follows the previous one, perfect for processes with a clear order.
+        naturally follows the previous one, which is good for processes with a clear order.
 
         Examples
         --------

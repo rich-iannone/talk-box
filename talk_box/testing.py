@@ -3097,7 +3097,39 @@ def _parse_test_scenario(scenario) -> List[str]:
 
 
 class PathwayTestResults:
-    """Results container for pathway testing."""
+    """Aggregate and summarize the outcomes of a `autotest_pathways()` run.
+
+    After `autotest_pathways()` exercises every pathway with the configured
+    test strategies, it wraps the individual `PathwayTestResult` records and
+    the test configuration into a `PathwayTestResults` object. Use this object
+    to inspect pass rates, adherence scores, state coverage, and per-strategy
+    breakdowns.
+
+    Parameters
+    ----------
+    test_results
+        List of `PathwayTestResult` objects, one per individual test
+        execution.
+    test_config
+        Dictionary describing how the test run was configured (pathway
+        count, strategies, model, etc.).
+
+    Examples
+    --------
+    Run pathway tests and inspect results (requires an LLM provider):
+
+    ```python
+    import talk_box as tb
+
+    pathways = tb.Pathways(title="Demo", desc="A demo pathway")
+    # ... define states ...
+
+    results = tb.autotest_pathways(pathways, model="openai")
+    results.summary["completion_rate"]
+    ```
+
+    %seealso autotest_pathways, Pathways, TestResults
+    """
 
     def __init__(self, test_results: List[PathwayTestResult], test_config: Dict[str, Any]):
         self.results = test_results

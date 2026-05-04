@@ -852,11 +852,47 @@ class Conversation:
 
 
 class ToolEnabledConversation(Conversation):
-    """
-    Extended Conversation class with integrated Tool Box support.
+    """Extend `Conversation` with automatic tool invocation support.
 
-    Enables conversations to automatically use tools when appropriate,
-    with rich context passing and result integration.
+    `ToolEnabledConversation` inherits every feature of `Conversation` and
+    adds the ability to discover, invoke, and record tool calls. When
+    `auto_tools` is `True`, the conversation can automatically match user
+    requests to registered tools and inject tool results back into the
+    message history.
+
+    Parameters
+    ----------
+    conversation_id
+        Optional identifier for this conversation. Generated automatically
+        when `None`.
+    tool_registry
+        The `ToolRegistry` that holds available tools. When `None` the
+        global registry returned by `get_global_registry()` is used.
+    auto_tools
+        If `True` (the default), the conversation may invoke tools
+        automatically when a matching tool is found for a user message.
+    tool_confirmation
+        If `True`, prompt the user for confirmation before executing any
+        tool. Defaults to `False`.
+
+    Examples
+    --------
+    Create a tool-enabled conversation and list available tools:
+
+    ```python
+    import talk_box as tb
+
+    conv = tb.ToolEnabledConversation()
+    conv.get_available_tools()
+    ```
+
+    Use the convenience factory instead:
+
+    ```python
+    conv = tb.create_tool_conversation()
+    ```
+
+    %seealso Conversation, create_tool_conversation, ToolContext
     """
 
     def __init__(
@@ -963,5 +999,26 @@ class ToolEnabledConversation(Conversation):
 
 # Convenience functions for easy integration
 def create_tool_conversation() -> ToolEnabledConversation:
-    """Create a new conversation with tool support."""
+    """Create a `ToolEnabledConversation` with default settings.
+
+    This is a convenience factory that returns a new conversation backed by
+    the global tool registry, with `auto_tools` enabled and
+    `tool_confirmation` disabled.
+
+    Returns
+    -------
+    ToolEnabledConversation
+        A ready-to-use conversation with tool support.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    conv = tb.create_tool_conversation()
+    conv.get_available_tools()
+    ```
+
+    %seealso ToolEnabledConversation, Conversation
+    """
     return ToolEnabledConversation()

@@ -435,17 +435,39 @@ class VocabularyTerm:
 
 
 class Priority(Enum):
-    """
-    Priority levels for prompt components based on attention positioning.
+    """Control where a prompt section is placed relative to other sections.
+
+    `PromptBuilder` uses priority levels to order sections so that the most
+    important content lands in the regions of the prompt where LLM attention
+    is strongest (typically the beginning and end). Assign a priority when
+    calling builder methods such as `structured_section()` or when
+    constructing a `PromptSection` directly.
 
     Values
     ------
-    The following priority levels are defined:
+    - `CRITICAL`: placed at the very front of the prompt for maximum attention
+    - `HIGH`: placed early, right after critical sections
+    - `MEDIUM`: placed in the middle of the prompt (the default for most builder methods)
+    - `LOW`: placed toward the end for supporting or secondary information
 
-    - `CRITICAL`: front-loaded placement for highest attention and maximum impact
-    - `HIGH`: early placement in the prompt structure for strong attention
-    - `MEDIUM`: middle section placement for standard attention levels
-    - `LOW`: less prominent placement for supporting information
+    Examples
+    --------
+    ```{python}
+    import talk_box as tb
+
+    builder = (
+        tb.PromptBuilder()
+        .persona("analyst", "data analysis")
+        .structured_section(
+            "Key Constraints",
+            ["Use only public data", "Cite sources"],
+            priority=tb.Priority.CRITICAL,
+        )
+    )
+    builder.get_section_count()
+    ```
+
+    %seealso PromptSection, PromptBuilder
     """
 
     CRITICAL = "critical"  # Front-loaded, gets highest attention
@@ -4192,15 +4214,28 @@ print(builder)
 
 # Convenience functions for common patterns
 def architectural_analysis_prompt() -> PromptBuilder:
-    """
-    Create a pre-configured prompt builder for architectural analysis tasks.
+    """Create a pre-configured `PromptBuilder` for architectural analysis.
 
-    Implements the optimized pattern from the blog post example.
+    The returned builder includes a senior-architect persona, a
+    task-context section, core analysis dimensions (frameworks, data models,
+    API design), a legacy-assessment structured section, and an output-format
+    specification. Customize it further by chaining additional builder methods.
 
     Returns
     -------
     PromptBuilder
-        Configured PromptBuilder for architectural analysis.
+        A builder pre-loaded with architectural analysis sections.
+
+    Examples
+    --------
+    ```{python}
+    import talk_box as tb
+
+    builder = tb.architectural_analysis_prompt()
+    print(builder.build()[:200])
+    ```
+
+    %seealso code_review_prompt, debugging_prompt, PromptBuilder
     """
     return (
         PromptBuilder()
@@ -4235,13 +4270,28 @@ def architectural_analysis_prompt() -> PromptBuilder:
 
 
 def code_review_prompt() -> PromptBuilder:
-    """
-    Create a pre-configured prompt builder for code review tasks.
+    """Create a pre-configured `PromptBuilder` for code review.
+
+    The builder includes a senior-engineer persona, core analysis dimensions
+    covering security, performance, maintainability, best practices, and
+    testing, plus an output format that groups findings by severity. Extend
+    it with additional constraints or sections as needed.
 
     Returns
     -------
     PromptBuilder
-        Configured PromptBuilder for code reviews.
+        A builder pre-loaded with code-review sections.
+
+    Examples
+    --------
+    ```{python}
+    import talk_box as tb
+
+    builder = tb.code_review_prompt()
+    print(builder.build()[:200])
+    ```
+
+    %seealso architectural_analysis_prompt, debugging_prompt, PromptBuilder
     """
     return (
         PromptBuilder()
@@ -4268,13 +4318,29 @@ def code_review_prompt() -> PromptBuilder:
 
 
 def debugging_prompt() -> PromptBuilder:
-    """
-    Create a pre-configured prompt builder for debugging tasks.
+    """Create a pre-configured `PromptBuilder` for debugging.
+
+    The builder sets up an expert-debugger persona, a critical constraint to
+    target root causes, a required "Analysis Steps" section (reproduce,
+    trace, identify, fix), and an output format that structures the response
+    into problem summary, reproduction steps, root-cause analysis, and
+    recommended fix.
 
     Returns
     -------
     PromptBuilder
-        Configured PromptBuilder for debugging tasks.
+        A builder pre-loaded with debugging sections.
+
+    Examples
+    --------
+    ```{python}
+    import talk_box as tb
+
+    builder = tb.debugging_prompt()
+    print(builder.build()[:200])
+    ```
+
+    %seealso architectural_analysis_prompt, code_review_prompt, PromptBuilder
     """
     return (
         PromptBuilder()

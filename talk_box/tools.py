@@ -73,7 +73,45 @@ class ToolStatus(Enum):
 
 
 class ToolCategory(Enum):
-    """Categories for organizing tools."""
+    """Categorize tools by their primary function.
+
+    Every tool registered with the `@tool` decorator belongs to exactly one
+    category. Categories drive filtering in `ToolRegistry.get_tools_by_category()`
+    and appear in debugging dashboards, so choosing the right category helps
+    users discover and organize their tools.
+
+    Values
+    ------
+    - `WEB`: tools that make HTTP requests or interact with web APIs
+    - `FILE`: tools that read, write, or transform files on disk
+    - `DATA`: tools that query databases, transform datasets, or compute metrics
+    - `COMMUNICATION`: tools that send emails, messages, or notifications
+    - `SYSTEM`: tools that interact with the operating system or shell
+    - `CUSTOM`: catch-all for tools that do not fit another category (the default)
+    - `ANALYSIS`: tools that perform analysis, summarization, or inference
+    - `SEARCH`: tools that search indexes, documents, or knowledge bases
+
+    Examples
+    --------
+    Pass a category when registering a tool:
+
+    ```python
+    import talk_box as tb
+
+    @tb.tool(category=tb.ToolCategory.WEB)
+    def fetch_page(url: str) -> str:
+        ...
+    ```
+
+    Filter registered tools by category:
+
+    ```python
+    registry = tb.get_global_registry()
+    web_tools = registry.get_tools_by_category(tb.ToolCategory.WEB)
+    ```
+
+    %seealso tool, ToolContext, ToolResult
+    """
 
     WEB = "web"
     FILE = "file"
@@ -117,11 +155,54 @@ class ToolExecutionMetrics:
 
 
 class ToolContext:
-    """
-    Rich context object passed to all tools.
+    """Provide runtime context to every tool execution.
 
-    Provides access to conversation history, user information,
-    and Talk Box specific functionality.
+    When a tool is invoked, Talk Box creates a `ToolContext` and passes it as the
+    first positional argument. The context carries conversation history, user
+    metadata, and a reference to the `ToolRegistry`, giving the tool everything
+    it needs to make informed decisions without accepting extra parameters from
+    the caller.
+
+    Parameters
+    ----------
+    conversation_id
+        Identifier for the current conversation. Useful for correlating tool
+        calls with conversation logs.
+    user_id
+        Identifier for the user who triggered the tool call.
+    session_id
+        Identifier for the broader session (may span multiple conversations).
+    conversation_history
+        List of message dictionaries from the current conversation. Each
+        dictionary contains at minimum `"role"` and `"content"` keys.
+    user_metadata
+        Arbitrary metadata about the user (preferences, permissions, etc.).
+    tool_registry
+        The `ToolRegistry` instance that the tool belongs to. Allows tools to
+        discover and invoke other tools at runtime.
+    extra
+        Open-ended dictionary for passing additional data that does not fit the
+        other fields.
+
+    Examples
+    --------
+    Create a context manually (most often done by `ToolEnabledConversation`):
+
+    ```python
+    from talk_box.tools import ToolContext
+
+    ctx = ToolContext(
+        conversation_id="conv-42",
+        user_id="user-7",
+        conversation_history=[
+            {"role": "user", "content": "What's the weather?"}
+        ],
+    )
+
+    ctx.get_last_messages(1)
+    ```
+
+    %seealso ToolResult, ToolCategory, ToolEnabledConversation
     """
 
     def __init__(
@@ -177,11 +258,59 @@ class ToolContext:
 
 
 class ToolResult:
-    """
-    Rich result object returned by tools.
+    """Represent the outcome of a tool execution.
 
-    Supports multiple output formats, metadata, and integration
-    with Talk Box conversation system.
+    Every tool returns a `ToolResult` (or Talk Box wraps the return value in
+    one). The object carries the primary data, success/failure status, optional
+    metadata such as confidence scores and source citations, and a display
+    format hint that controls how the result is rendered in conversations.
+
+    Parameters
+    ----------
+    data
+        The primary return value of the tool. Can be any serializable type.
+    success
+        Whether the tool executed without errors. Defaults to `True`.
+    error
+        A human-readable error message when `success` is `False`.
+    metadata
+        Arbitrary key-value pairs for downstream consumers (analytics,
+        logging, etc.).
+    display_format
+        Hint for how to render the result in a conversation. One of
+        `"auto"`, `"json"`, `"text"`, `"html"`, or `"markdown"`.
+        Defaults to `"auto"`.
+    should_continue
+        Whether the conversation should continue after this tool result.
+        Set to `False` to signal that the tool's output is terminal.
+        Defaults to `True`.
+    confidence
+        Optional float between 0 and 1 indicating how confident the tool is
+        in its result.
+    sources
+        Optional list of source URLs or identifiers that back the result.
+    extra
+        Open-ended dictionary for additional data.
+
+    Examples
+    --------
+    Return a successful result from a tool function:
+
+    ```python
+    from talk_box.tools import ToolResult
+
+    result = ToolResult(data={"temperature": 72, "unit": "F"}, confidence=0.95)
+    result.success
+    ```
+
+    Signal an error:
+
+    ```python
+    err = ToolResult(data=None, success=False, error="API key expired")
+    err.success
+    ```
+
+    %seealso ToolContext, tool, ToolCategory
     """
 
     def __init__(
@@ -590,16 +719,68 @@ def tool(
     tags: Optional[List[str]] = None,
     registry: Optional[ToolRegistry] = None,
 ) -> Callable[[F], F]:
-    """Decorator to create and register a Talk Box tool.
+    """Register a function as a Talk Box tool.
 
-    Supports both forms:
-    1. With arguments:
-        @tb.tool(description="Add numbers")
-        def add(x: int, y: int) -> int: ...
+    Use `@tool` as a decorator on any function to make it available to
+    `ChatBot` conversations and the `ToolRegistry`. The decorator supports
+    two forms: bare (`@tb.tool`) and with keyword arguments
+    (`@tb.tool(description="...")`).
 
-    2. Bare (no parentheses):
-        @tb.tool
-        def say_hello(name: str) -> str: ...
+    Parameters
+    ----------
+    _func
+        Internal parameter that captures the decorated function when the
+        decorator is used without parentheses. Do not pass this explicitly.
+    name
+        Display name for the tool. Defaults to the function name.
+    description
+        Human-readable description shown to the LLM when it decides which
+        tool to call. Defaults to the function's docstring.
+    category
+        A `ToolCategory` value used for filtering and dashboard display.
+        Defaults to `ToolCategory.CUSTOM`.
+    examples
+        Optional list of example invocation strings for documentation.
+    requires_confirmation
+        If `True`, the tool will ask the user for confirmation before
+        executing. Defaults to `False`.
+    timeout_seconds
+        Maximum wall-clock time (in seconds) before the tool execution is
+        cancelled. `None` means no limit.
+    max_retries
+        Number of automatic retries on failure. Defaults to `0`.
+    tags
+        Freeform string tags for discovery and filtering.
+    registry
+        A `ToolRegistry` to register the tool in. Defaults to the global
+        registry returned by `get_global_registry()`.
+
+    Returns
+    -------
+    Callable
+        The original function, with a `_talk_box_tool` attribute attached.
+
+    Examples
+    --------
+    Register a tool with keyword arguments:
+
+    ```python
+    import talk_box as tb
+
+    @tb.tool(description="Add two numbers", category=tb.ToolCategory.DATA)
+    def add(x: int, y: int) -> int:
+        return x + y
+    ```
+
+    Register a tool without arguments (bare decorator):
+
+    ```python
+    @tb.tool
+    def greet(name: str) -> str:
+        return f"Hello, {name}!"
+    ```
+
+    %seealso ToolCategory, ToolContext, ToolResult, get_global_registry
     """
 
     def _wrap(func: F) -> F:
@@ -631,7 +812,28 @@ def tool(
 
 
 def get_global_registry() -> ToolRegistry:
-    """Get the global tool registry."""
+    """Return the process-wide `ToolRegistry` singleton.
+
+    All `@tool`-decorated functions are registered here by default. Use this
+    function when you need to inspect, iterate, or pass the registry to other
+    components such as `ToolEnabledConversation` or `ChatBot`.
+
+    Returns
+    -------
+    ToolRegistry
+        The global registry instance.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    registry = tb.get_global_registry()
+    all_tools = registry.get_all_tools()
+    ```
+
+    %seealso tool, ToolEnabledConversation
+    """
     return _global_registry
 
 

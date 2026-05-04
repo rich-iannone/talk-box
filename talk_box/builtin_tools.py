@@ -677,23 +677,32 @@ def get_builtin_tool(name: str):
 
 
 def load_selected_tools(tool_names: List[str]) -> None:
-    """Load only specific tools from the Tool Box.
+    """Register a subset of the built-in Tool Box tools.
 
-    This provides a middle ground between loading all tools and cherry-picking
-    individual ones. Useful for loading several related tools at once.
+    This provides a middle ground between loading every built-in tool with
+    `load_tool_box()` and fetching them one at a time with
+    `get_builtin_tool()`. Each requested tool is validated, registered in
+    the global registry, and ready for use.
 
     Parameters
     ----------
-    tool_names : List[str]
-        Names of the tools to load
+    tool_names
+        Names of the built-in tools to load.
+
+    Raises
+    ------
+    ValueError
+        If any name in `tool_names` does not match a known built-in tool.
 
     Examples
     --------
-    >>> # Load just text and math tools
-    >>> load_selected_tools(["text_stats", "calculate", "convert_case"])
-    >>>
-    >>> # Load web-related tools
-    >>> load_selected_tools(["parse_url", "url_encode_decode"])
+    ```python
+    import talk_box as tb
+
+    tb.load_selected_tools(["text_stats", "calculate", "convert_case"])
+    ```
+
+    %seealso load_tool_box, get_builtin_tool
     """
     # Simply get each tool - this will automatically handle validation and registration
     for name in tool_names:
@@ -701,7 +710,28 @@ def load_selected_tools(tool_names: List[str]) -> None:
 
 
 def load_tool_box():
-    """Load all Tool Box tools into the global registry."""
+    """Register all built-in Tool Box tools in the global registry.
+
+    Call this once at startup to make every built-in tool (text processing,
+    math, date/time, data utilities, web helpers, file tools) available to
+    `ChatBot` and `ToolEnabledConversation`. If the tools are already
+    registered (e.g., from a previous call) the function is a no-op.
+
+    Returns
+    -------
+    int
+        The number of built-in tools now present in the global registry.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    count = tb.load_tool_box()
+    ```
+
+    %seealso get_builtin_tool, load_selected_tools, get_global_registry
+    """
     import inspect
     import sys
 

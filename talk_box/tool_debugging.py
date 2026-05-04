@@ -18,11 +18,45 @@ console = Console()
 
 
 class ToolDebugger:
-    """
-    High-level debugging interface for Talk Box tools.
+    """Inspect tool performance, analyze errors, and monitor executions.
 
-    Provides easy methods to inspect tool performance, analyze errors,
-    and monitor tool execution in real-time.
+    `ToolDebugger` wraps a `ToolObserver` and adds rich, terminal-friendly
+    output powered by the *Rich* library. It can display performance
+    dashboards, per-tool detail views, error analyses, live monitoring feeds,
+    and exportable JSON reports.
+
+    For quick, one-off checks the module-level convenience functions
+    (`debug_dashboard()`, `debug_tool()`, etc.) create a `ToolDebugger`
+    automatically. Instantiate the class directly when you need to target a
+    specific `ToolObserver` instance.
+
+    Parameters
+    ----------
+    observer
+        The `ToolObserver` to read data from. When `None` the global
+        observer returned by `get_global_observer()` is used.
+
+    Examples
+    --------
+    Show a dashboard using the global observer:
+
+    ```python
+    import talk_box as tb
+
+    debugger = tb.ToolDebugger()
+    debugger.show_performance_dashboard()
+    ```
+
+    Target a custom observer:
+
+    ```python
+    from talk_box.tool_observability import ToolObserver, ObservabilityLevel
+
+    obs = ToolObserver(level=ObservabilityLevel.DEBUG)
+    debugger = tb.ToolDebugger(observer=obs)
+    ```
+
+    %seealso debug_dashboard, debug_tool, ToolObserver
     """
 
     def __init__(self, observer: Optional[ToolObserver] = None):
@@ -243,37 +277,161 @@ class ToolDebugger:
 
 
 def debug_dashboard() -> None:
-    """Show the tool performance dashboard."""
+    """Print a rich performance dashboard to the terminal.
+
+    The dashboard includes overall execution statistics (success rate, average
+    duration, error rate), the most-used tools, and the slowest tools. Data
+    comes from the global `ToolObserver`.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    tb.debug_dashboard()
+    ```
+
+    %seealso debug_tool, debug_errors, ToolDebugger
+    """
     debugger = ToolDebugger()
     debugger.show_performance_dashboard()
 
 
 def debug_tool(tool_name: str) -> None:
-    """Show detailed information about a specific tool."""
+    """Print detailed metrics and recent executions for one tool.
+
+    Parameters
+    ----------
+    tool_name
+        The registered name of the tool to inspect.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    tb.debug_tool("fetch_page")
+    ```
+
+    %seealso debug_dashboard, debug_errors, ToolDebugger
+    """
     debugger = ToolDebugger()
     debugger.show_tool_details(tool_name)
 
 
 def debug_errors(tool_name: Optional[str] = None) -> None:
-    """Show error analysis for all tools or a specific tool."""
+    """Print an error analysis report to the terminal.
+
+    The report shows total error counts, the most common error types and
+    messages, and a table of recent failures. When `tool_name` is provided
+    the report is scoped to that single tool.
+
+    Parameters
+    ----------
+    tool_name
+        Limit the analysis to this tool. When `None` (the default), all
+        tools are included.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    # Errors across all tools
+    tb.debug_errors()
+
+    # Errors for one tool
+    tb.debug_errors("fetch_page")
+    ```
+
+    %seealso debug_dashboard, debug_tool, ToolDebugger
+    """
     debugger = ToolDebugger()
     debugger.show_error_analysis(tool_name)
 
 
 def live_monitor(duration: int = 30) -> None:
-    """Start live monitoring of tool executions."""
+    """Stream tool executions to the terminal in real time.
+
+    The monitor prints one line per tool execution as it finishes (success or
+    failure) for `duration` seconds or until you press Ctrl+C.
+
+    Parameters
+    ----------
+    duration
+        How many seconds to monitor before stopping automatically.
+        Defaults to `30`.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    tb.live_monitor(duration=60)
+    ```
+
+    %seealso debug_dashboard, ToolDebugger
+    """
     debugger = ToolDebugger()
     debugger.show_live_monitoring(duration)
 
 
 def export_debug_report(filename: Optional[str] = None) -> str:
-    """Export a comprehensive debug report."""
+    """Write a JSON debug report to disk.
+
+    The report contains the performance summary, per-tool metrics, recent
+    execution records, and error analysis produced by the global
+    `ToolObserver`.
+
+    Parameters
+    ----------
+    filename
+        Path to write the JSON file. When `None` a timestamped filename in
+        the current directory is generated automatically.
+
+    Returns
+    -------
+    str
+        The path of the written file.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    path = tb.export_debug_report("debug.json")
+    ```
+
+    %seealso debug_dashboard, ToolDebugger
+    """
     debugger = ToolDebugger()
     return debugger.export_debug_report(filename)
 
 
 def configure_debug_mode(level: ObservabilityLevel = ObservabilityLevel.DEBUG) -> None:
-    """Configure observability for maximum debugging detail."""
+    """Switch the global observer to a high-detail debugging configuration.
+
+    This is a convenience wrapper around `configure_observability()` that
+    sets generous defaults for debugging sessions: 5 000 stored executions,
+    14-day retention, and memory profiling enabled.
+
+    Parameters
+    ----------
+    level
+        The observability level to use. Defaults to
+        `ObservabilityLevel.DEBUG`.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    tb.configure_debug_mode()
+    tb.debug_dashboard()
+    ```
+
+    %seealso configure_observability, ObservabilityLevel, debug_dashboard
+    """
     from .tool_observability import configure_observability
 
     observer = configure_observability(

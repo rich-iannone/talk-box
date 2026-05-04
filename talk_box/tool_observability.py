@@ -22,12 +22,36 @@ from .tools import ToolStatus
 
 
 class ObservabilityLevel(Enum):
-    """Different levels of observability detail."""
+    """Control how much detail the tool observability system records.
 
-    NONE = "none"  # No observability
-    BASIC = "basic"  # Basic metrics and errors
-    DETAILED = "detailed"  # Detailed timing and parameters
-    DEBUG = "debug"  # Everything including internal state
+    Choose a level that balances insight with performance overhead. Higher
+    levels capture more data (parameters, result summaries, internal state)
+    but consume more memory and disk.
+
+    Values
+    ------
+    - `NONE`: observability disabled; no data is captured
+    - `BASIC`: execution counts, durations, and error messages only
+    - `DETAILED`: everything in `BASIC` plus parameters and result summaries
+    - `DEBUG`: everything in `DETAILED` plus internal state and verbose logging
+
+    Examples
+    --------
+    Set the level when configuring the global observer:
+
+    ```python
+    import talk_box as tb
+
+    tb.configure_observability(level=tb.ObservabilityLevel.DETAILED)
+    ```
+
+    %seealso configure_observability, ToolObserver
+    """
+
+    NONE = "none"
+    BASIC = "basic"
+    DETAILED = "detailed"
+    DEBUG = "debug"
 
 
 @dataclass
@@ -85,15 +109,46 @@ class ToolMetrics:
 
 
 class ToolObserver:
-    """
-    Observes and records tool executions for monitoring and debugging.
+    """Record, aggregate, and analyze tool executions.
 
-    Features:
-    - Real-time execution tracking
-    - Performance metrics collection
-    - Error pattern analysis
-    - Memory usage monitoring
-    - Configurable retention policies
+    `ToolObserver` is the core of Talk Box's tool observability system. It
+    tracks every tool invocation, computes per-tool performance metrics,
+    detects error patterns, and supports real-time listeners for live
+    monitoring dashboards.
+
+    Most users interact with the observer indirectly through the convenience
+    functions `configure_observability()`, `debug_dashboard()`, and
+    `debug_tool()`. Create a `ToolObserver` directly only when you need a
+    private observer that is separate from the global singleton.
+
+    Parameters
+    ----------
+    level
+        The amount of detail to capture. See `ObservabilityLevel` for the
+        available options. Defaults to `ObservabilityLevel.BASIC`.
+    max_executions
+        Maximum number of execution records to keep in memory. Older records
+        are evicted in FIFO order. Defaults to `1000`.
+    retention_days
+        Number of days to retain execution data before `cleanup_old_data()`
+        removes it. Defaults to `7`.
+    enable_memory_profiling
+        If `True`, record per-execution memory usage. This adds overhead
+        and is best reserved for debugging sessions. Defaults to `False`.
+
+    Examples
+    --------
+    Create a detailed observer and inspect metrics:
+
+    ```python
+    from talk_box.tool_observability import ToolObserver, ObservabilityLevel
+
+    observer = ToolObserver(level=ObservabilityLevel.DETAILED)
+    summary = observer.get_performance_summary()
+    summary["total_executions"]
+    ```
+
+    %seealso ObservabilityLevel, configure_observability, ToolDebugger
     """
 
     def __init__(
@@ -426,7 +481,28 @@ _global_observer: Optional[ToolObserver] = None
 
 
 def get_global_observer() -> ToolObserver:
-    """Get the global tool observer instance."""
+    """Return the process-wide `ToolObserver` singleton.
+
+    If no observer has been configured yet, a default one is created with
+    `ObservabilityLevel.BASIC`. Call `configure_observability()` first to
+    choose a different level.
+
+    Returns
+    -------
+    ToolObserver
+        The global observer instance.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    observer = tb.get_global_observer()
+    observer.get_performance_summary()
+    ```
+
+    %seealso configure_observability, ToolObserver
+    """
     global _global_observer
     if _global_observer is None:  # pragma: no cover
         _global_observer = ToolObserver()  # pragma: no cover
@@ -436,7 +512,38 @@ def get_global_observer() -> ToolObserver:
 def configure_observability(
     level: ObservabilityLevel = ObservabilityLevel.BASIC, **kwargs
 ) -> ToolObserver:
-    """Configure global observability settings."""
+    """Create and install a new global `ToolObserver` with the given settings.
+
+    Calling this function replaces the current global observer. Any data held
+    by the previous observer is discarded.
+
+    Parameters
+    ----------
+    level
+        The observability level. Defaults to `ObservabilityLevel.BASIC`.
+    **kwargs
+        Additional keyword arguments forwarded to `ToolObserver.__init__`
+        (e.g., `max_executions`, `retention_days`,
+        `enable_memory_profiling`).
+
+    Returns
+    -------
+    ToolObserver
+        The newly created global observer.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    observer = tb.configure_observability(
+        level=tb.ObservabilityLevel.DETAILED,
+        max_executions=5000,
+    )
+    ```
+
+    %seealso ObservabilityLevel, ToolObserver, get_global_observer
+    """
     global _global_observer
     _global_observer = ToolObserver(level=level, **kwargs)
     return _global_observer
