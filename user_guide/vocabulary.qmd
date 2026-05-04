@@ -1,0 +1,420 @@
+---
+title: "Domain Vocabulary"
+---
+
+The `VocabularyTerm` class enables AI systems to correctly understand and use specialized terminology within specific business, technical, or professional contexts. By providing explicit definitions and multilingual support, vocabulary terms ensure consistent interpretation of domain-specific language that might otherwise be misunderstood.
+
+## Why Use Domain Vocabulary?
+
+Professional contexts require precise terminology that often differs from general language usage. Here's why explicit vocabulary definitions matter:
+
+- **Prevent Misinterpretation**: terms like "deployment" mean different things in military, software, and business contexts
+- **Multilingual Consistency**: ensure accurate understanding across languages and regional variants
+- **Professional Standards**: align AI communication with industry-specific terminology conventions
+- **Context Boundaries**: establish clear domain-specific definitions to prevent confusion
+
+## The Problem with General Language Understanding
+
+AI models are trained on general internet text, which means they understand common usage but may miss nuanced professional meanings. For example:
+
+- "sprint" could mean athletics, agile development, or telecom services
+- "pipeline" varies between oil & gas, sales, data engineering, and CI/CD
+- "circuit breaker" has different meanings in electrical engineering versus software architecture
+
+`VocabularyTerm` solves this by providing explicit, contextual definitions that anchor the AI's understanding to your specific domain.
+
+## Basic Usage: Single Terms
+
+Define individual vocabulary terms for your domain:
+
+```{python}
+import talk_box as tb
+
+# Define a customer success term
+churn_term = tb.VocabularyTerm(
+    term="Customer Churn",
+    definition="The percentage of customers who stop using our service during a specific time period",
+    synonyms=["attrition rate", "customer turnover", "subscription cancellation rate"]
+)
+
+# Use in a prompt builder
+builder = (
+    tb.PromptBuilder()
+    .persona("customer success manager")
+    .vocabulary(churn_term)
+    .task_context("Analyze customer retention patterns and improvement strategies")
+)
+
+print(builder)
+```
+
+## Working with Multiple Terms
+
+For comprehensive domain coverage, define multiple related terms:
+
+```{python}
+tech_vocab = [
+    tb.VocabularyTerm(
+        term="Escalation Path",
+        definition="The structured process for transferring complex issues to specialized teams",
+        synonyms=["escalation process", "tier advancement", "specialist referral"]
+    ),
+    tb.VocabularyTerm(
+        term="Service Level Agreement",
+        definition="Guaranteed response and resolution timeframes based on issue priority",
+        synonyms=["SLA", "service guarantee", "response commitment"]
+    ),
+    tb.VocabularyTerm(
+        term="Root Cause Analysis",
+        definition="Systematic investigation to identify the underlying source of recurring issues",
+        synonyms=["RCA", "deep dive analysis", "systematic troubleshooting"]
+    )
+]
+
+builder = (
+    tb.PromptBuilder()
+    .persona("technical support specialist")
+    .vocabulary(tech_vocab)
+    .task_context("Provide comprehensive technical support for enterprise software")
+)
+
+print(builder)
+```
+
+## Multilingual Support: Synonyms vs Translations
+
+`VocabularyTerm` supports two distinct approaches to multilingual terminology. **Language-coded synonyms** capture how users naturally refer to concepts in different languages, while **official translations** provide standardized terminology for formal communications.
+
+Use `synonyms=` with language codes when you want to recognize alternative expressions users might employ across languages:
+
+```{python}
+recognition_term = tb.VocabularyTerm(
+    term="Market Penetration Rate",
+    definition="Percentage of target market currently using our services",
+    synonyms=[
+        "market share",           # English alternative
+        "adoption rate",          # Another English way
+        "es:cuota de mercado",    # How Spanish users might say it
+        "de:Marktanteil",         # How German users might refer to it
+        "fr:part de marché"       # How French users might express it
+    ]
+)
+```
+
+Use `translations=` when you need standardized terminology across languages for official communications:
+
+```{python}
+standardization_term = tb.VocabularyTerm(
+    term="Market Penetration Rate",
+    definition="Percentage of target market currently using our services",
+    synonyms=["market share", "adoption rate"],     # English alternatives only
+    translations={
+        "es": "Tasa de Penetración de Mercado",     # Official Spanish name
+        "de": "Marktdurchdringungsrate",            # Official German name
+        "fr": "Taux de Pénétration du Marché"       # Official French name
+    }
+)
+```
+
+For comprehensive multilingual support, combine both approaches to handle both informal user expressions and formal terminology standards:
+
+```{python}
+comprehensive_term = tb.VocabularyTerm(
+    term="Customer Lifetime Value",
+    definition="Total revenue expected from a customer relationship over time",
+    synonyms=[
+        "CLV", "lifetime revenue",                  # English alternatives
+        "es:valor del cliente",                     # Informal Spanish expression
+        "de:Kundenwert"                             # Casual German way
+    ],
+    translations={
+        "es": "Valor de Vida del Cliente",          # Official Spanish translation
+        "de": "Kundenlebenszeitwert",               # Official German translation
+        "fr": "Valeur Vie Client"                   # Official French translation
+    }
+)
+```
+
+This dual approach ensures your AI assistant can both recognize how users naturally express concepts and respond using appropriate formal terminology for your organization's standards.
+
+## Industry-Specific Examples
+
+### Healthcare & Medical Informatics
+
+Healthcare systems require precise terminology for regulatory compliance and patient safety. Medical terms often have specific meanings that differ from general usage, and international healthcare organizations need standardized translations for interoperability.
+
+```{python}
+healthcare_vocab = [
+    tb.VocabularyTerm(
+        term="Electronic Health Record",
+        definition="Digital version of patient medical history maintained by healthcare providers",
+        synonyms=["EHR", "electronic medical record", "EMR", "digital health record"],
+        translations={
+            "es": "Registro Médico Electrónico",
+            "fr": "Dossier Médical Électronique",
+            "de": "Elektronische Patientenakte"
+        }
+    ),
+    tb.VocabularyTerm(
+        term="Clinical Decision Support",
+        definition="Health IT providing evidence-based treatment recommendations",
+        synonyms=["CDS", "decision support system", "clinical guidance system"],
+        translations={
+            "es": "Soporte de Decisiones Clínicas",
+            "fr": "Aide à la Décision Clinique",
+            "de": "Klinische Entscheidungsunterstützung"
+        }
+    )
+]
+
+health_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("healthcare IT consultant", "medical informatics")
+        .vocabulary(healthcare_vocab)
+        .constraint("Maintain strict patient privacy and HIPAA compliance")
+    )
+)
+```
+
+### Software Development & DevOps
+
+Modern software architecture uses specialized patterns and practices that can be ambiguous without proper context. Terms like "circuit breaker" or "mesh" have specific technical meanings that differ significantly from their everyday usage.
+
+```{python}
+devops_vocab = [
+    tb.VocabularyTerm(
+        term="Blue-Green Deployment",
+        definition="Deployment strategy using two identical environments to enable zero-downtime releases",
+        synonyms=["blue green strategy", "dual environment deployment", "zero downtime deployment"]
+    ),
+    tb.VocabularyTerm(
+        term="Circuit Breaker Pattern",
+        definition="Resilience pattern that prevents cascading failures by monitoring service health",
+        synonyms=["circuit breaker", "failure isolation pattern", "resilience pattern"]
+    ),
+    tb.VocabularyTerm(
+        term="Service Mesh",
+        definition="Infrastructure layer handling service-to-service communication in microservices",
+        synonyms=["mesh architecture", "service communication layer", "microservices mesh"]
+    )
+]
+
+devops_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("DevOps architect", "cloud infrastructure and microservices")
+        .vocabulary(devops_vocab)
+        .task_context("Design resilient microservices architecture")
+    )
+)
+```
+
+### Financial Services
+
+Financial terminology requires precision for regulatory compliance and risk management. Many financial concepts have specific technical definitions that are critical for accurate analysis and reporting across global markets.
+
+```{python}
+finance_vocab = [
+    tb.VocabularyTerm(
+        term="Value at Risk",
+        definition="Statistical measure of potential loss in portfolio value over specific time period",
+        synonyms=["VaR", "risk measure", "portfolio risk metric"],
+        translations={
+            "es": "Valor en Riesgo",
+            "de": "Value-at-Risk",
+            "fr": "Valeur en Risque"
+        }
+    ),
+    tb.VocabularyTerm(
+        term="Know Your Customer",
+        definition="Regulatory requirement to verify client identities and assess risk profiles",
+        synonyms=["KYC", "customer due diligence", "identity verification"],
+        translations={
+            "es": "Conozca a Su Cliente",
+            "de": "Kenne Deinen Kunden",
+            "fr": "Connaître Son Client"
+        }
+    )
+]
+```
+
+## Best Practices
+
+Creating effective vocabulary terms requires thoughtful consideration of how your team actually uses language in practice. These guidelines help ensure your vocabulary definitions are clear, maintainable, and provide maximum value for AI understanding within your specific domain context.
+
+### 1. Use Clear, Operational Definitions
+
+Focus on how terms are used in your specific context rather than dictionary definitions:
+
+```python
+# Good: Operational definition
+tb.VocabularyTerm(
+    term="Sprint",
+    definition="Two-week development cycle with defined scope and deliverables in agile methodology",
+    synonyms=["iteration", "development cycle", "timebox"]
+)
+
+# Avoid: Generic definition
+tb.VocabularyTerm(
+    term="Sprint",
+    definition="A short race run at full speed",
+    synonyms=["dash", "run"]
+)
+```
+
+### 2. Include Common Abbreviations and Variants
+
+Capture the ways your team actually refers to concepts:
+
+```{python}
+tb.VocabularyTerm(
+    term="Application Programming Interface",
+    definition="Set of protocols and tools for building software applications",
+    synonyms=["API", "web service", "endpoint", "service interface"]
+)
+```
+
+### 3. Use Language Codes Properly
+
+Follow standard language codes (ISO 639-1/639-2) for consistent formatting:
+
+```{python}
+# Standard language codes
+tb.VocabularyTerm(
+    term="User Interface",
+    definition="The visual elements and controls through which users interact with software.",
+    synonyms=[
+        "UI", "interface", "frontend",
+        "es:interfaz de usuario",      # Spanish
+        "fr:interface utilisateur",    # French
+        "de:Benutzeroberfläche",       # German
+        "pt-BR:interface do usuário"   # Brazilian Portuguese
+    ]
+)
+```
+
+### 4. Group Related Terms
+
+Organize vocabulary by domain or functional area for better maintainability:
+
+```python
+# Authentication & Security Terms
+auth_vocab = [
+    tb.VocabularyTerm(term="Multi-Factor Authentication", ...),
+    tb.VocabularyTerm(term="Single Sign-On", ...),
+    tb.VocabularyTerm(term="Access Control", ...)
+]
+
+# Database & Storage Terms
+data_vocab = [
+    tb.VocabularyTerm(term="ACID Compliance", ...),
+    tb.VocabularyTerm(term="Eventual Consistency", ...),
+    tb.VocabularyTerm(term="Sharding", ...)
+]
+
+# Combine when needed
+all_vocab = auth_vocab + data_vocab
+```
+
+## Integration with Other Features
+
+Vocabulary definitions work seamlessly with other Talk Box features to create comprehensive AI systems. When combined with conversation pathways, vocabulary ensures AI assistants understand domain-specific terminology while following structured dialogue flows:
+
+```{python}
+# Define e-commerce vocabulary
+ecommerce_vocab = [
+    tb.VocabularyTerm(
+        term="Cart Abandonment",
+        definition="When customers add items to cart but don't complete purchase",
+        synonyms=["abandoned cart", "incomplete checkout", "cart dropout"]
+    )
+]
+
+# Create pathway with vocabulary context
+support_pathway = (
+    tb.Pathways("Customer Support", "systematic issue resolution")
+    .state("understand the customer issue")
+    .required(["problem description", "account information"])
+    .next_state("troubleshooting")
+)
+
+support_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("customer support specialist", "e-commerce platform")
+        .vocabulary(ecommerce_vocab)
+        .pathways(support_pathway)
+        .constraint("Always maintain friendly, helpful tone")
+    )
+)
+
+# Show the generated prompt
+print(support_bot.system_prompt)
+```
+
+Vocabulary becomes particularly valuable when analyzing domain-specific documents through file attachments, ensuring AI assistants correctly interpret specialized terminology in uploaded files:
+
+```python
+legal_vocab = [
+    tb.VocabularyTerm(
+        term="Force Majeure",
+        definition="Unforeseeable circumstances preventing contract fulfillment",
+        synonyms=["act of God", "unforeseeable event", "superior force"]
+    )
+]
+
+contract_bot = (
+    tb.ChatBot()
+    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .system_prompt(
+        tb.PromptBuilder()
+        .persona("legal analyst", "contract review")
+        .vocabulary(legal_vocab)
+        .task_context("Review contracts for key terms and potential issues")
+    )
+)
+
+# Analyze contract with vocabulary context
+response = contract_bot.chat(
+    "Please review this contract for key terms",
+    attachments=["contract.pdf"]
+)
+```
+
+## Vocabulary Term Display
+
+When you print a `VocabularyTerm`, it displays in a clean, readable format:
+
+```{python}
+term = tb.VocabularyTerm(
+    term="Customer Lifetime Value",
+    definition="Total revenue expected from a customer relationship over time",
+    synonyms=["CLV", "lifetime revenue"],
+    translations={"es": "Valor de Vida del Cliente"}
+)
+
+print(term)
+```
+
+This formatting makes it easy to review and share vocabulary definitions with your team.
+
+## Common Use Cases
+
+Domain vocabulary proves valuable across diverse organizational contexts. It's particularly effective for **onboarding new team members** with comprehensive terminology guides, enabling **cross-functional communication** where terms like "deployment" mean different things to DevOps versus Sales teams, and supporting **international operations** by ensuring consistent understanding across global teams working in different languages.
+
+The feature also excels in **regulatory compliance** scenarios where precise definitions matter legally, **customer support** contexts where AI assistants need to understand product-specific terminology, and **technical documentation** workflows where consistent definitions are critical for clarity and accuracy.
+
+## Next Steps
+
+- **Explore [PromptBuilder Guide](prompt-builder.qmd)** for comprehensive prompt engineering
+- **Learn about [Conversation Pathways](pathways.qmd)** for structured dialogue management
+- **Check out [Testing & Validation](testing-avoid-topics.qmd)** for quality assurance
+
+Domain vocabulary is most powerful when combined with other Talk Box features to create comprehensive, professional AI systems that understand and communicate effectively within your specific business context.
