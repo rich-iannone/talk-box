@@ -9,16 +9,17 @@ include = ["talk_box*"]
 
 [tool.setuptools.package-data]
 talk_box = [
-    "web_components/**/*",
+    "py.typed",
+    "personas/**/*.yaml",
 ]
 
 [project]
 name = "talk-box"
 dynamic = ["version"]
-description = "The best way to generate, test, and deploy LLM chatbots"
+description = "Build production AI assistants with battle-tested personas, structured conversations, and built-in quality assurance"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 authors = [
     {name = "Richard Iannone", email = "riannone@me.com"},
 ]
@@ -26,19 +27,21 @@ keywords = [
     "chatbot",
     "llm",
     "ai",
+    "agents",
+    "personas",
     "conversation",
+    "prompt-engineering",
+    "local-models",
     "testing",
-    "deployment",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -46,10 +49,8 @@ dependencies = [
     "chatlas>=0.1.0",
     "typing-extensions>=4.4.0",
     "python-dotenv>=1.0.0",
-    "requests>=2.25.0", # For server health checks
-    "fastapi>=0.68.0", # For React chat server
-    "uvicorn>=0.15.0", # For running FastAPI server
-    "rich>=13.0.0", # For tool debugging UI
+    "rich>=13.0.0",
+    "pyyaml>=6.0.0",
 ]
 
 [project.optional-dependencies]
@@ -64,7 +65,6 @@ dev = [
     "pytest-rerunfailures>=15.0",
     "ruff>=0.1.0",
     "pre-commit>=3.0.0",
-    "quartodoc>=0.7.0",
 ]
 
 # Rich reporting dependencies
@@ -75,7 +75,7 @@ reporting = [
 
 # Documentation dependencies
 docs = [
-    "quartodoc>=0.7.0",
+    "great-docs",
     "jupyter>=1.0.0",
 ]
 
@@ -86,7 +86,7 @@ all = [
 
 [project.urls]
 Homepage = "https://github.com/rich-iannone/talk-box"
-Documentation = "https://talk-box.readthedocs.io"
+Documentation = "https://rich-iannone.github.io/talk-box/"
 Repository = "https://github.com/rich-iannone/talk-box"
 "Bug Tracker" = "https://github.com/rich-iannone/talk-box/issues"
 
