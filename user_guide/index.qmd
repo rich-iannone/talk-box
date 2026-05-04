@@ -102,7 +102,7 @@ It's been shown that **how you organize information** matters more than the spec
 
 Talk Box offers two approaches depending on your needs and experience level. Start with simple chatbots to get familiar with the framework, then graduate to PromptBuilder for more sophisticated applications.
 
-### Simple Chatbots (Perfect for Getting Started)
+### Simple Chatbots (Great for Getting Started)
 
 The simplest way to use Talk Box is with basic chatbot configuration using presets. This approach gets you up and running quickly with professional-quality chatbots.
 
