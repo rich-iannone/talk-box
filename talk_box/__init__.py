@@ -18,6 +18,22 @@ from talk_box.conversation import (
     ToolEnabledConversation,
     create_tool_conversation,
 )
+from talk_box.guardrails import (
+    Guard,
+    GuardAction,
+    GuardPhase,
+    GuardPipeline,
+    GuardPipelineResult,
+    GuardResult,
+    disclaimer_required,
+    guardrail,
+    keyword_block,
+    max_input_length,
+    max_response_length,
+    must_cite_sources,
+    no_pii,
+    tone_check,
+)
 from talk_box.pathways import Pathways
 from talk_box.personas import PersonaDefinition, get_persona, list_personas, persona_categories
 from talk_box.presets import Preset, PresetManager, PresetNames
@@ -72,6 +88,21 @@ __all__ = [
     "AttachmentMetadata",
     # Conversational pathways
     "Pathways",
+    # Guardrails
+    "Guard",
+    "GuardAction",
+    "GuardPhase",
+    "GuardPipeline",
+    "GuardPipelineResult",
+    "GuardResult",
+    "guardrail",
+    "disclaimer_required",
+    "keyword_block",
+    "max_input_length",
+    "max_response_length",
+    "must_cite_sources",
+    "no_pii",
+    "tone_check",
     # Prompt engineering
     "PromptBuilder",
     "Priority",
