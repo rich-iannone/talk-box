@@ -1,7 +1,7 @@
 .PHONY: test lint check clean docs
 
 test:
-	@uv run pytest \
+	@uv run --extra dev pytest \
 		--cov=talk_box \
 		--cov-report=term-missing \
 		--randomly-seed 123 \
