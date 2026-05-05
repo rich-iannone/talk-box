@@ -383,6 +383,9 @@ class ChatBot:
 
         self._guard_pipeline = GuardPipeline()
 
+        # Mock response queue for testing/documentation
+        self._mock_responses: list[str] = []
+
         # Auto-enable LLM integration if available
         self._auto_enable_llm()
 
@@ -2180,6 +2183,45 @@ class ChatBot:
         """
         return self._guard_pipeline.stats()
 
+    def mock_responses(self, responses: list[str]) -> "ChatBot":
+        """Set scripted responses for demonstration and testing purposes.
+
+        When mock responses are queued, `chat()` returns them in order
+        instead of calling the LLM or using echo mode. This is useful for
+        documentation examples, deterministic testing, and demos that need
+        realistic-looking output without requiring API keys.
+
+        Responses are consumed in FIFO order. Once exhausted, the chatbot
+        reverts to its normal behavior (LLM or echo mode).
+
+        Parameters
+        ----------
+        responses
+            A list of response strings to return sequentially from `chat()`.
+
+        Returns
+        -------
+        ChatBot
+            The same instance for method chaining.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        bot = tb.ChatBot().mock_responses([
+            "Hello! How can I help you today?",
+            "I'd be happy to assist with that.",
+        ])
+
+        convo = bot.chat("Hi there")
+        print(convo.get_last_message().content)
+        # "Hello! How can I help you today?"
+        ```
+        """
+        self._mock_responses = list(responses)
+        return self
+
     def persona(self, persona_description: str) -> "ChatBot":
         """Set a persona that shapes the chatbot's tone and behavior.
 
@@ -3121,8 +3163,11 @@ class ChatBot:
         # Add user message to conversation
         conversation.add_user_message(user_content)
 
+        # Use mock response if available
+        if self._mock_responses:
+            response_content = self._mock_responses.pop(0)
         # Get response based on LLM availability
-        if self._llm_enabled:
+        elif self._llm_enabled:
             try:
                 # Pass the conversation context to maintain history
                 response_content = self._chat_with_llm(message, conversation)
