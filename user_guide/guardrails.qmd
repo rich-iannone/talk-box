@@ -1,0 +1,595 @@
+---
+title: "Guardrails"
+---
+
+Every production chatbot needs boundaries. A financial advisor shouldn't leak customer email addresses. A support bot shouldn't respond with profanity. A medical assistant must include disclaimers. Talk Box's guardrail system lets you enforce these constraints declaratively, using plain Python functions that intercept messages before and after they reach the LLM.
+
+This guide covers how guardrails work, the built-in guards that ship with Talk Box, how to write your own, and patterns for composing them in real-world applications.
+
+## Quick Start
+
+Adding guardrails to a chatbot is a single method call per guard. Here's a financial advisor protected by three layers of validation:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# A financial advisor with safety guardrails
+bot = (
+    tb.ChatBot()
+    .persona_pack("financial_advisor")
+    .guardrail(tb.no_pii())
+    .guardrail(tb.max_response_length(500))
+    .guardrail(tb.disclaimer_required(
+        "This is not financial advice. Consult a licensed professional."
+    ))
+)
+
+convo = bot.chat("What's a good investment strategy for retirement?")
+print(convo.get_last_message().content)
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("financial_advisor")
+    .guardrail(tb.no_pii())
+    .guardrail(tb.max_response_length(500))
+    .guardrail(tb.disclaimer_required(
+        "This is not financial advice. Consult a licensed professional."
+    ))
+    .mock_responses([
+        "Based on your described portfolio allocation, a 60/40 stock/bond "
+        "split is a common starting point for moderate risk tolerance. "
+        "Consider reviewing your time horizon and adjusting accordingly."
+    ])
+)
+
+convo = bot.chat("What's a good investment strategy for retirement?")
+print(convo.get_last_message().content)
+```
+
+That single chain adds three layers of protection:
+
+- **`no_pii()`** strips email addresses, phone numbers, SSNs, and credit card numbers from both inputs and outputs
+- **`max_response_length(500)`** truncates overly verbose responses
+- **`disclaimer_required(...)`** appends a legal disclaimer if the model forgets to include one
+
+The guards run automatically on every message and no additional code is required at the point of interaction.
+
+## How Guards Work
+
+At their core, guards are functions that inspect text and decide what to do with it. Each guard takes a string and returns a `GuardResult` indicating whether the text should pass through, be blocked, or be rewritten.
+
+You can call any guard directly with `.check()` to see exactly what it does:
+
+```{python}
+import talk_box as tb
+
+# Call a guard directly to see what it does
+guard = tb.no_pii()
+
+# Clean text passes through
+result = guard.check("What's my account balance?")
+print(f"Action: {result.action.value}")
+```
+
+When PII is present, the guard detects it and rewrites the text with placeholders:
+
+```{python}
+# Text with PII gets rewritten
+result = guard.check("My email is john.doe@example.com and my SSN is 123-45-6789")
+print(f"Action: {result.action.value}")
+print(f"Cleaned: {result.message}")
+print(f"Reason: {result.reason}")
+```
+
+Every guard returns one of three possible outcomes:
+
+| Action | Meaning | What Happens |
+|--------|---------|--------------|
+| `passed` | Text is fine | Continues unchanged to the next guard |
+| `blocked` | Text is rejected | Pipeline stops immediately; user sees a block message |
+| `rewritten` | Text is modified | Modified text continues through remaining guards |
+
+This three-outcome model means guards can do more than just accept/reject, they can actively clean up text while still letting the conversation continue.
+
+## The Guard Pipeline
+
+When you attach multiple guards to a chatbot, they form a pipeline. Guards execute sequentially in the order you added them. If one guard rewrites the text, the next guard sees the rewritten version. If any guard blocks, the pipeline short-circuits and later guards never run.
+
+This ordering is important. The example below shows a pipeline where PII is stripped first (so keyword checks don't accidentally match on email domains), then keywords are checked, then length is enforced, and finally a disclaimer is appended:
+
+```{python}
+import talk_box as tb
+
+# Pipeline order matters
+bot = (
+    tb.ChatBot()
+    .guardrail(tb.no_pii())                          # 1. Strip PII first
+    .guardrail(tb.keyword_block(["confidential"]))   # 2. Then check for keywords
+    .guardrail(tb.max_response_length(200))          # 3. Then enforce length
+    .guardrail(tb.disclaimer_required("AI-generated content."))  # 4. Add disclaimer
+)
+
+# Check what guards are attached
+for guard in bot._guard_pipeline.guards:
+    print(f"  {guard.name} (phase: {guard.phase.value})")
+```
+
+The output confirms both the order and the phase assignment for each guard.
+
+### Input vs. Output Guards
+
+Not every guard should run on both sides of the conversation. A length limit on user input serves a different purpose than a length limit on bot output. Each guard has a **phase** that controls when it fires:
+
+| Phase | When It Runs | Use For |
+|-------|-------------|---------|
+| `INPUT` | Before the LLM sees the message | Blocking abuse, rejecting long inputs, stripping PII from user messages |
+| `OUTPUT` | After the LLM responds | Enforcing length, adding disclaimers, checking tone, requiring citations |
+| `BOTH` | Both directions | PII detection, keyword blocking |
+
+The built-in guards come with sensible phase defaults. You can inspect them to understand when each fires:
+
+```{python}
+import talk_box as tb
+
+# max_input_length only runs on user messages
+guard = tb.max_input_length(100)
+print(f"Phase: {guard.phase.value}")
+
+# disclaimer_required only runs on bot responses
+guard = tb.disclaimer_required("Disclaimer.")
+print(f"Phase: {guard.phase.value}")
+
+# no_pii runs in both directions
+guard = tb.no_pii()
+print(f"Phase: {guard.phase.value}")
+```
+
+This phase system means you don't need to worry about output-only guards accidentally interfering with user messages, or vice versa.
+
+## Built-in Guards
+
+Talk Box ships with seven guards covering the most common validation needs. Each can be configured through its factory function and used immediately (no subclassing required).
+
+### `no_pii()`: PII Detection and Removal
+
+The most critical guard for any production chatbot. It detects email addresses, phone numbers, Social Security numbers, and credit card numbers using pattern matching, and either replaces them with placeholders or blocks the message entirely.
+
+In its default mode, PII is replaced with labeled placeholders so the conversation can continue without exposing sensitive data:
+
+```{python}
+import talk_box as tb
+
+# Default: rewrite (replace PII with placeholders)
+guard = tb.no_pii()
+result = guard.check("Call me at 555-867-5309 or email alice@company.com")
+print(result.message)
+```
+
+For high-security environments where any PII presence should halt the conversation, use block mode:
+
+```{python}
+# Strict mode: block messages containing PII
+guard = tb.no_pii(action="block")
+result = guard.check("My credit card is 4111 1111 1111 1111")
+print(f"Action: {result.action.value}")
+print(f"Reason: {result.reason}")
+```
+
+You can extend the built-in patterns with domain-specific identifiers. Here we add detection for medical record numbers:
+
+```{python}
+# Add custom PII patterns (e.g., medical record numbers)
+guard = tb.no_pii(patterns=[r"\bMRN-\d{5,}\b"])
+result = guard.check("Patient MRN-123456 needs a follow-up")
+print(result.message)
+```
+
+### `max_response_length()`: Enforce Brevity
+
+LLMs tend toward verbosity. This output-only guard truncates responses that exceed a character limit, breaking cleanly at word boundaries and appending an ellipsis:
+
+```{python}
+import talk_box as tb
+
+guard = tb.max_response_length(80)
+long_response = (
+    "Machine learning is a subset of artificial intelligence that enables "
+    "systems to learn from data and improve their performance over time "
+    "without being explicitly programmed for every scenario."
+)
+result = guard.check(long_response)
+print(result.message)
+```
+
+This is especially useful for chatbots embedded in space-constrained UIs (chat widgets, mobile apps) where concise answers are essential.
+
+### `tone_check()`: Enforce Communication Style
+
+Professional chatbots should sound professional. This guard uses keyword heuristics to detect tone mismatches like casual slang in a professional context, or, overly formal language when the tone is otherwise friendly:
+
+```{python}
+import talk_box as tb
+
+guard = tb.tone_check("professional")
+
+# Professional text passes
+result = guard.check("I appreciate your inquiry. Let me review the details.")
+print(f"Professional text: {result.action.value}")
+
+# Casual text gets blocked
+result = guard.check("lol yeah that's totally broken bruh, my bad")
+print(f"Casual text: {result.action.value}")
+print(f"Reason: {result.reason}")
+```
+
+The guard ships with built-in indicator lists for `"professional"`, `"formal"`, and `"casual"` tones, and accepts custom indicator dictionaries for domain-specific needs.
+
+### `disclaimer_required()`: Ensure Legal/Safety Text
+
+Regulated industries often require specific disclaimers on every response. This guard checks whether the disclaimer text is present, and appends (or prepends) it if missing. If the model already included it, the text passes through unchanged:
+
+```{python}
+import talk_box as tb
+
+guard = tb.disclaimer_required(
+    "⚠️ This information is for educational purposes only.",
+    position="end"
+)
+
+# Response without disclaimer: disclaimer added automatically
+result = guard.check("You should diversify your portfolio across asset classes.")
+print(result.message)
+```
+
+This is a rewriting guard and it never blocks (it only adds the missing text). That makes it safe to stack at the end of any pipeline.
+
+### `must_cite_sources()`: Require Citations
+
+For research assistants, knowledge bots, or any context where unsourced claims are unacceptable, this guard blocks responses that don't contain recognizable citations. It detects URLs, bracketed references like `[1]`, footnote markers, and author-year notation:
+
+```{python}
+import talk_box as tb
+
+guard = tb.must_cite_sources(min_citations=1)
+
+# No citations: blocked
+result = guard.check("Studies show that exercise improves cognition.")
+print(f"Action: {result.action.value}")
+print(f"Reason: {result.reason}")
+
+# With citation: passes
+result = guard.check("Studies show that exercise improves cognition (Hillman et al., 2008).")
+print(f"With citation: {result.action.value}")
+```
+
+Use `min_citations` to require more than one source for higher-stakes responses.
+
+### `max_input_length()`: Reject Oversized Inputs
+
+A defense against prompt stuffing attacks and accidental paste-dumps. This input-only guard blocks messages exceeding a character limit before they reach the LLM (saving tokens and preventing context window overflow):
+
+```{python}
+import talk_box as tb
+
+guard = tb.max_input_length(50)
+result = guard.check("x" * 100)
+print(f"Action: {result.action.value}")
+print(f"Reason: {result.reason}")
+```
+
+### `keyword_block()`: Block Specific Words or Phrases
+
+A straightforward blocklist guard. Useful for preventing the chatbot from engaging with certain topics, or for blocking users who attempt to extract sensitive information:
+
+```{python}
+import talk_box as tb
+
+guard = tb.keyword_block(
+    ["password", "api_key", "secret_token"],
+    phase=tb.GuardPhase.INPUT
+)
+
+result = guard.check("Here's my api_key: sk-abc123")
+print(f"Action: {result.action.value}")
+print(f"Reason: {result.reason}")
+```
+
+The keyword check is case-insensitive by default. Pass `case_sensitive=True` for exact matching when needed.
+
+## Writing Custom Guards
+
+The built-in guards cover common scenarios, but every application has domain-specific rules. Any function that takes a `str` and returns a `GuardResult` can become a guard using the `@tb.guardrail` decorator.
+
+### Basic Custom Guard
+
+Here's a guard that prevents the chatbot from mentioning competitor names, which is a common requirement for customer-facing bots:
+
+```{python}
+import talk_box as tb
+
+@tb.guardrail
+def no_competitor_mentions(text: str) -> tb.GuardResult:
+    """Block or redact mentions of competitor names."""
+    competitors = ["acme corp", "globex", "initech"]
+    text_lower = text.lower()
+    for name in competitors:
+        if name in text_lower:
+            return tb.GuardResult.blocked(f"Competitor mention detected: {name}")
+    return tb.GuardResult.passed()
+
+# Test it
+result = no_competitor_mentions.check("How does this compare to Acme Corp?")
+print(f"Action: {result.action.value}")
+print(f"Reason: {result.reason}")
+```
+
+The `@tb.guardrail` decorator converts the function into a `Guard` object with a `.check()` method, a name (derived from the function name), and a default phase of `BOTH`.
+
+### Guard with Rewriting
+
+Sometimes you don't want to block and you instead want to silently fix the output. This guard strips external URLs from responses, useful for chatbots that shouldn't direct users away from your platform:
+
+```{python}
+import re
+import talk_box as tb
+
+@tb.guardrail(name="URL Redactor", phase=tb.GuardPhase.OUTPUT)
+def redact_urls(text: str) -> tb.GuardResult:
+    """Replace URLs with a placeholder to prevent link sharing."""
+    cleaned = re.sub(r"https?://\S+", "[URL removed]", text)
+    if cleaned != text:
+        return tb.GuardResult.rewrite(cleaned, reason="Removed external URLs")
+    return tb.GuardResult.passed()
+
+result = redact_urls.check("Check out https://example.com/secret-page for details")
+print(f"Action: {result.action.value}")
+print(f"Result: {result.message}")
+```
+
+Notice the decorator accepts keyword arguments: `name` overrides the display name used in telemetry, and `phase` restricts when the guard runs.
+
+### Using Custom Guards with ChatBot
+
+Custom guards integrate identically to built-in ones. Here, a `require_greeting` guard ensures every response starts with a friendly greeting (rewriting the output if the model forgot):
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+@tb.guardrail
+def require_greeting(text: str) -> tb.GuardResult:
+    """Ensure bot responses start with a greeting."""
+    greetings = ["hello", "hi", "hey", "greetings", "welcome"]
+    if any(text.lower().startswith(g) for g in greetings):
+        return tb.GuardResult.passed()
+    return tb.GuardResult.rewrite(f"Hello! {text}", reason="Added greeting")
+
+bot = tb.ChatBot().guardrail(require_greeting)
+
+convo = bot.chat("What is the meaning of life?")
+print(convo.get_last_message().content)
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+@tb.guardrail
+def require_greeting(text: str) -> tb.GuardResult:
+    greetings = ["hello", "hi", "hey", "greetings", "welcome"]
+    if any(text.lower().startswith(g) for g in greetings):
+        return tb.GuardResult.passed()
+    return tb.GuardResult.rewrite(f"Hello! {text}", reason="Added greeting")
+
+bot = (
+    tb.ChatBot()
+    .guardrail(require_greeting)
+    .mock_responses(["The answer to your question is 42."])
+)
+
+convo = bot.chat("What is the meaning of life?")
+print(convo.get_last_message().content)
+```
+
+The model's response didn't start with a greeting, so the guard prepended "Hello!" automatically. The user sees a polished interaction without knowing the guard intervened.
+
+## Monitoring Guard Activity
+
+In production, you need visibility into how often each guard fires. Are your PII guards catching real data, or are they idle? Is the tone check blocking too aggressively (a sign of false positives)? The `guard_stats()` method provides per-guard activation counts:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .guardrail(tb.no_pii())
+    .guardrail(tb.max_response_length(200))
+)
+
+# Chat with the bot for a while...
+bot.chat("What's my balance?")
+bot.chat("How do I reset my password?")
+bot.chat("What's the support email?")
+
+# Check guard activity
+stats = bot.guard_stats()
+for guard_name, counts in stats.items():
+    print(f"{guard_name}: {counts}")
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .guardrail(tb.no_pii())
+    .guardrail(tb.max_response_length(200))
+    .mock_responses([
+        "Your account balance is $1,234.56.",
+        "I can help with that! Here's a detailed explanation of the process.",
+        "Contact support at help@example.com for further assistance.",
+    ])
+)
+
+bot.chat("What's my balance?")
+bot.chat("How do I reset my password?")
+bot.chat("What's the support email?")
+
+stats = bot.guard_stats()
+for guard_name, counts in stats.items():
+    print(f"{guard_name}: {counts}")
+```
+
+Each guard tracks three counters: `passed` (text was fine), `blocked` (text was rejected), and `rewritten` (text was modified). Use these numbers to tune your guard configuration. A guard that never fires may be unnecessary, while one that blocks frequently may need its sensitivity adjusted.
+
+## Real-World Patterns
+
+The following examples show how to compose multiple guards into cohesive protection layers for production use cases.
+
+### Financial Advisor with Full Protection
+
+A financial chatbot needs layered defenses: no PII leakage, no specific stock recommendations (liability risk), professional tone, and a legal disclaimer on every response. Here's how that looks with Talk Box:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+@tb.guardrail(name="No Specific Tickers")
+def no_stock_picks(text: str) -> tb.GuardResult:
+    """Prevent the bot from recommending specific stocks."""
+    import re
+    # Match common ticker patterns like $AAPL or (TSLA)
+    tickers = re.findall(r"(?:\$[A-Z]{1,5}|\([A-Z]{1,5}\))", text)
+    if tickers:
+        return tb.GuardResult.blocked(
+            f"Cannot recommend specific securities: {', '.join(tickers)}"
+        )
+    return tb.GuardResult.passed()
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("financial_advisor")
+    .guardrail(tb.no_pii())
+    .guardrail(no_stock_picks)
+    .guardrail(tb.tone_check("professional"))
+    .guardrail(tb.disclaimer_required(
+        "\n\n---\n*This is educational content only, not financial advice. "
+        "Consult a licensed financial advisor for personalized guidance.*"
+    ))
+)
+
+convo = bot.chat("How should I invest for retirement?")
+print(convo.get_last_message().content)
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+@tb.guardrail(name="No Specific Tickers")
+def no_stock_picks(text: str) -> tb.GuardResult:
+    import re
+    tickers = re.findall(r"(?:\$[A-Z]{1,5}|\([A-Z]{1,5}\))", text)
+    if tickers:
+        return tb.GuardResult.blocked(
+            f"Cannot recommend specific securities: {', '.join(tickers)}"
+        )
+    return tb.GuardResult.passed()
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("financial_advisor")
+    .guardrail(tb.no_pii())
+    .guardrail(no_stock_picks)
+    .guardrail(tb.tone_check("professional"))
+    .guardrail(tb.disclaimer_required(
+        "\n\n---\n*This is educational content only, not financial advice. "
+        "Consult a licensed financial advisor for personalized guidance.*"
+    ))
+    .mock_responses([
+        "For retirement planning, consider a diversified approach: allocate across "
+        "broad market index funds, bonds, and international equities based on your "
+        "risk tolerance and time horizon. A common starting framework is the "
+        "'age in bonds' rule: subtract your age from 110 to get your stock allocation."
+    ])
+)
+
+convo = bot.chat("How should I invest for retirement?")
+print(convo.get_last_message().content)
+```
+
+The custom `no_stock_picks` guard demonstrates how domain-specific rules integrate naturally alongside the built-in guards. The response passes through all four layers: PII cleaned, no tickers found, tone verified professional, and disclaimer appended.
+
+### Customer Support with Input Validation
+
+Customer support bots face a different threat model: abusive inputs, prompt-stuffing attacks, and legal escalation triggers. This configuration blocks legal threats at the input stage (before the LLM even processes them), while still protecting output with PII stripping:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("customer_support_tier1")
+    .guardrail(tb.no_pii())
+    .guardrail(tb.max_input_length(2000))
+    .guardrail(tb.keyword_block(
+        ["lawsuit", "lawyer", "attorney"],
+        phase=tb.GuardPhase.INPUT
+    ))
+)
+
+# Normal message works fine
+convo = bot.chat("I need help with my order #12345")
+print(f"Normal: {convo.get_last_message().content}")
+
+# Legal threat is blocked
+convo = bot.chat("I'm calling my lawyer about this")
+print(f"Legal: {convo.get_last_message().content}")
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("customer_support_tier1")
+    .guardrail(tb.no_pii())
+    .guardrail(tb.max_input_length(2000))
+    .guardrail(tb.keyword_block(
+        ["lawsuit", "lawyer", "attorney"],
+        phase=tb.GuardPhase.INPUT
+    ))
+    .mock_responses(["I'll look into that for you."])
+)
+
+convo = bot.chat("I need help with my order #12345")
+print(f"Normal: {convo.get_last_message().content}")
+
+convo = bot.chat("I'm calling my lawyer about this")
+print(f"Legal: {convo.get_last_message().content}")
+```
+
+The legal keyword guard fires on the input phase, so the LLM never sees the threatening message. This protects against both wasted tokens and the risk of the model responding inappropriately to legal threats.
+
+## Guard Composition Best Practices
+
+Guard ordering affects behavior. Because each guard passes its output to the next, place them in this sequence:
+
+1. **Input validation**: reject bad inputs early (`max_input_length`, `keyword_block`)
+2. **PII protection**: strip sensitive data before processing (`no_pii`)
+3. **Output quality**: enforce standards on responses (`tone_check`, `must_cite_sources`)
+4. **Output formatting**: final adjustments (`max_response_length`, `disclaimer_required`)
+
+This layering ensures that expensive checks (like tone analysis) only run on text that already passed cheaper checks (like length limits), and that formatting guards like `disclaimer_required` append text *after* truncation rather than before it.
+
+Every guard is independent and testable in isolation. Call `.check(text)` on any guard before attaching it to a chatbot to verify it behaves as expected. The same guard instance can be reused across multiple chatbots, and built-in guards mix freely with custom ones in any order. Once deployed, use `.guard_stats()` to monitor activation rates and tune sensitivity. A guard that never fires may be unnecessary, while one that blocks on every message likely needs its threshold adjusted.
