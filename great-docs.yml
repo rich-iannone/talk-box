@@ -186,6 +186,31 @@ reference:
       - export_debug_report
       - live_monitor
 
+  - title: Guardrails
+    desc: Composable input/output validation for chatbot messages
+    contents:
+      - name: Guard
+        members: false
+      - Guard.check
+      - GuardAction
+      - GuardPhase
+      - GuardResult
+      - name: GuardPipeline
+        members: false
+      - GuardPipeline.add
+      - GuardPipeline.run
+      - GuardPipelineResult
+      - guardrail
+      - ChatBot.guardrail
+      - ChatBot.guard_stats
+      - no_pii
+      - max_response_length
+      - max_input_length
+      - tone_check
+      - disclaimer_required
+      - must_cite_sources
+      - keyword_block
+
 # Site Settings
 site:
   theme: flatly
