@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 if TYPE_CHECKING:
     from talk_box.attachments import Attachments
     from talk_box.conversation import Conversation
+    from talk_box.guardrails import Guard
     from talk_box.presets import PresetNames
     from talk_box.prompt_builder import PromptBuilder
     from talk_box.tools import TalkBoxTool
