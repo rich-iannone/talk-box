@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 if TYPE_CHECKING:
     from talk_box.attachments import Attachments
     from talk_box.conversation import Conversation
+    from talk_box.guardrails import Guard
     from talk_box.presets import PresetNames
     from talk_box.prompt_builder import PromptBuilder
     from talk_box.tools import TalkBoxTool
@@ -377,6 +378,14 @@ class ChatBot:
         self._preset_manager = None
         self._current_preset = None
         self._llm_enabled = False
+
+        # Initialize guard pipeline
+        from talk_box.guardrails import GuardPipeline
+
+        self._guard_pipeline = GuardPipeline()
+
+        # Mock response queue for testing/documentation
+        self._mock_responses: list[str] = []
 
         # Auto-enable LLM integration if available
         self._auto_enable_llm()
@@ -2112,6 +2121,108 @@ class ChatBot:
         """
         return self._config["avoid"].copy()
 
+    def guardrail(self, guard: "Guard") -> "ChatBot":
+        """Add a guardrail to the chatbot's validation pipeline.
+
+        Guards run in the order they are added. Input guards validate user
+        messages before the LLM sees them. Output guards validate LLM
+        responses before they are returned to the user. If any guard blocks
+        a message, the pipeline short-circuits.
+
+        Parameters
+        ----------
+        guard
+            A `Guard` instance, typically created by `@tb.guardrail`,
+            or one of the built-in guard factories (`tb.no_pii()`,
+            `tb.max_response_length()`, etc.).
+
+        Returns
+        -------
+        ChatBot
+            The same instance for method chaining.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        bot = (
+            tb.ChatBot()
+            .guardrail(tb.no_pii())
+            .guardrail(tb.max_response_length(500))
+            .guardrail(tb.disclaimer_required("Not financial advice."))
+        )
+        ```
+        """
+        from talk_box.guardrails import Guard
+
+        if not isinstance(guard, Guard):
+            raise TypeError(
+                f"Expected a Guard instance, got {type(guard).__name__}. "
+                "Use @tb.guardrail to decorate your function, or use a "
+                "built-in guard like tb.no_pii()."
+            )
+        self._guard_pipeline.add(guard)
+        return self
+
+    def guard_stats(self) -> dict[str, dict[str, int]]:
+        """Get activation statistics for all attached guardrails.
+
+        Returns
+        -------
+        dict[str, dict[str, int]]
+            Mapping of guard name to counts of `passed`, `blocked`,
+            and `rewritten` activations.
+
+        Examples
+        --------
+        ```python
+        stats = bot.guard_stats()
+        # {'no_pii': {'passed': 42, 'blocked': 0, 'rewritten': 3},
+        #  'max_response_length': {'passed': 40, 'blocked': 0, 'rewritten': 5}}
+        ```
+        """
+        return self._guard_pipeline.stats()
+
+    def mock_responses(self, responses: list[str]) -> "ChatBot":
+        """Set scripted responses for demonstration and testing purposes.
+
+        When mock responses are queued, `chat()` returns them in order
+        instead of calling the LLM or using echo mode. This is useful for
+        documentation examples, deterministic testing, and demos that need
+        realistic-looking output without requiring API keys.
+
+        Responses are consumed in FIFO order. Once exhausted, the chatbot
+        reverts to its normal behavior (LLM or echo mode).
+
+        Parameters
+        ----------
+        responses
+            A list of response strings to return sequentially from `chat()`.
+
+        Returns
+        -------
+        ChatBot
+            The same instance for method chaining.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        bot = tb.ChatBot().mock_responses([
+            "Hello! How can I help you today?",
+            "I'd be happy to assist with that.",
+        ])
+
+        convo = bot.chat("Hi there")
+        print(convo.get_last_message().content)
+        # "Hello! How can I help you today?"
+        ```
+        """
+        self._mock_responses = list(responses)
+        return self
+
     def persona(self, persona_description: str) -> "ChatBot":
         """Set a persona that shapes the chatbot's tone and behavior.
 
@@ -3026,21 +3137,38 @@ class ChatBot:
         # Import here to avoid circular imports
         from talk_box.attachments import Attachments
         from talk_box.conversation import Conversation
+        from talk_box.guardrails import GuardPhase
 
         # Create new conversation if none provided
         if conversation is None:
             conversation = Conversation()
 
-        # Add user message to conversation
+        # Determine the user-facing text for guard checks
         if isinstance(message, Attachments):
-            # For attachments, store the prompt text (or a summary) in conversation
             user_content = message.prompt or f"[{len(message.files)} files attached]"
-            conversation.add_user_message(user_content)
         else:
-            conversation.add_user_message(message)
+            user_content = str(message)
 
+        # Run input guards
+        if self._guard_pipeline.guards:
+            input_result = self._guard_pipeline.run(user_content, GuardPhase.INPUT)
+            if input_result.blocked:
+                conversation.add_user_message(user_content)
+                conversation.add_assistant_message(
+                    f"[Blocked by guardrail: {input_result.block_reason}]"
+                )
+                return conversation
+            # Use the (possibly rewritten) text
+            user_content = input_result.text  # type: ignore[assignment]
+
+        # Add user message to conversation
+        conversation.add_user_message(user_content)
+
+        # Use mock response if available
+        if self._mock_responses:
+            response_content = self._mock_responses.pop(0)
         # Get response based on LLM availability
-        if self._llm_enabled:
+        elif self._llm_enabled:
             try:
                 # Pass the conversation context to maintain history
                 response_content = self._chat_with_llm(message, conversation)
@@ -3058,6 +3186,14 @@ class ChatBot:
             else:
                 echo_msg = str(message)
             response_content = f"Echo: {echo_msg}"
+
+        # Run output guards
+        if self._guard_pipeline.guards:
+            output_result = self._guard_pipeline.run(response_content, GuardPhase.OUTPUT)
+            if output_result.blocked:
+                response_content = f"[Response blocked by guardrail: {output_result.block_reason}]"
+            elif output_result.text is not None:
+                response_content = output_result.text
 
         conversation.add_assistant_message(response_content)
 
