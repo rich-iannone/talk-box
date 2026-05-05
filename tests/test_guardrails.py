@@ -604,3 +604,66 @@ class TestChatBotGuardrailIntegration:
         convo = bot.chat("forbidden content")
         last_msg = convo.get_last_message()
         assert "Blocked by guardrail" in last_msg.content
+
+
+# ---------------------------------------------------------------------------
+# mock_responses tests
+# ---------------------------------------------------------------------------
+
+
+class TestMockResponses:
+    def test_mock_response_returned(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().mock_responses(["Hello from mock!"])
+        convo = bot.chat("Hi")
+        assert convo.get_last_message().content == "Hello from mock!"
+
+    def test_mock_responses_consumed_in_order(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().mock_responses(["First", "Second", "Third"])
+        c1 = bot.chat("a")
+        c2 = bot.chat("b")
+        c3 = bot.chat("c")
+        assert c1.get_last_message().content == "First"
+        assert c2.get_last_message().content == "Second"
+        assert c3.get_last_message().content == "Third"
+
+    def test_mock_exhausted_falls_back_to_echo(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().mock_responses(["Only one"])
+        bot.chat("first")
+        convo = bot.chat("second")
+        # After mock is exhausted, should fall back to echo
+        assert "Echo:" in convo.get_last_message().content
+
+    def test_mock_with_output_guard(self):
+        from talk_box import ChatBot
+
+        bot = (
+            ChatBot().guardrail(disclaimer_required("DISCLAIMER")).mock_responses(["Some advice."])
+        )
+        convo = bot.chat("Help me")
+        content = convo.get_last_message().content
+        # Guard should append disclaimer to the mock response
+        assert "Some advice." in content
+        assert "DISCLAIMER" in content
+
+    def test_mock_with_input_guard(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().guardrail(no_pii()).mock_responses(["Got your message."])
+        convo = bot.chat("Email me at user@test.com")
+        # Input should be rewritten, mock response still used
+        user_msg = convo.get_messages()[0]
+        assert "[EMAIL]" in user_msg.content
+        assert convo.get_last_message().content == "Got your message."
+
+    def test_mock_responses_chaining(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().mock_responses(["resp"]).model("gpt-4")
+        convo = bot.chat("test")
+        assert convo.get_last_message().content == "resp"
