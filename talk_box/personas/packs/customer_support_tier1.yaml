@@ -54,6 +54,9 @@ recommended_models:
 temperature: 0.3
 max_tokens: 500
 
+default_guards:
+  - no_pii
+
 tags:
   - customer-service
   - support

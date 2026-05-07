@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Optional, Protocol
+from typing import Any, Callable, Optional, Protocol
 
 # ---------------------------------------------------------------------------
 # Core types
@@ -699,3 +699,70 @@ def keyword_block(
         return GuardResult.passed()
 
     return Guard(name="keyword_block", func=_check, phase=phase)
+
+
+# ---------------------------------------------------------------------------
+# Guard resolution from declarative specs
+# ---------------------------------------------------------------------------
+
+# Registry of built-in guard factory functions
+GUARD_FACTORIES: dict[str, Any] = {
+    "no_pii": no_pii,
+    "max_response_length": max_response_length,
+    "tone_check": tone_check,
+    "disclaimer_required": disclaimer_required,
+    "must_cite_sources": must_cite_sources,
+    "max_input_length": max_input_length,
+    "keyword_block": keyword_block,
+}
+
+
+def resolve_guards(specs: list[str | dict[str, Any]]) -> list[Guard]:
+    """Create Guard instances from declarative guard specifications.
+
+    Guard specs are either a plain string (guard name, no arguments) or a
+    dict with a single key (guard name) whose value is a dict of keyword
+    arguments to pass to the factory function.
+
+    Parameters
+    ----------
+    specs
+        List of guard specifications. Each is either a string naming a
+        built-in guard (e.g., `"no_pii"`) or a single-key dict mapping
+        the guard name to its keyword arguments (e.g.,
+        `{"disclaimer_required": {"disclaimer_text": "..."}}`).
+
+    Returns
+    -------
+    list[Guard]
+        Instantiated guards ready to add to a pipeline.
+
+    Raises
+    ------
+    ValueError
+        If a guard name is not found in the registry.
+    TypeError
+        If a spec has an unsupported type.
+    """
+    guards: list[Guard] = []
+
+    for spec in specs:
+        if isinstance(spec, str):
+            factory = GUARD_FACTORIES.get(spec)
+            if factory is None:
+                raise ValueError(f"Unknown guard '{spec}'. Available: {sorted(GUARD_FACTORIES)}")
+            guards.append(factory())
+        elif isinstance(spec, dict):
+            if len(spec) != 1:
+                raise ValueError(
+                    f"Guard spec dict must have exactly one key, got {len(spec)}: {spec}"
+                )
+            name, kwargs = next(iter(spec.items()))
+            factory = GUARD_FACTORIES.get(name)
+            if factory is None:
+                raise ValueError(f"Unknown guard '{name}'. Available: {sorted(GUARD_FACTORIES)}")
+            guards.append(factory(**kwargs))
+        else:
+            raise TypeError(f"Guard spec must be a str or dict, got {type(spec).__name__}")
+
+    return guards

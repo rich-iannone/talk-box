@@ -54,6 +54,11 @@ recommended_models:
 temperature: 0.2
 max_tokens: 700
 
+default_guards:
+  - no_pii
+  - disclaimer_required:
+      disclaimer_text: "This is educational information, not personalized financial advice. Consult a licensed financial professional for guidance specific to your situation."
+
 tags:
   - finance
   - budgeting

@@ -54,6 +54,11 @@ recommended_models:
 temperature: 0.1
 max_tokens: 800
 
+default_guards:
+  - no_pii
+  - disclaimer_required:
+      disclaimer_text: "This is general legal information, not legal advice. Consult a qualified attorney for advice specific to your situation."
+
 tags:
   - legal
   - compliance

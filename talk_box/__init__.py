@@ -41,6 +41,7 @@ from talk_box.guardrails import (
     max_response_length,
     must_cite_sources,
     no_pii,
+    resolve_guards,
     tone_check,
 )
 from talk_box.pathways import Pathways
@@ -111,6 +112,7 @@ __all__ = [
     "max_response_length",
     "must_cite_sources",
     "no_pii",
+    "resolve_guards",
     "tone_check",
     # Evaluation
     "eval",

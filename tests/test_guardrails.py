@@ -15,6 +15,7 @@ from talk_box.guardrails import (
     max_response_length,
     must_cite_sources,
     no_pii,
+    resolve_guards,
     tone_check,
 )
 
@@ -667,3 +668,162 @@ class TestMockResponses:
         bot = ChatBot().mock_responses(["resp"]).model("gpt-4")
         convo = bot.chat("test")
         assert convo.get_last_message().content == "resp"
+
+
+# ---------------------------------------------------------------------------
+# resolve_guards tests
+# ---------------------------------------------------------------------------
+
+
+class TestResolveGuards:
+    def test_resolve_string_spec(self):
+        guards = resolve_guards(["no_pii"])
+        assert len(guards) == 1
+        assert guards[0].name == "no_pii"
+
+    def test_resolve_dict_spec_with_kwargs(self):
+        guards = resolve_guards([{"disclaimer_required": {"disclaimer_text": "Not advice."}}])
+        assert len(guards) == 1
+        assert guards[0].name == "disclaimer_required"
+        # Verify the guard actually works
+        result = guards[0].check("Hello")
+        assert result.action == GuardAction.REWRITTEN
+        assert "Not advice." in result.message
+
+    def test_resolve_multiple_specs(self):
+        guards = resolve_guards(
+            [
+                "no_pii",
+                {"disclaimer_required": {"disclaimer_text": "Disclaimer."}},
+            ]
+        )
+        assert len(guards) == 2
+        assert guards[0].name == "no_pii"
+        assert guards[1].name == "disclaimer_required"
+
+    def test_resolve_empty_list(self):
+        guards = resolve_guards([])
+        assert guards == []
+
+    def test_resolve_unknown_guard_string(self):
+        with pytest.raises(ValueError, match="Unknown guard 'nonexistent'"):
+            resolve_guards(["nonexistent"])
+
+    def test_resolve_unknown_guard_dict(self):
+        with pytest.raises(ValueError, match="Unknown guard 'nonexistent'"):
+            resolve_guards([{"nonexistent": {}}])
+
+    def test_resolve_dict_with_multiple_keys(self):
+        with pytest.raises(ValueError, match="exactly one key"):
+            resolve_guards([{"no_pii": {}, "tone_check": {}}])
+
+    def test_resolve_invalid_type(self):
+        with pytest.raises(TypeError, match="str or dict"):
+            resolve_guards([42])
+
+    def test_resolve_all_builtin_guards(self):
+        specs = [
+            "no_pii",
+            {"max_response_length": {"max_chars": 100}},
+            {"tone_check": {"expected_tone": "professional"}},
+            {"disclaimer_required": {"disclaimer_text": "Test."}},
+            "must_cite_sources",
+            {"max_input_length": {"max_chars": 500}},
+            {"keyword_block": {"keywords": ["bad"]}},
+        ]
+        guards = resolve_guards(specs)
+        assert len(guards) == 7
+
+
+# ---------------------------------------------------------------------------
+# Persona-aware guard defaults tests
+# ---------------------------------------------------------------------------
+
+
+class TestPersonaDefaultGuards:
+    def test_financial_advisor_gets_guards(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("financial_advisor")
+        stats = bot.guard_stats()
+        assert "no_pii" in stats
+        assert "disclaimer_required" in stats
+
+    def test_financial_advisor_disclaimer_works(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("financial_advisor").mock_responses(["Save 20% of income."])
+        convo = bot.chat("How do I save?")
+        content = convo.get_last_message().content
+        assert "not personalized financial advice" in content
+
+    def test_legal_info_gets_guards(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("legal_info")
+        stats = bot.guard_stats()
+        assert "no_pii" in stats
+        assert "disclaimer_required" in stats
+
+    def test_legal_info_disclaimer_works(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("legal_info").mock_responses(["Fair use allows limited use."])
+        convo = bot.chat("What is fair use?")
+        content = convo.get_last_message().content
+        assert "not legal advice" in content
+
+    def test_hr_advisor_gets_guards(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("hr_advisor")
+        stats = bot.guard_stats()
+        assert "no_pii" in stats
+        assert "disclaimer_required" in stats
+
+    def test_customer_support_gets_pii_only(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("customer_support_tier1")
+        stats = bot.guard_stats()
+        assert "no_pii" in stats
+        assert "disclaimer_required" not in stats
+
+    def test_sales_assistant_gets_pii_only(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("sales_assistant")
+        stats = bot.guard_stats()
+        assert "no_pii" in stats
+        assert "disclaimer_required" not in stats
+
+    def test_code_reviewer_gets_no_guards(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("code_reviewer")
+        stats = bot.guard_stats()
+        assert stats == {}
+
+    def test_default_guards_false_skips_guards(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("financial_advisor", default_guards=False)
+        stats = bot.guard_stats()
+        assert stats == {}
+
+    def test_pii_guard_fires_on_persona_bot(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("customer_support_tier1").mock_responses(["I'll help you."])
+        convo = bot.chat("My email is test@example.com")
+        user_msg = convo.get_messages()[0]
+        assert "[EMAIL]" in user_msg.content
+
+    def test_manual_guard_added_after_persona_defaults(self):
+        from talk_box import ChatBot
+
+        bot = ChatBot().persona_pack("financial_advisor").guardrail(max_response_length(50))
+        stats = bot.guard_stats()
+        assert "no_pii" in stats
+        assert "disclaimer_required" in stats
+        assert "max_response_length" in stats
