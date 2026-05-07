@@ -126,6 +126,8 @@ __all__ = [
     "EvalResult",
     "EvalResults",
     "EvalScore",
+    "scorecard_table",
+    "sweep_table",
     # Prompt engineering
     "PromptBuilder",
     "Priority",
