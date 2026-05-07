@@ -186,7 +186,7 @@ tools:
   - "text_stats"
 
 recommended_models:
-  - provider_model: "anthropic:claude-sonnet-4-20250514"
+  - provider_model: "anthropic:claude-sonnet-4-6"
     context: "Excellent at understanding code context"
   - provider_model: "openai:gpt-4o"
     context: "Strong code analysis across many languages"

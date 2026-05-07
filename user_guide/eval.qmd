@@ -154,7 +154,7 @@ results = tb.eval(
         "Is this code vulnerable to SQL injection?",
         "How would you refactor this function?",
     ],
-    judge="anthropic:claude-sonnet-4-20250514",
+    judge="anthropic:claude-sonnet-4-6",
 )
 
 # See per-variant scores
@@ -316,10 +316,10 @@ import talk_box as tb
 results = tb.eval_suite(
     "code_reviewer",
     models=[
-        "anthropic:claude-sonnet-4-20250514",
+        "anthropic:claude-sonnet-4-6",
         "github:gpt-4o",
     ],
-    judge="anthropic:claude-sonnet-4-20250514",
+    judge="anthropic:claude-sonnet-4-6",
 )
 results.to_great_table()
 ```
@@ -329,7 +329,7 @@ results.to_great_table()
 import talk_box as tb
 
 bot_a = (
-    tb.ChatBot(name="Eval: code_reviewer @ anthropic:claude-sonnet-4-20250514")
+    tb.ChatBot(name="Eval: code_reviewer @ anthropic:claude-sonnet-4-6")
     .persona_pack("code_reviewer")
     .mock_responses([
         "This function has a potential null pointer dereference on line 5. "
@@ -357,7 +357,7 @@ judge = tb.ChatBot(name="Judge").mock_responses([
 
 results = tb.eval(
     variants={
-        "anthropic:claude-sonnet-4-20250514": bot_a,
+        "anthropic:claude-sonnet-4-6": bot_a,
         "github:gpt-4o": bot_b,
     },
     queries=["Review this function for issues"],
@@ -366,7 +366,7 @@ results = tb.eval(
 
 results.config["persona"] = "code_reviewer"
 results.config["models"] = [
-    "anthropic:claude-sonnet-4-20250514",
+    "anthropic:claude-sonnet-4-6",
     "github:gpt-4o",
 ]
 results.config["type"] = "suite"
@@ -386,9 +386,9 @@ By default, `eval_suite()` applies the persona's default guards (if any are defi
 #| eval: false
 results = tb.eval_suite(
     "financial_advisor",
-    models=["anthropic:claude-sonnet-4-20250514", "github:gpt-4o"],
+    models=["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
     default_guards=False,
-    judge="anthropic:claude-sonnet-4-20250514",
+    judge="anthropic:claude-sonnet-4-6",
 )
 ```
 
@@ -403,9 +403,9 @@ results = tb.eval_suite(
     models=[
         "github:gpt-4o",
         "github:o3-mini",
-        "github:claude-sonnet-4-20250514",
+        "github:claude-sonnet-4-6",
     ],
-    judge="anthropic:claude-sonnet-4-20250514",
+    judge="anthropic:claude-sonnet-4-6",
 )
 ```
 
@@ -429,7 +429,7 @@ import talk_box as tb
 results = tb.EvalResults(
     results=[
         tb.EvalResult(
-            variant="anthropic:claude-sonnet-4-20250514",
+            variant="anthropic:claude-sonnet-4-6",
             query="Review this function",
             response="Potential null pointer on line 5.",
             scores=[
@@ -461,7 +461,7 @@ results = tb.EvalResults(
     ],
     config={
         "persona": "code_reviewer",
-        "models": ["anthropic:claude-sonnet-4-20250514", "github:gpt-4o"],
+        "models": ["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
         "type": "suite",
     },
 )
@@ -478,8 +478,8 @@ The `eval_suite()` function also accepts a `scorecard_path` parameter for one-sh
 #| eval: false
 results = tb.eval_suite(
     "code_reviewer",
-    models=["anthropic:claude-sonnet-4-20250514", "github:gpt-4o"],
-    judge="anthropic:claude-sonnet-4-20250514",
+    models=["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
+    judge="anthropic:claude-sonnet-4-6",
     scorecard_path="scorecards/code_reviewer.json",
 )
 ```
@@ -494,7 +494,7 @@ import talk_box as tb
 
 # Uses code_reviewer's built-in test_queries
 bot = tb.ChatBot().persona_pack("code_reviewer")
-results = tb.eval(bot, judge="anthropic:claude-sonnet-4-20250514")
+results = tb.eval(bot, judge="anthropic:claude-sonnet-4-6")
 print(f"Evaluated {len(results)} queries")
 print(f"Overall passed (>0.7): {results.passed()}")
 ```
@@ -592,7 +592,7 @@ The `.passed()` method checks whether all variants meet a minimum quality thresh
 import talk_box as tb
 
 bot = tb.ChatBot().persona_pack("customer_support_tier1")
-results = tb.eval(bot, judge="anthropic:claude-sonnet-4-20250514")
+results = tb.eval(bot, judge="anthropic:claude-sonnet-4-6")
 
 assert results.passed(threshold=0.75), (
     f"Bot failed quality gate: {results.summary()['overall_scores']}"

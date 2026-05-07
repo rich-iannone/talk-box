@@ -50,11 +50,11 @@ bot = tb.ChatBot().model("gpt-4o")      # Best reasoning
 bot = tb.ChatBot().model("gpt-4o-mini")    # Fast and cost-effective
 
 # Anthropic models
-bot = tb.ChatBot().model("claude-sonnet-4-20250514")    # Excellent for creative tasks
+bot = tb.ChatBot().model("claude-sonnet-4-6")    # Excellent for creative tasks
 bot = tb.ChatBot().model("claude-haiku-3.5-20241022")   # Fast for simple tasks
 
 # Or specify provider explicitly
-bot = tb.ChatBot().provider_model("anthropic:claude-sonnet-4-20250514")
+bot = tb.ChatBot().provider_model("anthropic:claude-sonnet-4-6")
 ```
 
 ::: {.callout-tip}
@@ -153,7 +153,7 @@ code_bot = (tb.ChatBot()
 
 # Creative writer
 story_bot = (tb.ChatBot()
-    .model("claude-sonnet-4-20250514")
+    .model("claude-sonnet-4-6")
     .preset("creative_writer")
     .temperature(0.8)
     .persona("Imaginative storyteller with vivid descriptions"))

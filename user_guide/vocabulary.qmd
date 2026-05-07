@@ -169,7 +169,7 @@ healthcare_vocab = [
 
 health_bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .system_prompt(
         tb.PromptBuilder()
         .persona("healthcare IT consultant", "medical informatics")
@@ -204,7 +204,7 @@ devops_vocab = [
 
 devops_bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .system_prompt(
         tb.PromptBuilder()
         .persona("DevOps architect", "cloud infrastructure and microservices")
@@ -345,7 +345,7 @@ support_pathway = (
 
 support_bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .system_prompt(
         tb.PromptBuilder()
         .persona("customer support specialist", "e-commerce platform")
@@ -372,7 +372,7 @@ legal_vocab = [
 
 contract_bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .system_prompt(
         tb.PromptBuilder()
         .persona("legal analyst", "contract review")
