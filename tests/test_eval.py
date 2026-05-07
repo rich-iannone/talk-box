@@ -15,6 +15,7 @@ from talk_box.eval import (
     _resolve_queries,
     eval,
     eval_regression,
+    eval_model_update,
     eval_suite,
     scorecard_table,
     sweep_table,
@@ -967,3 +968,131 @@ class TestSweepTable:
         html = table.as_raw_html()
         assert "m1" in html
         assert "m2" in html
+
+
+# ---------------------------------------------------------------------------
+# eval_model_update tests
+# ---------------------------------------------------------------------------
+
+
+class TestEvalModelUpdate:
+    def test_basic(self):
+        judge = ChatBot(name="Judge").mock_responses(
+            [
+                "relevance: 0.85 | Good\nsafety: 1.0 | Safe\n"
+                "instruction_adherence: 0.80 | Follows instructions",
+                "relevance: 0.90 | Great\nsafety: 1.0 | Safe\n"
+                "instruction_adherence: 0.88 | Very good",
+            ]
+        )
+
+        results = eval_model_update(
+            "code_reviewer",
+            before="openai:gpt-4o",
+            after="anthropic:claude-sonnet-4-6",
+            queries=["Review this function"],
+            judge=judge,
+        )
+
+        assert len(results.variants) == 2
+        assert "openai:gpt-4o" in results.variants
+        assert "anthropic:claude-sonnet-4-6" in results.variants
+        assert results.config["type"] == "model_update"
+        assert results.config["before"] == "openai:gpt-4o"
+        assert results.config["after"] == "anthropic:claude-sonnet-4-6"
+        assert results.config["regression_threshold"] == 0.05
+        assert results.config["persona"] == "code_reviewer"
+
+    def test_same_model_raises(self):
+        with pytest.raises(ValueError, match="must be different models"):
+            eval_model_update(
+                "code_reviewer",
+                before="anthropic:claude-sonnet-4-6",
+                after="anthropic:claude-sonnet-4-6",
+            )
+
+    def test_regression_detected(self):
+        judge = ChatBot(name="Judge").mock_responses(
+            [
+                "relevance: 0.95 | Excellent\nsafety: 1.0 | Safe\n"
+                "instruction_adherence: 0.90 | Great",
+                "relevance: 0.60 | Weak\nsafety: 1.0 | Safe\n"
+                "instruction_adherence: 0.70 | Mediocre",
+            ]
+        )
+
+        results = eval_model_update(
+            "code_reviewer",
+            before="openai:gpt-4o",
+            after="openai:gpt-4o-mini",
+            queries=["Review this"],
+            judge=judge,
+            threshold=0.05,
+        )
+
+        regs = results.regressions(baseline="openai:gpt-4o", threshold=0.05)
+        assert "openai:gpt-4o-mini" in regs
+        assert "relevance" in regs["openai:gpt-4o-mini"]
+
+    def test_no_regression(self):
+        judge = ChatBot(name="Judge").mock_responses(
+            [
+                "relevance: 0.85 | Good\nsafety: 1.0 | Safe\ninstruction_adherence: 0.80 | OK",
+                "relevance: 0.90 | Better\nsafety: 1.0 | Safe\ninstruction_adherence: 0.85 | Good",
+            ]
+        )
+
+        results = eval_model_update(
+            "code_reviewer",
+            before="openai:gpt-4o",
+            after="anthropic:claude-sonnet-4-6",
+            queries=["Review this"],
+            judge=judge,
+        )
+
+        regs = results.regressions(baseline="openai:gpt-4o")
+        assert regs == {}
+
+    def test_custom_dimensions(self):
+        judge = ChatBot(name="Judge").mock_responses(
+            [
+                "relevance: 0.85 | ok\ntone: 0.90 | good",
+                "relevance: 0.88 | ok\ntone: 0.92 | good",
+            ]
+        )
+
+        results = eval_model_update(
+            "code_reviewer",
+            before="openai:gpt-4o",
+            after="anthropic:claude-sonnet-4-6",
+            queries=["Review this"],
+            dimensions=[EvalDimension.RELEVANCE, EvalDimension.TONE],
+            judge=judge,
+        )
+
+        assert len(results.dimensions) == 2
+
+    def test_scorecard_output(self, tmp_path):
+        judge = ChatBot(name="Judge").mock_responses(
+            [
+                "relevance: 0.85 | Good\nsafety: 1.0 | Safe\ninstruction_adherence: 0.80 | ok",
+                "relevance: 0.90 | Great\nsafety: 1.0 | Safe\ninstruction_adherence: 0.88 | good",
+            ]
+        )
+
+        out = tmp_path / "model_update.json"
+        results = eval_model_update(
+            "code_reviewer",
+            before="openai:gpt-4o",
+            after="anthropic:claude-sonnet-4-6",
+            queries=["Review this"],
+            judge=judge,
+            scorecard_path=out,
+        )
+
+        assert out.exists()
+        import json
+
+        loaded = json.loads(out.read_text())
+        assert "openai:gpt-4o" in loaded["variants"]
+        assert "anthropic:claude-sonnet-4-6" in loaded["variants"]
