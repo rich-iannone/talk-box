@@ -819,6 +819,100 @@ def eval_suite(
     return results
 
 
+def eval_model_update(
+    persona: str,
+    *,
+    before: str,
+    after: str,
+    queries: list[str | EvalCase] | None = None,
+    dimensions: list[EvalDimension] | None = None,
+    judge: str | "ChatBot | None" = None,
+    threshold: float = 0.05,
+    default_guards: bool = True,
+    scorecard_path: str | Path | None = None,
+) -> EvalResults:
+    """Compare persona behavior across two model versions.
+
+    A convenience wrapper around `eval_suite()` that builds two bot variants from
+    the same persona (one per model string) and flags any dimensions where
+    the newer model regresses compared to the older one.
+
+    Parameters
+    ----------
+    persona
+        Persona name to evaluate (e.g., `"code_reviewer"`).
+    before
+        Provider:model string for the baseline model (e.g., `"anthropic:claude-sonnet-4-5"`).
+    after
+        Provider:model string for the new model (e.g., `"anthropic:claude-sonnet-4-6"`).
+    queries
+        Queries to evaluate. Falls back to persona `test_queries`.
+    dimensions
+        Scoring dimensions. Defaults to relevance, safety, instruction_adherence.
+    judge
+        Judge model string or ChatBot.
+    threshold
+        Score drop to flag as a regression (default 0.05 = 5%).
+    default_guards
+        Whether to apply persona default guards.
+    scorecard_path
+        If provided, writes the scorecard JSON to this path.
+
+    Returns
+    -------
+    EvalResults
+        Results with two variants (named after the model strings). Use
+        `.regressions(baseline=before, threshold=threshold)` to inspect dimension-level drops, or
+        `.to_great_table()` / `.scorecard_table()` for a visual comparison.
+
+    Raises
+    ------
+    ValueError
+        If `before=` and `after=` are the same string.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    results = tb.eval_model_update(
+        "code_reviewer",
+        before="anthropic:claude-sonnet-4-5",
+        after="anthropic:claude-sonnet-4-6",
+        judge="anthropic:claude-sonnet-4-6",
+    )
+
+    # Check for regressions
+    drops = results.regressions()
+    if drops:
+        print("Regressions detected:", drops)
+
+    # Visual comparison
+    results.to_great_table()
+    ```
+    """
+    if before == after:
+        raise ValueError(f"'before' and 'after' must be different models, got: {before!r}")
+
+    results = eval_suite(
+        persona,
+        models=[before, after],
+        queries=queries,
+        dimensions=dimensions,
+        judge=judge,
+        default_guards=default_guards,
+        scorecard_path=scorecard_path,
+    )
+
+    # Enrich config with model-update metadata
+    results.config["type"] = "model_update"
+    results.config["before"] = before
+    results.config["after"] = after
+    results.config["regression_threshold"] = threshold
+
+    return results
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -933,8 +1027,7 @@ def scorecard_table(source: str | Path | dict[str, Any]) -> "gt.GT":
     """
     if not HAS_GREAT_TABLES:
         raise ImportError(
-            "great_tables is required for scorecard_table(). "
-            "Install with: pip install great_tables"
+            "great_tables is required for scorecard_table(). Install with: pip install great_tables"
         )
     if not HAS_PANDAS:
         raise ImportError(
@@ -1033,13 +1126,10 @@ def sweep_table(source: str | Path | dict[str, Any]) -> "gt.GT":
     """
     if not HAS_GREAT_TABLES:
         raise ImportError(
-            "great_tables is required for sweep_table(). "
-            "Install with: pip install great_tables"
+            "great_tables is required for sweep_table(). Install with: pip install great_tables"
         )
     if not HAS_PANDAS:
-        raise ImportError(
-            "pandas is required for sweep_table(). Install with: pip install pandas"
-        )
+        raise ImportError("pandas is required for sweep_table(). Install with: pip install pandas")
 
     data = _load_json_source(source)
     sweep_results = data.get("results", [])
