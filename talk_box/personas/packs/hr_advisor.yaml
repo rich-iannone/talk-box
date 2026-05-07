@@ -53,6 +53,11 @@ recommended_models:
 temperature: 0.2
 max_tokens: 600
 
+default_guards:
+  - no_pii
+  - disclaimer_required:
+      disclaimer_text: "This is general HR guidance. Consult your organization's HR department or an employment attorney for advice specific to your situation."
+
 tags:
   - hr
   - human-resources
