@@ -60,6 +60,10 @@ That single chain adds three layers of protection:
 
 The guards run automatically on every message and no additional code is required at the point of interaction.
 
+::: {.callout-note}
+The `financial_advisor` persona already ships with `no_pii()` and a disclaimer as [default guards](#persona-default-guards). The example above adds them explicitly to illustrate how manual stacking works.
+:::
+
 ## How Guards Work
 
 At their core, guards are functions that inspect text and decide what to do with it. Each guard takes a string and returns a `GuardResult` indicating whether the text should pass through, be blocked, or be rewritten.
@@ -301,6 +305,75 @@ print(f"Reason: {result.reason}")
 ```
 
 The keyword check is case-insensitive by default. Pass `case_sensitive=True` for exact matching when needed.
+
+## Persona Default Guards
+
+Some personas ship with guardrails pre-configured. When you load a persona with `persona_pack()`, its default guards are applied automatically, so you get sensible protection without manually stacking guards.
+
+For example, the `financial_advisor` persona auto-applies `no_pii()` and a domain-appropriate disclaimer:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# PII protection and disclaimer are applied automatically
+bot = tb.ChatBot().persona_pack("financial_advisor")
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("financial_advisor")
+    .mock_responses([
+        "Start with an emergency fund covering 3-6 months of expenses, "
+        "then contribute to your employer's 401(k) up to the match."
+    ])
+)
+
+convo = bot.chat("How should I start saving?")
+print(convo.get_last_message().content)
+```
+
+The following personas include default guards:
+
+| Persona | Default Guards |
+|---------|---------------|
+| `financial_advisor` | `no_pii`, disclaimer (not personalized financial advice) |
+| `legal_info` | `no_pii`, disclaimer (not legal advice) |
+| `hr_advisor` | `no_pii`, disclaimer (general HR guidance) |
+| `customer_support_tier1` | `no_pii` |
+| `sales_assistant` | `no_pii` |
+
+Personas in the `technical`, `creative`, `data`, and `education` categories have no default guards, since their domains rarely involve sensitive personal data or liability concerns.
+
+You can always add more guards on top of the defaults:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("financial_advisor")       # Gets no_pii + disclaimer
+    .guardrail(tb.tone_check("professional"))  # Add your own on top
+    .guardrail(tb.max_response_length(500))
+)
+```
+
+To skip the persona's default guards entirely, pass `default_guards=False`:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# Load the persona's prompt and config, but not its guards
+bot = tb.ChatBot().persona_pack("financial_advisor", default_guards=False)
+```
+
+This is useful when you need full control over the guard stack, or when testing the persona's raw behavior without guardrail intervention.
 
 ## Writing Custom Guards
 
