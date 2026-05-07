@@ -344,7 +344,8 @@ class TestHelpers:
     def test_resolve_judge_string(self):
         judge = _resolve_judge("openai:gpt-4o")
         assert isinstance(judge, ChatBot)
-        assert judge._config["model"] == "openai:gpt-4o"
+        assert judge._config["provider"] == "openai"
+        assert judge._config["model"] == "gpt-4o"
         assert judge._config["temperature"] == 0.1
 
     def test_resolve_judge_chatbot(self):
@@ -679,14 +680,14 @@ class TestEvalSuite:
 
         results = eval_suite(
             "code_reviewer",
-            models=["openai:gpt-4o", "anthropic:claude-sonnet-4-20250514"],
+            models=["openai:gpt-4o", "anthropic:claude-sonnet-4-6"],
             queries=["Review this function"],
             judge=judge,
         )
 
         assert len(results.variants) == 2
         assert "openai:gpt-4o" in results.variants
-        assert "anthropic:claude-sonnet-4-20250514" in results.variants
+        assert "anthropic:claude-sonnet-4-6" in results.variants
         assert results.config["persona"] == "code_reviewer"
         assert results.config["type"] == "suite"
 
