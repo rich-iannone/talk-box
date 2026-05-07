@@ -233,6 +233,18 @@ reference:
       - EvalScore
       - scorecard_table
       - sweep_table
+  - title: Model Profiles
+    desc: Model capability registry for routing, eval, and prompt optimization.
+    contents:
+      - ModelProfile
+      - ModelProfile.key
+      - ModelProfile.name
+      - ModelProfile.supports
+      - CostTier
+      - get_model_profile
+      - list_models
+      - register_model
+      - model_profiles_table
 
 # Site Settings
 site:
