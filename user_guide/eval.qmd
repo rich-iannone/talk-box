@@ -1,0 +1,451 @@
+---
+title: "Evaluation"
+---
+
+Prompt engineering is iterative. You change a constraint, swap a model, add a guardrail, and then need to know: did things get better or worse? Talk Box's eval system answers that question by running your chatbot against test queries, scoring responses with a judge model, and surfacing regressions before they reach users.
+
+This guide covers single-bot evaluation, variant comparison, regression detection, and reporting.
+
+## Quick Start
+
+The simplest eval takes a bot and queries, scores responses on three default dimensions (relevance, safety, instruction adherence), and returns structured results:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+bot = tb.ChatBot().persona_pack("code_reviewer")
+
+results = tb.eval(bot, queries=["Review this function for issues"])
+print(results.summary())
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("code_reviewer")
+    .mock_responses([
+        "This function has a potential SQL injection vulnerability on line 3. "
+        "The user input is concatenated directly into the query string. Use "
+        "parameterized queries instead: `cursor.execute('SELECT * FROM users "
+        "WHERE id = ?', (user_id,))`. Additionally, the error handling is too "
+        "broad; catching bare `Exception` masks real bugs."
+    ])
+)
+
+judge = (
+    tb.ChatBot(name="Judge")
+    .mock_responses([
+        "relevance: 0.92 | Directly addresses code review with specific issues\n"
+        "safety: 1.0 | No harmful content\n"
+        "instruction_adherence: 0.88 | Follows code review persona constraints well"
+    ])
+)
+
+results = tb.eval(bot, queries=["Review this function for issues"], judge=judge)
+print(results.summary())
+```
+
+The summary shows scores per variant per dimension, making it easy to see where a bot excels and where it falls short.
+
+## How It Works
+
+The eval pipeline has three stages:
+
+1. **Run**: Each query is sent to the bot via `.chat()`. The response and timing are captured.
+2. **Judge**: A separate judge model scores each response on the requested dimensions (0.0 to 1.0).
+3. **Aggregate**: Scores are collected into an `EvalResults` object with reporting and analysis methods.
+
+The judge model receives the query, the bot's response, and persona context (role, constraints, avoid topics) so it can assess instruction adherence meaningfully.
+
+## Scoring Dimensions
+
+Talk Box ships with six scoring dimensions. By default, evaluations use relevance, safety, and instruction adherence:
+
+| Dimension | What It Measures |
+|-----------|-----------------|
+| `relevance` | Is the response on-topic and directly helpful? |
+| `safety` | Is it free from harmful or inappropriate content? |
+| `instruction_adherence` | Does it follow the persona's constraints? |
+| `tone` | Does it match the expected communication style? |
+| `completeness` | Does it address all aspects of the query? |
+| `conciseness` | Is it appropriately brief without padding? |
+
+You can select any subset for evaluation:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+results = tb.eval(
+    tb.ChatBot().persona_pack("financial_advisor"),
+    queries=["How should I start saving for retirement?"],
+    dimensions=[
+        tb.EvalDimension.RELEVANCE,
+        tb.EvalDimension.TONE,
+        tb.EvalDimension.COMPLETENESS,
+        tb.EvalDimension.CONCISENESS,
+    ],
+)
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("financial_advisor")
+    .mock_responses([
+        "Start with an emergency fund covering 3-6 months of expenses. "
+        "Then contribute to your employer's 401(k) up to the match. "
+        "After that, open a Roth IRA for tax-free growth."
+    ])
+)
+
+judge = (
+    tb.ChatBot(name="Judge")
+    .mock_responses([
+        "relevance: 0.95 | Directly answers the retirement savings question\n"
+        "tone: 0.90 | Professional and approachable\n"
+        "completeness: 0.80 | Covers basics but could mention asset allocation\n"
+        "conciseness: 0.92 | Clear and focused without filler"
+    ])
+)
+
+results = tb.eval(
+    bot,
+    queries=["How should I start saving for retirement?"],
+    dimensions=[
+        tb.EvalDimension.RELEVANCE,
+        tb.EvalDimension.TONE,
+        tb.EvalDimension.COMPLETENESS,
+        tb.EvalDimension.CONCISENESS,
+    ],
+    judge=judge,
+)
+
+for r in results:
+    for s in r.scores:
+        print(f"  {s.dimension.value}: {s.score:.2f} | {s.explanation}")
+```
+
+## Comparing Variants
+
+The most powerful use of eval is comparing two or more bot configurations side by side. Change a constraint, add a guardrail, swap a model, then measure the impact:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+results = tb.eval(
+    variants={
+        "baseline": tb.ChatBot().persona_pack("code_reviewer"),
+        "with_citations": (
+            tb.ChatBot()
+            .persona_pack("code_reviewer")
+            .guardrail(tb.must_cite_sources())
+        ),
+    },
+    queries=[
+        "Is this code vulnerable to SQL injection?",
+        "How would you refactor this function?",
+    ],
+    judge="anthropic:claude-sonnet-4-20250514",
+)
+
+# See per-variant scores
+for variant, scores in results.scores_by_variant().items():
+    print(f"{variant}: {scores}")
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+baseline = tb.ChatBot().persona_pack("code_reviewer").mock_responses([
+    "Yes, the code concatenates user input directly into SQL. Use parameterized queries.",
+    "Extract the validation logic into a separate function for reusability.",
+])
+
+with_citations = (
+    tb.ChatBot()
+    .persona_pack("code_reviewer")
+    .guardrail(tb.must_cite_sources())
+    .mock_responses([
+        "Yes, this is vulnerable (OWASP A03:2021). Use parameterized queries [1].",
+        "Extract validation per the Single Responsibility Principle (Martin, 2003).",
+    ])
+)
+
+judge = tb.ChatBot(name="Judge").mock_responses([
+    "relevance: 0.88 | Identifies the issue\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.80 | Good but no citations",
+    "relevance: 0.85 | Solid refactoring advice\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.75 | Missing citation references",
+    "relevance: 0.90 | Identifies issue with OWASP reference\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.92 | Includes citation as required",
+    "relevance: 0.87 | Good advice with principle reference\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.90 | Cites source material",
+])
+
+results = tb.eval(
+    variants={"baseline": baseline, "with_citations": with_citations},
+    queries=[
+        "Is this code vulnerable to SQL injection?",
+        "How would you refactor this function?",
+    ],
+    judge=judge,
+)
+
+for variant, scores in results.scores_by_variant().items():
+    print(f"{variant}: {scores}")
+```
+
+The variant comparison shows exactly how adding the `must_cite_sources()` guardrail affects instruction adherence scores, while verifying that relevance and safety don't regress.
+
+## Regression Detection
+
+When updating a persona or adding guardrails, you want confidence that quality didn't drop. The `eval_regression()` function compares a "before" and "after" version and flags any dimension where scores drop below a threshold:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+before = tb.ChatBot().persona_pack("customer_support_tier1")
+after = (
+    tb.ChatBot()
+    .persona_pack("customer_support_tier1")
+    .guardrail(tb.max_response_length(100))  # Might hurt completeness
+)
+
+results = tb.eval_regression(
+    before=before,
+    after=after,
+    queries=["How do I reset my password?", "What's your return policy?"],
+    threshold=0.05,
+)
+
+regressions = results.regressions(baseline="before", threshold=0.05)
+if regressions:
+    print("Regressions detected:")
+    for variant, dims in regressions.items():
+        for dim, delta in dims.items():
+            print(f"  {dim}: {delta:+.2f}")
+else:
+    print("No regressions. Safe to deploy.")
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+before = (
+    tb.ChatBot()
+    .persona_pack("customer_support_tier1")
+    .mock_responses([
+        "To reset your password, go to Settings > Security > Change Password. "
+        "You'll need to verify your email first.",
+        "Our return policy allows returns within 30 days of purchase with "
+        "original receipt. Items must be in unused condition.",
+    ])
+)
+
+after = (
+    tb.ChatBot()
+    .persona_pack("customer_support_tier1")
+    .guardrail(tb.max_response_length(100))
+    .mock_responses([
+        "To reset your password, go to Settings > Security > Change Password. "
+        "You'll need to verify your email first.",
+        "Our return policy allows returns within 30 days of purchase with "
+        "original receipt. Items must be in unused condition.",
+    ])
+)
+
+judge = tb.ChatBot(name="Judge").mock_responses([
+    "relevance: 0.90 | Helpful step-by-step\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.85 | Good support tone",
+    "relevance: 0.88 | Clear policy explanation\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.82 | Professional",
+    "relevance: 0.75 | Truncated, missing details\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.80 | Tone ok but incomplete",
+    "relevance: 0.70 | Cut off too early\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.78 | Abrupt ending",
+])
+
+results = tb.eval_regression(
+    before=before,
+    after=after,
+    queries=["How do I reset my password?", "What's your return policy?"],
+    judge=judge,
+    threshold=0.05,
+)
+
+regressions = results.regressions(baseline="before", threshold=0.05)
+if regressions:
+    print("Regressions detected:")
+    for variant, dims in regressions.items():
+        for dim, delta in dims.items():
+            print(f"  {dim}: {delta:+.2f}")
+else:
+    print("No regressions. Safe to deploy.")
+```
+
+This pattern is ideal for CI pipelines: run `eval_regression()` on every PR that touches persona definitions or guardrail configuration, and fail the build if quality drops.
+
+## Using Persona Test Queries
+
+Every persona ships with `test_queries`, which are representative questions that exercise the persona's core capabilities. When you call `eval()` without explicit queries, it automatically uses these:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# Uses code_reviewer's built-in test_queries
+bot = tb.ChatBot().persona_pack("code_reviewer")
+results = tb.eval(bot, judge="anthropic:claude-sonnet-4-20250514")
+print(f"Evaluated {len(results)} queries")
+print(f"Overall passed (>0.7): {results.passed()}")
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("code_reviewer")
+    .mock_responses([
+        "This function lacks input validation.",
+        "The query uses string formatting, making it vulnerable to injection.",
+        "Consider extracting the retry logic into a decorator.",
+        "The loop can be replaced with a list comprehension for clarity.",
+    ])
+)
+
+judge = tb.ChatBot(name="Judge").mock_responses([
+    "relevance: 0.85 | Identifies a real issue\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.80 | Good review feedback",
+    "relevance: 0.92 | Correctly identifies SQL injection\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.88 | Follows security-first priority",
+    "relevance: 0.80 | Reasonable suggestion\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.75 | Could include code example",
+    "relevance: 0.78 | Valid improvement\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.72 | Suggestion without severity level",
+])
+
+results = tb.eval(bot, judge=judge)
+print(f"Evaluated {len(results)} queries")
+print(f"Overall passed (>0.7): {results.passed()}")
+```
+
+This makes it easy to run a quality check on any persona with zero configuration.
+
+## Reporting
+
+`EvalResults` supports multiple output formats for analysis and presentation.
+
+### Summary Statistics
+
+The `.summary()` method returns a dictionary with aggregate scores:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+results = tb.eval(bot, queries=["How do I sort a list?"])
+summary = results.summary()
+print(f"Variants: {summary['variants']}")
+print(f"Dimensions: {summary['dimensions']}")
+print(f"Overall scores: {summary['overall_scores']}")
+```
+
+### Great Tables Report
+
+For visual comparison, `.to_great_table()` produces a formatted table showing mean scores per variant per dimension:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+results = tb.eval(
+    variants={"v1": bot_v1, "v2": bot_v2},
+    queries=queries,
+)
+results.to_great_table()
+```
+
+### DataFrame Export
+
+For custom analysis, `.to_dataframe()` exports all results to a pandas DataFrame with one row per (variant, query, dimension) combination:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+df = results.to_dataframe()
+# Group by variant, compute mean scores
+print(df.groupby("variant")["score"].mean())
+```
+
+## The Pass/Fail Gate
+
+The `.passed()` method checks whether all variants meet a minimum quality threshold. Use this in CI to gate deployments:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+bot = tb.ChatBot().persona_pack("customer_support_tier1")
+results = tb.eval(bot, judge="anthropic:claude-sonnet-4-20250514")
+
+assert results.passed(threshold=0.75), (
+    f"Bot failed quality gate: {results.summary()['overall_scores']}"
+)
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+bot = (
+    tb.ChatBot()
+    .persona_pack("customer_support_tier1")
+    .mock_responses([
+        "I'd be happy to help you with that! Let me look into your account.",
+    ])
+)
+
+judge = tb.ChatBot(name="Judge").mock_responses([
+    "relevance: 0.88 | Acknowledges and offers help\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.82 | Friendly support tone"
+])
+
+results = tb.eval(
+    bot,
+    queries=["I need help with my order"],
+    judge=judge,
+)
+
+print(f"Passed (threshold=0.75): {results.passed(threshold=0.75)}")
+print(f"Passed (threshold=0.95): {results.passed(threshold=0.95)}")
+```
+
+A threshold of 0.75 is a reasonable default for most use cases. Raise it for high-stakes personas (financial, medical) and lower it when testing against smaller local models.

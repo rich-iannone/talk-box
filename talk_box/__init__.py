@@ -18,6 +18,15 @@ from talk_box.conversation import (
     ToolEnabledConversation,
     create_tool_conversation,
 )
+from talk_box.eval import (
+    EvalCase,
+    EvalDimension,
+    EvalResult,
+    EvalResults,
+    EvalScore,
+    eval,
+    eval_regression,
+)
 from talk_box.guardrails import (
     Guard,
     GuardAction,
@@ -103,6 +112,14 @@ __all__ = [
     "must_cite_sources",
     "no_pii",
     "tone_check",
+    # Evaluation
+    "eval",
+    "eval_regression",
+    "EvalCase",
+    "EvalDimension",
+    "EvalResult",
+    "EvalResults",
+    "EvalScore",
     # Prompt engineering
     "PromptBuilder",
     "Priority",
