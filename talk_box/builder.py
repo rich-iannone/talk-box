@@ -1079,7 +1079,7 @@ class ChatBot:
 
         return self
 
-    def persona_pack(self, name: str) -> "ChatBot":
+    def persona_pack(self, name: str, *, default_guards: bool = True) -> "ChatBot":
         """
         Load a complete, production-ready persona configuration.
 
@@ -1092,11 +1092,18 @@ class ChatBot:
         `persona_pack()` builds a full `PromptBuilder`-based system prompt using
         research-backed attention patterns (primacy bias, clustering, recency bias).
 
+        Personas may also declare default guardrails (e.g., PII detection,
+        disclaimers) that are applied automatically. Pass `default_guards=False`
+        to skip them.
+
         Parameters
         ----------
         name
             The persona name (e.g., `"customer_support_tier1"`, `"code_reviewer"`).
             Use `talk_box.personas.list_personas()` to see all available names.
+        default_guards
+            Whether to apply the persona's default guardrails. Defaults to
+            `True`. Set to `False` to load the persona without any automatic guards.
 
         Returns
         -------
@@ -1113,6 +1120,7 @@ class ChatBot:
         >>> import talk_box as tb
         >>> bot = tb.ChatBot().persona_pack("code_reviewer")
         >>> bot = tb.ChatBot().persona_pack("customer_support_tier1").model("ollama:llama4")
+        >>> bot = tb.ChatBot().persona_pack("financial_advisor", default_guards=False)
         """
         from talk_box.personas import get_persona
 
@@ -1136,6 +1144,13 @@ class ChatBot:
         if persona.tools:
             existing_tools = self._config.get("tools") or []
             self._config["tools"] = list(set(existing_tools + persona.tools))
+
+        # Apply default guardrails from persona definition
+        if default_guards and persona.default_guards:
+            from talk_box.guardrails import resolve_guards
+
+            for guard in resolve_guards(persona.default_guards):
+                self.guardrail(guard)
 
         # Store metadata for introspection
         self._config["persona_pack"] = name
