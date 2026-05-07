@@ -211,6 +211,24 @@ reference:
       - must_cite_sources
       - keyword_block
 
+  - title: Evaluation
+    desc: Prompt evaluation, scoring, and regression detection
+    contents:
+      - eval
+      - eval_regression
+      - EvalCase
+      - EvalDimension
+      - name: EvalResults
+        members: false
+      - EvalResults.summary
+      - EvalResults.passed
+      - EvalResults.regressions
+      - EvalResults.scores_by_variant
+      - EvalResults.to_dataframe
+      - EvalResults.to_great_table
+      - EvalResult
+      - EvalScore
+
 # Site Settings
 site:
   theme: flatly
