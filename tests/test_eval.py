@@ -15,6 +15,7 @@ from talk_box.eval import (
     _resolve_queries,
     eval,
     eval_regression,
+    eval_suite,
 )
 
 
@@ -343,7 +344,8 @@ class TestHelpers:
     def test_resolve_judge_string(self):
         judge = _resolve_judge("openai:gpt-4o")
         assert isinstance(judge, ChatBot)
-        assert judge._config["model"] == "openai:gpt-4o"
+        assert judge._config["provider"] == "openai"
+        assert judge._config["model"] == "gpt-4o"
         assert judge._config["temperature"] == 0.1
 
     def test_resolve_judge_chatbot(self):
@@ -572,3 +574,196 @@ class TestEvalDimension:
         assert EvalDimension.RELEVANCE in DEFAULT_DIMENSIONS
         assert EvalDimension.SAFETY in DEFAULT_DIMENSIONS
         assert EvalDimension.INSTRUCTION_ADHERENCE in DEFAULT_DIMENSIONS
+
+
+# ---------------------------------------------------------------------------
+# to_scorecard tests
+# ---------------------------------------------------------------------------
+
+
+class TestScorecard:
+    def test_scorecard_basic(self):
+        results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="model_a",
+                    query="test?",
+                    response="yes",
+                    scores=[
+                        EvalScore(EvalDimension.RELEVANCE, 0.9, "good"),
+                        EvalScore(EvalDimension.SAFETY, 1.0, "safe"),
+                    ],
+                    duration=0.5,
+                ),
+            ],
+            config={"variants": ["model_a"], "dimensions": ["relevance", "safety"]},
+        )
+
+        card = results.to_scorecard()
+        assert "generated_at" in card
+        assert "model_a" in card["variants"]
+        assert card["variants"]["model_a"]["dimensions"]["relevance"] == 0.9
+        assert card["variants"]["model_a"]["overall"] == 0.95
+        assert card["variants"]["model_a"]["num_queries"] == 1
+
+    def test_scorecard_multiple_variants(self):
+        results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="v1",
+                    query="q",
+                    response="r1",
+                    scores=[EvalScore(EvalDimension.RELEVANCE, 0.8, "ok")],
+                    duration=0.1,
+                ),
+                EvalResult(
+                    variant="v2",
+                    query="q",
+                    response="r2",
+                    scores=[EvalScore(EvalDimension.RELEVANCE, 0.9, "good")],
+                    duration=0.2,
+                ),
+            ],
+            config={},
+        )
+
+        card = results.to_scorecard()
+        assert len(card["variants"]) == 2
+        assert card["variants"]["v1"]["dimensions"]["relevance"] == 0.8
+        assert card["variants"]["v2"]["dimensions"]["relevance"] == 0.9
+
+    def test_scorecard_write_to_file(self, tmp_path):
+        results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="v1",
+                    query="q",
+                    response="r",
+                    scores=[EvalScore(EvalDimension.SAFETY, 1.0, "safe")],
+                    duration=0.1,
+                ),
+            ],
+            config={},
+        )
+
+        out = tmp_path / "sub" / "scorecard.json"
+        card = results.to_scorecard(path=out)
+
+        assert out.exists()
+        import json
+
+        loaded = json.loads(out.read_text())
+        assert loaded["variants"]["v1"]["dimensions"]["safety"] == 1.0
+        assert card == loaded
+
+    def test_scorecard_empty_results(self):
+        results = EvalResults(results=[], config={})
+        card = results.to_scorecard()
+        assert card["variants"] == {}
+
+
+# ---------------------------------------------------------------------------
+# eval_suite tests
+# ---------------------------------------------------------------------------
+
+
+class TestEvalSuite:
+    def test_eval_suite_basic(self):
+        judge = ChatBot(name="Judge").mock_responses(
+            [
+                "relevance: 0.85 | Good\nsafety: 1.0 | Safe\n"
+                "instruction_adherence: 0.80 | Follows instructions",
+                "relevance: 0.90 | Great\nsafety: 1.0 | Safe\n"
+                "instruction_adherence: 0.88 | Very good",
+            ]
+        )
+
+        results = eval_suite(
+            "code_reviewer",
+            models=["openai:gpt-4o", "anthropic:claude-sonnet-4-6"],
+            queries=["Review this function"],
+            judge=judge,
+        )
+
+        assert len(results.variants) == 2
+        assert "openai:gpt-4o" in results.variants
+        assert "anthropic:claude-sonnet-4-6" in results.variants
+        assert results.config["persona"] == "code_reviewer"
+        assert results.config["type"] == "suite"
+
+    def test_eval_suite_uses_persona_test_queries(self):
+        # code_reviewer has test_queries defined
+        judge = ChatBot(name="Judge").mock_responses(
+            [
+                "relevance: 0.85 | ok\nsafety: 1.0 | safe\ninstruction_adherence: 0.80 | ok",
+            ]
+        )
+
+        results = eval_suite(
+            "code_reviewer",
+            models=["openai:gpt-4o"],
+            judge=judge,
+        )
+
+        assert len(results) >= 1
+
+    def test_eval_suite_empty_models(self):
+        with pytest.raises(ValueError, match="At least one model"):
+            eval_suite("code_reviewer", models=[])
+
+    def test_eval_suite_scorecard_output(self, tmp_path):
+        judge = ChatBot(name="Judge").mock_responses(
+            [
+                "relevance: 0.85 | Good\nsafety: 1.0 | Safe\ninstruction_adherence: 0.80 | ok",
+            ]
+        )
+
+        out = tmp_path / "scorecard.json"
+        results = eval_suite(
+            "code_reviewer",
+            models=["openai:gpt-4o"],
+            queries=["Review this"],
+            judge=judge,
+            scorecard_path=out,
+        )
+
+        assert out.exists()
+        import json
+
+        loaded = json.loads(out.read_text())
+        assert "openai:gpt-4o" in loaded["variants"]
+        assert loaded["config"]["persona"] == "code_reviewer"
+
+    def test_eval_suite_default_guards_false(self):
+        judge = ChatBot(name="Judge").mock_responses(
+            [
+                "relevance: 0.85 | ok\nsafety: 1.0 | safe\ninstruction_adherence: 0.80 | ok",
+            ]
+        )
+
+        results = eval_suite(
+            "financial_advisor",
+            models=["openai:gpt-4o"],
+            queries=["How should I save?"],
+            judge=judge,
+            default_guards=False,
+        )
+
+        assert len(results) == 1
+
+    def test_eval_suite_custom_dimensions(self):
+        judge = ChatBot(name="Judge").mock_responses(
+            [
+                "relevance: 0.85 | ok\ntone: 0.90 | good",
+            ]
+        )
+
+        results = eval_suite(
+            "code_reviewer",
+            models=["openai:gpt-4o"],
+            queries=["Review this"],
+            dimensions=[EvalDimension.RELEVANCE, EvalDimension.TONE],
+            judge=judge,
+        )
+
+        assert len(results.dimensions) == 2

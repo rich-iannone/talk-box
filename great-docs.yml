@@ -216,6 +216,7 @@ reference:
     contents:
       - eval
       - eval_regression
+      - eval_suite
       - EvalCase
       - EvalDimension
       - name: EvalResults
@@ -226,6 +227,7 @@ reference:
       - EvalResults.scores_by_variant
       - EvalResults.to_dataframe
       - EvalResults.to_great_table
+      - EvalResults.to_scorecard
       - EvalResult
       - EvalScore
 

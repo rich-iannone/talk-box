@@ -154,7 +154,7 @@ results = tb.eval(
         "Is this code vulnerable to SQL injection?",
         "How would you refactor this function?",
     ],
-    judge="anthropic:claude-sonnet-4-20250514",
+    judge="anthropic:claude-sonnet-4-6",
 )
 
 # See per-variant scores
@@ -305,6 +305,185 @@ else:
 
 This pattern is ideal for CI pipelines: run `eval_regression()` on every PR that touches persona definitions or guardrail configuration, and fail the build if quality drops.
 
+## Model Comparison with `eval_suite()`
+
+When you want to know which model runs a persona best, `eval_suite()` does the heavy lifting. Give it a persona name and a list of models; it creates a bot variant for each model, runs every query through all of them, and returns combined results:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+results = tb.eval_suite(
+    "code_reviewer",
+    models=[
+        "anthropic:claude-sonnet-4-6",
+        "github:gpt-4o",
+    ],
+    judge="anthropic:claude-sonnet-4-6",
+)
+results.to_great_table()
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+bot_a = (
+    tb.ChatBot(name="Eval: code_reviewer @ anthropic:claude-sonnet-4-6")
+    .persona_pack("code_reviewer")
+    .mock_responses([
+        "This function has a potential null pointer dereference on line 5. "
+        "Always validate the return value of `get_user()` before accessing "
+        "its attributes.",
+    ])
+)
+
+bot_b = (
+    tb.ChatBot(name="Eval: code_reviewer @ github:gpt-4o")
+    .persona_pack("code_reviewer")
+    .mock_responses([
+        "The code looks mostly fine. You could add a null check on line 5.",
+    ])
+)
+
+judge = tb.ChatBot(name="Judge").mock_responses([
+    "relevance: 0.92 | Identifies the exact issue with line reference\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.90 | Thorough review with actionable fix",
+    "relevance: 0.75 | Identifies the issue but lacks detail\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.68 | Too brief for a code review",
+])
+
+results = tb.eval(
+    variants={
+        "anthropic:claude-sonnet-4-6": bot_a,
+        "github:gpt-4o": bot_b,
+    },
+    queries=["Review this function for issues"],
+    judge=judge,
+)
+
+results.config["persona"] = "code_reviewer"
+results.config["models"] = [
+    "anthropic:claude-sonnet-4-6",
+    "github:gpt-4o",
+]
+results.config["type"] = "suite"
+
+for variant, scores in results.scores_by_variant().items():
+    dims = " | ".join(f"{d}: {s:.2f}" for d, s in scores.items())
+    print(f"{variant}: {dims}")
+```
+
+Each variant in the results is named after its model string, so it's immediately clear which model performed best on each dimension.
+
+### Persona default guards
+
+By default, `eval_suite()` applies the persona's default guards (if any are defined). To evaluate the raw model without guardrails, pass `default_guards=False`:
+
+```{python}
+#| eval: false
+results = tb.eval_suite(
+    "financial_advisor",
+    models=["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
+    default_guards=False,
+    judge="anthropic:claude-sonnet-4-6",
+)
+```
+
+### GitHub Copilot models
+
+Talk Box supports the `github` provider through chatlas' `ChatGithub`, which gives you access to a wide range of models through your GitHub Copilot subscription. Use the `github:` prefix in model strings:
+
+```{python}
+#| eval: false
+results = tb.eval_suite(
+    "code_reviewer",
+    models=[
+        "github:gpt-4o",
+        "github:o3-mini",
+        "github:claude-sonnet-4-6",
+    ],
+    judge="anthropic:claude-sonnet-4-6",
+)
+```
+
+::: {.callout-note}
+The `github` provider requires a `GITHUB_TOKEN` environment variable. If you have GitHub Copilot set up locally, this is typically your existing token.
+:::
+
+## Scorecard Export
+
+After running an evaluation, you can export the results as a JSON scorecard for tracking over time, committing to your repository, or publishing to a docs site:
+
+```{python}
+#| eval: false
+results.to_scorecard("scorecards/code_reviewer.json")
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+results = tb.EvalResults(
+    results=[
+        tb.EvalResult(
+            variant="anthropic:claude-sonnet-4-6",
+            query="Review this function",
+            response="Potential null pointer on line 5.",
+            scores=[
+                tb.EvalScore(tb.EvalDimension.RELEVANCE, 0.92, "Identifies issue"),
+                tb.EvalScore(tb.EvalDimension.SAFETY, 1.0, "Safe"),
+                tb.EvalScore(
+                    tb.EvalDimension.INSTRUCTION_ADHERENCE,
+                    0.90,
+                    "Thorough review",
+                ),
+            ],
+            duration=1.2,
+        ),
+        tb.EvalResult(
+            variant="github:gpt-4o",
+            query="Review this function",
+            response="Code looks fine, add a null check.",
+            scores=[
+                tb.EvalScore(tb.EvalDimension.RELEVANCE, 0.75, "Brief"),
+                tb.EvalScore(tb.EvalDimension.SAFETY, 1.0, "Safe"),
+                tb.EvalScore(
+                    tb.EvalDimension.INSTRUCTION_ADHERENCE,
+                    0.68,
+                    "Too brief",
+                ),
+            ],
+            duration=0.8,
+        ),
+    ],
+    config={
+        "persona": "code_reviewer",
+        "models": ["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
+        "type": "suite",
+    },
+)
+
+import json
+
+card = results.to_scorecard()
+print(json.dumps(card, indent=2))
+```
+
+The `eval_suite()` function also accepts a `scorecard_path` parameter for one-shot evaluate-and-export:
+
+```{python}
+#| eval: false
+results = tb.eval_suite(
+    "code_reviewer",
+    models=["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
+    judge="anthropic:claude-sonnet-4-6",
+    scorecard_path="scorecards/code_reviewer.json",
+)
+```
+
 ## Using Persona Test Queries
 
 Every persona ships with `test_queries`, which are representative questions that exercise the persona's core capabilities. When you call `eval()` without explicit queries, it automatically uses these:
@@ -315,7 +494,7 @@ import talk_box as tb
 
 # Uses code_reviewer's built-in test_queries
 bot = tb.ChatBot().persona_pack("code_reviewer")
-results = tb.eval(bot, judge="anthropic:claude-sonnet-4-20250514")
+results = tb.eval(bot, judge="anthropic:claude-sonnet-4-6")
 print(f"Evaluated {len(results)} queries")
 print(f"Overall passed (>0.7): {results.passed()}")
 ```
@@ -413,7 +592,7 @@ The `.passed()` method checks whether all variants meet a minimum quality thresh
 import talk_box as tb
 
 bot = tb.ChatBot().persona_pack("customer_support_tier1")
-results = tb.eval(bot, judge="anthropic:claude-sonnet-4-20250514")
+results = tb.eval(bot, judge="anthropic:claude-sonnet-4-6")
 
 assert results.passed(threshold=0.75), (
     f"Bot failed quality gate: {results.summary()['overall_scores']}"

@@ -43,7 +43,7 @@ avoid_topics:
   - "deceptive marketing practices"
 
 recommended_models:
-  - provider_model: "anthropic:claude-sonnet-4-20250514"
+  - provider_model: "anthropic:claude-sonnet-4-6"
     context: "Creative and wide-ranging idea generation"
   - provider_model: "openai:gpt-4o"
     context: "Good at structured brainstorming"

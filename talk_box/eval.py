@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -352,6 +354,49 @@ class EvalResults:
 
         return table
 
+    def to_scorecard(self, path: str | Path | None = None) -> dict[str, Any]:
+        """Export results as a scorecard dictionary (optionally written to JSON).
+
+        The scorecard is a portable representation of evaluation results
+        suitable for committing to a repository or publishing to a docs site.
+
+        Parameters
+        ----------
+        path
+            Optional file path to write the scorecard JSON. Directories are
+            created automatically.
+
+        Returns
+        -------
+        dict[str, Any]
+            Scorecard with metadata, per-variant scores, and overall results.
+        """
+        import datetime
+
+        by_variant = self.scores_by_variant()
+        overall = self.summary()["overall_scores"]
+
+        scorecard: dict[str, Any] = {
+            "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "config": self.config,
+            "variants": {},
+        }
+
+        for variant in self.variants:
+            variant_dims = by_variant.get(variant, {})
+            scorecard["variants"][variant] = {
+                "dimensions": variant_dims,
+                "overall": overall.get(variant, 0.0),
+                "num_queries": len([r for r in self.results if r.variant == variant]),
+            }
+
+        if path is not None:
+            p = Path(path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(json.dumps(scorecard, indent=2), encoding="utf-8")
+
+        return scorecard
+
     def __len__(self) -> int:
         return len(self.results)
 
@@ -510,7 +555,7 @@ def eval(
         Which dimensions to score on. Defaults to relevance, safety, and
         instruction_adherence.
     judge
-        The judge model. Can be a model string (e.g., "anthropic:claude-sonnet-4-20250514")
+        The judge model. Can be a model string (e.g., "anthropic:claude-sonnet-4-6")
         or a pre-configured ChatBot. If None, uses a default ChatBot with low temperature.
 
     Returns
@@ -547,7 +592,7 @@ def eval(
                 .guardrail(tb.must_cite_sources()),
         },
         queries=["Is this code secure?", "Review this SQL query"],
-        judge="anthropic:claude-sonnet-4-20250514",
+        judge="anthropic:claude-sonnet-4-6",
     )
     print(results.regressions())
     ```
@@ -673,6 +718,99 @@ def eval_regression(
     return results
 
 
+def eval_suite(
+    persona: str,
+    *,
+    models: list[str],
+    queries: list[str | EvalCase] | None = None,
+    dimensions: list[EvalDimension] | None = None,
+    judge: str | "ChatBot | None" = None,
+    default_guards: bool = True,
+    scorecard_path: str | Path | None = None,
+) -> EvalResults:
+    """Evaluate a persona across multiple models (model comparison matrix).
+
+    Creates a variant for each model, runs the persona's test queries (or
+    explicit queries) through each one, scores with a judge, and returns a
+    combined `EvalResults` where each variant is named after its model string.
+
+    Parameters
+    ----------
+    persona
+        Persona name to evaluate (e.g., `"code_reviewer"`).
+    models
+        List of provider:model strings (e.g.,
+        `["anthropic:claude-sonnet-4-6", "github:gpt-4o"]`).
+    queries
+        Queries to evaluate. Falls back to persona `test_queries`.
+    dimensions
+        Scoring dimensions. Defaults to relevance, safety, instruction_adherence.
+    judge
+        Judge model string or ChatBot.
+    default_guards
+        Whether to apply persona default guards (passed through to
+        `persona_pack()`).
+    scorecard_path
+        If provided, writes the scorecard JSON to this path after evaluation.
+
+    Returns
+    -------
+    EvalResults
+        Combined results with one variant per model.
+
+    Raises
+    ------
+    ValueError
+        If `models` is empty.
+
+    Examples
+    --------
+    Compare a persona across two providers:
+
+    ```python
+    import talk_box as tb
+
+    results = tb.eval_suite(
+        "code_reviewer",
+        models=["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
+        judge="anthropic:claude-sonnet-4-6",
+    )
+    results.to_scorecard("scorecards/code_reviewer.json")
+    results.to_great_table()
+    ```
+    """
+    from talk_box.builder import ChatBot
+
+    if not models:
+        raise ValueError("At least one model must be provided.")
+
+    variants: dict[str, ChatBot] = {}
+    for model_str in models:
+        bot = (
+            ChatBot(name=f"Eval: {persona} @ {model_str}")
+            .persona_pack(persona, default_guards=default_guards)
+            .provider_model(model_str)
+        )
+        variants[model_str] = bot
+
+    results = eval(
+        variants=variants,
+        queries=queries,
+        dimensions=dimensions,
+        judge=judge,
+    )
+
+    # Enrich config with suite metadata
+    results.config["persona"] = persona
+    results.config["models"] = models
+    results.config["type"] = "suite"
+
+    if scorecard_path is not None:
+        results.to_scorecard(scorecard_path)
+
+    return results
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -701,7 +839,7 @@ def _resolve_judge(judge: str | "ChatBot | None") -> "ChatBot":
     if judge is None:
         return ChatBot(name="Eval Judge").temperature(0.1)
     elif isinstance(judge, str):
-        return ChatBot(name="Eval Judge").model(judge).temperature(0.1)
+        return ChatBot(name="Eval Judge").provider_model(judge).temperature(0.1)
     else:
         return judge
 

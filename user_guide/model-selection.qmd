@@ -19,7 +19,7 @@ import talk_box as tb
 bot = tb.ChatBot().model("gpt-4o")
 
 # Anthropic
-bot = tb.ChatBot().model("claude-sonnet-4-20250514")
+bot = tb.ChatBot().model("claude-sonnet-4-6")
 
 # Google
 bot = tb.ChatBot().model("gemini-pro")
@@ -85,7 +85,7 @@ bot = (
 # Document analysis with large context
 bot = (
     tb.ChatBot()
-    .model("claude-sonnet-4-20250514")
+    .model("claude-sonnet-4-6")
     .temperature(0.4)
     .max_tokens(4000)
 )
@@ -114,7 +114,7 @@ For explicit provider selection, use the `provider_model()` method:
 ```python
 # Explicit provider specification
 bot = tb.ChatBot().provider_model("openai:gpt-4o")
-bot = tb.ChatBot().provider_model("anthropic:claude-sonnet-4-20250514")
+bot = tb.ChatBot().provider_model("anthropic:claude-sonnet-4-6")
 bot = tb.ChatBot().provider_model("google:gemini-pro")
 ```
 
@@ -136,7 +136,7 @@ code_bot = (
 # Creative writing: benefits from Claude's nuance
 writer_bot = (
     tb.ChatBot()
-    .model("claude-sonnet-4-20250514")
+    .model("claude-sonnet-4-6")
     .preset("creative_writer")
     .temperature(0.8)
 )

@@ -46,7 +46,7 @@ avoid_topics:
 recommended_models:
   - provider_model: "openai:gpt-4o"
     context: "Strong code generation for visualization libraries"
-  - provider_model: "anthropic:claude-sonnet-4-20250514"
+  - provider_model: "anthropic:claude-sonnet-4-6"
     context: "Thoughtful design recommendations"
 
 temperature: 0.3

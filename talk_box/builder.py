@@ -620,9 +620,9 @@ class ChatBot:
 
         **Anthropic Models:**
 
-        - `"claude-3-5-sonnet-20241022"`: Claude model with excellent reasoning
-        - `"claude-3-haiku-20240307"`: fast, efficient model for simple tasks
-        - `"claude-3-opus-20240229"`: very capable Claude model for complex tasks
+        - `"claude-sonnet-4-6"`: Claude model with excellent reasoning
+        - `"claude-haiku-4-5"`: fast, efficient model for simple tasks
+        - `"claude-opus-4-7"`: very capable Claude model for complex tasks
 
         **Google Models:**
 
@@ -647,7 +647,7 @@ class ChatBot:
         quick_bot = tb.ChatBot().model("gpt-3.5-turbo")
 
         # Creative model for storytelling
-        creative_bot = tb.ChatBot().model("claude-3-opus-20240229")
+        creative_bot = tb.ChatBot().model("claude-opus-4-7")
 
         # Multimodal model for image analysis
         vision_bot = tb.ChatBot().model("gpt-4o")
@@ -672,7 +672,7 @@ class ChatBot:
         # Creative writer with Claude
         writer_bot = (
             tb.ChatBot()
-            .model("claude-3-opus-20240229")
+            .model("claude-opus-4-7")
             .preset("creative_writer")
             .temperature(0.8)  # High creativity
             .persona("Imaginative storyteller with rich vocabulary")
@@ -708,7 +708,7 @@ class ChatBot:
         code_bot = tb.ChatBot().model("gpt-4-turbo").preset("technical_advisor")
 
         # For creative writing and storytelling
-        creative_bot = tb.ChatBot().model("claude-3-opus-20240229").preset("creative_writer")
+        creative_bot = tb.ChatBot().model("claude-opus-4-7").preset("creative_writer")
 
         # For cost-effective general tasks
         general_bot = tb.ChatBot().model("gpt-3.5-turbo").preset("customer_support")
@@ -781,7 +781,7 @@ class ChatBot:
         openai_bot = tb.ChatBot().provider_model("openai:gpt-4o")
 
         # Anthropic models
-        anthropic_bot = tb.ChatBot().provider_model("anthropic:claude-3-opus-20240229")
+        anthropic_bot = tb.ChatBot().provider_model("anthropic:claude-opus-4-7")
 
         # Google models
         google_bot = tb.ChatBot().provider_model("google:gemini-pro")
@@ -796,7 +796,7 @@ class ChatBot:
         # Complete configuration with explicit provider
         bot = (
             ChatBot()
-            .provider_model("anthropic:claude-3-opus-20240229")
+            .provider_model("anthropic:claude-opus-4-7")
             .preset("technical_advisor")
             .temperature(0.2)
             .max_tokens(2000)
@@ -933,7 +933,7 @@ class ChatBot:
         writer_bot = (
             tb.ChatBot()
             .preset("creative_writer")
-            .model("claude-3-opus-20240229")  # Excellent for creative tasks
+            .model("claude-opus-4-7")  # Excellent for creative tasks
         )
         ```
 
@@ -979,7 +979,7 @@ class ChatBot:
         creative_bot = (
             tb.ChatBot()
             .preset("creative_writer")
-            .model("claude-3-opus-20240229")  # Excellent creative capabilities
+            .model("claude-opus-4-7")  # Excellent creative capabilities
             .temperature(0.8)  # High creativity
             .max_tokens(3000)  # Allow longer creative outputs
         )
@@ -1264,7 +1264,7 @@ class ChatBot:
         # Creative for content generation
         creative_bot = (
             tb.ChatBot()
-            .model("claude-3-opus-20240229")
+            .model("claude-opus-4-7")
             .temperature(1.0)  # High creativity
             .preset("creative_writer")
         )
@@ -1380,7 +1380,7 @@ class ChatBot:
         # Claude models: may handle higher temperatures better
         claude_bot = (
             tb.ChatBot()
-            .model("claude-3-opus-20240229")
+            .model("claude-opus-4-7")
             .temperature(0.9)  # Claude often maintains coherence at higher temps
         )
 
@@ -1590,7 +1590,7 @@ class ChatBot:
         # Long-form content generation
         content_bot = (
             tb.ChatBot()
-            .model("claude-3-opus-20240229")
+            .model("claude-opus-4-7")
             .max_tokens(3000)  # ~2250 words
             .preset("creative_writer")
         )
@@ -1622,7 +1622,7 @@ class ChatBot:
         # Creative writing: longer form allowed
         story_bot = (
             tb.ChatBot()
-            .model("claude-3-opus-20240229")
+            .model("claude-opus-4-7")
             .max_tokens(2500)  # Allow creative expression
             .temperature(0.9)
             .preset("creative_writer")
@@ -3033,12 +3033,14 @@ class ChatBot:
         chat_session = adapter.create_chat_session(self._config)
 
         # Register tools if Tool Box is enabled or tools are specified
-        self._register_tools_with_session(chat_session)
+        if self._config.get("tool_box_enabled", False) or self._config.get("tools"):
+            self._register_tools_with_session(chat_session)
 
         # If we have conversation history, replay it to establish context
-        if conversation and conversation.messages:
+        # Skip the last message since it's the current one about to be sent
+        if conversation and len(conversation.messages) > 1:
             # Replay all previous conversation messages to establish context
-            for msg in conversation.messages:
+            for msg in conversation.messages[:-1]:
                 if msg.role == "user":
                     # Send each previous user message (but don't store the responses)
                     try:
