@@ -26,6 +26,7 @@ from talk_box.eval import (
     EvalScore,
     eval,
     eval_regression,
+    eval_suite,
 )
 from talk_box.guardrails import (
     Guard,
@@ -117,6 +118,7 @@ __all__ = [
     # Evaluation
     "eval",
     "eval_regression",
+    "eval_suite",
     "EvalCase",
     "EvalDimension",
     "EvalResult",
