@@ -3033,12 +3033,14 @@ class ChatBot:
         chat_session = adapter.create_chat_session(self._config)
 
         # Register tools if Tool Box is enabled or tools are specified
-        self._register_tools_with_session(chat_session)
+        if self._config.get("tool_box_enabled", False) or self._config.get("tools"):
+            self._register_tools_with_session(chat_session)
 
         # If we have conversation history, replay it to establish context
-        if conversation and conversation.messages:
+        # Skip the last message since it's the current one about to be sent
+        if conversation and len(conversation.messages) > 1:
             # Replay all previous conversation messages to establish context
-            for msg in conversation.messages:
+            for msg in conversation.messages[:-1]:
                 if msg.role == "user":
                     # Send each previous user message (but don't store the responses)
                     try:
