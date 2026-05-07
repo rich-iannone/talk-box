@@ -6,6 +6,7 @@ from chatlas import (
     ChatAnthropic,
     ChatCloudflare,
     ChatDeepSeek,
+    ChatGithub,
     ChatGoogle,
     ChatGroq,
     ChatHuggingFace,
@@ -67,6 +68,8 @@ class ChatlasAdapter:
                 chat = ChatPerplexity(model=model)
             elif provider == "cloudflare":
                 chat = ChatCloudflare(model=model)
+            elif provider == "github":
+                chat = ChatGithub(model=model)
             else:
                 # Default to OpenAI for unknown providers
                 chat = ChatOpenAI(model=model)
