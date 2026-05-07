@@ -16,6 +16,8 @@ from talk_box.eval import (
     eval,
     eval_regression,
     eval_suite,
+    scorecard_table,
+    sweep_table,
 )
 
 
@@ -767,3 +769,201 @@ class TestEvalSuite:
         )
 
         assert len(results.dimensions) == 2
+
+
+# ---------------------------------------------------------------------------
+# scorecard_table tests
+# ---------------------------------------------------------------------------
+
+
+class TestScorecardTable:
+    def test_scorecard_table_from_dict(self):
+        pytest.importorskip("great_tables")
+        pytest.importorskip("pandas")
+
+        card = {
+            "generated_at": "2025-05-07T12:00:00+00:00",
+            "config": {"persona": "code_reviewer", "judge": "anthropic:claude-sonnet-4-6"},
+            "variants": {
+                "anthropic:claude-sonnet-4-6": {
+                    "dimensions": {"relevance": 0.96, "safety": 1.0, "instruction_adherence": 0.92},
+                    "overall": 0.96,
+                    "num_queries": 3,
+                },
+                "github:gpt-4o": {
+                    "dimensions": {"relevance": 0.95, "safety": 1.0, "instruction_adherence": 0.90},
+                    "overall": 0.95,
+                    "num_queries": 3,
+                },
+            },
+        }
+
+        table = scorecard_table(card)
+        assert table is not None
+        html = table.as_raw_html()
+        assert "code_reviewer" in html
+        assert "anthropic:claude-sonnet-4-6" in html
+
+    def test_scorecard_table_from_file(self, tmp_path):
+        pytest.importorskip("great_tables")
+        pytest.importorskip("pandas")
+        import json
+
+        card = {
+            "generated_at": "2025-05-07T12:00:00+00:00",
+            "config": {},
+            "variants": {
+                "model_a": {
+                    "dimensions": {"relevance": 0.8},
+                    "overall": 0.8,
+                    "num_queries": 1,
+                },
+            },
+        }
+        p = tmp_path / "card.json"
+        p.write_text(json.dumps(card))
+
+        table = scorecard_table(p)
+        assert table is not None
+
+    def test_scorecard_table_empty(self):
+        pytest.importorskip("great_tables")
+        pytest.importorskip("pandas")
+
+        table = scorecard_table({"variants": {}})
+        assert table is not None
+
+    def test_scorecard_table_roundtrip(self):
+        """to_scorecard() output feeds directly into scorecard_table()."""
+        pytest.importorskip("great_tables")
+        pytest.importorskip("pandas")
+
+        results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="model_a",
+                    query="test?",
+                    response="yes",
+                    scores=[
+                        EvalScore(EvalDimension.RELEVANCE, 0.9, "good"),
+                        EvalScore(EvalDimension.SAFETY, 1.0, "safe"),
+                    ],
+                    duration=0.5,
+                ),
+            ],
+            config={"persona": "code_reviewer", "judge": "default"},
+        )
+
+        card = results.to_scorecard()
+        table = scorecard_table(card)
+        assert table is not None
+        html = table.as_raw_html()
+        assert "model_a" in html
+
+
+# ---------------------------------------------------------------------------
+# sweep_table tests
+# ---------------------------------------------------------------------------
+
+
+class TestSweepTable:
+    def test_sweep_table_from_dict(self):
+        pytest.importorskip("great_tables")
+        pytest.importorskip("pandas")
+
+        sweep = {
+            "generated_at": "2025-05-07T12:00:00+00:00",
+            "models": ["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
+            "judge": "anthropic:claude-sonnet-4-6",
+            "threshold": 0.7,
+            "elapsed_seconds": 120.5,
+            "passed": 2,
+            "total": 2,
+            "results": [
+                {
+                    "persona": "code_reviewer",
+                    "passed": True,
+                    "elapsed": 25.1,
+                    "scores": {"anthropic:claude-sonnet-4-6": 0.96, "github:gpt-4o": 0.95},
+                },
+                {
+                    "persona": "financial_advisor",
+                    "passed": True,
+                    "elapsed": 30.2,
+                    "scores": {"anthropic:claude-sonnet-4-6": 1.0, "github:gpt-4o": 0.99},
+                },
+            ],
+        }
+
+        table = sweep_table(sweep)
+        assert table is not None
+        html = table.as_raw_html()
+        assert "code_reviewer" in html
+        assert "financial_advisor" in html
+        assert "2/2 passed" in html
+
+    def test_sweep_table_from_file(self, tmp_path):
+        pytest.importorskip("great_tables")
+        pytest.importorskip("pandas")
+        import json
+
+        sweep = {
+            "generated_at": "2025-05-07T00:00:00+00:00",
+            "models": ["model_a"],
+            "judge": "judge_model",
+            "threshold": 0.7,
+            "passed": 1,
+            "total": 1,
+            "results": [
+                {"persona": "p1", "passed": True, "elapsed": 5, "scores": {"model_a": 0.85}},
+            ],
+        }
+        p = tmp_path / "sweep.json"
+        p.write_text(json.dumps(sweep))
+
+        table = sweep_table(p)
+        assert table is not None
+
+    def test_sweep_table_with_failure(self):
+        pytest.importorskip("great_tables")
+        pytest.importorskip("pandas")
+
+        sweep = {
+            "generated_at": "2025-05-07T00:00:00+00:00",
+            "models": ["model_a"],
+            "judge": "j",
+            "threshold": 0.7,
+            "passed": 0,
+            "total": 1,
+            "results": [
+                {"persona": "p1", "passed": False, "elapsed": 5, "scores": {"model_a": 0.55}},
+            ],
+        }
+
+        table = sweep_table(sweep)
+        html = table.as_raw_html()
+        assert "FAIL" in html
+        assert "0/1 passed" in html
+
+    def test_sweep_table_empty(self):
+        pytest.importorskip("great_tables")
+        pytest.importorskip("pandas")
+
+        table = sweep_table({"results": []})
+        assert table is not None
+
+    def test_sweep_table_discovers_models(self):
+        """When 'models' key is missing, discover from results."""
+        pytest.importorskip("great_tables")
+        pytest.importorskip("pandas")
+
+        sweep = {
+            "results": [
+                {"persona": "p1", "passed": True, "scores": {"m1": 0.9, "m2": 0.8}},
+            ],
+        }
+
+        table = sweep_table(sweep)
+        html = table.as_raw_html()
+        assert "m1" in html
+        assert "m2" in html

@@ -230,6 +230,8 @@ reference:
       - EvalResults.to_scorecard
       - EvalResult
       - EvalScore
+      - scorecard_table
+      - sweep_table
 
 # Site Settings
 site:

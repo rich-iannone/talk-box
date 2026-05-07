@@ -342,14 +342,22 @@ class EvalResults:
 
         df = pd.DataFrame(rows)
 
+        score_cols = dims + ["overall"]
+
         table = (
             gt.GT(df, rowname_col="Variant")
             .tab_header(
                 title="Evaluation Results",
                 subtitle=f"{len(self.results)} evaluations across {len(self.variants)} variant(s)",
             )
-            .fmt_number(columns=dims + ["overall"], decimals=3)
+            .fmt_number(columns=score_cols, decimals=3)
             .tab_spanner(label="Dimensions", columns=dims)
+            .data_color(
+                columns=score_cols,
+                palette=["#dc3545", "#ffc107", "#6fc276"],
+                domain=[0.0, 1.0],
+            )
+            .tab_style(style=gt.style.text(weight="bold"), locations=gt.loc.column_labels())
         )
 
         return table
@@ -866,3 +874,236 @@ def _get_persona_context(bot: "ChatBot") -> str:
         parts.append(f"System prompt (first 500 chars): {system_prompt[:500]}")
 
     return "\n".join(parts) if parts else ""
+
+
+# ---------------------------------------------------------------------------
+# Public scorecard tables
+# ---------------------------------------------------------------------------
+
+
+def _load_json_source(source: str | Path | dict[str, Any]) -> dict[str, Any]:
+    """Load a JSON source from a file path or pass through a dict."""
+    if isinstance(source, dict):
+        return source
+    p = Path(source)
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def scorecard_table(source: str | Path | dict[str, Any]) -> "gt.GT":
+    """Render a scorecard as a polished Great Table.
+
+    Takes the output of ``EvalResults.to_scorecard()`` (a dict or JSON file)
+    and produces a publication-ready table with color-coded score cells.
+
+    Parameters
+    ----------
+    source
+        Path to a scorecard JSON file, or a scorecard dict returned by
+        ``EvalResults.to_scorecard()``.
+
+    Returns
+    -------
+    gt.GT
+        A formatted Great Table ready for display, ``.save("file.html")``,
+        or embedding in a Quarto document.
+
+    Raises
+    ------
+    ImportError
+        If great_tables or pandas is not installed.
+
+    Examples
+    --------
+    From a file:
+
+    ```python
+    import talk_box as tb
+
+    table = tb.scorecard_table("scorecards/code_reviewer/2025-05-07.json")
+    table  # renders in notebook / Quarto
+    ```
+
+    From an in-memory scorecard:
+
+    ```python
+    results = tb.eval_suite("code_reviewer", models=[...], judge=...)
+    table = tb.scorecard_table(results.to_scorecard())
+    table.save("scorecard.html")
+    ```
+    """
+    if not HAS_GREAT_TABLES:
+        raise ImportError(
+            "great_tables is required for scorecard_table(). "
+            "Install with: pip install great_tables"
+        )
+    if not HAS_PANDAS:
+        raise ImportError(
+            "pandas is required for scorecard_table(). Install with: pip install pandas"
+        )
+
+    data = _load_json_source(source)
+    variants = data.get("variants", {})
+    config = data.get("config", {})
+    generated_at = data.get("generated_at", "")
+
+    if not variants:
+        return gt.GT(pd.DataFrame({"Status": ["No scorecard data"]}))
+
+    # Collect all dimension names across variants
+    all_dims: list[str] = []
+    for info in variants.values():
+        for dim in info.get("dimensions", {}):
+            if dim not in all_dims:
+                all_dims.append(dim)
+
+    # Build rows: one per variant (model)
+    rows = []
+    for variant_name, info in variants.items():
+        row: dict[str, Any] = {"Model": variant_name}
+        dims = info.get("dimensions", {})
+        for dim in all_dims:
+            row[dim] = dims.get(dim, 0.0)
+        row["overall"] = info.get("overall", 0.0)
+        row["queries"] = info.get("num_queries", 0)
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+    score_cols = all_dims + ["overall"]
+
+    # Build title/subtitle from config
+    persona = config.get("persona", "")
+    title = f"Scorecard: {persona}" if persona else "Evaluation Scorecard"
+    subtitle_parts = []
+    if generated_at:
+        # Show date portion only
+        subtitle_parts.append(generated_at[:10])
+    judge = config.get("judge", "")
+    if judge:
+        subtitle_parts.append(f"Judge: {judge}")
+    subtitle = " · ".join(subtitle_parts) if subtitle_parts else None
+
+    table = (
+        gt.GT(df, rowname_col="Model")
+        .tab_header(title=title, subtitle=subtitle)
+        .fmt_number(columns=score_cols, decimals=3)
+        .fmt_integer(columns="queries")
+        .tab_spanner(label="Dimensions", columns=all_dims)
+        .data_color(
+            columns=score_cols,
+            palette=["#dc3545", "#ffc107", "#6fc276"],
+            domain=[0.0, 1.0],
+        )
+        .tab_style(style=gt.style.text(weight="bold"), locations=gt.loc.column_labels())
+    )
+
+    return table
+
+
+def sweep_table(source: str | Path | dict[str, Any]) -> "gt.GT":
+    """Render an eval sweep summary as a polished Great Table.
+
+    Takes the combined sweep output from ``run_eval_sweep.py`` and produces
+    a persona × model matrix with color-coded overall scores and pass/fail
+    status.
+
+    Parameters
+    ----------
+    source
+        Path to a sweep summary JSON file, or a sweep dict.
+
+    Returns
+    -------
+    gt.GT
+        A formatted Great Table ready for display, ``.save("file.html")``,
+        or embedding in a Quarto document.
+
+    Raises
+    ------
+    ImportError
+        If great_tables or pandas is not installed.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    table = tb.sweep_table("scorecards/_sweeps/2025-05-07T12-00-00.json")
+    table.save("sweep_report.html")
+    ```
+    """
+    if not HAS_GREAT_TABLES:
+        raise ImportError(
+            "great_tables is required for sweep_table(). "
+            "Install with: pip install great_tables"
+        )
+    if not HAS_PANDAS:
+        raise ImportError(
+            "pandas is required for sweep_table(). Install with: pip install pandas"
+        )
+
+    data = _load_json_source(source)
+    sweep_results = data.get("results", [])
+    models = data.get("models", [])
+    threshold = data.get("threshold", 0.7)
+    generated_at = data.get("generated_at", "")
+
+    if not sweep_results:
+        return gt.GT(pd.DataFrame({"Status": ["No sweep data"]}))
+
+    # Discover model columns from the first result's scores
+    if not models:
+        for entry in sweep_results:
+            if "scores" in entry:
+                models = list(entry["scores"].keys())
+                break
+
+    # Build rows: one per persona
+    rows = []
+    for entry in sweep_results:
+        row: dict[str, Any] = {"Persona": entry.get("persona", "unknown")}
+
+        scores = entry.get("scores", {})
+        for model in models:
+            row[model] = scores.get(model, None)
+
+        row["status"] = "PASS" if entry.get("passed", False) else "FAIL"
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+
+    # Build title/subtitle
+    judge = data.get("judge", "")
+    passed = data.get("passed", 0)
+    total = data.get("total", len(sweep_results))
+    elapsed = data.get("elapsed_seconds", 0)
+
+    title = "Eval Sweep Results"
+    subtitle_parts = []
+    if generated_at:
+        subtitle_parts.append(generated_at[:10])
+    subtitle_parts.append(f"{passed}/{total} passed (threshold ≥ {threshold})")
+    if elapsed:
+        subtitle_parts.append(f"{elapsed:.0f}s")
+    if judge:
+        subtitle_parts.append(f"Judge: {judge}")
+    subtitle = " · ".join(subtitle_parts)
+
+    table = (
+        gt.GT(df, rowname_col="Persona")
+        .tab_header(title=title, subtitle=subtitle)
+        .fmt_number(columns=models, decimals=3)
+        .tab_spanner(label="Models", columns=models)
+        .data_color(
+            columns=models,
+            palette=["#dc3545", "#ffc107", "#6fc276"],
+            domain=[0.0, 1.0],
+        )
+        .data_color(
+            columns="status",
+            palette=["#dc3545", "#6fc276"],
+            domain=["FAIL", "PASS"],
+        )
+        .tab_style(style=gt.style.text(weight="bold"), locations=gt.loc.column_labels())
+    )
+
+    return table

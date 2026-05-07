@@ -27,6 +27,8 @@ from talk_box.eval import (
     eval,
     eval_regression,
     eval_suite,
+    scorecard_table,
+    sweep_table,
 )
 from talk_box.guardrails import (
     Guard,
@@ -124,6 +126,8 @@ __all__ = [
     "EvalResult",
     "EvalResults",
     "EvalScore",
+    "scorecard_table",
+    "sweep_table",
     # Prompt engineering
     "PromptBuilder",
     "Priority",
