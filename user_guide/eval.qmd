@@ -628,3 +628,98 @@ print(f"Passed (threshold=0.95): {results.passed(threshold=0.95)}")
 ```
 
 A threshold of 0.75 is a reasonable default for most use cases. Raise it for high-stakes personas (financial, medical) and lower it when testing against smaller local models.
+
+## Public Scorecards
+
+The `scorecard_table()` and `sweep_table()` functions turn scorecard and sweep JSON files into polished Great Tables with color-coded score cells, ready for embedding in docs, notebooks, or HTML reports.
+
+### Single-Persona Scorecard
+
+After running `eval_suite()`, the `.to_scorecard()` output feeds directly into `scorecard_table()`:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+# Run evaluation
+results = tb.eval_suite(
+    "code_reviewer",
+    models=["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
+    judge="anthropic:claude-sonnet-4-6",
+    scorecard_path="scorecards/code_reviewer.json",
+)
+
+# Render from the saved file
+tb.scorecard_table("scorecards/code_reviewer.json")
+```
+
+Or directly from the in-memory scorecard dict:
+
+```{python}
+#| eval: false
+tb.scorecard_table(results.to_scorecard())
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+card = {
+    "generated_at": "2025-05-07T12:00:00+00:00",
+    "config": {"persona": "code_reviewer", "judge": "anthropic:claude-sonnet-4-6"},
+    "variants": {
+        "anthropic:claude-sonnet-4-6": {
+            "dimensions": {"relevance": 0.96, "safety": 1.0, "instruction_adherence": 0.92},
+            "overall": 0.96,
+            "num_queries": 3,
+        },
+        "github:gpt-4o": {
+            "dimensions": {"relevance": 0.95, "safety": 1.0, "instruction_adherence": 0.90},
+            "overall": 0.95,
+            "num_queries": 3,
+        },
+    },
+}
+tb.scorecard_table(card)
+```
+
+### Sweep Summary
+
+After a multi-persona sweep (via `make eval-sweep` or `run_eval_sweep.py`), render the combined results with `sweep_table()`:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+tb.sweep_table("scorecards/_sweeps/2025-05-07T12-00-00.json")
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+sweep = {
+    "generated_at": "2025-05-07T12:00:00+00:00",
+    "models": ["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
+    "judge": "anthropic:claude-sonnet-4-6",
+    "threshold": 0.7,
+    "elapsed_seconds": 120,
+    "passed": 5,
+    "total": 5,
+    "results": [
+        {"persona": "code_reviewer", "passed": True, "elapsed": 25.1,
+         "scores": {"anthropic:claude-sonnet-4-6": 0.96, "github:gpt-4o": 0.95}},
+        {"persona": "financial_advisor", "passed": True, "elapsed": 30.2,
+         "scores": {"anthropic:claude-sonnet-4-6": 1.00, "github:gpt-4o": 0.99}},
+        {"persona": "customer_support_tier1", "passed": True, "elapsed": 22.8,
+         "scores": {"anthropic:claude-sonnet-4-6": 0.97, "github:gpt-4o": 0.96}},
+        {"persona": "data_analyst", "passed": True, "elapsed": 28.5,
+         "scores": {"anthropic:claude-sonnet-4-6": 0.98, "github:gpt-4o": 0.97}},
+        {"persona": "technical_writer", "passed": True, "elapsed": 18.3,
+         "scores": {"anthropic:claude-sonnet-4-6": 0.98, "github:gpt-4o": 0.77}},
+    ],
+}
+tb.sweep_table(sweep)
+```
+
+Both functions accept either a file path or a dict, so they work seamlessly in scripts, notebooks, and Quarto documents. The tables use a red → yellow → green color scale on score columns, making it easy to spot weak spots at a glance.
