@@ -201,3 +201,6 @@ great-docs/
 .great-docs-build/
 .great-docs-cache/
 .great-docs/
+
+# Eval scorecards
+scorecards/
