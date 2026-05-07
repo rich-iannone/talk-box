@@ -839,7 +839,7 @@ def _resolve_judge(judge: str | "ChatBot | None") -> "ChatBot":
     if judge is None:
         return ChatBot(name="Eval Judge").temperature(0.1)
     elif isinstance(judge, str):
-        return ChatBot(name="Eval Judge").model(judge).temperature(0.1)
+        return ChatBot(name="Eval Judge").provider_model(judge).temperature(0.1)
     else:
         return judge
 
