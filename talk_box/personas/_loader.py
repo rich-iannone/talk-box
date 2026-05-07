@@ -70,6 +70,10 @@ class PersonaDefinition:
         Default temperature for this persona.
     max_tokens
         Default max token limit for this persona.
+    default_guards
+        Guardrail specs applied automatically by ``persona_pack()``.
+        Each entry is a guard name string or a dict mapping a guard name
+        to its keyword arguments.
     tags
         Free-form tags for filtering and discovery.
     test_queries
@@ -117,6 +121,7 @@ class PersonaDefinition:
     recommended_models: list[ModelRecommendation] = field(default_factory=list)
     temperature: float | None = None
     max_tokens: int | None = None
+    default_guards: list[str | dict[str, Any]] = field(default_factory=list)
 
     # Metadata
     tags: list[str] = field(default_factory=list)
@@ -235,6 +240,7 @@ def _parse_persona(data: dict[str, Any]) -> PersonaDefinition:
         recommended_models=models,
         temperature=data.get("temperature"),
         max_tokens=data.get("max_tokens"),
+        default_guards=data.get("default_guards", []),
         tags=data.get("tags", []),
         test_queries=data.get("test_queries", []),
     )
