@@ -25,6 +25,7 @@ from talk_box.eval import (
     EvalResults,
     EvalScore,
     eval,
+    eval_model_update,
     eval_regression,
     eval_suite,
     scorecard_table,
@@ -119,6 +120,7 @@ __all__ = [
     "tone_check",
     # Evaluation
     "eval",
+    "eval_model_update",
     "eval_regression",
     "eval_suite",
     "EvalCase",

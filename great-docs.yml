@@ -216,6 +216,7 @@ reference:
     contents:
       - eval
       - eval_regression
+      - eval_model_update
       - eval_suite
       - EvalCase
       - EvalDimension
