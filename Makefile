@@ -1,4 +1,4 @@
-.PHONY: test lint check clean docs
+.PHONY: test lint check clean docs eval eval-sweep
 
 test:
 	@uv run --extra dev pytest \
@@ -55,3 +55,22 @@ docs-preview:
 
 install: dist ## install the package to the active Python's site-packages
 	python3 -m pip install --force-reinstall dist/talk_box*.whl
+
+PERSONA ?= code_reviewer
+EVAL_MODELS ?= anthropic:claude-sonnet-4-6
+EVAL_JUDGE ?= anthropic:claude-sonnet-4-6
+
+eval: ## Run a local eval suite for a persona (PERSONA=code_reviewer EVAL_MODELS="model1 model2")
+	@uv run python examples/run_eval.py $(PERSONA) \
+		--models $(EVAL_MODELS) \
+		--judge $(EVAL_JUDGE)
+
+SWEEP_PERSONAS ?= code_reviewer financial_advisor customer_support_tier1 data_analyst technical_writer
+SWEEP_MODELS ?= anthropic:claude-sonnet-4-6 github:gpt-4o
+SWEEP_JUDGE ?= anthropic:claude-sonnet-4-6
+
+eval-sweep: ## Run eval across multiple personas and models
+	@uv run python examples/run_eval_sweep.py \
+		--personas $(SWEEP_PERSONAS) \
+		--models $(SWEEP_MODELS) \
+		--judge $(SWEEP_JUDGE)
