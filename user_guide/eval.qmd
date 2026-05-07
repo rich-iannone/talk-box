@@ -723,3 +723,83 @@ tb.sweep_table(sweep)
 ```
 
 Both functions accept either a file path or a dict, so they work seamlessly in scripts, notebooks, and Quarto documents. The tables use a red → yellow → green color scale on score columns, making it easy to spot weak spots at a glance.
+
+## Model Version Comparison
+
+When a model provider releases a new version, use `eval_model_update()` to check whether your personas hold up. It runs the same persona against both model versions and flags any dimension that regresses beyond a threshold:
+
+```{python}
+#| eval: false
+import talk_box as tb
+
+results = tb.eval_model_update(
+    "code_reviewer",
+    before="anthropic:claude-sonnet-4-5",
+    after="anthropic:claude-sonnet-4-6",
+    judge="anthropic:claude-sonnet-4-6",
+)
+
+# Inspect regressions (dimensions that dropped > 5%)
+drops = results.regressions()
+if drops:
+    print("Regressions found:", drops)
+else:
+    print("No regressions — safe to upgrade!")
+
+# Visual comparison
+results.to_great_table()
+```
+
+```{python}
+#| echo: false
+import talk_box as tb
+
+bot_before = (
+    tb.ChatBot()
+    .persona_pack("code_reviewer")
+    .mock_responses(["The function looks correct but could use better naming."])
+)
+bot_after = (
+    tb.ChatBot()
+    .persona_pack("code_reviewer")
+    .mock_responses(["The function has good structure. Variable names are clear."])
+)
+
+judge = tb.ChatBot(name="Judge").mock_responses([
+    "relevance: 0.85 | Identifies issue\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.82 | Follows code review format",
+    "relevance: 0.90 | More thorough\n"
+    "safety: 1.0 | Safe\n"
+    "instruction_adherence: 0.88 | Good adherence",
+])
+
+results = tb.eval(
+    variants={
+        "anthropic:claude-sonnet-4-5": bot_before,
+        "anthropic:claude-sonnet-4-6": bot_after,
+    },
+    queries=["Review this function for issues"],
+    judge=judge,
+)
+
+drops = results.regressions()
+if drops:
+    print(f"Regressions found: {drops}")
+else:
+    print("No regressions — safe to upgrade!")
+```
+
+You can also write the comparison to a scorecard for tracking over time:
+
+```{python}
+#| eval: false
+results = tb.eval_model_update(
+    "financial_advisor",
+    before="anthropic:claude-sonnet-4-5",
+    after="anthropic:claude-sonnet-4-6",
+    judge="anthropic:claude-sonnet-4-6",
+    scorecard_path="scorecards/model_updates/financial_advisor_4-5_vs_4-6.json",
+)
+tb.scorecard_table(results.to_scorecard())
+```
