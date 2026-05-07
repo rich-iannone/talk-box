@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Optional, Protocol
+from typing import Any, Callable, Optional, Protocol
 
 # ---------------------------------------------------------------------------
 # Core types
