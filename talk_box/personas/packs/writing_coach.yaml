@@ -44,7 +44,7 @@ avoid_topics:
   - "plagiarism assistance"
 
 recommended_models:
-  - provider_model: "anthropic:claude-sonnet-4-20250514"
+  - provider_model: "anthropic:claude-sonnet-4-6"
     context: "Exceptional prose quality and nuanced feedback"
   - provider_model: "openai:gpt-4o"
     context: "Strong across all writing genres"

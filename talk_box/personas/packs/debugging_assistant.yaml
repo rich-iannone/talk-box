@@ -45,7 +45,7 @@ avoid_topics:
 recommended_models:
   - provider_model: "openai:gpt-4o"
     context: "Strong reasoning for complex debugging"
-  - provider_model: "anthropic:claude-sonnet-4-20250514"
+  - provider_model: "anthropic:claude-sonnet-4-6"
     context: "Careful trace analysis"
   - provider_model: "ollama:codellama"
     context: "Local debugging for sensitive codebases"

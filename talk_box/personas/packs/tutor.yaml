@@ -46,7 +46,7 @@ avoid_topics:
 recommended_models:
   - provider_model: "openai:gpt-4o"
     context: "Excellent at adaptive explanations"
-  - provider_model: "anthropic:claude-sonnet-4-20250514"
+  - provider_model: "anthropic:claude-sonnet-4-6"
     context: "Patient, detailed teaching style"
   - provider_model: "ollama:llama3.1"
     context: "Local tutoring for privacy"
