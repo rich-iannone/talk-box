@@ -75,7 +75,7 @@ import talk_box as tb
 # Create a security-focused chatbot with structured prompts
 bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .system_prompt(
         tb.PromptBuilder()
         .persona("senior security engineer", "web application security")
@@ -128,7 +128,7 @@ import talk_box as tb
 # Configure a bot with structured prompts in one go
 doc_bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .structured_prompt(
         persona="technical writer",
         task="review and improve documentation",
@@ -180,7 +180,7 @@ old_prompt = "Help me learn Spanish and correct my mistakes."
 # Attention-optimized approach
 bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .system_prompt(
         tb.PromptBuilder()
         .persona("experienced Spanish teacher", "conversational fluency and grammar")
@@ -464,7 +464,7 @@ healthcare_vocab = [
 # Create a healthcare IT consultant bot
 health_bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .system_prompt(
         tb.PromptBuilder()
         .persona("healthcare IT consultant", "medical informatics")
@@ -492,7 +492,7 @@ import talk_box as tb
 # Architectural analysis with attention optimization
 arch_bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .prompt_builder("architectural")
     .focus_on("identifying technical debt and modernization opportunities")
 )
@@ -500,7 +500,7 @@ arch_bot = (
 # Code review with structured feedback
 review_bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .prompt_builder("code_review")
     .avoid_topics(["personal criticism", "style nitpicking"])
     .focus_on("actionable security and performance improvements")
@@ -509,7 +509,7 @@ review_bot = (
 # Systematic debugging approach
 debug_bot = (
     tb.ChatBot()
-    .provider_model("anthropic:claude-sonnet-4-20250514")
+    .provider_model("anthropic:claude-sonnet-4-6")
     .prompt_builder("debugging")
     .critical_constraint("Always identify root cause, not just symptoms")
 )
