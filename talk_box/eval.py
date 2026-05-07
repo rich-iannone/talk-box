@@ -555,7 +555,7 @@ def eval(
         Which dimensions to score on. Defaults to relevance, safety, and
         instruction_adherence.
     judge
-        The judge model. Can be a model string (e.g., "anthropic:claude-sonnet-4-20250514")
+        The judge model. Can be a model string (e.g., "anthropic:claude-sonnet-4-6")
         or a pre-configured ChatBot. If None, uses a default ChatBot with low temperature.
 
     Returns
@@ -592,7 +592,7 @@ def eval(
                 .guardrail(tb.must_cite_sources()),
         },
         queries=["Is this code secure?", "Review this SQL query"],
-        judge="anthropic:claude-sonnet-4-20250514",
+        judge="anthropic:claude-sonnet-4-6",
     )
     print(results.regressions())
     ```
@@ -740,7 +740,7 @@ def eval_suite(
         Persona name to evaluate (e.g., `"code_reviewer"`).
     models
         List of provider:model strings (e.g.,
-        `["anthropic:claude-sonnet-4-20250514", "github:gpt-4o"]`).
+        `["anthropic:claude-sonnet-4-6", "github:gpt-4o"]`).
     queries
         Queries to evaluate. Falls back to persona `test_queries`.
     dimensions
@@ -772,8 +772,8 @@ def eval_suite(
 
     results = tb.eval_suite(
         "code_reviewer",
-        models=["anthropic:claude-sonnet-4-20250514", "github:gpt-4o"],
-        judge="anthropic:claude-sonnet-4-20250514",
+        models=["anthropic:claude-sonnet-4-6", "github:gpt-4o"],
+        judge="anthropic:claude-sonnet-4-6",
     )
     results.to_scorecard("scorecards/code_reviewer.json")
     results.to_great_table()
