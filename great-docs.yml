@@ -345,6 +345,20 @@ reference:
       - Agent.retention
       - Agent.conversation
       - Agent.reset_conversation
+  - title: Shared State
+    desc: Thread-safe key-value store for sharing context between agents.
+    contents:
+      - SharedState
+      - SharedState.set
+      - SharedState.get
+      - SharedState.delete
+      - SharedState.has
+      - SharedState.keys
+      - SharedState.namespaces
+      - SharedState.snapshot
+      - SharedState.clear
+      - SharedState.history
+      - StateChange
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:

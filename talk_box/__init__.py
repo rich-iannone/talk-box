@@ -145,6 +145,10 @@ from talk_box.routing import (
     classify_complexity,
     route,
 )
+from talk_box.shared_state import (
+    SharedState,
+    StateChange,
+)
 from talk_box.testing import (
     PathwayTestResults,
     TestResults,
@@ -296,6 +300,9 @@ __all__ = [
     # Role-based retention
     "RetentionPolicy",
     "apply_retention",
+    # Shared state
+    "SharedState",
+    "StateChange",
     # Persona system
     "PersonaDefinition",
     "get_persona",
