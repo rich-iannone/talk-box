@@ -51,10 +51,14 @@ from talk_box.guardrails import (
 from talk_box.models import (
     CostTier,
     ModelProfile,
+    OllamaStatus,
+    detect_ollama,
     get_model_profile,
     list_models,
+    list_ollama_models,
     model_profiles_table,
     register_model,
+    sync_ollama_models,
 )
 from talk_box.pathways import Pathways
 from talk_box.personas import PersonaDefinition, get_persona, list_personas, persona_categories
@@ -141,10 +145,15 @@ __all__ = [
     # Model profiles
     "ModelProfile",
     "CostTier",
+    "OllamaStatus",
     "get_model_profile",
     "list_models",
     "register_model",
     "model_profiles_table",
+    # Ollama
+    "detect_ollama",
+    "list_ollama_models",
+    "sync_ollama_models",
     # Prompt engineering
     "PromptBuilder",
     "Priority",
