@@ -576,6 +576,35 @@ reference:
       - FreshnessReport.by_status
       - FreshnessReport.to_dict
       - freshness_report
+  - title: Enrichment Q&A
+    desc: Structured questions to resolve knowledge graph ambiguity via user input.
+    contents:
+      - QuestionType
+      - QuestionStatus
+      - QuestionOption
+      - EnrichmentQuestion
+      - EnrichmentQuestion.is_pending
+      - EnrichmentQuestion.is_expired
+      - EnrichmentQuestion.to_dict
+      - QuestionQueue
+      - QuestionQueue.max_per_session
+      - QuestionQueue.add
+      - QuestionQueue.add_many
+      - QuestionQueue.pending_questions
+      - QuestionQueue.answer
+      - QuestionQueue.dismiss
+      - QuestionQueue.dismiss_all
+      - QuestionQueue.remove_for_nodes
+      - QuestionQueue.get
+      - QuestionQueue.stats
+      - QuestionQueue.clear
+      - QueueStats
+      - QueueStats.to_dict
+      - generate_question_id
+      - detect_name_ambiguity
+      - detect_factual_conflicts
+      - detect_weak_relationships
+      - pending_questions
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:

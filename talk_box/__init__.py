@@ -99,6 +99,19 @@ from talk_box.enrichment import (
     PipelineResult,
     regex_enricher,
 )
+from talk_box.enrichment_qa import (
+    EnrichmentQuestion,
+    QuestionOption,
+    QuestionQueue,
+    QuestionStatus,
+    QuestionType,
+    QueueStats,
+    detect_factual_conflicts,
+    detect_name_ambiguity,
+    detect_weak_relationships,
+    generate_question_id,
+    pending_questions,
+)
 from talk_box.eval import (
     EvalCase,
     EvalDimension,
@@ -494,6 +507,18 @@ __all__ = [
     "ExtractedRelationship",
     "PipelineResult",
     "regex_enricher",
+    # Enrichment Q&A
+    "EnrichmentQuestion",
+    "QuestionOption",
+    "QuestionQueue",
+    "QuestionStatus",
+    "QuestionType",
+    "QueueStats",
+    "detect_factual_conflicts",
+    "detect_name_ambiguity",
+    "detect_weak_relationships",
+    "generate_question_id",
+    "pending_questions",
     # Directives
     "ContextDirective",
     "RelatesToDirective",
