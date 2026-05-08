@@ -275,6 +275,17 @@ reference:
       - OptimizationLevel
       - OptimizeResult
 
+  - title: Hybrid Routing
+    desc: Route tasks between local and cloud models based on complexity and cost.
+    contents:
+      - route
+      - classify_complexity
+      - Router
+      - Router.route
+      - RoutingStrategy
+      - RoutingResult
+      - TaskComplexity
+
 # Site Settings
 site:
   theme: flatly

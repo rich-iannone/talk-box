@@ -84,6 +84,14 @@ from talk_box.prompt_optimizer import (
     OptimizeResult,
     optimize_prompt,
 )
+from talk_box.routing import (
+    Router,
+    RoutingResult,
+    RoutingStrategy,
+    TaskComplexity,
+    classify_complexity,
+    route,
+)
 from talk_box.testing import (
     PathwayTestResults,
     TestResults,
@@ -184,6 +192,13 @@ __all__ = [
     "OptimizationLevel",
     "OptimizeResult",
     "optimize_prompt",
+    # Hybrid routing
+    "Router",
+    "RoutingResult",
+    "RoutingStrategy",
+    "TaskComplexity",
+    "classify_complexity",
+    "route",
     # Persona system
     "PersonaDefinition",
     "get_persona",
