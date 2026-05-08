@@ -676,6 +676,14 @@ reference:
     contents:
       - export_json
       - export_html
+  - title: CLI
+    desc: Command-line interface for managing and testing AI assistants.
+    contents:
+      - cli.main
+      - cli.info
+      - cli.personas
+      - cli.models
+      - cli.test
 
 # Site Settings
 site:
