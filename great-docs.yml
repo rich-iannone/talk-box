@@ -331,6 +331,17 @@ reference:
     contents:
       - RetentionPolicy
       - apply_retention
+  - title: Agent
+    desc: Self-contained AI agent bundling persona, memory, tools, and conversation history.
+    contents:
+      - Agent
+      - Agent.from_persona
+      - Agent.respond
+      - Agent.remember
+      - Agent.recall
+      - Agent.retention
+      - Agent.conversation
+      - Agent.reset_conversation
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:
