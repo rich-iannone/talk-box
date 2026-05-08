@@ -132,6 +132,10 @@ from talk_box.replay import (
     ReplayTurn,
     replay,
 )
+from talk_box.retention import (
+    RetentionPolicy,
+    apply_retention,
+)
 from talk_box.routing import (
     Router,
     RoutingResult,
@@ -287,6 +291,9 @@ __all__ = [
     # Compliance export
     "export_json",
     "export_html",
+    # Role-based retention
+    "RetentionPolicy",
+    "apply_retention",
     # Persona system
     "PersonaDefinition",
     "get_persona",

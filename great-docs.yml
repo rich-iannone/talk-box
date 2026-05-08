@@ -326,6 +326,11 @@ reference:
       - PolicyResult
       - PolicyResult.removed_count
       - PolicyResult.retained_count
+  - title: Role-Based Retention
+    desc: Persona-driven memory lifecycle rules that declare what to remember and forget.
+    contents:
+      - RetentionPolicy
+      - apply_retention
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:

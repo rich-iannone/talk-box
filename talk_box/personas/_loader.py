@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from talk_box.retention import RetentionPolicy
+
 # ---------------------------------------------------------------------------
 # Schema
 # ---------------------------------------------------------------------------
@@ -74,6 +76,9 @@ class PersonaDefinition:
         Guardrail specs applied automatically by ``persona_pack()``.
         Each entry is a guard name string or a dict mapping a guard name
         to its keyword arguments.
+    retention
+        Optional ``RetentionPolicy`` defining memory lifecycle rules for
+        this persona. Use with ``apply_retention()`` to enforce the policy.
     tags
         Free-form tags for filtering and discovery.
     test_queries
@@ -122,6 +127,9 @@ class PersonaDefinition:
     temperature: float | None = None
     max_tokens: int | None = None
     default_guards: list[str | dict[str, Any]] = field(default_factory=list)
+
+    # Retention
+    retention: RetentionPolicy | None = None
 
     # Metadata
     tags: list[str] = field(default_factory=list)
@@ -218,6 +226,18 @@ def _parse_model_recommendation(data: dict[str, Any]) -> ModelRecommendation:
     )
 
 
+def _parse_retention(data: dict[str, Any] | None) -> RetentionPolicy | None:
+    """Parse a retention policy from YAML data."""
+    if data is None:
+        return None
+    return RetentionPolicy(
+        remember_tags=data.get("remember_tags", []),
+        remember_keys=data.get("remember_keys", []),
+        forget_tags=data.get("forget_tags", []),
+        forget_keys=data.get("forget_keys", []),
+    )
+
+
 def _parse_persona(data: dict[str, Any]) -> PersonaDefinition:
     """Parse a PersonaDefinition from a YAML dict."""
     models = [_parse_model_recommendation(m) for m in data.get("recommended_models", [])]
@@ -241,6 +261,7 @@ def _parse_persona(data: dict[str, Any]) -> PersonaDefinition:
         temperature=data.get("temperature"),
         max_tokens=data.get("max_tokens"),
         default_guards=data.get("default_guards", []),
+        retention=_parse_retention(data.get("retention")),
         tags=data.get("tags", []),
         test_queries=data.get("test_queries", []),
     )
@@ -417,6 +438,7 @@ def create_persona(
     recommended_models: list[dict[str, Any]] | None = None,
     temperature: float | None = None,
     max_tokens: int | None = None,
+    retention: RetentionPolicy | None = None,
     tags: list[str] | None = None,
     test_queries: list[str] | None = None,
 ) -> PersonaDefinition:
@@ -464,6 +486,10 @@ def create_persona(
         Default temperature for this persona.
     max_tokens
         Default max token limit for this persona.
+    retention
+        A ``RetentionPolicy`` defining which memories this persona should
+        keep or discard. Use with ``apply_retention()`` to enforce the
+        policy on a ``MemoryStore``.
     tags
         Free-form tags for filtering and discovery.
     test_queries
@@ -531,6 +557,7 @@ def create_persona(
         recommended_models=models,
         temperature=temperature,
         max_tokens=max_tokens,
+        retention=retention,
         tags=tags or [],
         test_queries=test_queries or [],
     )
