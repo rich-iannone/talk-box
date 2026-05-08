@@ -161,9 +161,7 @@ def replay(
     ```
     """
     # Extract user prompts (not system prompts) from the original capture
-    user_prompts = [
-        e for e in source.prompts() if e.role != "system"
-    ]
+    user_prompts = [e for e in source.prompts() if e.role != "system"]
 
     if not user_prompts:
         raise ValueError("Source capture contains no user prompts to replay.")
@@ -172,9 +170,7 @@ def replay(
     original_responses = source.responses()
 
     # Detect original system prompt
-    original_system_prompts = [
-        e for e in source.prompts() if e.role == "system"
-    ]
+    original_system_prompts = [e for e in source.prompts() if e.role == "system"]
     effective_system_prompt = (
         system_prompt
         if system_prompt is not None
@@ -203,12 +199,8 @@ def replay(
         capture.record_prompt(prompt_event.content)
 
         # Get original response for comparison
-        original_response = (
-            original_responses[i].content if i < len(original_responses) else ""
-        )
-        original_model = (
-            original_responses[i].model if i < len(original_responses) else ""
-        )
+        original_response = original_responses[i].content if i < len(original_responses) else ""
+        original_model = original_responses[i].model if i < len(original_responses) else ""
 
         # Call the responder
         start = time.time()

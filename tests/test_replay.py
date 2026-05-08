@@ -14,12 +14,14 @@ def _echo_responder(model_key: str, prompt: str) -> str:
     return f"[{model_key}] {prompt}"
 
 
-def _make_source(*, system_prompt: str = "", prompts_responses: list[tuple[str, str]] | None = None):
+def _make_source(
+    *, system_prompt: str = "", prompts_responses: list[tuple[str, str]] | None = None
+):
     """Create a ConversationCapture with some recorded turns."""
     cap = ConversationCapture(session_id="original-session", metadata={"model": "original-model"})
     if system_prompt:
         cap.record_prompt(system_prompt, role="system")
-    for prompt, response in (prompts_responses or []):
+    for prompt, response in prompts_responses or []:
         cap.record_prompt(prompt)
         cap.record_response(response, model="original-model")
     return cap
@@ -285,9 +287,7 @@ class TestReplayErrors:
                 raise ValueError("Intermittent failure")
             return f"OK: {prompt}"
 
-        source = _make_source(
-            prompts_responses=[("Q1", "A1"), ("Q2", "A2"), ("Q3", "A3")]
-        )
+        source = _make_source(prompts_responses=[("Q1", "A1"), ("Q2", "A2"), ("Q3", "A3")])
         result = replay(source, sometimes_fails, model="m1")
 
         assert result.turn_count == 3
