@@ -409,6 +409,12 @@ reference:
       - register_skill
       - load_skill
       - skill_categories
+  - title: Structured Outputs
+    desc: Extract typed data from LLM responses using Pydantic models.
+    contents:
+      - ExtractResult
+      - extract
+      - schema_to_dict
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:

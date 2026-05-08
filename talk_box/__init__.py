@@ -176,6 +176,11 @@ from talk_box.skills import (
     register_skill,
     skill_categories,
 )
+from talk_box.structured import (
+    ExtractResult,
+    extract,
+    schema_to_dict,
+)
 from talk_box.subagents import (
     SubagentResult,
     children,
@@ -367,6 +372,10 @@ __all__ = [
     "register_skill",
     "load_skill",
     "skill_categories",
+    # Structured outputs
+    "ExtractResult",
+    "extract",
+    "schema_to_dict",
     # Persona system
     "PersonaDefinition",
     "get_persona",
