@@ -28,6 +28,7 @@ class PathwayState:
     success_conditions: List[str] = None
     fallback_actions: List[str] = None
     next_states: List[str] = None
+    agent: Optional[str] = None
     priority: int = 1
 
     def __post_init__(self):
@@ -332,8 +333,9 @@ class Pathways:
         self._transitions: List[PathwayTransition] = []
         self._current_state_name: Optional[str] = None
         self._start_state: Optional[str] = None
+        self._agents: Dict[str, Any] = {}
 
-    def state(self, desc: str, id: str = None, type: str = None) -> "Pathways":
+    def state(self, desc: str, id: str = None, type: str = None, agent: str = None) -> "Pathways":
         """
         Define a state with natural language description as the primary identifier.
 
@@ -512,6 +514,7 @@ class Pathways:
             tools=[],
             success_conditions=[],
             next_states=[],
+            agent=agent,
         )
 
         # Store whether type was explicitly set (for inference logic)
@@ -969,6 +972,103 @@ class Pathways:
             self._states[self._current_state_name].success_conditions.append(condition)
         return self
 
+    def agent(self, agent_name: str) -> "Pathways":
+        """Assign an agent to the current state.
+
+        When a state has an agent, that agent handles all interactions while the pathway is in that
+        state. This enables multi-agent workflows where different states are served by different
+        specialized agents.
+
+        Parameters
+        ----------
+        agent_name
+            Name of the agent to handle this state. Register the agent via `register_agent()` before
+            running the pathway.
+
+        Returns
+        -------
+        Pathways
+            Self for method chaining.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        pathway = (
+            tb.Pathways(title="Support", desc="Multi-agent support")
+            .state("triage: classify the issue")
+            .agent("triage_bot")
+            .branch_on("technical", id="tech")
+            .state("tech: resolve technical issues")
+            .agent("tech_expert")
+        )
+        ```
+        """
+        if self._current_state_name in self._states:
+            self._states[self._current_state_name].agent = agent_name
+        return self
+
+    def register_agent(self, name: str, agent: Any) -> "Pathways":
+        """Register an ``Agent`` instance for use in pathway states.
+
+        Agents registered here can be retrieved later with ``get_agent()``
+        to handle interactions when the pathway reaches their state.
+
+        Parameters
+        ----------
+        name
+            The agent name (must match the name used in ``.state(agent=...)``
+            or ``.agent(...)``).
+        agent
+            An ``Agent`` instance.
+
+        Returns
+        -------
+        Pathways
+            Self for method chaining.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        triage = tb.Agent.from_persona("customer_support_tier1")
+        tech = tb.Agent.from_persona("debugging_assistant")
+
+        pathway = (
+            tb.Pathways(title="Support", desc="Multi-agent support")
+            .register_agent("triage", triage)
+            .register_agent("tech", tech)
+            .state("triage: classify issue", agent="triage")
+            .state("tech: resolve issue", agent="tech")
+        )
+        ```
+        """
+        self._agents[name] = agent
+        return self
+
+    def get_agent(self, state_name: str) -> Any:
+        """Get the agent assigned to a specific state.
+
+        Parameters
+        ----------
+        state_name
+            The state ID to look up.
+
+        Returns
+        -------
+        Agent or None
+            The registered ``Agent`` for that state, or ``None`` if no
+            agent is assigned or registered.
+        """
+        if state_name not in self._states:
+            return None
+        agent_name = self._states[state_name].agent
+        if agent_name is None:
+            return None
+        return self._agents.get(agent_name)
+
     def next_state(self, state_name: str) -> "Pathways":
         """
         Define direct transition to the next state.
@@ -1301,6 +1401,7 @@ class Pathways:
             "transitions": [self._transition_to_dict(t) for t in self._transitions],
             "completion_criteria": self._completion_criteria,
             "fallback_strategy": self._fallback_strategy,
+            "agents": list(self._agents.keys()),
         }
 
     def __getitem__(self, key: str) -> Any:
@@ -1346,7 +1447,7 @@ class Pathways:
 
     def _state_to_dict(self, state: PathwayState) -> Dict[str, Any]:
         """Convert PathwayState to dictionary."""
-        return {
+        result = {
             "name": state.name,
             "type": state.state_type.value,
             "description": state.description,
@@ -1357,6 +1458,9 @@ class Pathways:
             "fallback_actions": state.fallback_actions,
             "priority": state.priority,
         }
+        if state.agent is not None:
+            result["agent"] = state.agent
+        return result
 
     def _transition_to_dict(self, transition: PathwayTransition) -> Dict[str, Any]:
         """Convert PathwayTransition to dictionary."""
@@ -1418,6 +1522,10 @@ class Pathways:
             state_lines.append(
                 f"{indent}- {state_name.upper()} ({state['type']}): {state.get('description', '')}"
             )
+
+            # Agent assignment
+            if state.get("agent"):
+                state_lines.append(f"{indent}  Agent: {state['agent']}")
 
             # Helper function to format lists with numbering if multiple items
             def format_list(items, label):
@@ -1524,18 +1632,18 @@ class Pathways:
         This method generates a flowchart diagram showing all states, transitions, and
         branching logic using pure HTML/CSS. The visualization includes:
 
-        - Color-coded boxes based on state type (collect, tool, decision, summary)
-        - Clear flow arrows showing progression
-        - Reconvergence indicators for states with multiple parents
-        - Professional styling with hover effects
+        - color-coded boxes based on state type (collect, tool, decision, summary)
+        - clear flow arrows showing progression
+        - reconvergence indicators for states with multiple parents
+        - professional styling with hover effects
 
         Parameters
         ----------
-        title : str, optional
-            Title for the visualization page. If None, uses the pathway title.
-        filename : str, optional
-            Name for the HTML file (without extension). If None, uses "pathway_visualization".
-        auto_open : bool, default True
+        title
+            Title for the visualization page. If `None`, uses the pathway title.
+        filename
+            Name for the HTML file (without extension). If `None`, uses "pathway_visualization".
+        auto_open
             Whether to automatically open the visualization in the default browser.
 
         Returns

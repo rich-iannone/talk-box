@@ -97,6 +97,9 @@ reference:
       - Pathways.next_state
       - Pathways.branch_on
       - Pathways.fallback
+      - Pathways.agent
+      - Pathways.register_agent
+      - Pathways.get_agent
       - Pathways.visualize
 
   - title: Conversation Methods
