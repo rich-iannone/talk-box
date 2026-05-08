@@ -731,6 +731,157 @@ class KnowledgeGraph:
         }
 
     # ------------------------------------------------------------------
+    # Enrichment Q&A
+    # ------------------------------------------------------------------
+
+    def pending_questions(
+        self,
+        *,
+        refresh: bool = True,
+        sort_by: str = "confusion_impact",
+        limit: int | None = None,
+    ) -> list[Any]:
+        """Get pending enrichment questions for this knowledge graph.
+
+        Detects ambiguities (duplicate names, factual conflicts, weak
+        relationships) and returns structured questions sorted by
+        confusion impact.
+
+        Parameters
+        ----------
+        refresh
+            If ``True`` (default), run built-in detectors to find new
+            questions before returning.
+        sort_by
+            Sort field: ``"confusion_impact"`` (default, descending) or
+            ``"created_at"`` (ascending, oldest first).
+        limit
+            Maximum questions to return. Defaults to the queue's
+            ``max_per_session`` (7).
+
+        Returns
+        -------
+        list[EnrichmentQuestion]
+            Pending questions sorted by priority.
+
+        Examples
+        --------
+        ```python
+        import talk_box as tb
+
+        kg = tb.KnowledgeGraph(":memory:")
+        # ... add nodes and edges ...
+        questions = kg.pending_questions()
+        for q in questions:
+            print(f"[{q.confusion_impact:.2f}] {q.text}")
+        ```
+
+        Skip detection and return only existing questions:
+
+        ```python
+        questions = kg.pending_questions(refresh=False)
+        ```
+        """
+        from talk_box.enrichment_qa import pending_questions as _pending
+
+        return _pending(
+            self,
+            self._get_question_queue(),
+            refresh=refresh,
+            sort_by=sort_by,
+            limit=limit,
+        )
+
+    def answer_question(
+        self,
+        question_id: str,
+        *,
+        choice: int | None = None,
+        freeform: str | None = None,
+    ) -> Any | None:
+        """Answer a pending enrichment question.
+
+        At least one of ``choice`` or ``freeform`` must be provided.
+
+        Parameters
+        ----------
+        question_id
+            ID of the question to answer.
+        choice
+            Index of the selected option.
+        freeform
+            Freeform text answer.
+
+        Returns
+        -------
+        EnrichmentQuestion | None
+            The updated question, or ``None`` if not found or not
+            pending.
+
+        Raises
+        ------
+        ValueError
+            If neither ``choice`` nor ``freeform`` is provided, or
+            ``choice`` is out of range.
+
+        Examples
+        --------
+        ```python
+        questions = kg.pending_questions()
+        kg.answer_question(questions[0].id, choice=0)
+        kg.answer_question(questions[1].id, freeform="It's the API migration")
+        ```
+        """
+        return self._get_question_queue().answer(question_id, choice=choice, freeform=freeform)
+
+    def dismiss_question(self, question_id: str) -> Any | None:
+        """Dismiss a pending enrichment question without answering.
+
+        Parameters
+        ----------
+        question_id
+            ID of the question to dismiss.
+
+        Returns
+        -------
+        EnrichmentQuestion | None
+            The dismissed question, or ``None`` if not found.
+
+        Examples
+        --------
+        ```python
+        kg.dismiss_question("eq-a1b2c3d4")
+        ```
+        """
+        return self._get_question_queue().dismiss(question_id)
+
+    def question_stats(self) -> dict[str, int]:
+        """Get summary statistics for the enrichment question queue.
+
+        Returns
+        -------
+        dict[str, int]
+            Counts by status (total, pending, answered, dismissed,
+            expired).
+
+        Examples
+        --------
+        ```python
+        kg.question_stats()
+        # {"total": 5, "pending": 3, "answered": 1, ...}
+        ```
+        """
+        return self._get_question_queue().stats().to_dict()
+
+    def _get_question_queue(self) -> Any:
+        """Lazily create the question queue."""
+        if not hasattr(self, "_question_queue"):
+            from talk_box.enrichment_qa import QuestionQueue
+
+            self._question_queue = QuestionQueue()
+        return self._question_queue
+
+    # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
 

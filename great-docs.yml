@@ -455,6 +455,10 @@ reference:
       - KnowledgeGraph.search
       - KnowledgeGraph.stats
       - KnowledgeGraph.health
+      - KnowledgeGraph.pending_questions
+      - KnowledgeGraph.answer_question
+      - KnowledgeGraph.dismiss_question
+      - KnowledgeGraph.question_stats
       - KnowledgeGraph.clear
       - KnowledgeGraph.close
       - Node
