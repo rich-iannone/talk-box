@@ -36,6 +36,16 @@ from talk_box.compliance import (
     export_html,
     export_json,
 )
+from talk_box.connectors import (
+    AppleNotes,
+    Connector,
+    DirectoryConnector,
+    Document,
+    MarkdownDir,
+    SyncResult,
+    connector,
+    sync,
+)
 from talk_box.consensus import (
     ConsensusResult,
     ConsensusStrategy,
@@ -423,6 +433,15 @@ __all__ = [
     "Edge",
     "NodeType",
     "cosine_similarity",
+    # Connectors
+    "Connector",
+    "Document",
+    "MarkdownDir",
+    "DirectoryConnector",
+    "AppleNotes",
+    "SyncResult",
+    "connector",
+    "sync",
     # Persona system
     "PersonaDefinition",
     "get_persona",
