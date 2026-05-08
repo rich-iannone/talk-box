@@ -109,6 +109,13 @@ from talk_box.hitl import (
     reject,
     revise,
 )
+from talk_box.knowledge_graph import (
+    Edge,
+    KnowledgeGraph,
+    Node,
+    NodeType,
+    cosine_similarity,
+)
 from talk_box.mcp_bridge import (
     MCPBridgeServer,
     MCPToolInfo,
@@ -410,6 +417,12 @@ __all__ = [
     "mcp_tool_to_talk_box",
     "list_mcp_tools",
     "discover_mcp_tools",
+    # Knowledge graph
+    "KnowledgeGraph",
+    "Node",
+    "Edge",
+    "NodeType",
+    "cosine_similarity",
     # Persona system
     "PersonaDefinition",
     "get_persona",

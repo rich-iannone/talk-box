@@ -10,7 +10,7 @@ from talk_box.mcp_bridge import (
     mcp_tool_to_talk_box,
     tools_to_mcp_server,
 )
-from talk_box.tools import ToolCategory, ToolContext, ToolResult, TalkBoxTool, tool
+from talk_box.tools import ToolCategory, ToolContext, ToolResult, TalkBoxTool
 
 
 # ---------------------------------------------------------------------------
@@ -18,29 +18,34 @@ from talk_box.tools import ToolCategory, ToolContext, ToolResult, TalkBoxTool, t
 # ---------------------------------------------------------------------------
 
 
-@tool(description="Add two numbers", category=ToolCategory.DATA, tags=["test"])
-def add_numbers(context: ToolContext, a: int, b: int) -> ToolResult:
+def _add_numbers(context: ToolContext, a: int, b: int) -> ToolResult:
     """Add two numbers together."""
     return ToolResult(data={"sum": a + b})
 
 
-@tool(description="Echo a message", category=ToolCategory.CUSTOM, tags=["test"])
-def echo(context: ToolContext, message: str) -> ToolResult:
+def _echo(context: ToolContext, message: str) -> ToolResult:
     """Echo back a message."""
     return ToolResult(data=message)
 
 
 def _get_test_tools() -> list[TalkBoxTool]:
-    """Get the two test TalkBoxTool instances from the global registry."""
-    from talk_box.tools import get_global_registry
-
-    registry = get_global_registry()
-    tools = []
-    for name in ["add_numbers", "echo"]:
-        t = registry.get_tool(name)
-        if t:
-            tools.append(t)
-    return tools
+    """Build two TalkBoxTool instances directly (no global registry)."""
+    return [
+        TalkBoxTool(
+            name="add_numbers",
+            description="Add two numbers",
+            func=_add_numbers,
+            category=ToolCategory.DATA,
+            tags=["test"],
+        ),
+        TalkBoxTool(
+            name="echo",
+            description="Echo a message",
+            func=_echo,
+            category=ToolCategory.CUSTOM,
+            tags=["test"],
+        ),
+    ]
 
 
 # ---------------------------------------------------------------------------

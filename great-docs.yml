@@ -438,6 +438,29 @@ reference:
       - mcp_tool_to_talk_box
       - list_mcp_tools
       - discover_mcp_tools
+  - title: Knowledge Graph
+    desc: SQLite-backed knowledge graph with nodes, edges, traversal, search, and embedding support.
+    contents:
+      - KnowledgeGraph
+      - KnowledgeGraph.add_node
+      - KnowledgeGraph.get_node
+      - KnowledgeGraph.delete_node
+      - KnowledgeGraph.list_nodes
+      - KnowledgeGraph.node_count
+      - KnowledgeGraph.add_edge
+      - KnowledgeGraph.get_edges
+      - KnowledgeGraph.delete_edge
+      - KnowledgeGraph.edge_count
+      - KnowledgeGraph.neighbors
+      - KnowledgeGraph.search
+      - KnowledgeGraph.stats
+      - KnowledgeGraph.health
+      - KnowledgeGraph.clear
+      - KnowledgeGraph.close
+      - Node
+      - Edge
+      - NodeType
+      - cosine_similarity
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:
