@@ -216,6 +216,16 @@ from talk_box.tools import (
     get_global_registry,
     tool,
 )
+from talk_box.traits import (
+    TraitDefinition,
+    apply_trait,
+    create_trait,
+    get_trait,
+    list_traits,
+    load_trait,
+    register_trait,
+    trait_categories,
+)
 
 # Make key classes available at package level
 __all__ = [
@@ -376,6 +386,15 @@ __all__ = [
     "ExtractResult",
     "extract",
     "schema_to_dict",
+    # Persona traits
+    "TraitDefinition",
+    "apply_trait",
+    "create_trait",
+    "get_trait",
+    "list_traits",
+    "register_trait",
+    "load_trait",
+    "trait_categories",
     # Persona system
     "PersonaDefinition",
     "get_persona",

@@ -1,0 +1,20 @@
+name: junior_friendly
+display_name: "Junior-Friendly"
+category: tone
+description: "Adjusts output for beginners with explanations and simple language."
+
+constraints:
+  - "Explain technical jargon and acronyms when first used"
+  - "Provide step-by-step instructions rather than terse commands"
+  - "Include brief 'why' explanations alongside 'how' instructions"
+  - "Use simple, concrete examples over abstract descriptions"
+
+output_format:
+  - "Use numbered steps for multi-step processes"
+  - "Bold key terms on first use"
+
+task_context_extra: "The audience may be new to this topic, so adjust complexity accordingly."
+
+tags:
+  - "beginner"
+  - "educational"

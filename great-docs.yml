@@ -415,6 +415,17 @@ reference:
       - ExtractResult
       - extract
       - schema_to_dict
+  - title: Persona Traits
+    desc: Composable modifiers that add constraints, expertise, and tools to any persona.
+    contents:
+      - TraitDefinition
+      - apply_trait
+      - create_trait
+      - get_trait
+      - list_traits
+      - register_trait
+      - load_trait
+      - trait_categories
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:
