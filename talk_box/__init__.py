@@ -73,6 +73,15 @@ from talk_box.diff import (
     TurnStatus,
     diff,
 )
+from talk_box.enrichment import (
+    EnrichmentConfig,
+    EnrichmentPipeline,
+    EnrichmentResult,
+    ExtractedEntity,
+    ExtractedRelationship,
+    PipelineResult,
+    regex_enricher,
+)
 from talk_box.eval import (
     EvalCase,
     EvalDimension,
@@ -442,6 +451,14 @@ __all__ = [
     "SyncResult",
     "connector",
     "sync",
+    # Enrichment
+    "EnrichmentConfig",
+    "EnrichmentPipeline",
+    "EnrichmentResult",
+    "ExtractedEntity",
+    "ExtractedRelationship",
+    "PipelineResult",
+    "regex_enricher",
     # Persona system
     "PersonaDefinition",
     "get_persona",

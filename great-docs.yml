@@ -477,6 +477,22 @@ reference:
       - SyncResult.total
       - connector
       - sync
+  - title: Enrichment
+    desc: Extract entities, topics, relationships, and summaries from documents in the knowledge graph.
+    contents:
+      - ExtractedEntity
+      - ExtractedRelationship
+      - EnrichmentResult
+      - EnrichmentResult.entity_names
+      - EnrichmentResult.entity_count
+      - EnrichmentResult.topic_count
+      - EnrichmentResult.relationship_count
+      - EnrichmentPipeline
+      - EnrichmentPipeline.run
+      - PipelineResult
+      - PipelineResult.total
+      - EnrichmentConfig
+      - regex_enricher
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:
