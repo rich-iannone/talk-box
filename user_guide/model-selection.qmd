@@ -299,6 +299,85 @@ production_bot = tb.ChatBot().model("gpt-4o").temperature(0.3)
 creative_bot = tb.ChatBot().model("gpt-4o").temperature(0.9)
 ```
 
+## Managing Context Windows
+
+When switching between models with different context sizes (e.g., Claude's 200K vs. a local 8K model), you need to ensure your prompts and conversation history fit. The `ContextWindow` class handles this automatically:
+
+```python
+import talk_box as tb
+
+# Create a context window from a model profile
+ctx = tb.ContextWindow(model="ollama:llama3.2:latest")
+
+# Or with an explicit token budget
+ctx = tb.ContextWindow(max_tokens=8192, reserve_output=2048)
+```
+
+### Fitting Conversation Messages
+
+`fit_messages()` trims conversation history to fit, dropping older messages first:
+
+```python
+messages = [
+    {"role": "user", "content": "Hello!"},
+    {"role": "assistant", "content": "Hi! How can I help?"},
+    {"role": "user", "content": "Explain Python decorators in detail..."},
+    # ... many more turns
+]
+
+ctx = tb.ContextWindow(max_tokens=4096, reserve_output=1024)
+result = ctx.fit_messages(messages, system_prompt="You are a helpful tutor.")
+
+print(f"Kept {len(result.messages)} of {len(messages)} messages")
+print(f"Using {result.tokens_used}/{result.token_budget} input tokens")
+print(f"Dropped {result.messages_dropped} oldest messages")
+```
+
+Two strategies are available:
+
+- **`truncate_oldest`** (default): drops the oldest messages first, preserving recent context
+- **`truncate_middle`**: keeps the first message (sets context) and the most recent messages, dropping from the middle
+
+```python
+# Keep the opening message and recent exchanges
+result = ctx.fit_messages(messages, strategy="truncate_middle")
+```
+
+### Fitting Prompts
+
+For `PromptBuilder` prompts that are too large for a model, `fit_prompt()` drops lowest-priority sections:
+
+```python
+builder = (
+    tb.PromptBuilder()
+    .persona("data analyst", "statistics")
+    .task_context("Analyze quarterly sales data")
+    .structured_section("BACKGROUND", long_context, priority=tb.Priority.LOW)
+    .structured_section("KEY METRICS", metrics, priority=tb.Priority.CRITICAL)
+    .constraint("Be concise")
+)
+
+ctx = tb.ContextWindow(model="ollama:llama3.2:latest")
+result = ctx.fit_prompt(builder)
+
+if result.sections_dropped:
+    print(f"Dropped {len(result.sections_dropped)} low-priority sections to fit")
+```
+
+### Quick Budget Checks
+
+Use `fits()` and `overflow()` for simple checks without fitting:
+
+```python
+ctx = tb.ContextWindow(model="openai:gpt-4o")
+
+prompt = str(my_builder)
+if ctx.fits(prompt):
+    print("Prompt fits within budget")
+else:
+    print(f"{ctx.overflow(prompt)} tokens over budget")
+```
+
 ## Key Takeaways
 
 - **GPT-4o** and **Claude Sonnet 4** are excellent defaults for most applications
