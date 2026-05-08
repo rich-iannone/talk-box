@@ -67,6 +67,12 @@ from talk_box.eval import (
     scorecard_table,
     sweep_table,
 )
+from talk_box.forgetting import (
+    PolicyResult,
+    compress_after_n_turns,
+    forget_after_resolution,
+    retain_only,
+)
 from talk_box.guardrails import (
     Guard,
     GuardAction,
@@ -260,6 +266,11 @@ __all__ = [
     "MemoryTier",
     "ShortTermMemory",
     "WorkingMemory",
+    # Forgetting policies
+    "PolicyResult",
+    "forget_after_resolution",
+    "compress_after_n_turns",
+    "retain_only",
     # Conversation capture
     "ConversationCapture",
     "CaptureEvent",

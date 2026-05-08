@@ -317,6 +317,15 @@ reference:
       - LongTermMemory
       - MemoryEntry
       - MemoryTier
+  - title: Forgetting Policies
+    desc: Automatic memory lifecycle management and cleanup.
+    contents:
+      - forget_after_resolution
+      - compress_after_n_turns
+      - retain_only
+      - PolicyResult
+      - PolicyResult.removed_count
+      - PolicyResult.retained_count
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:
