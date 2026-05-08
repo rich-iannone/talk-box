@@ -286,6 +286,16 @@ reference:
       - RoutingResult
       - TaskComplexity
 
+  - title: Consensus Mode
+    desc: Query multiple models, compare outputs, and resolve disagreements.
+    contents:
+      - consensus
+      - find_disagreements
+      - ConsensusStrategy
+      - ConsensusResult
+      - ModelResponse
+      - Disagreement
+
 # Site Settings
 site:
   theme: flatly

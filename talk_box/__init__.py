@@ -12,6 +12,14 @@ __email__ = "riannone@me.com"
 from talk_box.attachments import AttachmentMetadata, Attachments
 from talk_box.builder import BuilderTypes, ChatBot
 from talk_box.builtin_tools import get_builtin_tool, load_selected_tools, load_tool_box
+from talk_box.consensus import (
+    ConsensusResult,
+    ConsensusStrategy,
+    Disagreement,
+    ModelResponse,
+    consensus,
+    find_disagreements,
+)
 from talk_box.context_window import (
     ContextWindow,
     FitResult,
@@ -199,6 +207,13 @@ __all__ = [
     "TaskComplexity",
     "classify_complexity",
     "route",
+    # Consensus mode
+    "ConsensusResult",
+    "ConsensusStrategy",
+    "Disagreement",
+    "ModelResponse",
+    "consensus",
+    "find_disagreements",
     # Persona system
     "PersonaDefinition",
     "get_persona",
