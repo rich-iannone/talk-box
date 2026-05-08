@@ -384,6 +384,21 @@ reference:
       - ReviewDecision
       - ReviewStatus
       - ReviewQueue
+  - title: Agent Communication
+    desc: Structured message passing between agents.
+    contents:
+      - send
+      - broadcast
+      - reply
+      - AgentMessage
+      - MessageType
+      - Mailbox
+      - Mailbox.deliver
+      - Mailbox.inbox
+      - Mailbox.outbox
+      - Mailbox.thread
+      - Mailbox.by_type
+      - Mailbox.all
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:

@@ -24,6 +24,14 @@ from talk_box.cascade import (
     cascade,
     estimate_confidence,
 )
+from talk_box.comms import (
+    AgentMessage,
+    Mailbox,
+    MessageType,
+    broadcast,
+    reply,
+    send,
+)
 from talk_box.compliance import (
     export_html,
     export_json,
@@ -335,6 +343,13 @@ __all__ = [
     "approve",
     "reject",
     "revise",
+    # Agent communication
+    "AgentMessage",
+    "MessageType",
+    "Mailbox",
+    "send",
+    "broadcast",
+    "reply",
     # Persona system
     "PersonaDefinition",
     "get_persona",
