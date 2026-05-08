@@ -36,6 +36,12 @@ from talk_box.compliance import (
     export_html,
     export_json,
 )
+from talk_box.confusion import (
+    ConfusionReport,
+    ConfusionScore,
+    confusion,
+    node_confusion,
+)
 from talk_box.connectors import (
     AppleNotes,
     Connector,
@@ -491,6 +497,11 @@ __all__ = [
     "FilterResult",
     "filter_for_persona",
     "retrieve_context",
+    # Confusion metric
+    "ConfusionScore",
+    "ConfusionReport",
+    "confusion",
+    "node_confusion",
     # Persona system
     "PersonaDefinition",
     "get_persona",
