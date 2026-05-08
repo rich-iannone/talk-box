@@ -304,6 +304,20 @@ reference:
       - CascadeResult
       - CascadeRound
 
+  - title: Memory Tiers
+    desc: Working, short-term, and long-term memory for conversations.
+    contents:
+      - MemoryStore
+      - MemoryStore.remember
+      - MemoryStore.recall
+      - MemoryStore.forget
+      - MemoryStore.search
+      - WorkingMemory
+      - ShortTermMemory
+      - LongTermMemory
+      - MemoryEntry
+      - MemoryTier
+
 # Site Settings
 site:
   theme: flatly

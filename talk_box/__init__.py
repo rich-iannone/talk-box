@@ -69,6 +69,14 @@ from talk_box.guardrails import (
     resolve_guards,
     tone_check,
 )
+from talk_box.memory import (
+    LongTermMemory,
+    MemoryEntry,
+    MemoryStore,
+    MemoryTier,
+    ShortTermMemory,
+    WorkingMemory,
+)
 from talk_box.models import (
     CostTier,
     ModelProfile,
@@ -225,6 +233,13 @@ __all__ = [
     "CascadeRound",
     "cascade",
     "estimate_confidence",
+    # Memory tiers
+    "LongTermMemory",
+    "MemoryEntry",
+    "MemoryStore",
+    "MemoryTier",
+    "ShortTermMemory",
+    "WorkingMemory",
     # Persona system
     "PersonaDefinition",
     "get_persona",
