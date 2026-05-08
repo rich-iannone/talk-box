@@ -296,6 +296,14 @@ reference:
       - ModelResponse
       - Disagreement
 
+  - title: Cascade Consensus
+    desc: Start with one model, fan out to additional models when confidence is low.
+    contents:
+      - cascade
+      - estimate_confidence
+      - CascadeResult
+      - CascadeRound
+
 # Site Settings
 site:
   theme: flatly

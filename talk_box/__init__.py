@@ -12,6 +12,12 @@ __email__ = "riannone@me.com"
 from talk_box.attachments import AttachmentMetadata, Attachments
 from talk_box.builder import BuilderTypes, ChatBot
 from talk_box.builtin_tools import get_builtin_tool, load_selected_tools, load_tool_box
+from talk_box.cascade import (
+    CascadeResult,
+    CascadeRound,
+    cascade,
+    estimate_confidence,
+)
 from talk_box.consensus import (
     ConsensusResult,
     ConsensusStrategy,
@@ -214,6 +220,11 @@ __all__ = [
     "ModelResponse",
     "consensus",
     "find_disagreements",
+    # Cascade consensus
+    "CascadeResult",
+    "CascadeRound",
+    "cascade",
+    "estimate_confidence",
     # Persona system
     "PersonaDefinition",
     "get_persona",
