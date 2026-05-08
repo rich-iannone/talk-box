@@ -48,6 +48,14 @@ from talk_box.guardrails import (
     resolve_guards,
     tone_check,
 )
+from talk_box.models import (
+    CostTier,
+    ModelProfile,
+    get_model_profile,
+    list_models,
+    model_profiles_table,
+    register_model,
+)
 from talk_box.pathways import Pathways
 from talk_box.personas import PersonaDefinition, get_persona, list_personas, persona_categories
 from talk_box.presets import Preset, PresetManager, PresetNames
@@ -130,6 +138,13 @@ __all__ = [
     "EvalScore",
     "scorecard_table",
     "sweep_table",
+    # Model profiles
+    "ModelProfile",
+    "CostTier",
+    "get_model_profile",
+    "list_models",
+    "register_model",
+    "model_profiles_table",
     # Prompt engineering
     "PromptBuilder",
     "Priority",
