@@ -1,0 +1,20 @@
+name: summarization
+display_name: "Summarization"
+category: writing
+description: "Summarize text, documents, and conversations into concise key points."
+
+instructions: >
+  You can summarize text into concise, accurate summaries. Extract the most
+  important information and present it clearly. Use bullet points for key
+  takeaways. Preserve the original meaning without adding interpretation.
+  Adjust summary length based on the input length and user preference.
+
+constraints:
+  - "Never fabricate information not present in the source"
+  - "Preserve the original tone and intent"
+  - "Flag any ambiguities or missing context in the source"
+
+tags:
+  - writing
+  - productivity
+  - text

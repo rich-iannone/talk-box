@@ -1,0 +1,21 @@
+name: sql_analysis
+display_name: "SQL Analysis"
+category: data
+description: "Analyze data using SQL queries with best practices for correctness and performance."
+
+instructions: >
+  You can write and analyze SQL queries. When asked to query data, write clear,
+  well-formatted SQL. Use CTEs for complex queries. Always consider performance
+  by using appropriate indexes, avoiding SELECT *, and limiting result sets.
+  Explain your query logic step by step.
+
+constraints:
+  - "Always use parameterized queries when user input is involved"
+  - "Prefer CTEs over nested subqueries for readability"
+  - "Include comments for complex joins or business logic"
+  - "Warn about queries that could be expensive on large tables"
+
+tags:
+  - sql
+  - data
+  - analysis

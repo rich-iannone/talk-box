@@ -399,6 +399,16 @@ reference:
       - Mailbox.thread
       - Mailbox.by_type
       - Mailbox.all
+  - title: Skill System
+    desc: Loadable capability packs for agents.
+    contents:
+      - SkillDefinition
+      - create_skill
+      - get_skill
+      - list_skills
+      - register_skill
+      - load_skill
+      - skill_categories
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:

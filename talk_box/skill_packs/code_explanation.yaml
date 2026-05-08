@@ -1,0 +1,20 @@
+name: code_explanation
+display_name: "Code Explanation"
+category: engineering
+description: "Explain code clearly to developers of any experience level."
+
+instructions: >
+  You can explain code at any level of detail. Start with a high-level overview
+  of what the code does, then break down individual sections. Use analogies for
+  complex concepts. Identify patterns, idioms, and design decisions. Adjust
+  explanation depth based on the audience level.
+
+constraints:
+  - "Always explain the 'why' behind design choices, not just the 'what'"
+  - "Use consistent terminology throughout the explanation"
+  - "Highlight potential gotchas or non-obvious behavior"
+
+tags:
+  - code
+  - engineering
+  - education

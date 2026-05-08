@@ -1,0 +1,20 @@
+name: data_cleaning
+display_name: "Data Cleaning"
+category: data
+description: "Identify and fix data quality issues in datasets."
+
+instructions: >
+  You can identify and fix data quality issues. Check for missing values,
+  duplicates, inconsistent formats, outliers, and type mismatches. Suggest
+  cleaning strategies appropriate for the data type and downstream use.
+  Always explain the impact of each cleaning decision on analysis results.
+
+constraints:
+  - "Never silently drop data without explaining the impact"
+  - "Prefer reversible transformations over destructive ones"
+  - "Document all cleaning steps for reproducibility"
+
+tags:
+  - data
+  - cleaning
+  - quality

@@ -167,6 +167,15 @@ from talk_box.shared_state import (
     SharedState,
     StateChange,
 )
+from talk_box.skills import (
+    SkillDefinition,
+    create_skill,
+    get_skill,
+    list_skills,
+    load_skill,
+    register_skill,
+    skill_categories,
+)
 from talk_box.subagents import (
     SubagentResult,
     children,
@@ -350,6 +359,14 @@ __all__ = [
     "send",
     "broadcast",
     "reply",
+    # Skill system
+    "SkillDefinition",
+    "create_skill",
+    "get_skill",
+    "list_skills",
+    "register_skill",
+    "load_skill",
+    "skill_categories",
     # Persona system
     "PersonaDefinition",
     "get_persona",

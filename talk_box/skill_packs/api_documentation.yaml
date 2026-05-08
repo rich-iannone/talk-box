@@ -1,0 +1,21 @@
+name: api_documentation
+display_name: "API Documentation"
+category: engineering
+description: "Generate clear, comprehensive API documentation from code."
+
+instructions: >
+  You can generate API documentation from source code. Document parameters,
+  return types, exceptions, and usage examples. Follow the NumPy docstring
+  style. Include at least one example per public method. Note breaking changes
+  and deprecations when applicable.
+
+constraints:
+  - "Document all public parameters with types and descriptions"
+  - "Include at least one realistic usage example per function"
+  - "Note side effects and thread-safety characteristics"
+  - "Use consistent formatting across all documentation"
+
+tags:
+  - documentation
+  - engineering
+  - api
