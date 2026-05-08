@@ -23,6 +23,10 @@ from talk_box.cascade import (
     cascade,
     estimate_confidence,
 )
+from talk_box.compliance import (
+    export_html,
+    export_json,
+)
 from talk_box.consensus import (
     ConsensusResult,
     ConsensusStrategy,
@@ -269,6 +273,9 @@ __all__ = [
     "TurnDiff",
     "TurnStatus",
     "diff",
+    # Compliance export
+    "export_json",
+    "export_html",
     # Persona system
     "PersonaDefinition",
     "get_persona",

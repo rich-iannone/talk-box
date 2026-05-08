@@ -366,6 +366,11 @@ reference:
       - DiffResult.summary
       - TurnDiff
       - TurnStatus
+  - title: Compliance Export
+    desc: Export conversation transcripts as auditable JSON or HTML files.
+    contents:
+      - export_json
+      - export_html
 
 # Site Settings
 site:
