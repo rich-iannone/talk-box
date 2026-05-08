@@ -246,6 +246,14 @@ reference:
       - register_model
       - model_profiles_table
 
+  - title: Ollama Detection
+    desc: Auto-detect local Ollama instances and register available models.
+    contents:
+      - OllamaStatus
+      - detect_ollama
+      - list_ollama_models
+      - sync_ollama_models
+
 # Site Settings
 site:
   theme: flatly

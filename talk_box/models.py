@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -645,3 +648,278 @@ def model_profiles_table() -> "gt.GT":
     )
 
     return table
+
+
+# ---------------------------------------------------------------------------
+# Ollama detection & setup
+# ---------------------------------------------------------------------------
+
+_OLLAMA_DEFAULT_URL = "http://localhost:11434"
+
+
+@dataclass
+class OllamaStatus:
+    """Status of the local Ollama instance.
+
+    Parameters
+    ----------
+    available
+        Whether Ollama is reachable.
+    url
+        The base URL that was checked.
+    version
+        Ollama server version string, if available.
+    models
+        List of model names currently pulled/available.
+    error
+        Error message if Ollama is not reachable.
+    """
+
+    available: bool
+    url: str
+    version: str = ""
+    models: list[str] | None = None
+    error: str = ""
+
+
+def detect_ollama(url: str | None = None, *, timeout: float = 2.0) -> OllamaStatus:
+    """Detect whether a local Ollama instance is running.
+
+    Pings the Ollama HTTP API and returns connection status, server version,
+    and the list of available models.
+
+    Parameters
+    ----------
+    url
+        Base URL for the Ollama API. Defaults to `http://localhost:11434`. Can also be set via the
+        `OLLAMA_HOST` environment variable.
+    timeout
+        Connection timeout in seconds.
+
+    Returns
+    -------
+    OllamaStatus
+        Status object with availability, version, and model list.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    status = tb.detect_ollama()
+    if status.available:
+        print(f"Ollama {status.version} running with {len(status.models)} models")
+        for model in status.models:
+            print(f"  - {model}")
+    else:
+        print(f"Ollama not available: {status.error}")
+    ```
+    """
+    import os
+
+    base_url = url or os.environ.get("OLLAMA_HOST", _OLLAMA_DEFAULT_URL)
+    base_url = base_url.rstrip("/")
+
+    # Check server is reachable
+    try:
+        req = urllib.request.Request(f"{base_url}/api/version", method="GET")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            version = data.get("version", "")
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        return OllamaStatus(
+            available=False,
+            url=base_url,
+            error=str(e),
+        )
+
+    # List available models
+    models: list[str] = []
+    try:
+        req = urllib.request.Request(f"{base_url}/api/tags", method="GET")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            for m in data.get("models", []):
+                name = m.get("name", "")
+                if name:
+                    models.append(name)
+    except (urllib.error.URLError, OSError, TimeoutError):
+        pass  # Server is up but /api/tags failed — still report as available
+
+    return OllamaStatus(
+        available=True,
+        url=base_url,
+        version=version,
+        models=sorted(models),
+    )
+
+
+def _parse_ollama_model_details(model_info: dict[str, Any]) -> dict[str, Any]:
+    """Extract capability hints from Ollama model metadata."""
+    details = model_info.get("details") or {}
+    families = details.get("families") or []
+    parameter_size = details.get("parameter_size") or ""
+
+    # Heuristic: determine vision support from family tags
+    supports_vision = any("vision" in f.lower() for f in families)
+
+    # Heuristic: determine tool support (most recent models support it)
+    # Ollama models generally support tools if they're instruct-tuned
+    family = details.get("family") or ""
+    supports_tools = family in (
+        "llama",
+        "qwen2",
+        "gemma",
+        "gemma2",
+        "gemma3",
+        "mistral",
+        "command-r",
+        "phi3",
+        "phi4",
+    )
+
+    # Context window from model info (not always available from /api/tags)
+    # We'll use a conservative default for unknown models
+    context_window = 8_192  # conservative default
+
+    # Known model family context windows
+    context_hints = {
+        "llama": 128_000,
+        "qwen2": 32_768,
+        "gemma": 8_192,
+        "gemma2": 8_192,
+        "gemma3": 128_000,
+        "mistral": 32_768,
+        "command-r": 128_000,
+        "phi3": 128_000,
+        "phi4": 16_384,
+    }
+    if family in context_hints:
+        context_window = context_hints[family]
+
+    return {
+        "supports_vision": supports_vision,
+        "supports_tools": supports_tools,
+        "context_window": context_window,
+        "parameter_size": parameter_size,
+    }
+
+
+def list_ollama_models(
+    url: str | None = None,
+    *,
+    timeout: float = 5.0,
+) -> list[ModelProfile]:
+    """Query Ollama for available models and return their profiles.
+
+    Connects to the Ollama API, retrieves the list of pulled models with their metadata, and returns
+    `ModelProfile` instances for each.
+
+    Parameters
+    ----------
+    url
+        Base URL for the Ollama API. Defaults to `http://localhost:11434` or the `OLLAMA_HOST`
+        environment variable.
+    timeout
+        Connection timeout in seconds.
+
+    Returns
+    -------
+    list[ModelProfile]
+        A profile for each model available in Ollama. Returns an empty list if Ollama is not
+        reachable.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    models = tb.list_ollama_models()
+    for m in models:
+        print(f"{m.model}: {m.context_window:,} tokens, tools={m.supports_tools}")
+    ```
+    """
+    import os
+
+    base_url = url or os.environ.get("OLLAMA_HOST", _OLLAMA_DEFAULT_URL)
+    base_url = base_url.rstrip("/")
+
+    try:
+        req = urllib.request.Request(f"{base_url}/api/tags", method="GET")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, TimeoutError):
+        return []
+
+    profiles: list[ModelProfile] = []
+    for model_info in data.get("models", []):
+        name = model_info.get("name", "")
+        if not name:
+            continue
+
+        # Strip :latest tag for cleaner naming
+        display = name.removesuffix(":latest")
+
+        caps = _parse_ollama_model_details(model_info)
+
+        profile = ModelProfile(
+            provider="ollama",
+            model=name,
+            display_name=f"{display} (Ollama)",
+            context_window=caps["context_window"],
+            max_output_tokens=None,
+            supports_tools=caps["supports_tools"],
+            supports_vision=caps["supports_vision"],
+            supports_structured_output=True,  # Ollama supports JSON mode
+            supports_streaming=True,
+            cost_tier=CostTier.FREE,
+            notes=f"Local model; {caps['parameter_size']}"
+            if caps["parameter_size"]
+            else "Local model",
+        )
+        profiles.append(profile)
+
+    profiles.sort(key=lambda p: p.model)
+    return profiles
+
+
+def sync_ollama_models(
+    url: str | None = None,
+    *,
+    timeout: float = 5.0,
+) -> list[ModelProfile]:
+    """Detect Ollama models and register them in the profile registry.
+
+    Combines `list_ollama_models()` with `register_model()`, and discovered models are added to the
+    global registry so they appear in `list_models(provider="ollama")`, `get_model_profile()`, and
+    `model_profiles_table()`.
+
+    Parameters
+    ----------
+    url
+        Base URL for the Ollama API.
+    timeout
+        Connection timeout in seconds.
+
+    Returns
+    -------
+    list[ModelProfile]
+        The profiles that were registered. Empty if Ollama is unreachable.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    # Sync local models into the registry
+    new_models = tb.sync_ollama_models()
+    print(f"Registered {len(new_models)} Ollama models")
+
+    # Now they're queryable
+    tb.list_models(provider="ollama")
+    ```
+    """
+    profiles = list_ollama_models(url=url, timeout=timeout)
+    for p in profiles:
+        _PROFILES[p.key] = p
+    return profiles
