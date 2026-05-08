@@ -79,6 +79,11 @@ from talk_box.prompt_builder import (
     code_review_prompt,
     debugging_prompt,
 )
+from talk_box.prompt_optimizer import (
+    OptimizationLevel,
+    OptimizeResult,
+    optimize_prompt,
+)
 from talk_box.testing import (
     PathwayTestResults,
     TestResults,
@@ -175,6 +180,10 @@ __all__ = [
     "architectural_analysis_prompt",
     "code_review_prompt",
     "debugging_prompt",
+    # Prompt optimization
+    "OptimizationLevel",
+    "OptimizeResult",
+    "optimize_prompt",
     # Persona system
     "PersonaDefinition",
     "get_persona",
