@@ -111,6 +111,11 @@ from talk_box.prompt_optimizer import (
     OptimizeResult,
     optimize_prompt,
 )
+from talk_box.replay import (
+    ReplayResult,
+    ReplayTurn,
+    replay,
+)
 from talk_box.routing import (
     Router,
     RoutingResult,
@@ -249,6 +254,10 @@ __all__ = [
     "ConversationCapture",
     "CaptureEvent",
     "EventType",
+    # Replay mode
+    "ReplayResult",
+    "ReplayTurn",
+    "replay",
     # Persona system
     "PersonaDefinition",
     "get_persona",

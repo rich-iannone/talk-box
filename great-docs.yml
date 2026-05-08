@@ -344,6 +344,13 @@ reference:
       - CaptureEvent.to_dict
       - CaptureEvent.from_dict
       - EventType
+  - title: Replay Mode
+    desc: Re-run captured conversations against different models or prompts.
+    contents:
+      - replay
+      - ReplayResult
+      - ReplayResult.turn_count
+      - ReplayTurn
 
 # Site Settings
 site:
