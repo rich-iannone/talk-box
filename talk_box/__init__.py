@@ -149,6 +149,13 @@ from talk_box.shared_state import (
     SharedState,
     StateChange,
 )
+from talk_box.subagents import (
+    SubagentResult,
+    children,
+    delegate,
+    parent_name,
+    spawn,
+)
 from talk_box.testing import (
     PathwayTestResults,
     TestResults,
@@ -303,6 +310,12 @@ __all__ = [
     # Shared state
     "SharedState",
     "StateChange",
+    # Subagent spawning
+    "SubagentResult",
+    "spawn",
+    "delegate",
+    "children",
+    "parent_name",
     # Persona system
     "PersonaDefinition",
     "get_persona",

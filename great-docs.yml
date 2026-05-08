@@ -359,6 +359,14 @@ reference:
       - SharedState.clear
       - SharedState.history
       - StateChange
+  - title: Subagent Spawning
+    desc: Spawn child agents and delegate tasks with structured results.
+    contents:
+      - spawn
+      - delegate
+      - children
+      - parent_name
+      - SubagentResult
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:
