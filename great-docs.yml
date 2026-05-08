@@ -351,6 +351,21 @@ reference:
       - ReplayResult
       - ReplayResult.turn_count
       - ReplayTurn
+  - title: Conversation Diff
+    desc: Compare two captures or replay sessions side by side.
+    contents:
+      - diff
+      - DiffResult
+      - DiffResult.turn_count
+      - DiffResult.identical_count
+      - DiffResult.similar_count
+      - DiffResult.changed_count
+      - DiffResult.added_count
+      - DiffResult.removed_count
+      - DiffResult.similarity_score
+      - DiffResult.summary
+      - TurnDiff
+      - TurnStatus
 
 # Site Settings
 site:

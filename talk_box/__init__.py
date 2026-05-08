@@ -44,6 +44,12 @@ from talk_box.conversation import (
     ToolEnabledConversation,
     create_tool_conversation,
 )
+from talk_box.diff import (
+    DiffResult,
+    TurnDiff,
+    TurnStatus,
+    diff,
+)
 from talk_box.eval import (
     EvalCase,
     EvalDimension,
@@ -258,6 +264,11 @@ __all__ = [
     "ReplayResult",
     "ReplayTurn",
     "replay",
+    # Conversation diff
+    "DiffResult",
+    "TurnDiff",
+    "TurnStatus",
+    "diff",
     # Persona system
     "PersonaDefinition",
     "get_persona",
