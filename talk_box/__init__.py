@@ -118,6 +118,12 @@ from talk_box.forgetting import (
     forget_after_resolution,
     retain_only,
 )
+from talk_box.freshness import (
+    FreshnessEntry,
+    FreshnessReport,
+    FreshnessStatus,
+    freshness_report,
+)
 from talk_box.gap_detection import (
     Gap,
     GapReport,
@@ -513,6 +519,11 @@ __all__ = [
     "Gap",
     "GapReport",
     "detect_gaps",
+    # Freshness reporting
+    "FreshnessStatus",
+    "FreshnessEntry",
+    "FreshnessReport",
+    "freshness_report",
     # Persona system
     "PersonaDefinition",
     "get_persona",

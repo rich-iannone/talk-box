@@ -556,6 +556,26 @@ reference:
       - GapReport.suggestions
       - GapReport.to_dict
       - detect_gaps
+  - title: Freshness Reporting
+    desc: Knowledge graph hygiene based on node age and update recency.
+    contents:
+      - FreshnessStatus
+      - FreshnessEntry
+      - FreshnessReport
+      - FreshnessReport.total
+      - FreshnessReport.fresh_count
+      - FreshnessReport.aging_count
+      - FreshnessReport.stale_count
+      - FreshnessReport.unknown_count
+      - FreshnessReport.coverage
+      - FreshnessReport.mean_age_days
+      - FreshnessReport.max_age_days
+      - FreshnessReport.stale_entries
+      - FreshnessReport.fresh_entries
+      - FreshnessReport.by_type
+      - FreshnessReport.by_status
+      - FreshnessReport.to_dict
+      - freshness_report
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:
