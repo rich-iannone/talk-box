@@ -493,6 +493,26 @@ reference:
       - PipelineResult.total
       - EnrichmentConfig
       - regex_enricher
+  - title: User Directives
+    desc: Parse @context, @relates-to, @confidential, and @expires annotations from document text.
+    contents:
+      - ContextDirective
+      - RelatesToDirective
+      - ConfidentialDirective
+      - ExpiresDirective
+      - ExpiresDirective.is_expired
+      - ParsedDirectives
+      - ParsedDirectives.is_confidential
+      - ParsedDirectives.is_expired
+      - ParsedDirectives.context_values
+      - ParsedDirectives.relates_to_targets
+      - ParsedDirectives.directive_count
+      - ParsedDirectives.all_directives
+      - ParsedDirectives.to_metadata
+      - ApplyResult
+      - parse_directives
+      - strip_directives
+      - apply_directives
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:

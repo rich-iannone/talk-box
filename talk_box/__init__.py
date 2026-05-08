@@ -73,6 +73,17 @@ from talk_box.diff import (
     TurnStatus,
     diff,
 )
+from talk_box.directives import (
+    ApplyResult,
+    ConfidentialDirective,
+    ContextDirective,
+    ExpiresDirective,
+    ParsedDirectives,
+    RelatesToDirective,
+    apply_directives,
+    parse_directives,
+    strip_directives,
+)
 from talk_box.enrichment import (
     EnrichmentConfig,
     EnrichmentPipeline,
@@ -459,6 +470,16 @@ __all__ = [
     "ExtractedRelationship",
     "PipelineResult",
     "regex_enricher",
+    # Directives
+    "ContextDirective",
+    "RelatesToDirective",
+    "ConfidentialDirective",
+    "ExpiresDirective",
+    "ParsedDirectives",
+    "ApplyResult",
+    "parse_directives",
+    "strip_directives",
+    "apply_directives",
     # Persona system
     "PersonaDefinition",
     "get_persona",
