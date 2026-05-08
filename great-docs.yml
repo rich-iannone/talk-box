@@ -254,6 +254,20 @@ reference:
       - list_ollama_models
       - sync_ollama_models
 
+  - title: Context Window Management
+    desc: Token-aware fitting of prompts and messages within model context limits.
+    contents:
+      - ContextWindow
+      - ContextWindow.fit_messages
+      - ContextWindow.fit_prompt
+      - ContextWindow.count_tokens
+      - ContextWindow.fits
+      - ContextWindow.overflow
+      - FitResult
+      - PromptFitResult
+      - FitStrategy
+      - estimate_tokens
+
 # Site Settings
 site:
   theme: flatly

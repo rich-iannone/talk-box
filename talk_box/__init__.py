@@ -12,6 +12,13 @@ __email__ = "riannone@me.com"
 from talk_box.attachments import AttachmentMetadata, Attachments
 from talk_box.builder import BuilderTypes, ChatBot
 from talk_box.builtin_tools import get_builtin_tool, load_selected_tools, load_tool_box
+from talk_box.context_window import (
+    ContextWindow,
+    FitResult,
+    FitStrategy,
+    PromptFitResult,
+    estimate_tokens,
+)
 from talk_box.conversation import (
     Conversation,
     Message,
@@ -130,6 +137,12 @@ __all__ = [
     "no_pii",
     "resolve_guards",
     "tone_check",
+    # Context window management
+    "ContextWindow",
+    "FitResult",
+    "FitStrategy",
+    "PromptFitResult",
+    "estimate_tokens",
     # Evaluation
     "eval",
     "eval_model_update",
