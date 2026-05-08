@@ -542,6 +542,20 @@ reference:
       - ConfusionReport.to_dict
       - confusion
       - node_confusion
+  - title: Gap Detection
+    desc: Find structural holes in a knowledge graph and suggest fixes.
+    contents:
+      - GapType
+      - Gap
+      - GapReport
+      - GapReport.total
+      - GapReport.severity_score
+      - GapReport.orphan_count
+      - GapReport.stale_count
+      - GapReport.by_type
+      - GapReport.suggestions
+      - GapReport.to_dict
+      - detect_gaps
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:

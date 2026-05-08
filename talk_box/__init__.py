@@ -118,6 +118,12 @@ from talk_box.forgetting import (
     forget_after_resolution,
     retain_only,
 )
+from talk_box.gap_detection import (
+    Gap,
+    GapReport,
+    GapType,
+    detect_gaps,
+)
 from talk_box.guardrails import (
     Guard,
     GuardAction,
@@ -502,6 +508,11 @@ __all__ = [
     "ConfusionReport",
     "confusion",
     "node_confusion",
+    # Gap detection
+    "GapType",
+    "Gap",
+    "GapReport",
+    "detect_gaps",
     # Persona system
     "PersonaDefinition",
     "get_persona",
