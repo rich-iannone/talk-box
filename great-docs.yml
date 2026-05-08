@@ -465,6 +465,19 @@ reference:
       - Edge
       - NodeType
       - cosine_similarity
+  - title: KG Visualization
+    desc: Render knowledge graphs as Mermaid diagrams or interactive HTML pages.
+    contents:
+      - VisNode
+      - VisEdge
+      - VisGraph
+      - VisGraph.node_count
+      - VisGraph.edge_count
+      - VisGraph.to_dict
+      - prepare_vis_graph
+      - to_mermaid
+      - to_html
+      - visualize
   - title: Connectors
     desc: Ingest documents from files, directories, and Apple Notes into the knowledge graph.
     contents:

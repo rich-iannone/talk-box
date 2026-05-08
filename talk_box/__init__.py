@@ -170,6 +170,15 @@ from talk_box.hitl import (
     reject,
     revise,
 )
+from talk_box.kg_visualization import (
+    VisEdge,
+    VisGraph,
+    VisNode,
+    prepare_vis_graph,
+    to_html,
+    to_mermaid,
+    visualize,
+)
 from talk_box.knowledge_filter import (
     FilterResult,
     KnowledgeFilter,
@@ -490,6 +499,14 @@ __all__ = [
     "Edge",
     "NodeType",
     "cosine_similarity",
+    # KG visualization
+    "VisNode",
+    "VisEdge",
+    "VisGraph",
+    "prepare_vis_graph",
+    "to_mermaid",
+    "to_html",
+    "visualize",
     # Connectors
     "Connector",
     "Document",
