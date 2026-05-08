@@ -91,6 +91,16 @@ from talk_box.guardrails import (
     resolve_guards,
     tone_check,
 )
+from talk_box.hitl import (
+    HumanReview,
+    ReviewDecision,
+    ReviewQueue,
+    ReviewStatus,
+    approve,
+    human_review,
+    reject,
+    revise,
+)
 from talk_box.memory import (
     LongTermMemory,
     MemoryEntry,
@@ -316,6 +326,15 @@ __all__ = [
     "delegate",
     "children",
     "parent_name",
+    # Human-in-the-loop
+    "HumanReview",
+    "ReviewDecision",
+    "ReviewStatus",
+    "ReviewQueue",
+    "human_review",
+    "approve",
+    "reject",
+    "revise",
     # Persona system
     "PersonaDefinition",
     "get_persona",

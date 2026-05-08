@@ -367,6 +367,23 @@ reference:
       - children
       - parent_name
       - SubagentResult
+  - title: Human-in-the-Loop
+    desc: Pause agent workflows for human review, approval, or revision.
+    contents:
+      - human_review
+      - approve
+      - reject
+      - revise
+      - HumanReview
+      - HumanReview.status
+      - HumanReview.decision
+      - HumanReview.is_pending
+      - HumanReview.is_resolved
+      - HumanReview.is_approved
+      - HumanReview.final_content
+      - ReviewDecision
+      - ReviewStatus
+      - ReviewQueue
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:
