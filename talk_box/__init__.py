@@ -139,6 +139,12 @@ from talk_box.hitl import (
     reject,
     revise,
 )
+from talk_box.knowledge_filter import (
+    FilterResult,
+    KnowledgeFilter,
+    filter_for_persona,
+    retrieve_context,
+)
 from talk_box.knowledge_graph import (
     Edge,
     KnowledgeGraph,
@@ -480,6 +486,11 @@ __all__ = [
     "parse_directives",
     "strip_directives",
     "apply_directives",
+    # Knowledge filtering
+    "KnowledgeFilter",
+    "FilterResult",
+    "filter_for_persona",
+    "retrieve_context",
     # Persona system
     "PersonaDefinition",
     "get_persona",

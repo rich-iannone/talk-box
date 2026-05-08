@@ -513,6 +513,20 @@ reference:
       - parse_directives
       - strip_directives
       - apply_directives
+  - title: Knowledge Filtering
+    desc: Per-persona knowledge graph filtering by topic, tag, type, and directives.
+    contents:
+      - KnowledgeFilter
+      - KnowledgeFilter.apply
+      - KnowledgeFilter.search
+      - KnowledgeFilter.is_empty
+      - KnowledgeFilter.rule_count
+      - FilterResult
+      - FilterResult.total
+      - FilterResult.node_ids
+      - FilterResult.node_names
+      - filter_for_persona
+      - retrieve_context
   - title: Conversation Capture
     desc: Record prompts, responses, tool calls, and events during a conversation.
     contents:
