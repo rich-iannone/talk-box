@@ -317,6 +317,33 @@ reference:
       - LongTermMemory
       - MemoryEntry
       - MemoryTier
+  - title: Conversation Capture
+    desc: Record prompts, responses, tool calls, and events during a conversation.
+    contents:
+      - ConversationCapture
+      - ConversationCapture.record
+      - ConversationCapture.record_prompt
+      - ConversationCapture.record_response
+      - ConversationCapture.record_tool_call
+      - ConversationCapture.record_tool_result
+      - ConversationCapture.record_guard_check
+      - ConversationCapture.record_pathway_transition
+      - ConversationCapture.record_error
+      - ConversationCapture.filter
+      - ConversationCapture.prompts
+      - ConversationCapture.responses
+      - ConversationCapture.tool_calls
+      - ConversationCapture.tool_results
+      - ConversationCapture.errors
+      - ConversationCapture.turns
+      - ConversationCapture.to_dict
+      - ConversationCapture.from_dict
+      - ConversationCapture.to_json
+      - ConversationCapture.from_json
+      - CaptureEvent
+      - CaptureEvent.to_dict
+      - CaptureEvent.from_dict
+      - EventType
 
 # Site Settings
 site:
