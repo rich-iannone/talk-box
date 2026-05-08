@@ -109,6 +109,14 @@ from talk_box.hitl import (
     reject,
     revise,
 )
+from talk_box.mcp_bridge import (
+    MCPBridgeServer,
+    MCPToolInfo,
+    discover_mcp_tools,
+    list_mcp_tools,
+    mcp_tool_to_talk_box,
+    tools_to_mcp_server,
+)
 from talk_box.memory import (
     LongTermMemory,
     MemoryEntry,
@@ -395,6 +403,13 @@ __all__ = [
     "register_trait",
     "load_trait",
     "trait_categories",
+    # MCP bridge
+    "MCPToolInfo",
+    "MCPBridgeServer",
+    "tools_to_mcp_server",
+    "mcp_tool_to_talk_box",
+    "list_mcp_tools",
+    "discover_mcp_tools",
     # Persona system
     "PersonaDefinition",
     "get_persona",
