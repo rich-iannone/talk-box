@@ -450,7 +450,6 @@ reference:
         members: false
       - TalkBoxConfig.resolve
       - TalkBoxConfig.to_dict
-      - TalkBoxConfig.from_dict
       - TalkBoxConfig.validate_model
       - TalkBoxConfig.is_cloud_model
       - name: ProfileConfig
