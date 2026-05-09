@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import yaml
+from yaml12 import parse_yaml
 
 from talk_box.retention import RetentionPolicy
 
@@ -290,7 +290,7 @@ def _scan_packs() -> None:
 
     for yaml_file in sorted(_PERSONAS_DIR.glob("*.yaml")):
         try:
-            raw = yaml.safe_load(yaml_file.read_text(encoding="utf-8"))
+            raw = parse_yaml(yaml_file.read_text(encoding="utf-8"))
             if raw is None:
                 continue
             persona = _parse_persona(raw)
@@ -390,7 +390,7 @@ def load_persona(path: str | Path) -> PersonaDefinition:
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"Persona file not found: {path}")
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    raw = parse_yaml(path.read_text(encoding="utf-8"))
     return _parse_persona(raw)
 
 
