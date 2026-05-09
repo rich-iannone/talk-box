@@ -442,7 +442,7 @@ reference:
       - cli.info
       - cli.personas
       - cli.models
-      - cli.test
+      - cli.test_cmd
   - title: Configuration
     desc: Layered configuration system with profiles, environment overrides, and CLI flags.
     contents:
