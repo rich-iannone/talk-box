@@ -172,3 +172,66 @@ class TestTest:
         result = _runner().invoke(main, ["test", "code_reviewer"])
         assert result.exit_code != 0
         assert "model" in result.output.lower() or "required" in result.output.lower()
+
+
+# ---------------------------------------------------------------------------
+# TestConfig
+# ---------------------------------------------------------------------------
+
+
+class TestConfig:
+    """Tests for 'talk-box config' commands."""
+
+    def test_config_help(self):
+        result = _runner().invoke(main, ["config", "--help"])
+        assert result.exit_code == 0
+        assert "show" in result.output
+        assert "get" in result.output
+        assert "set" in result.output
+
+    def test_config_show(self):
+        result = _runner().invoke(main, ["config", "show"])
+        assert result.exit_code == 0
+        assert "Configuration" in result.output
+        assert "Model" in result.output
+        assert "Allow Cloud" in result.output
+
+    def test_config_get_allow_cloud(self):
+        result = _runner().invoke(main, ["config", "get", "allow_cloud"])
+        assert result.exit_code == 0
+        assert "True" in result.output
+
+    def test_config_get_unknown_key(self):
+        result = _runner().invoke(main, ["config", "get", "nonexistent_key"])
+        assert result.exit_code == 1
+        assert "Unknown key" in result.output
+
+    def test_config_set_and_get(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = _runner().invoke(main, ["config", "set", "default_model", "ollama:llama3.3"])
+        assert result.exit_code == 0
+        assert "Set" in result.output
+        assert "ollama:llama3.3" in result.output
+
+        result = _runner().invoke(main, ["config", "get", "default_model"])
+        assert result.exit_code == 0
+        assert "ollama:llama3.3" in result.output
+
+    def test_config_set_bool(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = _runner().invoke(main, ["config", "set", "allow_cloud", "false"])
+        assert result.exit_code == 0
+
+    def test_config_set_float(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = _runner().invoke(main, ["config", "set", "temperature", "0.42"])
+        assert result.exit_code == 0
+
+    def test_config_set_invalid_float(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = _runner().invoke(main, ["config", "set", "temperature", "hot"])
+        assert result.exit_code == 1
+
+    def test_config_list_empty(self):
+        result = _runner().invoke(main, ["config", "list"])
+        assert result.exit_code == 0
