@@ -11,7 +11,8 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Center, Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, DataTable, Footer, Header, Input, Static
+from textual.widgets import Button, DataTable, Footer, Header, Input, OptionList, Static
+from textual.widgets.option_list import Option
 from textual.worker import Worker, WorkerState
 
 # ---------------------------------------------------------------------------
@@ -625,22 +626,19 @@ class PersonaScreen(Screen):
         with Horizontal(id="persona-layout"):
             with Vertical(id="persona-list-panel"):
                 yield Static("[b]Personas[/b]", id="persona-list-title")
-                with VerticalScroll(id="persona-list-scroll"):
-                    yield Static(
-                        self._build_persona_list(),
-                        id="persona-list-content",
-                    )
+                yield OptionList(id="persona-list")
             with Vertical(id="persona-detail-panel"):
                 yield Static("[b]Select a persona[/b]", id="persona-detail-title")
-                yield Static(
-                    "[dim]Use the Persona Browser to explore available personas.\n\n"
-                    "Persona selection and detail view coming soon.[/dim]",
-                    id="persona-detail-content",
-                )
+                with VerticalScroll(id="persona-detail-scroll"):
+                    yield Static(
+                        "[dim]Highlight a persona to see its details.[/dim]",
+                        id="persona-detail-content",
+                    )
         yield Footer()
 
-    def _build_persona_list(self) -> str:
-        """Build the categorized persona list."""
+    def on_mount(self) -> None:
+        """Populate the persona option list."""
+        ol = self.query_one("#persona-list", OptionList)
         try:
             from talk_box.personas._loader import get_persona, list_personas
 
@@ -654,14 +652,53 @@ class PersonaScreen(Screen):
                     cat = "other"
                 categories.setdefault(cat, []).append(name)
 
-            lines: list[str] = []
             for cat in sorted(categories):
-                lines.append(f"\n[b]{cat}[/b] ({len(categories[cat])})")
+                ol.add_option(Option(f"── {cat} ──", id=f"__cat_{cat}", disabled=True))
                 for name in sorted(categories[cat]):
-                    lines.append(f"  {name}")
-            return "\n".join(lines) if lines else "[dim]No personas found[/dim]"
+                    ol.add_option(Option(name, id=name))
         except Exception:
-            return "[dim]Could not load personas[/dim]"
+            pass
+
+    def on_option_list_option_highlighted(
+        self, event: OptionList.OptionHighlighted
+    ) -> None:
+        """Show detail for the highlighted persona."""
+        if event.option.id is None or str(event.option.id).startswith("__cat_"):
+            return
+        name = str(event.option.id)
+        try:
+            from talk_box.personas._loader import get_persona
+
+            p = get_persona(name)
+            lines = [
+                f"[b]{p.display_name or p.name}[/b]",
+                f"  Category: {p.category or '—'}",
+                f"  {p.description}" if p.description else "",
+                "",
+                f"  Role:      {p.persona_role}" if p.persona_role else "",
+                f"  Expertise: {p.expertise}" if p.expertise else "",
+                f"  Temp:      {p.temperature}" if p.temperature is not None else "",
+            ]
+            if p.tags:
+                lines.append(f"  Tags:      {', '.join(p.tags)}")
+            if p.tools:
+                lines.append(f"  Tools:     {', '.join(p.tools)}")
+            if p.avoid_topics:
+                lines.append(f"  Avoid:     {', '.join(p.avoid_topics)}")
+            if p.recommended_models:
+                lines.append(f"  Models:    {', '.join(str(m) for m in p.recommended_models)}")
+            if p.default_guards:
+                lines.append(f"  Guards:    {', '.join(str(g) for g in p.default_guards)}")
+            if p.test_queries:
+                lines.append("")
+                lines.append("  [b]Test queries:[/b]")
+                for q in p.test_queries[:5]:
+                    lines.append(f"    • {q}")
+            detail = "\n".join(line for line in lines if line is not None)
+        except Exception:
+            detail = f"[dim]{name}[/dim]"
+        self.query_one("#persona-detail-title", Static).update(f"[b]{name}[/b]")
+        self.query_one("#persona-detail-content", Static).update(detail)
 
 
 # ---------------------------------------------------------------------------
@@ -679,31 +716,66 @@ class TraitScreen(Screen):
         with Horizontal(id="trait-layout"):
             with Vertical(id="trait-list-panel"):
                 yield Static("[b]Traits[/b]", id="trait-list-title")
-                with VerticalScroll(id="trait-list-scroll"):
-                    yield Static("", id="trait-list-content")
+                yield OptionList(id="trait-list")
             with Vertical(id="trait-detail-panel"):
                 yield Static("[b]Trait Details[/b]", id="trait-detail-title")
-                yield Static(
-                    "[dim]Select a trait to see its details.[/dim]",
-                    id="trait-detail-content",
-                )
+                with VerticalScroll(id="trait-detail-scroll"):
+                    yield Static(
+                        "[dim]Highlight a trait to see its details.[/dim]",
+                        id="trait-detail-content",
+                    )
         yield Footer()
 
     def on_mount(self) -> None:
-        """Populate the trait list grouped by category."""
+        """Populate the trait option list."""
+        ol = self.query_one("#trait-list", OptionList)
         try:
             from talk_box.traits import trait_categories
 
             cats = trait_categories()
-            lines: list[str] = []
             for cat, names in cats.items():
-                lines.append(f"\n[b]{cat}[/b] ({len(names)})")
+                ol.add_option(Option(f"── {cat} ──", id=f"__cat_{cat}", disabled=True))
                 for name in names:
-                    lines.append(f"  {name}")
-            text = "\n".join(lines) if lines else "[dim]No traits found[/dim]"
+                    ol.add_option(Option(name, id=name))
         except Exception:
-            text = "[dim]Could not load traits[/dim]"
-        self.query_one("#trait-list-content", Static).update(text)
+            pass
+
+    def on_option_list_option_highlighted(
+        self, event: OptionList.OptionHighlighted
+    ) -> None:
+        """Show detail for the highlighted trait."""
+        if event.option.id is None or str(event.option.id).startswith("__cat_"):
+            return
+        name = str(event.option.id)
+        try:
+            from talk_box.traits import get_trait
+
+            t = get_trait(name)
+            lines = [
+                f"[b]{t.display_name or t.name}[/b]",
+                f"  Category:    {t.category}",
+                f"  {t.description}" if t.description else "",
+            ]
+            if t.constraints:
+                lines.append("")
+                lines.append("  [b]Constraints:[/b]")
+                for c in t.constraints:
+                    lines.append(f"    • {c}")
+            if t.critical_constraints:
+                lines.append("  [b]Critical:[/b]")
+                for c in t.critical_constraints:
+                    lines.append(f"    • {c}")
+            if t.expertise_extra:
+                lines.append(f"  Expertise:   {t.expertise_extra}")
+            if t.tags:
+                lines.append(f"  Tags:        {', '.join(t.tags)}")
+            if t.temperature is not None:
+                lines.append(f"  Temperature: {t.temperature}")
+            detail = "\n".join(line for line in lines if line is not None)
+        except Exception:
+            detail = f"[dim]{name}[/dim]"
+        self.query_one("#trait-detail-title", Static).update(f"[b]{name}[/b]")
+        self.query_one("#trait-detail-content", Static).update(detail)
 
 
 # ---------------------------------------------------------------------------
@@ -914,31 +986,68 @@ class SkillScreen(Screen):
         with Horizontal(id="skill-layout"):
             with Vertical(id="skill-list-panel"):
                 yield Static("[b]Skills[/b]", id="skill-list-title")
-                with VerticalScroll(id="skill-list-scroll"):
-                    yield Static("", id="skill-list-content")
+                yield OptionList(id="skill-list")
             with Vertical(id="skill-detail-panel"):
                 yield Static("[b]Skill Details[/b]", id="skill-detail-title")
-                yield Static(
-                    "[dim]Select a skill to see its details.[/dim]",
-                    id="skill-detail-content",
-                )
+                with VerticalScroll(id="skill-detail-scroll"):
+                    yield Static(
+                        "[dim]Highlight a skill to see its details.[/dim]",
+                        id="skill-detail-content",
+                    )
         yield Footer()
 
     def on_mount(self) -> None:
-        """Populate the skill list grouped by category."""
+        """Populate the skill option list."""
+        ol = self.query_one("#skill-list", OptionList)
         try:
             from talk_box.skills import skill_categories
 
             cats = skill_categories()
-            lines: list[str] = []
             for cat, names in cats.items():
-                lines.append(f"\n[b]{cat}[/b] ({len(names)})")
+                ol.add_option(Option(f"── {cat} ──", id=f"__cat_{cat}", disabled=True))
                 for name in names:
-                    lines.append(f"  {name}")
-            text = "\n".join(lines) if lines else "[dim]No skills found[/dim]"
+                    ol.add_option(Option(name, id=name))
         except Exception:
-            text = "[dim]Could not load skills[/dim]"
-        self.query_one("#skill-list-content", Static).update(text)
+            pass
+
+    def on_option_list_option_highlighted(
+        self, event: OptionList.OptionHighlighted
+    ) -> None:
+        """Show detail for the highlighted skill."""
+        if event.option.id is None or str(event.option.id).startswith("__cat_"):
+            return
+        name = str(event.option.id)
+        try:
+            from talk_box.skills import get_skill
+
+            s = get_skill(name)
+            lines = [
+                f"[b]{s.display_name or s.name}[/b]",
+                f"  Category: {s.category}",
+                f"  {s.description}" if s.description else "",
+            ]
+            if s.instructions:
+                lines.append("")
+                lines.append("  [b]Instructions:[/b]")
+                # Show first 200 chars of instructions
+                preview = s.instructions[:200]
+                if len(s.instructions) > 200:
+                    preview += "…"
+                lines.append(f"    {preview}")
+            if s.constraints:
+                lines.append("")
+                lines.append("  [b]Constraints:[/b]")
+                for c in s.constraints:
+                    lines.append(f"    • {c}")
+            if s.tools:
+                lines.append(f"  Tools: {', '.join(s.tools)}")
+            if s.tags:
+                lines.append(f"  Tags:  {', '.join(s.tags)}")
+            detail = "\n".join(line for line in lines if line is not None)
+        except Exception:
+            detail = f"[dim]{name}[/dim]"
+        self.query_one("#skill-detail-title", Static).update(f"[b]{name}[/b]")
+        self.query_one("#skill-detail-content", Static).update(detail)
 
 
 # ---------------------------------------------------------------------------

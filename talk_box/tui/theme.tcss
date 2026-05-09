@@ -175,7 +175,7 @@ Screen {
     padding: 0 0 1 0;
 }
 
-#persona-list-scroll {
+#persona-list {
     height: 1fr;
 }
 
@@ -187,6 +187,10 @@ Screen {
 #persona-detail-title {
     text-style: bold;
     padding: 0 0 1 0;
+}
+
+#persona-detail-scroll {
+    height: 1fr;
 }
 
 /* -- Command list modal --------------------------------------------------- */
@@ -314,7 +318,7 @@ CommandListScreen {
     padding: 0 0 1 0;
 }
 
-#trait-list-scroll {
+#trait-list {
     height: 1fr;
 }
 
@@ -326,6 +330,10 @@ CommandListScreen {
 #trait-detail-title {
     text-style: bold;
     padding: 0 0 1 0;
+}
+
+#trait-detail-scroll {
+    height: 1fr;
 }
 
 /* -- Pathway screen ------------------------------------------------------- */
@@ -355,7 +363,7 @@ CommandListScreen {
     padding: 0 0 1 0;
 }
 
-#skill-list-scroll {
+#skill-list {
     height: 1fr;
 }
 
@@ -367,6 +375,10 @@ CommandListScreen {
 #skill-detail-title {
     text-style: bold;
     padding: 0 0 1 0;
+}
+
+#skill-detail-scroll {
+    height: 1fr;
 }
 
 /* -- Knowledge Graph screen ----------------------------------------------- */

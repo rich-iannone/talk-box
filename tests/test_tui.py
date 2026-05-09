@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from talk_box.tui.app import SCREEN_NAV, TalkBoxApp
-from textual.widgets import DataTable, Static
+from textual.widgets import DataTable, OptionList, Static
 from talk_box.tui.screens import (
     ChatScreen,
     CommandListScreen,
@@ -485,8 +485,8 @@ class TestPersonaScreen:
             app = pilot.app
             app._switch_to("personas")
             await pilot.pause()
-            content = app.screen.query_one("#persona-list-content")
-            assert content is not None
+            ol = app.screen.query_one("#persona-list", OptionList)
+            assert ol is not None
 
     @pytest.mark.asyncio()
     async def test_persona_has_detail_panel(self, _fake_config):
@@ -498,14 +498,13 @@ class TestPersonaScreen:
             assert detail is not None
 
     @pytest.mark.asyncio()
-    async def test_persona_list_shows_categories(self, _fake_config):
+    async def test_persona_list_has_options(self, _fake_config):
         async with TalkBoxApp().run_test() as pilot:
             app = pilot.app
             app._switch_to("personas")
             await pilot.pause()
-            content = app.screen.query_one("#persona-list-content", Static)
-            # Should not be empty placeholder
-            assert content is not None
+            ol = app.screen.query_one("#persona-list", OptionList)
+            assert ol.option_count > 0
 
 
 class TestProfileScreen:
@@ -582,8 +581,8 @@ class TestTraitScreen:
             app = pilot.app
             app._switch_to("traits")
             await pilot.pause()
-            content = app.screen.query_one("#trait-list-content")
-            assert content is not None
+            ol = app.screen.query_one("#trait-list", OptionList)
+            assert ol is not None
 
     @pytest.mark.asyncio()
     async def test_trait_has_detail_panel(self, _fake_config):
@@ -613,8 +612,8 @@ class TestSkillScreen:
             app = pilot.app
             app._switch_to("skills")
             await pilot.pause()
-            content = app.screen.query_one("#skill-list-content")
-            assert content is not None
+            ol = app.screen.query_one("#skill-list", OptionList)
+            assert ol is not None
 
     @pytest.mark.asyncio()
     async def test_skill_has_detail_panel(self, _fake_config):
