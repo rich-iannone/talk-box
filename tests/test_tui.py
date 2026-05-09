@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from talk_box.tui.app import SCREEN_NAV, TalkBoxApp
+from textual.widgets import DataTable, Static
 from talk_box.tui.screens import (
     ChatScreen,
     CommandListScreen,
@@ -436,4 +437,241 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             info = app.screen.query_one("#chat-sidebar-info")
+            assert info is not None
+
+
+class TestModelScreen:
+    @pytest.mark.asyncio()
+    async def test_model_has_table(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("models")
+            await pilot.pause()
+            table = app.screen.query_one("#model-table")
+            assert table is not None
+
+    @pytest.mark.asyncio()
+    async def test_model_table_has_rows(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("models")
+            await pilot.pause()
+            table = app.screen.query_one("#model-table", DataTable)
+            assert table.row_count > 0
+
+    @pytest.mark.asyncio()
+    async def test_model_table_has_columns(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("models")
+            await pilot.pause()
+            table = app.screen.query_one("#model-table", DataTable)
+            assert len(table.columns) == 6
+
+    @pytest.mark.asyncio()
+    async def test_model_detail_panel_exists(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("models")
+            await pilot.pause()
+            detail = app.screen.query_one("#model-detail")
+            assert detail is not None
+
+
+class TestPersonaScreen:
+    @pytest.mark.asyncio()
+    async def test_persona_has_list(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("personas")
+            await pilot.pause()
+            content = app.screen.query_one("#persona-list-content")
+            assert content is not None
+
+    @pytest.mark.asyncio()
+    async def test_persona_has_detail_panel(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("personas")
+            await pilot.pause()
+            detail = app.screen.query_one("#persona-detail-content")
+            assert detail is not None
+
+    @pytest.mark.asyncio()
+    async def test_persona_list_shows_categories(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("personas")
+            await pilot.pause()
+            content = app.screen.query_one("#persona-list-content", Static)
+            # Should not be empty placeholder
+            assert content is not None
+
+
+class TestProfileScreen:
+    @pytest.mark.asyncio()
+    async def test_profile_has_list_panel(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("profiles")
+            await pilot.pause()
+            content = app.screen.query_one("#profile-list-content")
+            assert content is not None
+
+    @pytest.mark.asyncio()
+    async def test_profile_has_detail_panel(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("profiles")
+            await pilot.pause()
+            detail = app.screen.query_one("#profile-detail-content")
+            assert detail is not None
+
+    @pytest.mark.asyncio()
+    async def test_profile_list_title(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("profiles")
+            await pilot.pause()
+            title = app.screen.query_one("#profile-list-title")
+            assert title is not None
+
+
+class TestGuardrailScreen:
+    @pytest.mark.asyncio()
+    async def test_guard_has_table(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("guardrails")
+            await pilot.pause()
+            table = app.screen.query_one("#guard-table")
+            assert table is not None
+
+    @pytest.mark.asyncio()
+    async def test_guard_table_has_rows(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("guardrails")
+            await pilot.pause()
+            table = app.screen.query_one("#guard-table", DataTable)
+            assert table.row_count == 7
+
+    @pytest.mark.asyncio()
+    async def test_guard_table_has_columns(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("guardrails")
+            await pilot.pause()
+            table = app.screen.query_one("#guard-table", DataTable)
+            assert len(table.columns) == 3
+
+    @pytest.mark.asyncio()
+    async def test_guard_detail_panel_exists(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("guardrails")
+            await pilot.pause()
+            detail = app.screen.query_one("#guard-detail")
+            assert detail is not None
+
+
+class TestTraitScreen:
+    @pytest.mark.asyncio()
+    async def test_trait_has_list(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("traits")
+            await pilot.pause()
+            content = app.screen.query_one("#trait-list-content")
+            assert content is not None
+
+    @pytest.mark.asyncio()
+    async def test_trait_has_detail_panel(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("traits")
+            await pilot.pause()
+            detail = app.screen.query_one("#trait-detail-content")
+            assert detail is not None
+
+
+class TestPathwayScreen:
+    @pytest.mark.asyncio()
+    async def test_pathway_has_info(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("pathways")
+            await pilot.pause()
+            info = app.screen.query_one("#pathway-info")
+            assert info is not None
+
+
+class TestSkillScreen:
+    @pytest.mark.asyncio()
+    async def test_skill_has_list(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("skills")
+            await pilot.pause()
+            content = app.screen.query_one("#skill-list-content")
+            assert content is not None
+
+    @pytest.mark.asyncio()
+    async def test_skill_has_detail_panel(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("skills")
+            await pilot.pause()
+            detail = app.screen.query_one("#skill-detail-content")
+            assert detail is not None
+
+
+class TestKnowledgeScreen:
+    @pytest.mark.asyncio()
+    async def test_knowledge_has_table(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("knowledge")
+            await pilot.pause()
+            table = app.screen.query_one("#kg-table")
+            assert table is not None
+
+    @pytest.mark.asyncio()
+    async def test_knowledge_has_stats(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("knowledge")
+            await pilot.pause()
+            stats = app.screen.query_one("#kg-stats-content")
+            assert stats is not None
+
+
+class TestMemoryScreen:
+    @pytest.mark.asyncio()
+    async def test_memory_has_tiers(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("memory")
+            await pilot.pause()
+            tiers = app.screen.query_one("#memory-tiers")
+            assert tiers is not None
+
+
+class TestEvalScreen:
+    @pytest.mark.asyncio()
+    async def test_eval_has_table(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("eval")
+            await pilot.pause()
+            table = app.screen.query_one("#eval-dim-table", DataTable)
+            assert table.row_count == 6
+
+    @pytest.mark.asyncio()
+    async def test_eval_has_info(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("eval")
+            await pilot.pause()
+            info = app.screen.query_one("#eval-info")
             assert info is not None

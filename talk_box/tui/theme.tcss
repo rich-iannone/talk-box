@@ -135,6 +135,60 @@ Screen {
     text-align: center;
 }
 
+/* -- Model Browser screen ------------------------------------------------- */
+
+#model-layout {
+    padding: 1 2;
+}
+
+#model-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#model-table {
+    height: 1fr;
+    margin: 0 0 1 0;
+}
+
+#model-detail-panel {
+    height: auto;
+    max-height: 12;
+    border: solid $primary;
+    padding: 1 2;
+}
+
+/* -- Persona Browser screen ----------------------------------------------- */
+
+#persona-layout {
+    height: 1fr;
+}
+
+#persona-list-panel {
+    width: 30;
+    border-right: solid $primary;
+    padding: 1 1;
+}
+
+#persona-list-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#persona-list-scroll {
+    height: 1fr;
+}
+
+#persona-detail-panel {
+    width: 1fr;
+    padding: 1 2;
+}
+
+#persona-detail-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
 /* -- Command list modal --------------------------------------------------- */
 
 CommandListScreen {
@@ -187,4 +241,188 @@ CommandListScreen {
 #welcome-skip {
     width: 100%;
     margin: 0 0 1 0;
+}
+
+/* -- Profile Browser screen ----------------------------------------------- */
+
+#profile-layout {
+    height: 1fr;
+}
+
+#profile-list-panel {
+    width: 30;
+    border-right: solid $primary;
+    padding: 1 1;
+}
+
+#profile-list-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#profile-list-scroll {
+    height: 1fr;
+}
+
+#profile-detail-panel {
+    width: 1fr;
+    padding: 1 2;
+}
+
+#profile-detail-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+/* -- Guardrail Browser screen --------------------------------------------- */
+
+#guard-layout {
+    padding: 1 2;
+}
+
+#guard-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#guard-table {
+    height: 1fr;
+    margin: 0 0 1 0;
+}
+
+#guard-detail-panel {
+    height: auto;
+    max-height: 10;
+    border: solid $primary;
+    padding: 1 2;
+}
+
+/* -- Trait Browser screen ------------------------------------------------- */
+
+#trait-layout {
+    height: 1fr;
+}
+
+#trait-list-panel {
+    width: 30;
+    border-right: solid $primary;
+    padding: 1 1;
+}
+
+#trait-list-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#trait-list-scroll {
+    height: 1fr;
+}
+
+#trait-detail-panel {
+    width: 1fr;
+    padding: 1 2;
+}
+
+#trait-detail-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+/* -- Pathway screen ------------------------------------------------------- */
+
+#pathway-layout {
+    padding: 1 2;
+}
+
+#pathway-info {
+    padding: 1 2;
+}
+
+/* -- Skill Browser screen ------------------------------------------------- */
+
+#skill-layout {
+    height: 1fr;
+}
+
+#skill-list-panel {
+    width: 30;
+    border-right: solid $primary;
+    padding: 1 1;
+}
+
+#skill-list-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#skill-list-scroll {
+    height: 1fr;
+}
+
+#skill-detail-panel {
+    width: 1fr;
+    padding: 1 2;
+}
+
+#skill-detail-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+/* -- Knowledge Graph screen ----------------------------------------------- */
+
+#kg-layout {
+    padding: 1 2;
+}
+
+#kg-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#kg-stats {
+    height: auto;
+    padding: 0 0 1 0;
+}
+
+#kg-table {
+    height: 1fr;
+}
+
+/* -- Memory Inspector screen ---------------------------------------------- */
+
+#memory-layout {
+    padding: 1 2;
+}
+
+#memory-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#memory-content {
+    height: 1fr;
+}
+
+/* -- Eval Dashboard screen ------------------------------------------------ */
+
+#eval-layout {
+    padding: 1 2;
+}
+
+#eval-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#eval-dim-table {
+    height: 1fr;
+    margin: 0 0 1 0;
+}
+
+#eval-info-panel {
+    height: auto;
+    max-height: 8;
+    border: solid $primary;
+    padding: 1 2;
 }

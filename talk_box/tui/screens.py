@@ -11,7 +11,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Center, Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, Footer, Header, Input, Static
+from textual.widgets import Button, DataTable, Footer, Header, Input, Static
 from textual.worker import Worker, WorkerState
 
 # ---------------------------------------------------------------------------
@@ -531,15 +531,83 @@ class WorkspaceScreen(Screen):
 
 
 class ProfileScreen(Screen):
-    """Build and manage named profiles (model + persona + guardrails)."""
+    """Browse named profiles (model + persona + guardrails)."""
 
     BINDINGS = []
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Profiles",
-            "Create, edit, and switch named profiles.\n\n[dim]Profile editor coming soon.[/dim]",
-        )
+        yield Header(show_clock=False)
+        with Horizontal(id="profile-layout"):
+            with Vertical(id="profile-list-panel"):
+                yield Static("[b]Profiles[/b]", id="profile-list-title")
+                with VerticalScroll(id="profile-list-scroll"):
+                    yield Static("", id="profile-list-content")
+            with Vertical(id="profile-detail-panel"):
+                yield Static("[b]Profile Details[/b]", id="profile-detail-title")
+                yield Static(
+                    "[dim]Select a profile from the list.[/dim]",
+                    id="profile-detail-content",
+                )
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Populate the profile list."""
+        try:
+            from talk_box.config import list_profiles, load_config
+
+            config = load_config()
+            active = config.default_profile
+            names = list_profiles()
+
+            lines: list[str] = []
+            if active:
+                lines.append(f"  Active: [b]{active}[/b]")
+                lines.append("")
+
+            if names:
+                for name in names:
+                    marker = "▸" if name == active else " "
+                    lines.append(f"{marker} {name}")
+            else:
+                lines.append("[dim]No profiles found.[/dim]")
+                lines.append("")
+                lines.append("[dim]Create profiles in[/dim]")
+                lines.append("[dim]~/.config/talk-box/profiles/[/dim]")
+
+            self.query_one("#profile-list-content", Static).update("\n".join(lines))
+
+            # Show first / active profile detail
+            detail_name = active or (names[0] if names else None)
+            if detail_name:
+                self._show_profile_detail(detail_name)
+        except Exception:
+            self.query_one("#profile-list-content", Static).update(
+                "[dim]Could not load profiles[/dim]"
+            )
+
+    def _show_profile_detail(self, name: str) -> None:
+        """Display profile details in the detail panel."""
+        try:
+            from talk_box.config import load_profile
+
+            profile = load_profile(name)
+            lines = [
+                f"[b]{profile.name}[/b]",
+                "",
+                f"  Model:       {profile.model or '(default)'}",
+                f"  Persona:     {profile.persona or '(default)'}",
+                f"  Temperature: {profile.temperature if profile.temperature is not None else '(default)'}",
+            ]
+            if profile.guardrails:
+                lines.append(f"  Guardrails:  {', '.join(profile.guardrails)}")
+            else:
+                lines.append("  Guardrails:  (none)")
+            self.query_one("#profile-detail-title", Static).update(f"[b]{profile.name}[/b]")
+            self.query_one("#profile-detail-content", Static).update("\n".join(lines))
+        except Exception:
+            self.query_one("#profile-detail-content", Static).update(
+                f"[dim]Could not load profile: {name}[/dim]"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -548,16 +616,52 @@ class ProfileScreen(Screen):
 
 
 class PersonaScreen(Screen):
-    """Browse, search, and edit personas."""
+    """Browse personas grouped by category with detail panel."""
 
     BINDINGS = []
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Personas",
-            "Browse all personas by category. Preview, edit, and create new ones.\n\n"
-            "[dim]Persona browser coming soon.[/dim]",
-        )
+        yield Header(show_clock=False)
+        with Horizontal(id="persona-layout"):
+            with Vertical(id="persona-list-panel"):
+                yield Static("[b]Personas[/b]", id="persona-list-title")
+                with VerticalScroll(id="persona-list-scroll"):
+                    yield Static(
+                        self._build_persona_list(),
+                        id="persona-list-content",
+                    )
+            with Vertical(id="persona-detail-panel"):
+                yield Static("[b]Select a persona[/b]", id="persona-detail-title")
+                yield Static(
+                    "[dim]Use the Persona Browser to explore available personas.\n\n"
+                    "Persona selection and detail view coming soon.[/dim]",
+                    id="persona-detail-content",
+                )
+        yield Footer()
+
+    def _build_persona_list(self) -> str:
+        """Build the categorized persona list."""
+        try:
+            from talk_box.personas._loader import get_persona, list_personas
+
+            names = list_personas()
+            categories: dict[str, list[str]] = {}
+            for name in names:
+                try:
+                    p = get_persona(name)
+                    cat = p.category or "other"
+                except Exception:
+                    cat = "other"
+                categories.setdefault(cat, []).append(name)
+
+            lines: list[str] = []
+            for cat in sorted(categories):
+                lines.append(f"\n[b]{cat}[/b] ({len(categories[cat])})")
+                for name in sorted(categories[cat]):
+                    lines.append(f"  {name}")
+            return "\n".join(lines) if lines else "[dim]No personas found[/dim]"
+        except Exception:
+            return "[dim]Could not load personas[/dim]"
 
 
 # ---------------------------------------------------------------------------
@@ -566,16 +670,40 @@ class PersonaScreen(Screen):
 
 
 class TraitScreen(Screen):
-    """Browse and compose persona traits."""
+    """Browse composable persona traits grouped by category."""
 
     BINDINGS = []
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Traits",
-            "Browse traits and compose them onto personas.\n\n"
-            "[dim]Trait composer coming soon.[/dim]",
-        )
+        yield Header(show_clock=False)
+        with Horizontal(id="trait-layout"):
+            with Vertical(id="trait-list-panel"):
+                yield Static("[b]Traits[/b]", id="trait-list-title")
+                with VerticalScroll(id="trait-list-scroll"):
+                    yield Static("", id="trait-list-content")
+            with Vertical(id="trait-detail-panel"):
+                yield Static("[b]Trait Details[/b]", id="trait-detail-title")
+                yield Static(
+                    "[dim]Select a trait to see its details.[/dim]",
+                    id="trait-detail-content",
+                )
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Populate the trait list grouped by category."""
+        try:
+            from talk_box.traits import trait_categories
+
+            cats = trait_categories()
+            lines: list[str] = []
+            for cat, names in cats.items():
+                lines.append(f"\n[b]{cat}[/b] ({len(names)})")
+                for name in names:
+                    lines.append(f"  {name}")
+            text = "\n".join(lines) if lines else "[dim]No traits found[/dim]"
+        except Exception:
+            text = "[dim]Could not load traits[/dim]"
+        self.query_one("#trait-list-content", Static).update(text)
 
 
 # ---------------------------------------------------------------------------
@@ -589,11 +717,95 @@ class ModelScreen(Screen):
     BINDINGS = []
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Models",
-            "Browse model profiles, compare capabilities, and check Ollama status.\n\n"
-            "[dim]Model browser coming soon.[/dim]",
-        )
+        yield Header(show_clock=False)
+        with Vertical(id="model-layout"):
+            yield Static("[b]Model Profiles[/b]", id="model-title")
+            yield DataTable(id="model-table")
+            with Vertical(id="model-detail-panel"):
+                yield Static("", id="model-detail")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Populate the model table."""
+        table = self.query_one("#model-table", DataTable)
+        table.cursor_type = "row"
+        table.add_columns("Provider", "Model", "Context", "Tools", "Vision", "Cost")
+        try:
+            from talk_box.models import list_models
+
+            for p in list_models():
+                ctx = f"{p.context_window:,}" if p.context_window else "—"
+                tools = "✓" if p.supports_tools else "✗"
+                vision = "✓" if p.supports_vision else "✗"
+                cost = p.cost_tier.value if p.cost_tier else "—"
+                table.add_row(
+                    p.provider,
+                    p.model,
+                    ctx,
+                    tools,
+                    vision,
+                    cost,
+                    key=p.key,
+                )
+        except Exception:
+            pass
+
+        # Ollama status row
+        try:
+            from talk_box.models import detect_ollama
+
+            status = detect_ollama()
+            if status.available and status.models:
+                for name in status.models:
+                    key = f"ollama:{name}"
+                    # Skip if already in the table from built-in profiles
+                    try:
+                        table.get_row(key)
+                    except Exception:
+                        table.add_row(
+                            "ollama",
+                            name,
+                            "—",
+                            "—",
+                            "—",
+                            "free",
+                            key=key,
+                        )
+        except Exception:
+            pass
+
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        """Show detail for the highlighted model."""
+        if event.row_key is None:
+            return
+        key = str(event.row_key.value)
+        try:
+            from talk_box.models import get_model_profile
+
+            profile = get_model_profile(key)
+            if profile:
+                lines = [
+                    f"[b]{profile.display_name or profile.name}[/b]",
+                    f"  Provider:  {profile.provider}",
+                    f"  Context:   {profile.context_window:,} tokens"
+                    if profile.context_window
+                    else "",
+                    f"  Output:    {profile.max_output_tokens:,} tokens"
+                    if profile.max_output_tokens
+                    else "",
+                    f"  Tools:     {'Yes' if profile.supports_tools else 'No'}",
+                    f"  Vision:    {'Yes' if profile.supports_vision else 'No'}",
+                    f"  Streaming: {'Yes' if profile.supports_streaming else 'No'}",
+                    f"  Cost:      {profile.cost_tier.value}" if profile.cost_tier else "",
+                    f"  Cutoff:    {profile.knowledge_cutoff}" if profile.knowledge_cutoff else "",
+                    f"  Notes:     {profile.notes}" if profile.notes else "",
+                ]
+                detail = "\n".join(line for line in lines if line)
+            else:
+                detail = f"[dim]No profile data for {key}[/dim]"
+        except Exception:
+            detail = f"[dim]{key}[/dim]"
+        self.query_one("#model-detail", Static).update(detail)
 
 
 # ---------------------------------------------------------------------------
@@ -601,17 +813,56 @@ class ModelScreen(Screen):
 # ---------------------------------------------------------------------------
 
 
+_BUILTIN_GUARDS = [
+    ("no_pii", "both", "Detects and redacts PII (emails, phones, SSNs, cards)"),
+    ("max_response_length", "output", "Limits response length in characters"),
+    ("max_input_length", "input", "Limits input length in characters"),
+    ("tone_check", "output", "Validates response matches an expected tone"),
+    ("disclaimer_required", "output", "Ensures responses include a disclaimer"),
+    ("must_cite_sources", "output", "Requires citation patterns in responses"),
+    ("keyword_block", "both", "Blocks messages containing specified keywords"),
+]
+
+
 class GuardrailScreen(Screen):
-    """Configure and test guardrails."""
+    """Browse built-in guardrails and active guard pipeline."""
 
     BINDINGS = []
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Guardrails",
-            "Configure guard pipelines and test them with sample inputs.\n\n"
-            "[dim]Guardrail manager coming soon.[/dim]",
-        )
+        yield Header(show_clock=False)
+        with Vertical(id="guard-layout"):
+            yield Static("[b]Guardrails[/b]", id="guard-title")
+            yield DataTable(id="guard-table")
+            with Vertical(id="guard-detail-panel"):
+                yield Static("", id="guard-detail")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Populate the guard table."""
+        table = self.query_one("#guard-table", DataTable)
+        table.cursor_type = "row"
+        table.add_columns("Guard", "Phase", "Description")
+        for name, phase, desc in _BUILTIN_GUARDS:
+            table.add_row(name, phase, desc, key=name)
+
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        """Show detail for the highlighted guard."""
+        if event.row_key is None:
+            return
+        key = str(event.row_key.value)
+        for name, phase, desc in _BUILTIN_GUARDS:
+            if name == key:
+                lines = [
+                    f"[b]{name}[/b]",
+                    f"  Phase:       {phase}",
+                    f"  Description: {desc}",
+                    "",
+                    "  Usage:",
+                    f"    bot.guardrail(tb.{name}(...))",
+                ]
+                self.query_one("#guard-detail", Static).update("\n".join(lines))
+                return
 
 
 # ---------------------------------------------------------------------------
@@ -620,16 +871,32 @@ class GuardrailScreen(Screen):
 
 
 class PathwayScreen(Screen):
-    """Visual pathway state-machine designer."""
+    """Browse and inspect conversational pathways."""
 
     BINDINGS = []
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Pathways",
-            "Design conversation pathways with states, branches, and fallbacks.\n\n"
-            "[dim]Pathway designer coming soon.[/dim]",
-        )
+        yield Header(show_clock=False)
+        with Vertical(id="pathway-layout"):
+            yield Static(
+                "[b]Pathways[/b]\n\n"
+                "Pathways define structured conversation flows with states,\n"
+                "branches, and fallbacks. Create pathways programmatically\n"
+                "using the chainable builder API:\n\n"
+                "  [dim]pathway = (\n"
+                '      tb.Pathways(title="Support", ...)\n'
+                '      .state("intake: gather info")\n'
+                '      .required(["issue description"])\n'
+                '      .next_state("triage")\n'
+                '      .state("triage: route request")\n'
+                '      .branch_on("Technical", id="tech")\n'
+                '      .branch_on("Billing", id="billing")\n'
+                "  )[/dim]\n\n"
+                "State types: [b]chat[/b], [b]decision[/b], [b]collect[/b], "
+                "[b]tool[/b], [b]summary[/b]",
+                id="pathway-info",
+            )
+        yield Footer()
 
 
 # ---------------------------------------------------------------------------
@@ -638,16 +905,40 @@ class PathwayScreen(Screen):
 
 
 class SkillScreen(Screen):
-    """Browse and manage skills."""
+    """Browse skill packs grouped by category."""
 
     BINDINGS = []
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Skills",
-            "Browse skill packs, install new skills, and manage registrations.\n\n"
-            "[dim]Skill browser coming soon.[/dim]",
-        )
+        yield Header(show_clock=False)
+        with Horizontal(id="skill-layout"):
+            with Vertical(id="skill-list-panel"):
+                yield Static("[b]Skills[/b]", id="skill-list-title")
+                with VerticalScroll(id="skill-list-scroll"):
+                    yield Static("", id="skill-list-content")
+            with Vertical(id="skill-detail-panel"):
+                yield Static("[b]Skill Details[/b]", id="skill-detail-title")
+                yield Static(
+                    "[dim]Select a skill to see its details.[/dim]",
+                    id="skill-detail-content",
+                )
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Populate the skill list grouped by category."""
+        try:
+            from talk_box.skills import skill_categories
+
+            cats = skill_categories()
+            lines: list[str] = []
+            for cat, names in cats.items():
+                lines.append(f"\n[b]{cat}[/b] ({len(names)})")
+                for name in names:
+                    lines.append(f"  {name}")
+            text = "\n".join(lines) if lines else "[dim]No skills found[/dim]"
+        except Exception:
+            text = "[dim]Could not load skills[/dim]"
+        self.query_one("#skill-list-content", Static).update(text)
 
 
 # ---------------------------------------------------------------------------
@@ -656,16 +947,46 @@ class SkillScreen(Screen):
 
 
 class KnowledgeScreen(Screen):
-    """Explore the knowledge graph, run syncs, and inspect nodes."""
+    """Explore the knowledge graph and inspect nodes."""
 
     BINDINGS = []
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Knowledge",
-            "Knowledge graph explorer with sync, search, and visualization.\n\n"
-            "[dim]Knowledge explorer coming soon.[/dim]",
-        )
+        yield Header(show_clock=False)
+        with Vertical(id="kg-layout"):
+            yield Static("[b]Knowledge Graph[/b]", id="kg-title")
+            with Horizontal(id="kg-stats"):
+                yield Static("", id="kg-stats-content")
+            yield DataTable(id="kg-table")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Populate the knowledge graph summary."""
+        table = self.query_one("#kg-table", DataTable)
+        table.cursor_type = "row"
+        table.add_columns("ID", "Type", "Name")
+
+        try:
+            from talk_box.knowledge_graph import KnowledgeGraph, NodeType
+
+            kg = KnowledgeGraph()
+            docs = kg.node_count(node_type=NodeType.DOCUMENT)
+            entities = kg.node_count(node_type=NodeType.ENTITY)
+            topics = kg.node_count(node_type=NodeType.TOPIC)
+            edges = kg.edge_count()
+
+            stats = (
+                f"  Documents: {docs}  |  Entities: {entities}  |  "
+                f"Topics: {topics}  |  Edges: {edges}"
+            )
+            self.query_one("#kg-stats-content", Static).update(stats)
+
+            for node in kg.list_nodes(limit=50):
+                table.add_row(node.id, node.node_type.value, node.name, key=node.id)
+        except Exception:
+            self.query_one("#kg-stats-content", Static).update(
+                "  [dim]No knowledge graph loaded[/dim]"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -674,16 +995,38 @@ class KnowledgeScreen(Screen):
 
 
 class MemoryScreen(Screen):
-    """Inspect memory tiers (working, short-term, long-term)."""
+    """Inspect memory tiers and their contents."""
 
     BINDINGS = []
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Memory",
-            "Inspect working, short-term, and long-term memory contents.\n\n"
-            "[dim]Memory inspector coming soon.[/dim]",
-        )
+        yield Header(show_clock=False)
+        with Vertical(id="memory-layout"):
+            yield Static("[b]Memory Inspector[/b]", id="memory-title")
+            with VerticalScroll(id="memory-content"):
+                yield Static("", id="memory-tiers")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Show memory tier overview."""
+        lines = [
+            "[b]Working Memory[/b]",
+            "  In-conversation key-value store. Lost when the conversation ends.",
+            "  API: WorkingMemory().set(key, value) / .get(key)",
+            "",
+            "[b]Short-Term Memory[/b]",
+            "  Session memory with TTL and max-entry eviction.",
+            "  API: ShortTermMemory(max_entries=100, default_ttl=3600)",
+            "",
+            "[b]Long-Term Memory[/b]",
+            "  Persistent SQLite-backed memory.",
+            "  API: LongTermMemory(path) / MemoryStore(path)",
+            "",
+            "[b]Retention Policies[/b]",
+            "  Control memory lifecycle with RetentionPolicy.",
+            "  Personas can specify retention rules for automatic cleanup.",
+        ]
+        self.query_one("#memory-tiers", Static).update("\n".join(lines))
 
 
 # ---------------------------------------------------------------------------
@@ -692,13 +1035,38 @@ class MemoryScreen(Screen):
 
 
 class EvalScreen(Screen):
-    """Run evals and view results across models and personas."""
+    """Browse evaluation dimensions and scoring info."""
 
     BINDINGS = []
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Eval",
-            "Run eval suites, view scorecards, and track regressions.\n\n"
-            "[dim]Eval dashboard coming soon.[/dim]",
+        yield Header(show_clock=False)
+        with Vertical(id="eval-layout"):
+            yield Static("[b]Eval Dashboard[/b]", id="eval-title")
+            yield DataTable(id="eval-dim-table")
+            with Vertical(id="eval-info-panel"):
+                yield Static("", id="eval-info")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Populate the eval dimensions table."""
+        table = self.query_one("#eval-dim-table", DataTable)
+        table.cursor_type = "row"
+        table.add_columns("Dimension", "Description")
+
+        dims = [
+            ("relevance", "Is the response on-topic and directly helpful?"),
+            ("safety", "Is the response free from harmful content?"),
+            ("instruction_adherence", "Does the response follow persona constraints?"),
+            ("tone", "Does the response match the expected communication style?"),
+            ("completeness", "Does the response thoroughly address the query?"),
+            ("conciseness", "Is the response appropriately concise?"),
+        ]
+        for name, desc in dims:
+            table.add_row(name, desc, key=name)
+
+        self.query_one("#eval-info", Static).update(
+            "  Run evals with: [b]tb.eval_suite(bot, cases)[/b]\n"
+            "  Compare variants: [b]tb.eval(bots, cases)[/b]\n"
+            "  Export results: [b]results.to_scorecard(path)[/b]"
         )
