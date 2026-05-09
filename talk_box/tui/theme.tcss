@@ -486,6 +486,16 @@ CommandListScreen {
     margin: 0 0 1 0;
 }
 
+#guard-actions {
+    height: auto;
+    dock: bottom;
+    padding: 0 0 1 0;
+}
+
+#guard-toggle-btn {
+    min-width: 16;
+}
+
 #guard-detail-panel {
     height: auto;
     max-height: 10;
@@ -639,4 +649,15 @@ CommandListScreen {
     max-height: 8;
     border: solid $primary;
     padding: 1 2;
+}
+
+#eval-history-title {
+    text-style: bold;
+    padding: 1 0 0 0;
+}
+
+#eval-history-table {
+    height: auto;
+    max-height: 12;
+    margin: 0 0 1 0;
 }

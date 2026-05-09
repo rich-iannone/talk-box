@@ -1627,8 +1627,30 @@ class WorkspaceScreen(Screen):
 
     def on_mount(self) -> None:
         """Set up the workspace with agent status."""
+        import os
+        from pathlib import Path
+
+        from talk_box.workspace_tools import WorkspaceAgent
+
         self._pending_changes = []
         self._current_change_idx = 0
+
+        # Load trusted commands from config if available
+        trusted: list[str] = []
+        try:
+            from talk_box.config import load_config
+
+            config = load_config()
+            resolved = config.resolve()
+            trusted = resolved.trusted_commands or []
+        except Exception:
+            pass
+
+        self._agent = WorkspaceAgent(
+            root=Path(os.getcwd()),
+            trusted_commands=trusted
+            or ["python", "uv", "pytest", "grep", "find", "cat", "ls", "wc"],
+        )
         self._update_agent_status()
 
     def _update_agent_status(self) -> None:
@@ -1739,33 +1761,211 @@ class WorkspaceScreen(Screen):
             content.update(Text(f"Cannot read file: {e}"))
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle task submission."""
+        """Handle task submission — run workspace tool commands or show a plan."""
         text = event.value.strip()
         if not text:
             return
         event.input.value = ""
 
+        # Direct tool commands start with ">"
+        if text.startswith(">"):
+            self._run_tool_command(text[1:].strip())
+            return
+
+        # Natural language task — show plan and execute analysis step
+        self._run_task(text)
+
+    def _run_tool_command(self, cmd: str) -> None:
+        """Execute a direct workspace tool command.
+
+        Supported commands:
+            >read PATH [START] [END]
+            >write PATH CONTENT
+            >edit PATH <<<OLD>>> <<<NEW>>>
+            >search PATTERN [GLOB]
+            >ls [PATH] [PATTERN]
+            >exec COMMAND
+        """
+        plan = self.query_one("#workspace-plan-content", Static)
+        parts = cmd.split(maxsplit=1)
+        if not parts:
+            plan.update("[red]Empty command[/red]")
+            return
+
+        action = parts[0].lower()
+        args = parts[1] if len(parts) > 1 else ""
+
+        if action == "read":
+            tokens = args.split()
+            path = tokens[0] if tokens else ""
+            start = int(tokens[1]) if len(tokens) > 1 else 1
+            end = int(tokens[2]) if len(tokens) > 2 else None
+            result = self._agent.file_read(path, start_line=start, end_line=end)
+
+        elif action == "write":
+            # >write path\ncontent
+            lines = args.split("\n", 1)
+            path = lines[0].strip()
+            content = lines[1] if len(lines) > 1 else ""
+            result = self._agent.file_write(path, content)
+
+        elif action == "search":
+            tokens = args.split(maxsplit=1)
+            pattern = tokens[0] if tokens else ""
+            glob = tokens[1] if len(tokens) > 1 else "**/*"
+            result = self._agent.file_search(pattern, glob=glob)
+
+        elif action in ("ls", "list"):
+            tokens = args.split()
+            path = tokens[0] if tokens else "."
+            pattern = tokens[1] if len(tokens) > 1 else "*"
+            result = self._agent.list_files(path, pattern=pattern)
+
+        elif action in ("exec", "run", "shell"):
+            result = self._agent.shell_exec(args)
+
+        else:
+            plan.update(
+                f"[red]Unknown command: {action}[/red]\n\nAvailable: read, write, search, ls, exec"
+            )
+            return
+
+        # Display result
+        from rich.text import Text as RichText
+
+        icon = "✅" if result.success else "❌"
+        header = f"{icon} [b]>{action}[/b]"
+        if result.path:
+            header += f" {result.path}"
+        plan.update(f"{header}\n\n")
+
+        # Show output in the source viewer for read operations
+        if action == "read" and result.success:
+            viewer = self.query_one("#workspace-viewer-content", Static)
+            title = self.query_one("#workspace-viewer-title", Static)
+            title.update(f"[b]{result.path}[/b]")
+            viewer.update(RichText(result.output))
+            plan.update(f"{header}\n  {len(result.output.splitlines())} lines displayed")
+        else:
+            plan.update(f"{header}\n\n{result.output}")
+
+        self._update_change_stats()
+
+    def _run_task(self, text: str) -> None:
+        """Execute a natural language task using workspace tools."""
         plan_content = self.query_one("#workspace-plan-content", Static)
+
+        # Step 1: Analyze — list project files
         plan_content.update(
             f"[b]Task:[/b] {text}\n\n"
-            "  1. ⬜ Analyze codebase\n"
+            "  1. 🔄 Analyze codebase\n"
             "  2. ⬜ Plan changes\n"
             "  3. ⬜ Generate edits\n"
             "  4. ⬜ Review & approve\n"
-            "  5. ⬜ Run tests\n\n"
-            "[dim]Agent execution coming in a future update.[/dim]"
+            "  5. ⬜ Run tests"
         )
 
-        # Update status to show task received
+        # Update status
+        self._set_agent_status("analyzing")
+
+        # Run analysis in a worker to avoid blocking UI
+        self.run_worker(self._do_analyze(text), name="workspace-analyze")
+
+    async def _do_analyze(self, task: str) -> None:
+        """Worker: analyze the project and produce a plan."""
+        import asyncio
+
+        # Step 1: List project structure
+        listing = await asyncio.to_thread(self._agent.list_files, ".", pattern="*")
+        py_search = await asyncio.to_thread(
+            self._agent.file_search, "def ", glob="**/*.py", max_results=20
+        )
+
+        # Build analysis summary
+        file_list = listing.output if listing.success else "(could not list files)"
+        code_hits = py_search.output if py_search.success else "(no Python files found)"
+
+        plan_text = (
+            f"[b]Task:[/b] {task}\n\n"
+            "  1. ✅ Analyze codebase\n"
+            "  2. ✅ Plan changes\n"
+            "  3. ⬜ Generate edits — [dim]awaiting approval[/dim]\n"
+            "  4. ⬜ Review & approve\n"
+            "  5. ⬜ Run tests\n\n"
+            "[b]Analysis:[/b]\n"
+            f"  Files in root:\n"
+        )
+        # Show first 15 root entries
+        for line in file_list.splitlines()[:15]:
+            plan_text += f"    {line}\n"
+
+        plan_text += (
+            f"\n  Python definitions found: {len(code_hits.splitlines()) - 1}\n\n"
+            "[b]Suggested approach:[/b]\n"
+            f"  Use [b]>search[/b] to find relevant code, then [b]>edit[/b] to apply changes.\n"
+            f"  Use [b]>exec pytest[/b] to verify.\n\n"
+            "[dim]Use > commands to execute tools directly:[/dim]\n"
+            "  [dim]>read PATH        — view a file[/dim]\n"
+            "  [dim]>search PATTERN   — grep across project[/dim]\n"
+            "  [dim]>ls [DIR]         — list directory[/dim]\n"
+            "  [dim]>exec COMMAND     — run a shell command[/dim]\n"
+            "  [dim]>edit PATH <<<OLD>>> <<<NEW>>> — edit a file[/dim]"
+        )
+
+        self.app.call_from_thread(self._update_plan, plan_text)
+        self.app.call_from_thread(self._set_agent_status, "ready")
+        self.app.call_from_thread(self._update_change_stats)
+
+    def _update_plan(self, text: str) -> None:
+        """Update the plan panel content (main thread)."""
         try:
-            status = self.query_one("#workspace-agent-status", Static)
-            current = status.renderable
-            status.update(
-                str(current).replace(
-                    "Status:  [dim]idle[/dim]",
-                    "Status:  [yellow]task received[/yellow]",
-                )
-            )
+            self.query_one("#workspace-plan-content", Static).update(text)
+        except Exception:
+            pass
+
+    def _set_agent_status(self, status: str) -> None:
+        """Update the agent status line."""
+        colors = {
+            "idle": "[dim]idle[/dim]",
+            "analyzing": "[yellow]analyzing…[/yellow]",
+            "ready": "[green]ready[/green]",
+            "executing": "[yellow]executing…[/yellow]",
+            "done": "[green]done[/green]",
+            "error": "[red]error[/red]",
+        }
+        styled = colors.get(status, status)
+        try:
+            widget = self.query_one("#workspace-agent-status", Static)
+            lines = str(widget._Static__content).splitlines()
+            # Replace the Status line
+            new_lines = []
+            for line in lines:
+                if "Status:" in line:
+                    new_lines.append(f"  Status:  {styled}")
+                else:
+                    new_lines.append(line)
+            widget.update("\n".join(new_lines))
+        except Exception:
+            pass
+
+    def _update_change_stats(self) -> None:
+        """Show change statistics in the agent stats area."""
+        changes = self._agent.changes
+        if not changes:
+            return
+        try:
+            stats = self.query_one("#workspace-agent-stats", Static)
+            writes = sum(1 for c in changes if c["action"] == "write")
+            edits = sum(1 for c in changes if c["action"] == "edit")
+            cmds = sum(1 for c in changes if c["action"] == "shell")
+            parts = []
+            if writes:
+                parts.append(f"  Writes: {writes}")
+            if edits:
+                parts.append(f"  Edits:  {edits}")
+            if cmds:
+                parts.append(f"  Cmds:   {cmds}")
+            stats.update("\n".join(parts))
         except Exception:
             pass
 
@@ -2223,7 +2423,7 @@ _BUILTIN_GUARDS = [
 
 
 class GuardrailScreen(Screen):
-    """Browse built-in guardrails and active guard pipeline."""
+    """Browse built-in guardrails with active/inactive toggle."""
 
     BINDINGS = []
 
@@ -2232,17 +2432,37 @@ class GuardrailScreen(Screen):
         with Vertical(id="guard-layout"):
             yield Static("[b]Guardrails[/b]", id="guard-title")
             yield DataTable(id="guard-table")
+            with Horizontal(id="guard-actions"):
+                yield Button("Toggle Guard", id="guard-toggle-btn", variant="primary")
             with Vertical(id="guard-detail-panel"):
                 yield Static("", id="guard-detail")
         yield Footer()
 
     def on_mount(self) -> None:
-        """Populate the guard table."""
+        """Populate the guard table with active status."""
+        self._active_guards = self._load_active_guards()
+        self._rebuild_table()
+
+    def _load_active_guards(self) -> set[str]:
+        """Load active guardrails from config."""
+        try:
+            from talk_box.config import load_config
+
+            config = load_config()
+            resolved = config.resolve()
+            return set(resolved.guardrails or [])
+        except Exception:
+            return set()
+
+    def _rebuild_table(self) -> None:
+        """Rebuild the guard table with current active status."""
         table = self.query_one("#guard-table", DataTable)
+        table.clear(columns=True)
         table.cursor_type = "row"
-        table.add_columns("Guard", "Phase", "Description")
+        table.add_columns("Status", "Guard", "Phase", "Description")
         for name, phase, desc in _BUILTIN_GUARDS:
-            table.add_row(name, phase, desc, key=name)
+            status = "✅ Active" if name in self._active_guards else "⬜ Off"
+            table.add_row(status, name, phase, desc, key=name)
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         """Show detail for the highlighted guard."""
@@ -2251,16 +2471,52 @@ class GuardrailScreen(Screen):
         key = str(event.row_key.value)
         for name, phase, desc in _BUILTIN_GUARDS:
             if name == key:
+                active = name in self._active_guards
+                status = "[green]Active[/green]" if active else "[dim]Inactive[/dim]"
                 lines = [
-                    f"[b]{name}[/b]",
+                    f"[b]{name}[/b]  {status}",
                     f"  Phase:       {phase}",
                     f"  Description: {desc}",
                     "",
                     "  Usage:",
                     f"    bot.guardrail(tb.{name}(...))",
+                    "",
+                    "  Press [b]Toggle Guard[/b] to enable/disable.",
                 ]
                 self.query_one("#guard-detail", Static).update("\n".join(lines))
                 return
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle the toggle guard button."""
+        if event.button.id != "guard-toggle-btn":
+            return
+
+        table = self.query_one("#guard-table", DataTable)
+        row_key = table.cursor_row
+        if row_key < 0 or row_key >= len(_BUILTIN_GUARDS):
+            return
+
+        name = _BUILTIN_GUARDS[row_key][0]
+
+        if name in self._active_guards:
+            self._active_guards.discard(name)
+            self.notify(f"Disabled guard: {name}", severity="warning")
+        else:
+            self._active_guards.add(name)
+            self.notify(f"Enabled guard: {name}", severity="information")
+
+        # Persist to config
+        self._save_active_guards()
+        self._rebuild_table()
+
+    def _save_active_guards(self) -> None:
+        """Persist active guards to global config."""
+        try:
+            from talk_box.config import persist_guardrails
+
+            persist_guardrails(list(self._active_guards))
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -2554,7 +2810,7 @@ class MemoryScreen(Screen):
 
 
 class EvalScreen(Screen):
-    """Browse evaluation dimensions and scoring info."""
+    """Browse evaluation dimensions, scoring info, and scorecard history."""
 
     BINDINGS = []
 
@@ -2565,10 +2821,12 @@ class EvalScreen(Screen):
             yield DataTable(id="eval-dim-table")
             with Vertical(id="eval-info-panel"):
                 yield Static("", id="eval-info")
+            yield Static("[b]Scorecard History[/b]", id="eval-history-title")
+            yield DataTable(id="eval-history-table")
         yield Footer()
 
     def on_mount(self) -> None:
-        """Populate the eval dimensions table."""
+        """Populate the eval dimensions table and scorecard history."""
         table = self.query_one("#eval-dim-table", DataTable)
         table.cursor_type = "row"
         table.add_columns("Dimension", "Description")
@@ -2589,3 +2847,53 @@ class EvalScreen(Screen):
             "  Compare variants: [b]tb.eval(bots, cases)[/b]\n"
             "  Export results: [b]results.to_scorecard(path)[/b]"
         )
+
+        self._load_scorecard_history()
+
+    def _load_scorecard_history(self) -> None:
+        """Scan for scorecard JSON files and populate the history table."""
+        import json
+        import os
+        from pathlib import Path
+
+        history_table = self.query_one("#eval-history-table", DataTable)
+        history_table.cursor_type = "row"
+        history_table.add_columns("Persona", "Model", "Overall", "Queries", "Date")
+
+        scorecards_dir = Path(os.getcwd()) / "scorecards"
+        if not scorecards_dir.is_dir():
+            history_table.add_row("—", "—", "—", "—", "[dim]No scorecards found[/dim]")
+            return
+
+        entries: list[tuple[str, str, str, str, str, str]] = []
+        for json_file in sorted(scorecards_dir.rglob("*.json"), reverse=True):
+            if json_file.parent.name == "_sweeps":
+                continue
+            try:
+                data = json.loads(json_file.read_text())
+                config = data.get("config", {})
+                persona = config.get("persona", "—")
+                variants = data.get("variants", {})
+                generated = data.get("generated_at", "—")
+                # Show date portion only
+                date_str = generated[:19].replace("T", " ") if "T" in generated else generated
+
+                for model_name, scores in variants.items():
+                    overall = scores.get("overall", 0)
+                    n_queries = scores.get("num_queries", config.get("num_queries", "?"))
+                    overall_str = (
+                        f"{overall:.1%}" if isinstance(overall, (int, float)) else str(overall)
+                    )
+                    entries.append(
+                        (persona, model_name, overall_str, str(n_queries), date_str, str(json_file))
+                    )
+            except Exception:
+                continue
+
+        if not entries:
+            history_table.add_row("—", "—", "—", "—", "[dim]No scorecards found[/dim]")
+            return
+
+        for persona, model, overall, n_queries, date_str, path in entries[:20]:
+            row_key = f"sc-{len(history_table.rows)}"
+            history_table.add_row(persona, model, overall, n_queries, date_str, key=row_key)

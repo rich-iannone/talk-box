@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from talk_box.tui.app import SCREEN_NAV, TalkBoxApp
-from textual.widgets import Button, DataTable, DirectoryTree, OptionList, Select, Static
+from textual.widgets import Button, DataTable, DirectoryTree, Input, OptionList, Select, Static
 from talk_box.tui.screens import (
     ChatScreen,
     CommandListScreen,
@@ -959,7 +959,7 @@ class TestGuardrailScreen:
             app._switch_to("guardrails")
             await pilot.pause()
             table = app.screen.query_one("#guard-table", DataTable)
-            assert len(table.columns) == 3
+            assert len(table.columns) == 4
 
     @pytest.mark.asyncio()
     async def test_guard_detail_panel_exists(self, _fake_config):
@@ -1601,3 +1601,153 @@ class TestMarkdownRendering:
             await pilot.pause()
             widget = app.screen.query_one("#chat-msg-1", Static)
             assert widget._raw_content == original
+
+
+class TestWorkspaceScreenTools:
+    """Tests for workspace screen tool command execution."""
+
+    @pytest.mark.asyncio()
+    async def test_workspace_has_agent(self, _fake_config):
+        """WorkspaceScreen creates a WorkspaceAgent on mount."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("workspace")
+            await pilot.pause()
+            assert hasattr(app.screen, "_agent")
+
+    @pytest.mark.asyncio()
+    async def test_tool_command_ls(self, _fake_config):
+        """Direct >ls command lists files."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("workspace")
+            await pilot.pause()
+            app.screen._run_tool_command("ls")
+            await pilot.pause()
+            plan = app.screen.query_one("#workspace-plan-content", Static)
+            content = str(plan._Static__content)
+            assert ">ls" in content
+
+    @pytest.mark.asyncio()
+    async def test_tool_command_read(self, _fake_config):
+        """Direct >read command shows file content."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("workspace")
+            await pilot.pause()
+            app.screen._run_tool_command("read pyproject.toml")
+            await pilot.pause()
+            plan = app.screen.query_one("#workspace-plan-content", Static)
+            content = str(plan._Static__content)
+            assert ">read" in content
+
+    @pytest.mark.asyncio()
+    async def test_tool_command_search(self, _fake_config):
+        """Direct >search command finds text."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("workspace")
+            await pilot.pause()
+            app.screen._run_tool_command("search def")
+            await pilot.pause()
+            plan = app.screen.query_one("#workspace-plan-content", Static)
+            content = str(plan._Static__content)
+            assert ">search" in content
+
+    @pytest.mark.asyncio()
+    async def test_tool_command_unknown(self, _fake_config):
+        """Unknown > command shows error."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("workspace")
+            await pilot.pause()
+            app.screen._run_tool_command("zzzz")
+            await pilot.pause()
+            plan = app.screen.query_one("#workspace-plan-content", Static)
+            content = str(plan._Static__content)
+            assert "Unknown" in content
+
+    @pytest.mark.asyncio()
+    async def test_task_triggers_analysis(self, _fake_config):
+        """Natural language task sets initial plan with task text."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("workspace")
+            await pilot.pause()
+            # Directly call _run_task — the worker will fail in test mode
+            # but the initial plan text should be set synchronously
+            app.screen._run_task("Refactor the code")
+            plan = app.screen.query_one("#workspace-plan-content", Static)
+            content = str(plan._Static__content)
+            assert "Refactor" in content
+
+
+class TestGuardrailScreenToggle:
+    """Tests for guardrail toggle functionality."""
+
+    @pytest.mark.asyncio()
+    async def test_toggle_button_exists(self, _fake_config):
+        """Toggle button is present on GuardrailScreen."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("guardrails")
+            await pilot.pause()
+            btn = app.screen.query_one("#guard-toggle-btn", Button)
+            assert btn is not None
+
+    @pytest.mark.asyncio()
+    async def test_guard_table_has_status_column(self, _fake_config):
+        """Guard table includes Status column."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("guardrails")
+            await pilot.pause()
+            table = app.screen.query_one("#guard-table", DataTable)
+            col_labels = [str(c.label) for c in table.columns.values()]
+            assert "Status" in col_labels
+
+    @pytest.mark.asyncio()
+    async def test_active_guards_set_initialized(self, _fake_config):
+        """_active_guards is initialized from config."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("guardrails")
+            await pilot.pause()
+            assert isinstance(app.screen._active_guards, set)
+
+
+class TestEvalScreenHistory:
+    """Tests for EvalScreen scorecard history."""
+
+    @pytest.mark.asyncio()
+    async def test_eval_has_history_table(self, _fake_config):
+        """EvalScreen includes a history DataTable."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("eval")
+            await pilot.pause()
+            table = app.screen.query_one("#eval-history-table", DataTable)
+            assert table is not None
+
+    @pytest.mark.asyncio()
+    async def test_eval_history_has_columns(self, _fake_config):
+        """Eval history table has expected columns."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("eval")
+            await pilot.pause()
+            table = app.screen.query_one("#eval-history-table", DataTable)
+            col_labels = [str(c.label) for c in table.columns.values()]
+            assert "Persona" in col_labels
+            assert "Model" in col_labels
+            assert "Overall" in col_labels
+
+    @pytest.mark.asyncio()
+    async def test_eval_history_has_rows(self, _fake_config):
+        """Eval history table has at least one row (scorecards exist in project)."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("eval")
+            await pilot.pause()
+            table = app.screen.query_one("#eval-history-table", DataTable)
+            assert table.row_count > 0

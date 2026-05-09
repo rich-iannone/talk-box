@@ -784,3 +784,11 @@ def get_favorites() -> tuple[list[str], list[str]]:
         models if isinstance(models, list) else [],
         personas if isinstance(personas, list) else [],
     )
+
+
+def persist_guardrails(guards: list[str]) -> None:
+    """Persist the active guardrail list to the global config."""
+    config = _load_yaml_file(_GLOBAL_CONFIG_PATH) if _GLOBAL_CONFIG_PATH.is_file() else {}
+    config["guardrails"] = sorted(guards)
+    _GLOBAL_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    write_yaml(config, _GLOBAL_CONFIG_PATH)
