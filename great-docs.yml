@@ -437,6 +437,27 @@ reference:
       - cli.personas
       - cli.models
       - cli.test
+  - title: Configuration
+    desc: Layered configuration system with profiles, environment overrides, and CLI flags.
+    contents:
+      - name: TalkBoxConfig
+        members: false
+      - TalkBoxConfig.resolve
+      - TalkBoxConfig.to_dict
+      - TalkBoxConfig.from_dict
+      - TalkBoxConfig.validate_model
+      - TalkBoxConfig.is_cloud_model
+      - name: ProfileConfig
+        members: false
+      - ProfileConfig.to_dict
+      - name: ResolvedConfig
+        members: false
+      - TUIMode
+      - load_config
+      - save_config
+      - load_profile
+      - save_profile
+      - list_profiles
 
 # Site Settings
 site:
