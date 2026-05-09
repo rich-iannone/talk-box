@@ -398,3 +398,185 @@ def models(
 
     console.print(table)
     console.print(f"\n[dim]{len(profiles)} model(s)[/dim]")
+
+
+# ---------------------------------------------------------------------------
+# config
+# ---------------------------------------------------------------------------
+
+
+@main.group()
+def config() -> None:
+    """View and manage Talk Box configuration.
+
+    Configuration is resolved from multiple layers (last wins):
+    built-in defaults → global config → project config → profile → env vars → CLI flags.
+    """
+
+
+@config.command("show")
+def config_show() -> None:
+    """Show the resolved configuration.
+
+    Displays the merged result of all config layers with the source
+    of each setting.
+    """
+    from talk_box.config import global_config_dir, load_config, project_config_path
+
+    console = Console()
+    cfg = load_config()
+
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column(style="bold cyan")
+    table.add_column()
+
+    table.add_row("Model", cfg.default_model or "[dim]not set[/dim]")
+    table.add_row("Persona", cfg.default_persona or "[dim]not set[/dim]")
+    table.add_row(
+        "Temperature", str(cfg.temperature) if cfg.temperature is not None else "[dim]not set[/dim]"
+    )
+    table.add_row("Guardrails", ", ".join(cfg.guardrails) if cfg.guardrails else "[dim]none[/dim]")
+    table.add_row("Allow Cloud", str(cfg.allow_cloud))
+    table.add_row("TUI Mode", cfg.mode.value)
+    table.add_row("Profiles", ", ".join(cfg.profiles.keys()) if cfg.profiles else "[dim]none[/dim]")
+    table.add_row("Trusted Cmds", ", ".join(cfg.trusted_commands))
+
+    project = project_config_path()
+    table.add_row("Project Config", str(project) if project else "[dim]none found[/dim]")
+    table.add_row("Global Config", str(global_config_dir() / "config.yml"))
+
+    console.print(Panel(table, title="[bold]Configuration[/bold]", border_style="blue"))
+
+
+@config.command("get")
+@click.argument("key")
+def config_get(key: str) -> None:
+    """Get the value of a configuration key.
+
+    Examples:
+
+        talk-box config get default_model
+
+        talk-box config get allow_cloud
+    """
+    from talk_box.config import load_config
+
+    console = Console()
+    cfg = load_config()
+
+    # Map key names to config attributes
+    key_map = {
+        "default_model": cfg.default_model,
+        "model": cfg.default_model,
+        "default_persona": cfg.default_persona,
+        "persona": cfg.default_persona,
+        "temperature": cfg.temperature,
+        "guardrails": cfg.guardrails,
+        "allow_cloud": cfg.allow_cloud,
+        "mode": cfg.mode.value,
+        "trusted_commands": cfg.trusted_commands,
+    }
+
+    if key not in key_map:
+        console.print(f"[red]Unknown key: {key}[/red]")
+        console.print(f"Available: {', '.join(sorted(key_map.keys()))}")
+        raise SystemExit(1)
+
+    value = key_map[key]
+    if isinstance(value, list):
+        console.print(", ".join(str(v) for v in value))
+    elif value is None:
+        console.print("[dim]not set[/dim]")
+    else:
+        console.print(str(value))
+
+
+@config.command("set")
+@click.argument("key")
+@click.argument("value")
+def config_set(key: str, value: str) -> None:
+    """Set a configuration value in the project config.
+
+    Creates or updates ``talk-box.yml`` in the current directory.
+
+    Examples:
+
+        talk-box config set default_model ollama:llama3.3
+
+        talk-box config set allow_cloud false
+    """
+    from pathlib import Path
+
+    from yaml12 import read_yaml, write_yaml
+
+    console = Console()
+    config_path = Path("talk-box.yml")
+
+    # Load existing or start fresh
+    if config_path.is_file():
+        try:
+            data = read_yaml(config_path)
+            if not isinstance(data, dict):
+                data = {}
+        except (OSError, ValueError):
+            data = {}
+    else:
+        data = {}
+
+    # Type coercion for known keys
+    bool_keys = {"allow_cloud"}
+    float_keys = {"temperature"}
+    list_keys = {"guardrails", "trusted_commands"}
+
+    if key in bool_keys:
+        data[key] = value.lower() in ("true", "1", "yes")
+    elif key in float_keys:
+        try:
+            data[key] = float(value)
+        except ValueError:
+            console.print(f"[red]Invalid float value: {value}[/red]")
+            raise SystemExit(1)
+    elif key in list_keys:
+        data[key] = [v.strip() for v in value.split(",")]
+    else:
+        data[key] = value
+
+    write_yaml(data, config_path)
+    console.print(f"[green]Set {key} = {data[key]}[/green] in {config_path}")
+
+
+@config.command("list")
+def config_list() -> None:
+    """List all named profiles.
+
+    Profiles are stored in ``~/.config/talk-box/profiles/``.
+    """
+    from talk_box.config import list_profiles, load_profile
+
+    console = Console()
+    names = list_profiles()
+
+    if not names:
+        console.print("[dim]No profiles found.[/dim]")
+        console.print("Create one with: talk-box config set-profile NAME --model MODEL")
+        return
+
+    table = Table(title="Named Profiles", border_style="blue")
+    table.add_column("Name", style="bold cyan")
+    table.add_column("Model", style="green")
+    table.add_column("Persona")
+    table.add_column("Temp", justify="right")
+
+    for name in names:
+        try:
+            p = load_profile(name)
+            table.add_row(
+                name,
+                p.model or "—",
+                p.persona or "—",
+                str(p.temperature) if p.temperature is not None else "—",
+            )
+        except Exception:
+            table.add_row(name, "[red]error[/red]", "", "")
+
+    console.print(table)

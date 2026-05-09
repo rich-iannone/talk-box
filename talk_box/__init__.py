@@ -36,6 +36,17 @@ from talk_box.compliance import (
     export_html,
     export_json,
 )
+from talk_box.config import (
+    ProfileConfig,
+    ResolvedConfig,
+    TalkBoxConfig,
+    TUIMode,
+    list_profiles,
+    load_config,
+    load_profile,
+    save_config,
+    save_profile,
+)
 from talk_box.confusion import (
     ConfusionReport,
     ConfusionScore,
