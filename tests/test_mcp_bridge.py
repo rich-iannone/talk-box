@@ -334,9 +334,7 @@ class TestDiscoverMcpTools:
         mock_session = AsyncMock()
         mock_session.list_tools.return_value = mock_result
 
-        infos = asyncio.get_event_loop().run_until_complete(
-            discover_mcp_tools(mock_session, server_url="ws://localhost")
-        )
+        infos = asyncio.run(discover_mcp_tools(mock_session, server_url="ws://localhost"))
         assert len(infos) == 1
         assert infos[0].name == "remote_tool"
         assert infos[0].server_url == "ws://localhost"
@@ -347,7 +345,7 @@ class TestDiscoverMcpTools:
         mock_session = AsyncMock()
         mock_session.list_tools.return_value = mock_result
 
-        infos = asyncio.get_event_loop().run_until_complete(discover_mcp_tools(mock_session))
+        infos = asyncio.run(discover_mcp_tools(mock_session))
         assert infos == []
 
     def test_tool_without_description(self):
@@ -361,7 +359,7 @@ class TestDiscoverMcpTools:
         mock_session = AsyncMock()
         mock_session.list_tools.return_value = mock_result
 
-        infos = asyncio.get_event_loop().run_until_complete(discover_mcp_tools(mock_session))
+        infos = asyncio.run(discover_mcp_tools(mock_session))
         assert infos[0].description == ""
         assert infos[0].input_schema == {}
 
