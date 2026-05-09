@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional
+from typing import Any, Generator, Optional
 
 import chatlas
 from chatlas import (
@@ -150,11 +150,11 @@ class ChatlasAdapter:
         """
         try:
             # Use chatlas to get the response
-            # If message is a list of content objects, unpack it as individual arguments
+            # Disable echo/streaming to avoid Rich live display conflicts
             if isinstance(message, list):
-                response = chat_session.chat(*message)
+                response = chat_session.chat(*message, echo="none", stream=False)
             else:
-                response = chat_session.chat(message)
+                response = chat_session.chat(message, echo="none", stream=False)
 
             # Extract response content (chatlas returns a Turn object)
             content = str(response)
@@ -185,3 +185,72 @@ class ChatlasAdapter:
                 content=f"Error communicating with LLM: {e!s}",
                 metadata={"provider": self.provider, "error": str(e), "success": False},
             )
+
+    def stream_with_session(
+        self, chat_session: chatlas.Chat, message
+    ) -> Generator[str, None, None]:
+        """
+        Stream a response from a chatlas session, yielding text chunks.
+
+        Args:
+            chat_session: Active chatlas.Chat session
+            message: User message to send (str or list of content objects)
+
+        Yields:
+            str: Text chunks as they arrive from the LLM.
+        """
+        if isinstance(message, list):
+            yield from chat_session.stream(*message, echo="none")
+        else:
+            yield from chat_session.stream(message, echo="none")
+
+    def stream_with_thinking(
+        self,
+        message: str,
+        system_prompt: Optional[str] = None,
+        thinking_budget: int = 2048,
+    ) -> Generator[tuple[str, str], None, None]:
+        """
+        Stream a response with thinking support (Anthropic only).
+
+        Yields (phase, text) tuples where phase is 'thinking' or 'text'.
+        Falls back to chatlas stream() for non-Anthropic providers.
+
+        Args:
+            message: User message to send.
+            system_prompt: Optional system prompt.
+            thinking_budget: Token budget for thinking (min 1024).
+
+        Yields:
+            tuple[str, str]: (phase, chunk) pairs.
+        """
+        if self.provider.lower() == "anthropic":
+            try:
+                import anthropic
+
+                client = anthropic.Anthropic()
+                kwargs: dict[str, Any] = {
+                    "model": self.default_model,
+                    "max_tokens": max(4096, thinking_budget + 2048),
+                    "thinking": {"type": "enabled", "budget_tokens": thinking_budget},
+                    "messages": [{"role": "user", "content": message}],
+                }
+                if system_prompt:
+                    kwargs["system"] = system_prompt
+
+                with client.messages.stream(**kwargs) as stream:
+                    for event in stream:
+                        etype = getattr(event, "type", "")
+                        if etype == "thinking":
+                            yield ("thinking", getattr(event, "thinking", ""))
+                        elif etype == "text":
+                            yield ("text", getattr(event, "text", ""))
+                return
+            except Exception:
+                pass
+
+        # Fallback: no thinking support, just stream text
+        chat_session = self._create_chat_instance(model=self.default_model)
+        for chunk in chat_session.stream(message, echo="none"):
+            if isinstance(chunk, str):
+                yield ("text", chunk)

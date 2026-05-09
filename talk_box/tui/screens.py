@@ -11,7 +11,16 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Center, Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, DataTable, Footer, Header, Input, OptionList, Static
+from textual.widgets import (
+    Button,
+    DataTable,
+    Footer,
+    Header,
+    Input,
+    OptionList,
+    Select,
+    Static,
+)
 from textual.widgets.option_list import Option
 from textual.worker import Worker, WorkerState
 
@@ -162,6 +171,7 @@ class WelcomeScreen(Screen):
             ("ANTHROPIC_API_KEY", "Anthropic"),
             ("OPENAI_API_KEY", "OpenAI"),
             ("GOOGLE_API_KEY", "Google"),
+            ("GITHUB_TOKEN", "GitHub"),
         ]
         found = [name for var, name in key_vars if os.environ.get(var)]
         if found:
@@ -274,6 +284,7 @@ class HomeScreen(Screen):
             ("ANTHROPIC_API_KEY", "Anthropic"),
             ("OPENAI_API_KEY", "OpenAI"),
             ("GOOGLE_API_KEY", "Google"),
+            ("GITHUB_TOKEN", "GitHub"),
         ]
         found = [name for var, name in key_vars if os.environ.get(var)]
         lines.append(f"  API Keys:    {len(found)}/{len(key_vars)} configured")
@@ -325,6 +336,7 @@ class ChatScreen(Screen):
 
     Supports echo mode (no model) and real LLM chat via ChatBot.
     Messages are sent in a background worker to keep the UI responsive.
+    The sidebar lets users pick a persona and model, and reset the chat.
     """
 
     BINDINGS = []
@@ -334,6 +346,8 @@ class ChatScreen(Screen):
         self._bot = None
         self._conversation = None
         self._message_count = 0
+        self._active_persona: str | None = None
+        self._active_model: str | None = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -353,15 +367,68 @@ class ChatScreen(Screen):
             # Sidebar
             with Vertical(id="chat-sidebar"):
                 yield Static("[b]Session[/b]", id="chat-sidebar-title")
-                yield Static(
-                    self._build_sidebar(),
-                    id="chat-sidebar-info",
+                yield Static("", id="chat-sidebar-info")
+                yield Static("[b]Model[/b]", id="chat-model-label")
+                yield Select(
+                    self._get_model_options(),
+                    prompt="Select model",
+                    id="chat-model-select",
+                    allow_blank=True,
                 )
+                yield Static("[b]Persona[/b]", id="chat-persona-label")
+                yield Select(
+                    self._get_persona_options(),
+                    prompt="Select persona",
+                    id="chat-persona-select",
+                    allow_blank=True,
+                )
+                yield Button("New Chat", id="chat-new-btn", variant="warning")
         yield Footer()
+
+    def _get_model_options(self) -> list[tuple[str, str]]:
+        """Build model select options."""
+        options: list[tuple[str, str]] = []
+        try:
+            from talk_box.models import list_models
+
+            for p in list_models():
+                label = f"{p.provider}:{p.model}"
+                options.append((label, label))
+        except Exception:
+            pass
+        return options
+
+    def _get_persona_options(self) -> list[tuple[str, str]]:
+        """Build persona select options."""
+        options: list[tuple[str, str]] = []
+        try:
+            from talk_box.personas._loader import list_personas
+
+            for name in list_personas():
+                options.append((name, name))
+        except Exception:
+            pass
+        return options
 
     def on_mount(self) -> None:
         """Initialize the ChatBot and focus the input."""
         self._init_bot()
+        self._update_sidebar()
+
+        # Pre-select config values in dropdowns
+        try:
+            model_sel = self.query_one("#chat-model-select", Select)
+            if self._active_model:
+                model_sel.value = self._active_model
+        except Exception:
+            pass
+        try:
+            persona_sel = self.query_one("#chat-persona-select", Select)
+            if self._active_persona:
+                persona_sel.value = self._active_persona
+        except Exception:
+            pass
+
         self.query_one("#chat-input", Input).focus()
 
     def _init_bot(self) -> None:
@@ -372,14 +439,15 @@ class ChatScreen(Screen):
 
             config = load_config()
             resolved = config.resolve()
+            self._active_model = resolved.model
+            self._active_persona = resolved.persona
+
             bot = ChatBot()
             if resolved.model:
-                provider_model = resolved.model
-                if ":" in provider_model:
-                    provider, model = provider_model.split(":", 1)
-                    bot = bot.provider(provider).model(model)
+                if ":" in resolved.model:
+                    bot = bot.provider_model(resolved.model)
                 else:
-                    bot = bot.model(provider_model)
+                    bot = bot.model(resolved.model)
             if resolved.persona:
                 try:
                     bot = bot.persona_pack(resolved.persona)
@@ -391,6 +459,68 @@ class ChatScreen(Screen):
         except Exception:
             # Fall through to echo mode
             self._bot = None
+
+    def _rebuild_bot(self) -> None:
+        """Rebuild the ChatBot from current sidebar selections."""
+        try:
+            from talk_box.builder import ChatBot
+
+            bot = ChatBot()
+            if self._active_model:
+                if ":" in self._active_model:
+                    bot = bot.provider_model(self._active_model)
+                else:
+                    bot = bot.model(self._active_model)
+            if self._active_persona:
+                try:
+                    bot = bot.persona_pack(self._active_persona)
+                except Exception:
+                    pass
+            self._bot = bot
+        except Exception:
+            self._bot = None
+
+    def on_select_changed(self, event: Select.Changed) -> None:
+        """Handle model or persona selection changes."""
+        if event.select.id == "chat-model-select":
+            self._active_model = str(event.value) if event.value != Select.BLANK else None
+            self._rebuild_bot()
+            self._conversation = None
+            self._update_sidebar()
+        elif event.select.id == "chat-persona-select":
+            self._active_persona = str(event.value) if event.value != Select.BLANK else None
+            self._rebuild_bot()
+            self._conversation = None
+            self._update_sidebar()
+
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle New Chat and copy buttons."""
+        btn_id = event.button.id or ""
+        if btn_id == "chat-new-btn":
+            self._conversation = None
+            self._message_count = 0
+            self._rebuild_bot()
+            # Clear messages
+            container = self.query_one("#chat-messages", VerticalScroll)
+            await container.remove_children()
+            await container.mount(
+                Static(
+                    "[dim]Type a message below to start chatting.[/dim]",
+                    id="chat-welcome-hint",
+                )
+            )
+            self._update_sidebar()
+            self.query_one("#chat-input", Input).focus()
+        elif btn_id.startswith("copy-chat-msg-"):
+            msg_id = btn_id.removeprefix("copy-")
+            try:
+                widget = self.query_one(f"#{msg_id}", Static)
+                raw = getattr(widget, "_raw_content", "")
+                self.app.copy_to_clipboard(raw)
+                event.button.label = "✓"
+                self.set_timer(1.5, lambda: setattr(event.button, "label", "📋"))
+            except Exception:
+                pass
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle message submission."""
@@ -421,30 +551,119 @@ class ChatScreen(Screen):
             classes = "chat-message chat-assistant"
 
         widget = Static(f"{label}\n{content}", id=msg_id, classes=classes)
-        container.mount(widget)
+        widget._raw_content = content
+        copy_btn = Button("📋", id=f"copy-{msg_id}", classes="chat-copy-btn")
+        wrapper = Horizontal(widget, copy_btn, classes=f"chat-msg-row {role}-row")
+        container.mount(wrapper)
         container.scroll_end(animate=False)
         self._update_sidebar()
 
     def _send_message(self, text: str) -> None:
-        """Send a message via ChatBot in a background worker."""
+        """Send a message via ChatBot, streaming the response."""
         self._append_message("assistant", "[dim]Thinking…[/dim]")
         thinking_id = f"chat-msg-{self._message_count}"
         self._pending_thinking_id = thinking_id
+        try:
+            self.query_one(f"#{thinking_id}", Static).add_class("chat-thinking")
+        except Exception:
+            pass
 
-        async def _do_chat():
+        async def _do_stream():
             import asyncio
 
             loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(None, self._get_response, text)
+            await loop.run_in_executor(None, self._stream_response, text, thinking_id)
 
         self.run_worker(
-            _do_chat(),
+            _do_stream(),
             name="chat_response",
             group="chat",
         )
 
+    def _stream_response(self, text: str, widget_id: str) -> None:
+        """Stream the LLM response, updating the widget chunk by chunk (runs in thread)."""
+
+        thinking_text = ""
+        response_text = ""
+        try:
+            if self._bot is not None and self._bot._llm_enabled:
+                from talk_box.conversation import Conversation
+
+                if self._conversation is None:
+                    self._conversation = Conversation()
+
+                try:
+                    for phase, chunk in self._bot._stream_with_thinking(text, self._conversation):
+                        if phase == "thinking":
+                            thinking_text += chunk
+                            display = self._format_stream_display(thinking_text, "")
+                            self.app.call_from_thread(
+                                self._update_stream_widget, widget_id, display
+                            )
+                        elif phase == "text":
+                            response_text += chunk
+                            display = self._format_stream_display(thinking_text, response_text)
+                            self.app.call_from_thread(
+                                self._update_stream_widget, widget_id, display
+                            )
+
+                    # Add the completed exchange to conversation
+                    self._conversation.add_message("user", text)
+                    self._conversation.add_message("assistant", response_text)
+
+                except Exception as e:
+                    response_text = f"Error: {e}"
+            else:
+                response_text = f"Echo: {text}"
+        except Exception as e:
+            response_text = f"Error: {e}"
+
+        # Final update with raw content
+        self.app.call_from_thread(
+            self._finalize_stream_widget,
+            widget_id,
+            response_text,
+            thinking_text,
+        )
+
+    @staticmethod
+    def _format_stream_display(thinking: str, response: str) -> str:
+        """Format the streaming display with thinking and response sections."""
+        parts = ["[b]Assistant[/b]"]
+        if thinking:
+            parts.append(f"[dim]💭 {thinking}[/dim]")
+        if response:
+            parts.append(response)
+        elif not thinking:
+            parts.append("[dim]…[/dim]")
+        return "\n".join(parts)
+
+    def _update_stream_widget(self, widget_id: str, display: str) -> None:
+        """Update the streaming widget with new content (called on main thread)."""
+        try:
+            widget = self.query_one(f"#{widget_id}", Static)
+            widget.update(display)
+            container = self.query_one("#chat-messages", VerticalScroll)
+            container.scroll_end(animate=False)
+        except Exception:
+            pass
+
+    def _finalize_stream_widget(self, widget_id: str, content: str, thinking: str = "") -> None:
+        """Finalize the streamed widget with raw content for copy (called on main thread)."""
+        try:
+            widget = self.query_one(f"#{widget_id}", Static)
+            display = self._format_stream_display(thinking, content)
+            widget.update(display)
+            widget._raw_content = content
+            widget.remove_class("chat-thinking")
+            container = self.query_one("#chat-messages", VerticalScroll)
+            container.scroll_end(animate=False)
+            self._update_sidebar()
+        except Exception:
+            pass
+
     def _get_response(self, text: str) -> str:
-        """Get a response from the bot (runs in worker thread)."""
+        """Get a response from the bot (runs in worker thread). Fallback for non-streaming."""
         if self._bot is not None:
             try:
                 from talk_box.conversation import Conversation
@@ -460,40 +679,19 @@ class ChatScreen(Screen):
             return f"Echo: {text}"
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
-        """Handle worker completion — replace thinking indicator with response."""
+        """Handle worker completion."""
         if event.worker.name != "chat_response":
             return
         if event.state == WorkerState.SUCCESS:
-            result = event.worker.result
-            thinking_id = getattr(self, "_pending_thinking_id", None)
-            if thinking_id:
-                try:
-                    widget = self.query_one(f"#{thinking_id}", Static)
-                    widget.update(f"[b]Assistant[/b]\n{result}")
-                    widget.remove_class("chat-thinking")
-                except Exception:
-                    self._append_message("assistant", str(result))
-            container = self.query_one("#chat-messages", VerticalScroll)
-            container.scroll_end(animate=False)
+            # Streaming updates are handled inline; just ensure sidebar is current
             self._update_sidebar()
 
     def _build_sidebar(self) -> str:
         """Build sidebar info text."""
-        try:
-            from talk_box.config import load_config
-
-            config = load_config()
-            resolved = config.resolve()
-            model = resolved.model or "[dim]echo mode[/dim]"
-            persona = resolved.persona or "[dim]none[/dim]"
-        except Exception:
-            model = "[dim]echo mode[/dim]"
-            persona = "[dim]none[/dim]"
-
+        model = self._active_model or "[dim]echo mode[/dim]"
+        persona = self._active_persona or "[dim]none[/dim]"
         user_msgs = self._message_count // 2 if self._message_count > 0 else 0
-        return (
-            f"\n  Model:\n  {model}\n\n  Persona:\n  {persona}\n\n  Messages:\n  {user_msgs} sent"
-        )
+        return f"\n  Messages: {user_msgs} sent"
 
     def _update_sidebar(self) -> None:
         """Refresh the sidebar info."""
@@ -659,9 +857,7 @@ class PersonaScreen(Screen):
         except Exception:
             pass
 
-    def on_option_list_option_highlighted(
-        self, event: OptionList.OptionHighlighted
-    ) -> None:
+    def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
         """Show detail for the highlighted persona."""
         if event.option.id is None or str(event.option.id).startswith("__cat_"):
             return
@@ -740,9 +936,7 @@ class TraitScreen(Screen):
         except Exception:
             pass
 
-    def on_option_list_option_highlighted(
-        self, event: OptionList.OptionHighlighted
-    ) -> None:
+    def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
         """Show detail for the highlighted trait."""
         if event.option.id is None or str(event.option.id).startswith("__cat_"):
             return
@@ -1010,9 +1204,7 @@ class SkillScreen(Screen):
         except Exception:
             pass
 
-    def on_option_list_option_highlighted(
-        self, event: OptionList.OptionHighlighted
-    ) -> None:
+    def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
         """Show detail for the highlighted skill."""
         if event.option.id is None or str(event.option.id).startswith("__cat_"):
             return

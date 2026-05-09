@@ -21,6 +21,12 @@ def main() -> None:
 
     Use 'talk-box COMMAND --help' for details on each command.
     """
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except ImportError:
+        pass
 
 
 # ---------------------------------------------------------------------------

@@ -332,7 +332,7 @@ def test_chat_with_session_success():
     adapter = ChatlasAdapter(provider="openai")
     result = adapter.chat_with_session(mock_session, "Hello")
 
-    mock_session.chat.assert_called_once_with("Hello")
+    mock_session.chat.assert_called_once_with("Hello", echo="none", stream=False)
     assert isinstance(result, ChatResponse)
     assert result.content == "Hello! How can I help you?"
     assert result.metadata["provider"] == "openai"

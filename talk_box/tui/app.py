@@ -107,6 +107,14 @@ class TalkBoxApp(App):
 
     def on_mount(self) -> None:
         """Initialize screens and show the home screen."""
+        # Load .env file so API keys are available
+        try:
+            from dotenv import load_dotenv
+
+            load_dotenv()
+        except ImportError:
+            pass
+
         # Install all screens
         for _key, screen_id, _label, screen_cls in SCREEN_NAV:
             self.install_screen(screen_cls, name=screen_id)

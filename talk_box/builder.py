@@ -3044,7 +3044,7 @@ class ChatBot:
                 if msg.role == "user":
                     # Send each previous user message (but don't store the responses)
                     try:
-                        chat_session.chat(msg.content)
+                        chat_session.chat(msg.content, echo="none", stream=False)
                     except Exception as e:
                         # If replaying fails, we'll continue but with reduced context
                         print(f"Warning: Failed to replay message for context: {e}")
@@ -3064,6 +3064,77 @@ class ChatBot:
             response = adapter.chat_with_session(chat_session, message)
 
         return response.content
+
+    def _stream_with_llm(
+        self, message: str, conversation: Optional["Conversation"] = None
+    ) -> "Generator[str, None, None]":
+        """
+        Stream a response from the LLM, yielding text chunks.
+
+        Parameters
+        ----------
+        message
+            The message to send to the LLM.
+        conversation
+            The conversation context to maintain history.
+
+        Yields
+        ------
+        str
+            Text chunks as they arrive from the LLM.
+        """
+
+        from talk_box._utils_chatlas import ChatlasAdapter
+
+        provider = self._config.get("provider")
+        model = self._config.get("model")
+
+        adapter = ChatlasAdapter(provider=provider, model=model)
+        chat_session = adapter.create_chat_session(self._config)
+
+        if self._config.get("tool_box_enabled", False) or self._config.get("tools"):
+            self._register_tools_with_session(chat_session)
+
+        if conversation and len(conversation.messages) > 1:
+            for msg in conversation.messages[:-1]:
+                if msg.role == "user":
+                    try:
+                        chat_session.chat(msg.content, echo="none", stream=False)
+                    except Exception:
+                        pass
+
+        yield from adapter.stream_with_session(chat_session, message)
+
+    def _stream_with_thinking(
+        self, message: str, conversation: Optional["Conversation"] = None
+    ) -> "Generator[tuple[str, str], None, None]":
+        """
+        Stream a response with thinking support, yielding (phase, chunk) tuples.
+
+        Parameters
+        ----------
+        message
+            The message to send to the LLM.
+        conversation
+            The conversation context to maintain history.
+
+        Yields
+        ------
+        tuple[str, str]
+            (phase, chunk) pairs where phase is 'thinking' or 'text'.
+        """
+
+        from talk_box._utils_chatlas import ChatlasAdapter
+
+        provider = self._config.get("provider")
+        model = self._config.get("model")
+
+        adapter = ChatlasAdapter(provider=provider, model=model)
+
+        # Build system prompt from config
+        system_prompt = self._config.get("system_prompt")
+
+        yield from adapter.stream_with_thinking(message, system_prompt=system_prompt)
 
     def _register_tools_with_session(self, chat_session) -> None:
         """Register tools with the chatlas session if tools are available."""

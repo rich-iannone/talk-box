@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from talk_box.tui.app import SCREEN_NAV, TalkBoxApp
-from textual.widgets import DataTable, OptionList, Static
+from textual.widgets import Button, DataTable, OptionList, Select, Static
 from talk_box.tui.screens import (
     ChatScreen,
     CommandListScreen,
@@ -438,6 +438,33 @@ class TestChatScreen:
             await pilot.pause()
             info = app.screen.query_one("#chat-sidebar-info")
             assert info is not None
+
+    @pytest.mark.asyncio()
+    async def test_chat_has_model_select(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            sel = app.screen.query_one("#chat-model-select", Select)
+            assert sel is not None
+
+    @pytest.mark.asyncio()
+    async def test_chat_has_persona_select(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            sel = app.screen.query_one("#chat-persona-select", Select)
+            assert sel is not None
+
+    @pytest.mark.asyncio()
+    async def test_chat_has_new_chat_button(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            btn = app.screen.query_one("#chat-new-btn", Button)
+            assert btn is not None
 
 
 class TestModelScreen:

@@ -101,7 +101,28 @@ Screen {
 .chat-message {
     padding: 1 2;
     margin: 0 0 1 0;
+    width: 1fr;
+}
+
+.chat-msg-row {
+    height: auto;
     width: 100%;
+}
+
+.chat-copy-btn {
+    width: 4;
+    min-width: 4;
+    height: 3;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: $text-muted;
+}
+
+.chat-copy-btn:hover {
+    background: $surface;
+    color: $text;
 }
 
 .chat-user {
@@ -112,6 +133,10 @@ Screen {
 .chat-assistant {
     background: $surface;
     border-left: thick $secondary;
+}
+
+.chat-thinking {
+    color: $text-muted;
 }
 
 #chat-input {
@@ -133,6 +158,23 @@ Screen {
 #chat-welcome-hint {
     padding: 2 4;
     text-align: center;
+}
+
+#chat-model-label,
+#chat-persona-label {
+    text-style: bold;
+    padding: 1 0 0 0;
+}
+
+#chat-model-select,
+#chat-persona-select {
+    width: 100%;
+    margin: 0 0 0 0;
+}
+
+#chat-new-btn {
+    width: 100%;
+    margin: 1 0 0 0;
 }
 
 /* -- Model Browser screen ------------------------------------------------- */

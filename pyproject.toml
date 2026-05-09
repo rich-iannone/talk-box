@@ -75,6 +75,12 @@ reporting = [
     "pandas>=1.3.0",
 ]
 
+# LLM provider dependencies
+llm = [
+    "anthropic>=0.18.0",
+    "google-generativeai>=0.3.0",
+]
+
 # Documentation dependencies
 docs = [
     "great-docs",
@@ -85,7 +91,7 @@ docs = [
 
 # All optional dependencies
 all = [
-    "talk-box[dev,docs]",
+    "talk-box[dev,docs,llm]",
 ]
 
 [project.urls]
