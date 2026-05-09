@@ -13,24 +13,11 @@ from talk_box.agent import Agent
 from talk_box.attachments import AttachmentMetadata, Attachments
 from talk_box.builder import BuilderTypes, ChatBot
 from talk_box.builtin_tools import get_builtin_tool, load_selected_tools, load_tool_box
-from talk_box.capture import (
-    CaptureEvent,
-    ConversationCapture,
-    EventType,
-)
 from talk_box.cascade import (
     CascadeResult,
     CascadeRound,
     cascade,
     estimate_confidence,
-)
-from talk_box.comms import (
-    AgentMessage,
-    Mailbox,
-    MessageType,
-    broadcast,
-    reply,
-    send,
 )
 from talk_box.compliance import (
     export_html,
@@ -46,12 +33,6 @@ from talk_box.config import (
     load_profile,
     save_config,
     save_profile,
-)
-from talk_box.confusion import (
-    ConfusionReport,
-    ConfusionScore,
-    confusion,
-    node_confusion,
 )
 from talk_box.connectors import (
     AppleNotes,
@@ -84,23 +65,6 @@ from talk_box.conversation import (
     ToolEnabledConversation,
     create_tool_conversation,
 )
-from talk_box.diff import (
-    DiffResult,
-    TurnDiff,
-    TurnStatus,
-    diff,
-)
-from talk_box.directives import (
-    ApplyResult,
-    ConfidentialDirective,
-    ContextDirective,
-    ExpiresDirective,
-    ParsedDirectives,
-    RelatesToDirective,
-    apply_directives,
-    parse_directives,
-    strip_directives,
-)
 from talk_box.enrichment import (
     EnrichmentConfig,
     EnrichmentPipeline,
@@ -109,19 +73,6 @@ from talk_box.enrichment import (
     ExtractedRelationship,
     PipelineResult,
     regex_enricher,
-)
-from talk_box.enrichment_qa import (
-    EnrichmentQuestion,
-    QuestionOption,
-    QuestionQueue,
-    QuestionStatus,
-    QuestionType,
-    QueueStats,
-    detect_factual_conflicts,
-    detect_name_ambiguity,
-    detect_weak_relationships,
-    generate_question_id,
-    pending_questions,
 )
 from talk_box.eval import (
     EvalCase,
@@ -135,24 +86,6 @@ from talk_box.eval import (
     eval_suite,
     scorecard_table,
     sweep_table,
-)
-from talk_box.forgetting import (
-    PolicyResult,
-    compress_after_n_turns,
-    forget_after_resolution,
-    retain_only,
-)
-from talk_box.freshness import (
-    FreshnessEntry,
-    FreshnessReport,
-    FreshnessStatus,
-    freshness_report,
-)
-from talk_box.gap_detection import (
-    Gap,
-    GapReport,
-    GapType,
-    detect_gaps,
 )
 from talk_box.guardrails import (
     Guard,
@@ -189,12 +122,6 @@ from talk_box.kg_visualization import (
     to_html,
     to_mermaid,
     visualize,
-)
-from talk_box.knowledge_filter import (
-    FilterResult,
-    KnowledgeFilter,
-    filter_for_persona,
-    retrieve_context,
 )
 from talk_box.knowledge_graph import (
     Edge,
@@ -233,7 +160,6 @@ from talk_box.models import (
 )
 from talk_box.pathways import Pathways
 from talk_box.personas import PersonaDefinition, get_persona, list_personas, persona_categories
-from talk_box.presets import Preset, PresetManager, PresetNames
 from talk_box.prompt_builder import (
     Priority,
     PromptBuilder,
@@ -248,15 +174,6 @@ from talk_box.prompt_optimizer import (
     OptimizeResult,
     optimize_prompt,
 )
-from talk_box.replay import (
-    ReplayResult,
-    ReplayTurn,
-    replay,
-)
-from talk_box.retention import (
-    RetentionPolicy,
-    apply_retention,
-)
 from talk_box.routing import (
     Router,
     RoutingResult,
@@ -264,10 +181,6 @@ from talk_box.routing import (
     TaskComplexity,
     classify_complexity,
     route,
-)
-from talk_box.shared_state import (
-    SharedState,
-    StateChange,
 )
 from talk_box.skills import (
     SkillDefinition,
@@ -283,33 +196,11 @@ from talk_box.structured import (
     extract,
     schema_to_dict,
 )
-from talk_box.subagents import (
-    SubagentResult,
-    children,
-    delegate,
-    parent_name,
-    spawn,
-)
 from talk_box.testing import (
     PathwayTestResults,
     TestResults,
     autotest_avoid_topics,
     autotest_pathways,
-)
-from talk_box.tool_debugging import (
-    ToolDebugger,
-    configure_debug_mode,
-    debug_dashboard,
-    debug_errors,
-    debug_tool,
-    export_debug_report,
-    live_monitor,
-)
-from talk_box.tool_observability import (
-    ObservabilityLevel,
-    ToolObserver,
-    configure_observability,
-    get_global_observer,
 )
 from talk_box.tools import (
     ToolCategory,
@@ -427,39 +318,9 @@ __all__ = [
     "MemoryTier",
     "ShortTermMemory",
     "WorkingMemory",
-    # Forgetting policies
-    "PolicyResult",
-    "forget_after_resolution",
-    "compress_after_n_turns",
-    "retain_only",
-    # Conversation capture
-    "ConversationCapture",
-    "CaptureEvent",
-    "EventType",
-    # Replay mode
-    "ReplayResult",
-    "ReplayTurn",
-    "replay",
-    # Conversation diff
-    "DiffResult",
-    "TurnDiff",
-    "TurnStatus",
-    "diff",
     # Compliance export
     "export_json",
     "export_html",
-    # Role-based retention
-    "RetentionPolicy",
-    "apply_retention",
-    # Shared state
-    "SharedState",
-    "StateChange",
-    # Subagent spawning
-    "SubagentResult",
-    "spawn",
-    "delegate",
-    "children",
-    "parent_name",
     # Human-in-the-loop
     "HumanReview",
     "ReviewDecision",
@@ -469,13 +330,6 @@ __all__ = [
     "approve",
     "reject",
     "revise",
-    # Agent communication
-    "AgentMessage",
-    "MessageType",
-    "Mailbox",
-    "send",
-    "broadcast",
-    "reply",
     # Skill system
     "SkillDefinition",
     "create_skill",
@@ -535,57 +389,11 @@ __all__ = [
     "ExtractedRelationship",
     "PipelineResult",
     "regex_enricher",
-    # Enrichment Q&A
-    "EnrichmentQuestion",
-    "QuestionOption",
-    "QuestionQueue",
-    "QuestionStatus",
-    "QuestionType",
-    "QueueStats",
-    "detect_factual_conflicts",
-    "detect_name_ambiguity",
-    "detect_weak_relationships",
-    "generate_question_id",
-    "pending_questions",
-    # Directives
-    "ContextDirective",
-    "RelatesToDirective",
-    "ConfidentialDirective",
-    "ExpiresDirective",
-    "ParsedDirectives",
-    "ApplyResult",
-    "parse_directives",
-    "strip_directives",
-    "apply_directives",
-    # Knowledge filtering
-    "KnowledgeFilter",
-    "FilterResult",
-    "filter_for_persona",
-    "retrieve_context",
-    # Confusion metric
-    "ConfusionScore",
-    "ConfusionReport",
-    "confusion",
-    "node_confusion",
-    # Gap detection
-    "GapType",
-    "Gap",
-    "GapReport",
-    "detect_gaps",
-    # Freshness reporting
-    "FreshnessStatus",
-    "FreshnessEntry",
-    "FreshnessReport",
-    "freshness_report",
     # Persona system
     "PersonaDefinition",
     "get_persona",
     "list_personas",
     "persona_categories",
-    # Preset management
-    "Preset",
-    "PresetManager",
-    "PresetNames",
     # Builder types
     "BuilderTypes",
     # Testing functions
@@ -603,17 +411,14 @@ __all__ = [
     "load_tool_box",
     "get_builtin_tool",
     "load_selected_tools",
-    # Tool Observability
-    "ObservabilityLevel",
-    "ToolObserver",
-    "configure_observability",
-    "get_global_observer",
-    # Tool Debugging
-    "ToolDebugger",
-    "configure_debug_mode",
-    "debug_dashboard",
-    "debug_errors",
-    "debug_tool",
-    "export_debug_report",
-    "live_monitor",
+    # Config
+    "TalkBoxConfig",
+    "ProfileConfig",
+    "ResolvedConfig",
+    "TUIMode",
+    "load_config",
+    "save_config",
+    "load_profile",
+    "save_profile",
+    "list_profiles",
 ]

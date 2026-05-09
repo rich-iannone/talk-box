@@ -9,6 +9,12 @@ import time
 
 import talk_box as tb
 
+from talk_box.tool_debugging import (
+    ToolDebugger,
+    debug_dashboard,
+    debug_errors,
+    debug_tool,
+)
 from talk_box.tool_observability import (
     ObservabilityLevel,
     ToolExecution,
@@ -824,7 +830,7 @@ def test_metrics_aggregation():
     from talk_box.tool_observability import reset_observability
 
     reset_observability()
-    observer = tb.get_global_observer()
+    observer = get_global_observer()
 
     # Execute multiple operations
     for i in range(5):
@@ -856,7 +862,7 @@ def test_execution_filtering():
     from talk_box.tool_observability import reset_observability
 
     reset_observability()
-    observer = tb.get_global_observer()
+    observer = get_global_observer()
 
     # Create executions with different tools and statuses
     tools_and_statuses = [
@@ -894,7 +900,7 @@ def test_execution_filtering():
 
 def test_error_analysis():
     """Test error analysis functionality."""
-    observer = tb.get_global_observer()
+    observer = get_global_observer()
 
     # Create some errors
     error_scenarios = [
@@ -940,7 +946,7 @@ def test_performance_summary():
     from talk_box.tool_observability import reset_observability
 
     reset_observability()
-    observer = tb.get_global_observer()
+    observer = get_global_observer()
 
     # Create mixed executions
     for i in range(10):
@@ -987,18 +993,18 @@ def test_observability_levels():
 
 def test_debugger_creation():
     """Test that ToolDebugger can be created."""
-    debugger = tb.ToolDebugger()
+    debugger = ToolDebugger()
     assert debugger.observer is not None
 
     # Test with custom observer
     custom_observer = ToolObserver(level=ObservabilityLevel.DEBUG)
-    custom_debugger = tb.ToolDebugger(observer=custom_observer)
+    custom_debugger = ToolDebugger(observer=custom_observer)
     assert custom_debugger.observer is custom_observer
 
 
 def test_debug_functions():
     """Test convenience debug functions."""
-    observer = tb.get_global_observer()
+    observer = get_global_observer()
 
     # Create some test data
     execution = observer.start_execution("test_tool", "test_123", {"param": "value"})
@@ -1007,10 +1013,10 @@ def test_debug_functions():
     # Test that debug functions don't crash
     # (We can't easily test output in unit tests, but we can ensure they run)
     try:
-        tb.debug_dashboard()
-        tb.debug_tool("test_tool")
-        tb.debug_errors()
-        tb.debug_errors("test_tool")
+        debug_dashboard()
+        debug_tool("test_tool")
+        debug_errors()
+        debug_errors("test_tool")
 
         # These should complete without error
         assert True
@@ -1045,7 +1051,7 @@ async def test_tool_integration():
     assert "Value must be positive" in result.error
 
     # Check that observability captured these executions
-    observer = tb.get_global_observer()
+    observer = get_global_observer()
     executions = observer.get_executions(tool_name="integration_test_tool")
     assert len(executions) == 2
 

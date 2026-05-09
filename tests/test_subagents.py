@@ -307,24 +307,18 @@ class TestIntrospection:
 # ---------------------------------------------------------------------------
 
 
-class TestTopLevelImport:
-    def test_import_from_package(self):
-        import talk_box
+class TestImport:
+    def test_import_from_submodule(self):
+        from talk_box.subagents import (
+            spawn,
+            delegate,
+            children,
+            parent_name,
+            SubagentResult,
+        )
 
-        assert hasattr(talk_box, "spawn")
-        assert hasattr(talk_box, "delegate")
-        assert hasattr(talk_box, "children")
-        assert hasattr(talk_box, "parent_name")
-        assert hasattr(talk_box, "SubagentResult")
-
-    def test_all_contains_exports(self):
-        import talk_box
-
-        for name in [
-            "spawn",
-            "delegate",
-            "children",
-            "parent_name",
-            "SubagentResult",
-        ]:
-            assert name in talk_box.__all__
+        assert spawn is not None
+        assert delegate is not None
+        assert children is not None
+        assert parent_name is not None
+        assert SubagentResult is not None

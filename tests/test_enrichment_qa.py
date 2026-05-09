@@ -580,38 +580,38 @@ class TestPendingQuestions:
 # ---------------------------------------------------------------------------
 
 
-class TestTopLevelImport:
-    """Tests that enrichment_qa exports are accessible from talk_box."""
+class TestImport:
+    """Tests that enrichment_qa exports are accessible from talk_box.enrichment_qa."""
 
     def test_import_question_type(self):
-        from talk_box import QuestionType as QT
+        from talk_box.enrichment_qa import QuestionType as QT
 
         assert QT.ENTITY_AMBIGUITY.value == "entity_ambiguity"
 
     def test_import_question_status(self):
-        from talk_box import QuestionStatus as QS
+        from talk_box.enrichment_qa import QuestionStatus as QS
 
         assert QS.PENDING.value == "pending"
 
     def test_import_enrichment_question(self):
-        from talk_box import EnrichmentQuestion as EQ
+        from talk_box.enrichment_qa import EnrichmentQuestion as EQ
 
         q = EQ(id="t", question_type=QuestionType.ENTITY_AMBIGUITY, text="x")
         assert q.id == "t"
 
     def test_import_question_queue(self):
-        from talk_box import QuestionQueue as QQ
+        from talk_box.enrichment_qa import QuestionQueue as QQ
 
         queue = QQ()
         assert queue.max_per_session == 7
 
     def test_import_pending_questions(self):
-        from talk_box import pending_questions as pq
+        from talk_box.enrichment_qa import pending_questions as pq
 
         assert callable(pq)
 
     def test_import_detectors(self):
-        from talk_box import (
+        from talk_box.enrichment_qa import (
             detect_factual_conflicts,
             detect_name_ambiguity,
             detect_weak_relationships,

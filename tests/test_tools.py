@@ -1286,9 +1286,15 @@ class TestToolIntegration:
 
     def test_tool_observability_integration(self):
         """Test that tools integrate properly with observability system."""
+        from talk_box.tool_observability import (
+            ObservabilityLevel,
+            configure_observability,
+            get_global_observer,
+        )
+        from talk_box.tool_debugging import configure_debug_mode
 
         # Configure observability
-        tb.configure_debug_mode(tb.ObservabilityLevel.DETAILED)
+        configure_debug_mode(ObservabilityLevel.DETAILED)
 
         @tb.tool(name="observability_test_tool")
         def obs_tool(context: ToolContext, value: int) -> ToolResult:
@@ -1306,7 +1312,7 @@ class TestToolIntegration:
             assert result.data == i * 2
 
         # Check observability data
-        observer = tb.get_global_observer()
+        observer = get_global_observer()
         metrics = observer.get_metrics("observability_test_tool")
 
         assert "observability_test_tool" in metrics

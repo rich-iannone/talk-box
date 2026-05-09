@@ -488,23 +488,23 @@ class TestDetectGapsGeneral:
 # ---------------------------------------------------------------------------
 
 
-class TestTopLevelImport:
+class TestImport:
     def test_detect_gaps_importable(self):
-        import talk_box
+        from talk_box.gap_detection import detect_gaps
 
-        assert hasattr(talk_box, "detect_gaps")
+        assert detect_gaps is not None
 
     def test_gap_importable(self):
-        import talk_box
+        from talk_box.gap_detection import Gap
 
-        assert hasattr(talk_box, "Gap")
+        assert Gap is not None
 
     def test_gap_report_importable(self):
-        import talk_box
+        from talk_box.gap_detection import GapReport
 
-        assert hasattr(talk_box, "GapReport")
+        assert GapReport is not None
 
     def test_gap_type_importable(self):
-        import talk_box
+        from talk_box.gap_detection import GapType
 
-        assert hasattr(talk_box, "GapType")
+        assert GapType is not None

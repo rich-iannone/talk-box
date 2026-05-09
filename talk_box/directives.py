@@ -7,6 +7,18 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+__all__ = [
+    "ApplyResult",
+    "ConfidentialDirective",
+    "ContextDirective",
+    "ExpiresDirective",
+    "ParsedDirectives",
+    "RelatesToDirective",
+    "apply_directives",
+    "parse_directives",
+    "strip_directives",
+]
+
 # ---------------------------------------------------------------------------
 # Directive types
 # ---------------------------------------------------------------------------

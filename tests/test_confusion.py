@@ -494,23 +494,23 @@ class TestTypeCoverage:
 # ---------------------------------------------------------------------------
 
 
-class TestTopLevelImport:
+class TestImport:
     def test_confusion_importable(self):
-        import talk_box
+        from talk_box.confusion import confusion
 
-        assert hasattr(talk_box, "confusion")
+        assert confusion is not None
 
     def test_confusion_score_importable(self):
-        import talk_box
+        from talk_box.confusion import ConfusionScore
 
-        assert hasattr(talk_box, "ConfusionScore")
+        assert ConfusionScore is not None
 
     def test_confusion_report_importable(self):
-        import talk_box
+        from talk_box.confusion import ConfusionReport
 
-        assert hasattr(talk_box, "ConfusionReport")
+        assert ConfusionReport is not None
 
     def test_node_confusion_importable(self):
-        import talk_box
+        from talk_box.confusion import node_confusion
 
-        assert hasattr(talk_box, "node_confusion")
+        assert node_confusion is not None

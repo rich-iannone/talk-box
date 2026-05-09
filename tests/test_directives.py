@@ -488,9 +488,9 @@ class TestParseAndApply:
 # ---------------------------------------------------------------------------
 
 
-class TestTopLevelImport:
+class TestImport:
     def test_import_from_package(self):
-        from talk_box import (
+        from talk_box.directives import (
             ApplyResult,
             ConfidentialDirective,
             ContextDirective,
@@ -513,7 +513,7 @@ class TestTopLevelImport:
         assert strip_directives is not None
 
     def test_all_contains_exports(self):
-        import talk_box
+        import talk_box.directives
 
         for name in [
             "ApplyResult",
@@ -526,4 +526,4 @@ class TestTopLevelImport:
             "parse_directives",
             "strip_directives",
         ]:
-            assert name in talk_box.__all__, f"{name} missing from __all__"
+            assert name in talk_box.directives.__all__, f"{name} missing from __all__"

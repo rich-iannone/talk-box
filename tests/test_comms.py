@@ -431,9 +431,9 @@ class TestIntegrationScenario:
 # ---------------------------------------------------------------------------
 
 
-class TestTopLevelImport:
+class TestImport:
     def test_import_from_package(self):
-        import talk_box
+        import talk_box.comms
 
         for name in [
             "AgentMessage",
@@ -443,10 +443,10 @@ class TestTopLevelImport:
             "broadcast",
             "reply",
         ]:
-            assert hasattr(talk_box, name)
+            assert hasattr(talk_box.comms, name)
 
     def test_all_contains_exports(self):
-        import talk_box
+        import talk_box.comms
 
         for name in [
             "AgentMessage",
@@ -456,4 +456,4 @@ class TestTopLevelImport:
             "broadcast",
             "reply",
         ]:
-            assert name in talk_box.__all__
+            assert name in talk_box.comms.__all__

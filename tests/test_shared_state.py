@@ -328,15 +328,15 @@ class TestThreadSafety:
 # ---------------------------------------------------------------------------
 
 
-class TestTopLevelImport:
+class TestImport:
     def test_import_shared_state(self):
-        import talk_box as tb
+        import talk_box.shared_state as shared_state
 
-        assert hasattr(tb, "SharedState")
-        assert hasattr(tb, "StateChange")
+        assert hasattr(shared_state, "SharedState")
+        assert hasattr(shared_state, "StateChange")
 
     def test_in_all(self):
-        import talk_box
+        import talk_box.shared_state
 
-        assert "SharedState" in talk_box.__all__
-        assert "StateChange" in talk_box.__all__
+        assert "SharedState" in talk_box.shared_state.__all__
+        assert "StateChange" in talk_box.shared_state.__all__

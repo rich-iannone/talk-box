@@ -5,6 +5,11 @@ from dataclasses import dataclass, field
 from talk_box.forgetting import PolicyResult, retain_only
 from talk_box.memory import MemoryStore, MemoryTier
 
+__all__ = [
+    "RetentionPolicy",
+    "apply_retention",
+]
+
 # ---------------------------------------------------------------------------
 # Data types
 # ---------------------------------------------------------------------------

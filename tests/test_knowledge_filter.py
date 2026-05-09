@@ -603,23 +603,23 @@ class TestContextDirectiveIntegration:
 # ---------------------------------------------------------------------------
 
 
-class TestTopLevelImport:
+class TestImport:
     def test_knowledge_filter_importable(self):
-        import talk_box
+        from talk_box.knowledge_filter import KnowledgeFilter
 
-        assert hasattr(talk_box, "KnowledgeFilter")
+        assert KnowledgeFilter is not None
 
     def test_filter_result_importable(self):
-        import talk_box
+        from talk_box.knowledge_filter import FilterResult
 
-        assert hasattr(talk_box, "FilterResult")
+        assert FilterResult is not None
 
     def test_filter_for_persona_importable(self):
-        import talk_box
+        from talk_box.knowledge_filter import filter_for_persona
 
-        assert hasattr(talk_box, "filter_for_persona")
+        assert filter_for_persona is not None
 
     def test_retrieve_context_importable(self):
-        import talk_box
+        from talk_box.knowledge_filter import retrieve_context
 
-        assert hasattr(talk_box, "retrieve_context")
+        assert retrieve_context is not None

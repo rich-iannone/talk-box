@@ -1,5 +1,6 @@
 import pytest
-from talk_box import ChatBot, PresetNames
+from talk_box import ChatBot
+from talk_box.presets import PresetNames
 
 
 class TestPresetNames:

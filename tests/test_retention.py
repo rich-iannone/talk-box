@@ -294,15 +294,15 @@ persona_role: "basic role"
 # ---------------------------------------------------------------------------
 
 
-class TestTopLevelImport:
+class TestImport:
     def test_import_retention_policy(self):
-        import talk_box as tb
+        import talk_box.retention as retention
 
-        assert hasattr(tb, "RetentionPolicy")
-        assert hasattr(tb, "apply_retention")
+        assert hasattr(retention, "RetentionPolicy")
+        assert hasattr(retention, "apply_retention")
 
     def test_in_all(self):
-        import talk_box
+        import talk_box.retention
 
-        assert "RetentionPolicy" in talk_box.__all__
-        assert "apply_retention" in talk_box.__all__
+        assert "RetentionPolicy" in talk_box.retention.__all__
+        assert "apply_retention" in talk_box.retention.__all__

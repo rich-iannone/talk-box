@@ -2,7 +2,8 @@
 
 import pytest
 
-from talk_box import ChatBot, PresetManager
+from talk_box import ChatBot
+from talk_box.presets import PresetManager
 
 
 @pytest.fixture

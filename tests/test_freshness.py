@@ -393,23 +393,23 @@ class TestFreshnessReportFunction:
 # ---------------------------------------------------------------------------
 
 
-class TestTopLevelImport:
+class TestImport:
     def test_freshness_report_importable(self):
-        import talk_box
+        from talk_box.freshness import freshness_report
 
-        assert hasattr(talk_box, "freshness_report")
+        assert freshness_report is not None
 
     def test_freshness_report_class_importable(self):
-        import talk_box
+        from talk_box.freshness import FreshnessReport
 
-        assert hasattr(talk_box, "FreshnessReport")
+        assert FreshnessReport is not None
 
     def test_freshness_entry_importable(self):
-        import talk_box
+        from talk_box.freshness import FreshnessEntry
 
-        assert hasattr(talk_box, "FreshnessEntry")
+        assert FreshnessEntry is not None
 
     def test_freshness_status_importable(self):
-        import talk_box
+        from talk_box.freshness import FreshnessStatus
 
-        assert hasattr(talk_box, "FreshnessStatus")
+        assert FreshnessStatus is not None
