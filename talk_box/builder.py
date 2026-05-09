@@ -3130,11 +3130,27 @@ class ChatBot:
         model = self._config.get("model")
 
         adapter = ChatlasAdapter(provider=provider, model=model)
+        chat_session = adapter.create_chat_session(self._config)
+
+        # Register tools with the session
+        if self._config.get("tool_box_enabled", False) or self._config.get("tools"):
+            self._register_tools_with_session(chat_session)
+
+        # Replay conversation history
+        if conversation and len(conversation.messages) > 1:
+            for msg in conversation.messages[:-1]:
+                if msg.role == "user":
+                    try:
+                        chat_session.chat(msg.content, echo="none", stream=False)
+                    except Exception:
+                        pass
 
         # Build system prompt from config
         system_prompt = self._config.get("system_prompt")
 
-        yield from adapter.stream_with_thinking(message, system_prompt=system_prompt)
+        yield from adapter.stream_with_thinking(
+            message, system_prompt=system_prompt, chat_session=chat_session
+        )
 
     def _register_tools_with_session(self, chat_session) -> None:
         """Register tools with the chatlas session if tools are available."""

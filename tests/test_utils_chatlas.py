@@ -286,6 +286,55 @@ def test_create_chat_session_with_avoid_list(mock_create_chat):
 
 
 @patch("talk_box._utils_chatlas.ChatlasAdapter._create_chat_instance")
+def test_create_chat_session_with_tools_adds_awareness(mock_create_chat):
+    """Test chat session includes tool-awareness instruction when tools are configured."""
+    mock_chat = MagicMock()
+    mock_create_chat.return_value = mock_chat
+
+    adapter = ChatlasAdapter()
+    config = {"model": "gpt-4", "tools": ["file_read", "file_write", "list_files"]}
+
+    result = adapter.create_chat_session(config)
+
+    assert "file_read, file_write, list_files" in result.system_prompt
+    assert "use the file tools directly" in result.system_prompt
+
+
+@patch("talk_box._utils_chatlas.ChatlasAdapter._create_chat_instance")
+def test_create_chat_session_with_tool_box_enabled(mock_create_chat):
+    """Test tool-awareness instruction with tool_box_enabled flag."""
+    mock_chat = MagicMock()
+    mock_create_chat.return_value = mock_chat
+
+    adapter = ChatlasAdapter()
+    config = {"model": "gpt-4", "tool_box_enabled": True}
+
+    result = adapter.create_chat_session(config)
+
+    assert "tools available" in result.system_prompt
+    assert "use the file tools directly" in result.system_prompt
+
+
+@patch("talk_box._utils_chatlas.ChatlasAdapter._create_chat_instance")
+def test_create_chat_session_no_tools_no_awareness(mock_create_chat):
+    """Test no tool-awareness when tools are not configured."""
+    mock_chat = MagicMock()
+    mock_create_chat.return_value = mock_chat
+
+    adapter = ChatlasAdapter()
+    config = {"model": "gpt-4"}
+
+    result = adapter.create_chat_session(config)
+
+    # system_prompt should not be set at all (no persona, no avoid, no tools)
+    assert (
+        not hasattr(result, "system_prompt")
+        or result.system_prompt is None
+        or "tools" not in result.system_prompt
+    )
+
+
+@patch("talk_box._utils_chatlas.ChatlasAdapter._create_chat_instance")
 def test_create_chat_session_priority_order(mock_create_chat):
     """Test system prompt priority: custom > preset > persona."""
     mock_chat = MagicMock()
