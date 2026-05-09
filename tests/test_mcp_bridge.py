@@ -1,6 +1,8 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from talk_box.mcp_bridge import (
     MCPBridgeServer,
     MCPToolInfo,
@@ -11,6 +13,14 @@ from talk_box.mcp_bridge import (
     tools_to_mcp_server,
 )
 from talk_box.tools import ToolCategory, ToolContext, ToolResult, TalkBoxTool
+
+_has_mcp = True
+try:
+    import mcp  # noqa: F401
+except ModuleNotFoundError:
+    _has_mcp = False
+
+requires_mcp = pytest.mark.skipif(not _has_mcp, reason="mcp package not installed")
 
 
 # ---------------------------------------------------------------------------
@@ -98,6 +108,7 @@ class TestMCPBridgeServer:
         server = MCPBridgeServer(name="empty")
         assert server.tool_names() == []
 
+    @requires_mcp
     def test_build_returns_fast_mcp(self):
         tools = _get_test_tools()
         server = MCPBridgeServer(name="test", tools=tools)
@@ -107,6 +118,7 @@ class TestMCPBridgeServer:
 
         assert isinstance(mcp_server, FastMCP)
 
+    @requires_mcp
     def test_build_registers_tools(self):
         tools = _get_test_tools()
         server = MCPBridgeServer(name="test", tools=tools)
@@ -114,6 +126,7 @@ class TestMCPBridgeServer:
         # The FastMCP server should have the tools registered
         assert server._server is mcp_server
 
+    @requires_mcp
     def test_build_with_instructions(self):
         server = MCPBridgeServer(
             name="test",
@@ -154,6 +167,7 @@ class TestToolsToMcpServer:
 
 
 class TestRegisterToolOnServer:
+    @requires_mcp
     def test_sync_tool_registered(self):
         from mcp.server import FastMCP
 
@@ -163,6 +177,7 @@ class TestRegisterToolOnServer:
             _register_tool_on_server(mcp_server, t)
         # No error means success
 
+    @requires_mcp
     def test_registered_wrapper_is_callable(self):
         from mcp.server import FastMCP
 
@@ -357,6 +372,7 @@ class TestDiscoverMcpTools:
 
 
 class TestRoundTrip:
+    @requires_mcp
     def test_expose_and_consume(self):
         """Test the full round-trip: TB tool → MCP server → MCP info → TB tool."""
         tools = _get_test_tools()
