@@ -1751,3 +1751,38 @@ class TestEvalScreenHistory:
             await pilot.pause()
             table = app.screen.query_one("#eval-history-table", DataTable)
             assert table.row_count > 0
+
+
+class TestCostCommand:
+    """Tests for /cost slash command."""
+
+    @pytest.mark.asyncio()
+    async def test_cost_with_model(self, _fake_config):
+        """/cost shows pricing info for the active model."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_model = "anthropic:claude-sonnet-4-20250514"
+            inp = app.screen.query_one("#chat-input")
+            inp.load_text("/cost")
+            await pilot.press("enter")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = [str(m._Static__content) for m in msgs]
+            assert any("cost" in t.lower() or "$" in t for t in texts)
+
+    @pytest.mark.asyncio()
+    async def test_cost_no_model(self, _fake_config):
+        """/cost with no model set shows a message."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_model = None
+            inp = app.screen.query_one("#chat-input")
+            inp.load_text("/cost")
+            await pilot.press("enter")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            assert len(msgs) >= 1

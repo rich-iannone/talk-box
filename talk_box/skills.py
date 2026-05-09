@@ -284,6 +284,143 @@ def skill_categories() -> dict[str, list[str]]:
     return dict(sorted(categories.items()))
 
 
+def discover_skills(
+    *search_paths: str | Path,
+    scan_cwd: bool = True,
+) -> list[SkillDefinition]:
+    """Discover skills from ``SKILL.md`` files across multiple directories.
+
+    Scans the following locations (in order):
+
+    1. ``~/.config/talk-box/skills/``
+    2. ``./skills/`` (current working directory)
+    3. Any additional *search_paths* provided
+
+    Each ``SKILL.md`` file should have a YAML frontmatter block (delimited
+    by ``---``) with at minimum a ``name`` field, followed by Markdown
+    body used as the skill's ``instructions``.
+
+    Discovered skills are automatically registered in the global registry.
+
+    Parameters
+    ----------
+    *search_paths
+        Additional directories to scan.
+    scan_cwd
+        Whether to scan ``./skills/`` in the current directory.
+
+    Returns
+    -------
+    list[SkillDefinition]
+        Newly discovered skill definitions.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    skills = tb.discover_skills()
+    for s in skills:
+        print(s.name, s.description)
+    ```
+    """
+    import os
+
+    dirs: list[Path] = []
+
+    # Global skills dir
+    global_dir = Path(os.path.expanduser("~/.config/talk-box/skills"))
+    if global_dir.is_dir():
+        dirs.append(global_dir)
+
+    # CWD skills dir
+    if scan_cwd:
+        cwd_skills = Path.cwd() / "skills"
+        if cwd_skills.is_dir():
+            dirs.append(cwd_skills)
+
+    # Extra search paths
+    for p in search_paths:
+        d = Path(p)
+        if d.is_dir():
+            dirs.append(d)
+
+    discovered: list[SkillDefinition] = []
+    seen_names: set[str] = set()
+
+    for d in dirs:
+        for md_file in sorted(d.rglob("SKILL.md")):
+            try:
+                skill = _parse_skill_md(md_file)
+                if skill.name not in seen_names:
+                    seen_names.add(skill.name)
+                    discovered.append(skill)
+                    _cache[skill.name] = skill
+            except Exception:
+                continue
+
+    return discovered
+
+
+def _parse_skill_md(path: Path) -> SkillDefinition:
+    """Parse a ``SKILL.md`` file with YAML frontmatter + Markdown body.
+
+    Expected format::
+
+        ---
+        name: my_skill
+        display_name: My Skill
+        category: custom
+        description: Does something useful
+        constraints:
+          - Keep output concise
+        tools:
+          - file_reader
+        tags:
+          - writing
+        ---
+
+        # Instructions
+
+        Detailed instructions as markdown body...
+    """
+    text = path.read_text(encoding="utf-8")
+    lines = text.split("\n")
+
+    # Find YAML frontmatter delimiters
+    if not lines or lines[0].strip() != "---":
+        raise ValueError(f"No YAML frontmatter in {path}")
+
+    end_idx = -1
+    for i, line in enumerate(lines[1:], 1):
+        if line.strip() == "---":
+            end_idx = i
+            break
+
+    if end_idx < 0:
+        raise ValueError(f"Unclosed YAML frontmatter in {path}")
+
+    frontmatter = "\n".join(lines[1:end_idx])
+    body = "\n".join(lines[end_idx + 1 :]).strip()
+
+    data = parse_yaml(frontmatter)
+    if not isinstance(data, dict) or "name" not in data:
+        raise ValueError(f"Frontmatter must be a dict with 'name' key in {path}")
+
+    data.setdefault("instructions", "")
+    if body:
+        # Append body as instructions
+        existing = data.get("instructions", "")
+        data["instructions"] = f"{existing}\n\n{body}".strip() if existing else body
+
+    # Store source path in metadata
+    meta = data.get("metadata", {})
+    meta["source"] = str(path)
+    data["metadata"] = meta
+
+    return _parse_skill(data)
+
+
 def create_skill(
     name: str,
     *,

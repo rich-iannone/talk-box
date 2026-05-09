@@ -49,6 +49,85 @@ DEFAULT_DIMENSIONS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Custom metrics
+# ---------------------------------------------------------------------------
+
+# Type for scorer functions: (query, response, context) -> float [0..1]
+ScorerFn = Any  # Callable[[str, str, str], float] — use Any to avoid import issues
+
+
+@dataclass(frozen=True)
+class CustomMetric:
+    """A user-defined scoring metric.
+
+    Parameters
+    ----------
+    name
+        Unique metric name (e.g. ``"code_executes"``).
+    scorer_fn
+        Callable receiving ``(query, response, context)`` and returning
+        a float between 0.0 and 1.0.
+    description
+        Human-readable description of what the metric measures.
+    """
+
+    name: str
+    scorer_fn: Any  # Callable[[str, str, str], float]
+    description: str = ""
+
+
+_CUSTOM_METRICS: dict[str, CustomMetric] = {}
+
+
+def eval_metric(
+    name: str,
+    scorer_fn: Any,
+    *,
+    description: str = "",
+) -> CustomMetric:
+    """Register a custom evaluation metric.
+
+    The *scorer_fn* receives ``(query, response, context)`` and must
+    return a float between 0.0 and 1.0.  Custom metrics participate in
+    ``EvalResults.passed()``, ``.regressions()``, and scorecard rendering
+    alongside the built-in judge dimensions.
+
+    Parameters
+    ----------
+    name
+        Unique metric identifier (e.g. ``"code_executes"``).
+    scorer_fn
+        Scoring callable ``(query: str, response: str, context: str) -> float``.
+    description
+        Optional human-readable description.
+
+    Returns
+    -------
+    CustomMetric
+        The registered metric object.
+
+    Examples
+    --------
+    >>> def code_runs(query, response, context):
+    ...     return 1.0 if "def " in response else 0.0
+    >>> tb.eval_metric("code_executes", code_runs)
+    """
+    metric = CustomMetric(name=name, scorer_fn=scorer_fn, description=description)
+    _CUSTOM_METRICS[name] = metric
+    return metric
+
+
+def list_custom_metrics() -> list[CustomMetric]:
+    """Return all registered custom metrics."""
+    return list(_CUSTOM_METRICS.values())
+
+
+def clear_custom_metrics() -> None:
+    """Remove all registered custom metrics (useful for testing)."""
+    _CUSTOM_METRICS.clear()
+
+
 @dataclass(frozen=True)
 class EvalCase:
     """A single evaluation test case.
@@ -70,21 +149,29 @@ class EvalCase:
 
 @dataclass(frozen=True)
 class EvalScore:
-    """A judge's score on a single dimension for a single response.
+    """A score on a single dimension for a single response.
 
     Parameters
     ----------
     dimension
-        Which dimension was scored.
+        Which dimension was scored. For built-in dimensions this is an
+        ``EvalDimension`` enum; for custom metrics it is a plain string.
     score
         Numeric score from 0.0 to 1.0.
     explanation
-        Judge's explanation for the score.
+        Judge's or metric's explanation for the score.
     """
 
-    dimension: EvalDimension
+    dimension: EvalDimension | str
     score: float
     explanation: str = ""
+
+    @property
+    def dimension_key(self) -> str:
+        """Return the dimension name as a plain string."""
+        if isinstance(self.dimension, EvalDimension):
+            return self.dimension.value
+        return self.dimension
 
 
 @dataclass
@@ -118,10 +205,12 @@ class EvalResult:
             return 0.0
         return sum(s.score for s in self.scores) / len(self.scores)
 
-    def score_for(self, dimension: EvalDimension) -> float | None:
+    def score_for(self, dimension: EvalDimension | str) -> float | None:
         """Get score for a specific dimension, or None if not scored."""
         for s in self.scores:
-            if s.dimension == dimension:
+            key = s.dimension_key
+            target = dimension.value if isinstance(dimension, EvalDimension) else dimension
+            if key == target:
                 return s.score
         return None
 
@@ -151,9 +240,9 @@ class EvalResults:
         return seen
 
     @property
-    def dimensions(self) -> list[EvalDimension]:
+    def dimensions(self) -> list[EvalDimension | str]:
         """Unique dimensions scored across all results."""
-        seen: list[EvalDimension] = []
+        seen: list[EvalDimension | str] = []
         for r in self.results:
             for s in r.scores:
                 if s.dimension not in seen:
@@ -174,7 +263,7 @@ class EvalResults:
         accum: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
         for r in self.results:
             for s in r.scores:
-                accum[r.variant][s.dimension.value].append(s.score)
+                accum[r.variant][s.dimension_key].append(s.score)
 
         return {
             variant: {dim: sum(vals) / len(vals) for dim, vals in dims.items()}
@@ -198,7 +287,7 @@ class EvalResults:
             "total_queries": len({r.query for r in self.results}),
             "total_results": len(self.results),
             "variants": self.variants,
-            "dimensions": [d.value for d in self.dimensions],
+            "dimensions": [d.value if isinstance(d, EvalDimension) else d for d in self.dimensions],
             "scores_by_variant": by_variant,
             "overall_scores": overall,
         }
@@ -289,7 +378,7 @@ class EvalResults:
                         "variant": r.variant,
                         "query": r.query,
                         "response": r.response,
-                        "dimension": s.dimension.value,
+                        "dimension": s.dimension_key,
                         "score": s.score,
                         "explanation": s.explanation,
                         "duration": r.duration,
@@ -328,7 +417,7 @@ class EvalResults:
             return gt.GT(pd.DataFrame({"No results": ["No evaluation data"]}))
 
         # Build a summary DataFrame: variant × dimension
-        dims = [d.value for d in self.dimensions]
+        dims = [d.value if isinstance(d, EvalDimension) else d for d in self.dimensions]
         rows = []
         for variant in self.variants:
             row: dict[str, Any] = {"Variant": variant}
@@ -660,6 +749,22 @@ def eval(
             judge_response = judge_convo.get_last_message().content
             scores = _parse_judge_response(judge_response, dims)
 
+            # Run custom metrics
+            context_str = case.context if isinstance(case, EvalCase) else ""
+            for metric in _CUSTOM_METRICS.values():
+                try:
+                    metric_score = metric.scorer_fn(query_str, response, context_str)
+                    metric_score = max(0.0, min(1.0, float(metric_score)))
+                except Exception:
+                    metric_score = 0.0
+                scores.append(
+                    EvalScore(
+                        dimension=metric.name,
+                        score=metric_score,
+                        explanation=metric.description or f"Custom metric: {metric.name}",
+                    )
+                )
+
             results.append(
                 EvalResult(
                     variant=variant_name,
@@ -675,6 +780,7 @@ def eval(
         config={
             "variants": list(bot_variants.keys()),
             "dimensions": [d.value for d in dims],
+            "custom_metrics": list(_CUSTOM_METRICS.keys()),
             "num_queries": len(eval_cases),
             "judge": str(judge) if isinstance(judge, str) else "default",
         },

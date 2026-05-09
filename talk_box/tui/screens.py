@@ -711,6 +711,7 @@ class ChatScreen(Screen):
                 "  /guards            Show guardrail status\n"
                 "  /memory            Show memory tier summary\n"
                 "  /kg                Show knowledge graph stats\n"
+                "  /cost              Show estimated session cost\n"
                 "  /quit              Quit the app"
             )
             self._append_system_message(help_text)
@@ -816,6 +817,9 @@ class ChatScreen(Screen):
 
         elif cmd == "/kg":
             self._show_kg_summary()
+
+        elif cmd == "/cost":
+            self._show_cost_estimate()
 
         elif cmd == "/format":
             self._set_output_format(arg)
@@ -1189,6 +1193,76 @@ class ChatScreen(Screen):
                 lines.append("  [dim]tb.MarkdownDir('./docs/').sync(kg)[/dim]")
         except Exception:
             lines.append("  [dim]Could not load knowledge graph[/dim]")
+        self._append_system_message("\n".join(lines))
+
+    def _show_cost_estimate(self) -> None:
+        """Show estimated session cost based on token usage and model pricing."""
+        # Approximate cost per 1M tokens (input/output) by model family
+        _COST_TABLE: dict[str, tuple[float, float]] = {
+            "claude-sonnet-4-6": (3.0, 15.0),
+            "claude-opus-4": (15.0, 75.0),
+            "claude-haiku": (0.25, 1.25),
+            "gpt-4o": (2.5, 10.0),
+            "gpt-4o-mini": (0.15, 0.6),
+            "gpt-4.1": (2.0, 8.0),
+            "gpt-4.1-mini": (0.4, 1.6),
+            "o3": (2.0, 8.0),
+            "o4-mini": (1.1, 4.4),
+            "gemini-2.5-pro": (1.25, 10.0),
+            "gemini-2.5-flash": (0.15, 0.6),
+        }
+
+        if not self._conversation or not self._conversation.messages:
+            self._append_system_message("No conversation yet — no cost to estimate.")
+            return
+
+        # Estimate input/output tokens
+        input_chars = 0
+        output_chars = 0
+        for m in self._conversation.messages:
+            if m.role == "user":
+                input_chars += len(m.content)
+            else:
+                output_chars += len(m.content)
+
+        input_tokens = input_chars // 4
+        output_tokens = output_chars // 4
+
+        # Find model pricing
+        model = self._active_model or "unknown"
+        model_lower = model.lower()
+        input_cost_per_m = 0.0
+        output_cost_per_m = 0.0
+        matched = False
+        for key, (ic, oc) in _COST_TABLE.items():
+            if key in model_lower:
+                input_cost_per_m = ic
+                output_cost_per_m = oc
+                matched = True
+                break
+
+        # Check for free/local models
+        is_free = "ollama" in model_lower or "local" in model_lower
+
+        lines = [
+            "[b]Session Cost Estimate[/b]",
+            f"  Model:          {model}",
+            f"  Input tokens:   ~{input_tokens:,}",
+            f"  Output tokens:  ~{output_tokens:,}",
+        ]
+
+        if is_free:
+            lines.append("  Cost:           [green]$0.00 (local model)[/green]")
+        elif matched:
+            input_cost = (input_tokens / 1_000_000) * input_cost_per_m
+            output_cost = (output_tokens / 1_000_000) * output_cost_per_m
+            total = input_cost + output_cost
+            lines.append(f"  Input cost:     ${input_cost:.4f}")
+            lines.append(f"  Output cost:    ${output_cost:.4f}")
+            lines.append(f"  [b]Total:         ${total:.4f}[/b]")
+        else:
+            lines.append("  Cost:           [dim]unknown model — no pricing data[/dim]")
+
         self._append_system_message("\n".join(lines))
 
     def _set_output_format(self, fmt: str) -> None:

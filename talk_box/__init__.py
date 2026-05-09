@@ -75,15 +75,19 @@ from talk_box.enrichment import (
     regex_enricher,
 )
 from talk_box.eval import (
+    CustomMetric,
     EvalCase,
     EvalDimension,
     EvalResult,
     EvalResults,
     EvalScore,
+    clear_custom_metrics,
     eval,
+    eval_metric,
     eval_model_update,
     eval_regression,
     eval_suite,
+    list_custom_metrics,
     scorecard_table,
     sweep_table,
 )
@@ -185,6 +189,7 @@ from talk_box.routing import (
 from talk_box.skills import (
     SkillDefinition,
     create_skill,
+    discover_skills,
     get_skill,
     list_skills,
     load_skill,
@@ -258,9 +263,13 @@ __all__ = [
     "estimate_tokens",
     # Evaluation
     "eval",
+    "eval_metric",
     "eval_model_update",
     "eval_regression",
     "eval_suite",
+    "clear_custom_metrics",
+    "list_custom_metrics",
+    "CustomMetric",
     "EvalCase",
     "EvalDimension",
     "EvalResult",
@@ -333,6 +342,7 @@ __all__ = [
     # Skill system
     "SkillDefinition",
     "create_skill",
+    "discover_skills",
     "get_skill",
     "list_skills",
     "register_skill",

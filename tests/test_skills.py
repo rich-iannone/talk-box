@@ -293,6 +293,7 @@ class TestTopLevelImport:
         for name in [
             "SkillDefinition",
             "create_skill",
+            "discover_skills",
             "get_skill",
             "list_skills",
             "register_skill",
@@ -300,3 +301,107 @@ class TestTopLevelImport:
             "skill_categories",
         ]:
             assert name in talk_box.__all__
+
+
+class TestDiscoverSkills:
+    """Tests for discover_skills() SKILL.md scanning."""
+
+    def test_discover_from_directory(self, tmp_path):
+        from talk_box.skills import _reset_cache, discover_skills
+
+        _reset_cache()
+
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir()
+        (skills_dir / "SKILL.md").write_text(
+            "---\n"
+            "name: test_skill\n"
+            "category: testing\n"
+            "description: A test skill\n"
+            "---\n\n"
+            "# Instructions\n\n"
+            "Do something useful.\n"
+        )
+
+        found = discover_skills(str(skills_dir), scan_cwd=False)
+        assert len(found) == 1
+        assert found[0].name == "test_skill"
+        assert found[0].category == "testing"
+        assert "Do something useful" in found[0].instructions
+
+    def test_discover_with_constraints(self, tmp_path):
+        from talk_box.skills import _reset_cache, discover_skills
+
+        _reset_cache()
+
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir()
+        (skills_dir / "SKILL.md").write_text(
+            "---\n"
+            "name: constrained_skill\n"
+            "description: Has constraints\n"
+            "constraints:\n"
+            "  - Be concise\n"
+            "  - Use examples\n"
+            "tags:\n"
+            "  - writing\n"
+            "---\n\n"
+            "Write clearly.\n"
+        )
+
+        found = discover_skills(str(skills_dir), scan_cwd=False)
+        assert len(found) == 1
+        assert found[0].constraints == ["Be concise", "Use examples"]
+        assert found[0].tags == ["writing"]
+
+    def test_discover_nested_skill_md(self, tmp_path):
+        from talk_box.skills import _reset_cache, discover_skills
+
+        _reset_cache()
+
+        nested = tmp_path / "skills" / "sub"
+        nested.mkdir(parents=True)
+        (nested / "SKILL.md").write_text(
+            "---\nname: nested_skill\ndescription: Found nested\n---\n\nNested instructions.\n"
+        )
+
+        found = discover_skills(str(tmp_path / "skills"), scan_cwd=False)
+        assert len(found) == 1
+        assert found[0].name == "nested_skill"
+
+    def test_discover_empty_dir(self, tmp_path):
+        from talk_box.skills import _reset_cache, discover_skills
+
+        _reset_cache()
+
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        found = discover_skills(str(empty), scan_cwd=False)
+        assert found == []
+
+    def test_discover_no_frontmatter_skipped(self, tmp_path):
+        from talk_box.skills import _reset_cache, discover_skills
+
+        _reset_cache()
+
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir()
+        (skills_dir / "SKILL.md").write_text("No frontmatter here.\n")
+
+        found = discover_skills(str(skills_dir), scan_cwd=False)
+        assert found == []
+
+    def test_discover_stores_source_path(self, tmp_path):
+        from talk_box.skills import _reset_cache, discover_skills
+
+        _reset_cache()
+
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir()
+        (skills_dir / "SKILL.md").write_text(
+            "---\nname: sourced\ndescription: Has source\n---\n\nBody.\n"
+        )
+
+        found = discover_skills(str(skills_dir), scan_cwd=False)
+        assert "source" in found[0].metadata
+        assert "SKILL.md" in found[0].metadata["source"]

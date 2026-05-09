@@ -2,6 +2,7 @@ import pytest
 
 from talk_box.builder import ChatBot
 from talk_box.eval import (
+    CustomMetric,
     DEFAULT_DIMENSIONS,
     EvalCase,
     EvalDimension,
@@ -13,10 +14,13 @@ from talk_box.eval import (
     _parse_judge_response,
     _resolve_judge,
     _resolve_queries,
+    clear_custom_metrics,
     eval,
-    eval_regression,
+    eval_metric,
     eval_model_update,
+    eval_regression,
     eval_suite,
+    list_custom_metrics,
     scorecard_table,
     sweep_table,
 )
@@ -1096,3 +1100,125 @@ class TestEvalModelUpdate:
         loaded = json.loads(out.read_text())
         assert "openai:gpt-4o" in loaded["variants"]
         assert "anthropic:claude-sonnet-4-6" in loaded["variants"]
+
+
+# ---------------------------------------------------------------------------
+# Custom eval metrics
+# ---------------------------------------------------------------------------
+
+
+class TestCustomMetrics:
+    """Tests for custom eval metric registration and scoring."""
+
+    def setup_method(self):
+        clear_custom_metrics()
+
+    def teardown_method(self):
+        clear_custom_metrics()
+
+    def test_register_metric(self):
+        def scorer(q, r, c):
+            return 1.0
+
+        m = eval_metric("test_metric", scorer, description="A test metric")
+        assert isinstance(m, CustomMetric)
+        assert m.name == "test_metric"
+        assert m.description == "A test metric"
+
+    def test_list_custom_metrics(self):
+        eval_metric("m1", lambda q, r, c: 1.0)
+        eval_metric("m2", lambda q, r, c: 0.5)
+        metrics = list_custom_metrics()
+        assert len(metrics) == 2
+        names = {m.name for m in metrics}
+        assert names == {"m1", "m2"}
+
+    def test_clear_custom_metrics(self):
+        eval_metric("temp", lambda q, r, c: 1.0)
+        assert len(list_custom_metrics()) == 1
+        clear_custom_metrics()
+        assert len(list_custom_metrics()) == 0
+
+    def test_eval_score_dimension_key_enum(self):
+        s = EvalScore(dimension=EvalDimension.RELEVANCE, score=0.9)
+        assert s.dimension_key == "relevance"
+
+    def test_eval_score_dimension_key_string(self):
+        s = EvalScore(dimension="code_executes", score=0.8)
+        assert s.dimension_key == "code_executes"
+
+    def test_eval_result_score_for_custom(self):
+        r = EvalResult(
+            variant="test",
+            query="hello",
+            response="world",
+            scores=[
+                EvalScore(dimension=EvalDimension.RELEVANCE, score=0.9),
+                EvalScore(dimension="custom_check", score=0.75),
+            ],
+        )
+        assert r.score_for(EvalDimension.RELEVANCE) == 0.9
+        assert r.score_for("custom_check") == 0.75
+        assert r.score_for("nonexistent") is None
+
+    def test_eval_results_dimensions_includes_custom(self):
+        results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="v1",
+                    query="q",
+                    response="r",
+                    scores=[
+                        EvalScore(dimension=EvalDimension.SAFETY, score=1.0),
+                        EvalScore(dimension="my_metric", score=0.8),
+                    ],
+                )
+            ]
+        )
+        dims = results.dimensions
+        assert EvalDimension.SAFETY in dims
+        assert "my_metric" in dims
+
+    def test_eval_results_scores_by_variant_includes_custom(self):
+        results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="v1",
+                    query="q",
+                    response="r",
+                    scores=[
+                        EvalScore(dimension=EvalDimension.RELEVANCE, score=0.9),
+                        EvalScore(dimension="coverage", score=0.6),
+                    ],
+                )
+            ]
+        )
+        by_variant = results.scores_by_variant()
+        assert by_variant["v1"]["relevance"] == 0.9
+        assert by_variant["v1"]["coverage"] == 0.6
+
+    def test_scorer_fn_clamped(self):
+        """Metric scores outside 0-1 are clamped."""
+        # Create scores directly (simulating what eval() does)
+        s_high = EvalScore(dimension="too_high", score=max(0.0, min(1.0, 2.5)))
+        s_low = EvalScore(dimension="too_low", score=max(0.0, min(1.0, -0.5)))
+        assert s_high.score == 1.0
+        assert s_low.score == 0.0
+
+    def test_summary_with_custom_metrics(self):
+        results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="bot",
+                    query="q",
+                    response="r",
+                    scores=[
+                        EvalScore(dimension=EvalDimension.RELEVANCE, score=0.8),
+                        EvalScore(dimension="my_metric", score=0.6),
+                    ],
+                )
+            ]
+        )
+        summary = results.summary()
+        assert "my_metric" in summary["dimensions"]
+        assert "relevance" in summary["dimensions"]
