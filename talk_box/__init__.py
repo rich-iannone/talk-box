@@ -83,6 +83,7 @@ from talk_box.eval import (
     EvalResult,
     EvalResults,
     EvalScore,
+    artifact_correctness_scorer,
     benchmark_persona,
     clear_custom_metrics,
     eval,
@@ -192,6 +193,11 @@ from talk_box.routing import (
     classify_complexity,
     route,
 )
+from talk_box.playground import playground
+from talk_box.server import (
+    ServerConfig,
+    serve,
+)
 from talk_box.skills import (
     SkillDefinition,
     create_skill,
@@ -280,6 +286,7 @@ __all__ = [
     "eval_suite",
     "benchmark_persona",
     "BenchmarkResult",
+    "artifact_correctness_scorer",
     "clear_custom_metrics",
     "list_custom_metrics",
     "CustomMetric",
@@ -447,4 +454,9 @@ __all__ = [
     "save_profile",
     "list_profiles",
     "validate_config_dict",
+    # Server
+    "serve",
+    "ServerConfig",
+    # Playground
+    "playground",
 ]

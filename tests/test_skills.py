@@ -4,6 +4,7 @@ from talk_box.skills import (
     SkillDefinition,
     _reset_cache,
     create_skill,
+    discover_skills,
     get_skill,
     list_skills,
     load_skill,
@@ -624,3 +625,58 @@ class TestDiscoverEntryPointSkills:
 
         result = discover_entry_point_skills()
         assert result == []
+
+
+# ---------------------------------------------------------------------------
+# SKILL.md file discovery tests
+# ---------------------------------------------------------------------------
+
+
+class TestDiscoverSkillsMd:
+    def test_discover_from_directory(self, tmp_path):
+        """discover_skills() finds SKILL.md files in search paths."""
+        _reset_cache()
+
+        skill_dir = tmp_path / "my_skill"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text(
+            "---\nname: test_skill\ndisplay_name: Test Skill\n"
+            "category: testing\ndescription: A test skill\n---\n\n"
+            "# Instructions\n\nDo testing things.\n",
+            encoding="utf-8",
+        )
+
+        result = discover_skills(tmp_path, scan_cwd=False)
+        assert len(result) >= 1
+        names = [s.name for s in result]
+        assert "test_skill" in names
+
+        skill = get_skill("test_skill")
+        assert skill.category == "testing"
+        assert "testing things" in skill.instructions
+
+    def test_discover_skips_bad_files(self, tmp_path):
+        """Malformed SKILL.md files are silently skipped."""
+        _reset_cache()
+
+        bad_dir = tmp_path / "bad"
+        bad_dir.mkdir()
+        (bad_dir / "SKILL.md").write_text("not valid frontmatter", encoding="utf-8")
+
+        result = discover_skills(tmp_path, scan_cwd=False)
+        assert result == []
+
+    def test_first_party_skill_md_parseable(self):
+        """The first-party SKILL.md files in skills/ can be parsed."""
+        _reset_cache()
+        from pathlib import Path
+
+        skills_dir = Path(__file__).parent.parent / "skills"
+        if not skills_dir.is_dir():
+            pytest.skip("No skills/ directory in project root")
+
+        result = discover_skills(skills_dir, scan_cwd=False)
+        assert len(result) >= 1
+        names = [s.name for s in result]
+        # At least one of our first-party skills should be found
+        assert any(n in names for n in ["great_tables", "pointblank", "shiny_python"])

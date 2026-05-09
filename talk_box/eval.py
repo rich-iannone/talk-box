@@ -40,6 +40,7 @@ class EvalDimension(Enum):
     TONE = "tone"
     COMPLETENESS = "completeness"
     CONCISENESS = "conciseness"
+    ARTIFACT_CORRECTNESS = "artifact_correctness"
 
 
 DEFAULT_DIMENSIONS = [
@@ -1428,3 +1429,121 @@ def sweep_table(source: str | Path | dict[str, Any]) -> "gt.GT":
     )
 
     return table
+
+
+# ---------------------------------------------------------------------------
+# Artifact correctness scoring
+# ---------------------------------------------------------------------------
+
+
+def _extract_code_blocks(text: str) -> list[str]:
+    """Extract fenced code blocks from a response string.
+
+    Returns a list of code strings found inside ```python ... ``` or
+    ``` ... ``` fences.
+    """
+    import re
+
+    pattern = re.compile(r"```(?:python)?\s*\n(.*?)```", re.DOTALL)
+    return [m.group(1).strip() for m in pattern.finditer(text)]
+
+
+def _run_code_safely(code: str, *, timeout: float = 10.0) -> tuple[bool, str]:
+    """Execute *code* in a subprocess and return (success, output).
+
+    The code runs in an isolated process with a timeout.  Returns
+    ``(True, stdout)`` on success or ``(False, error_message)`` on failure.
+    """
+    import subprocess
+    import sys
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".py", delete=False, encoding="utf-8"
+    ) as f:
+        f.write(code)
+        f.flush()
+        script_path = f.name
+
+    try:
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        if result.returncode == 0:
+            return True, result.stdout
+        return False, result.stderr
+    except subprocess.TimeoutExpired:
+        return False, f"Timed out after {timeout}s"
+    except Exception as exc:
+        return False, str(exc)
+    finally:
+        import os
+
+        os.unlink(script_path)
+
+
+def artifact_correctness_scorer(
+    query: str,
+    response: str,
+    context: str = "",
+    *,
+    expected_output: str | None = None,
+    timeout: float = 10.0,
+) -> float:
+    """Score a response's code artifacts for correctness.
+
+    Extracts Python code blocks from the response, executes each in an
+    isolated subprocess, and returns a score based on:
+
+    - 1.0 — all code blocks execute successfully (and match expected output
+      if provided)
+    - 0.5 — code executes but output doesn't match expected
+    - 0.0 — code fails to execute or no code blocks found
+
+    Parameters
+    ----------
+    query
+        The original query/prompt.
+    response
+        The model's response containing code blocks.
+    context
+        Optional additional context (unused, kept for scorer API compat).
+    expected_output
+        If provided, the stdout of the code must contain this string
+        (case-insensitive) to score above 0.5.
+    timeout
+        Maximum seconds to allow each code block to run.
+
+    Returns
+    -------
+    float
+        Score between 0.0 and 1.0.
+    """
+    blocks = _extract_code_blocks(response)
+    if not blocks:
+        return 0.0
+
+    total = len(blocks)
+    executed = 0
+    matched = 0
+
+    for code in blocks:
+        success, output = _run_code_safely(code, timeout=timeout)
+        if success:
+            executed += 1
+            if expected_output is None or expected_output.lower() in output.lower():
+                matched += 1
+
+    if executed == 0:
+        return 0.0
+
+    exec_ratio = executed / total
+
+    if expected_output is not None:
+        match_ratio = matched / total
+        return exec_ratio * 0.5 + match_ratio * 0.5
+
+    return exec_ratio

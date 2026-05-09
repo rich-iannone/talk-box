@@ -11,10 +11,12 @@ from talk_box.eval import (
     EvalResults,
     EvalScore,
     _build_judge_prompt,
+    _extract_code_blocks,
     _get_persona_context,
     _parse_judge_response,
     _resolve_judge,
     _resolve_queries,
+    artifact_correctness_scorer,
     benchmark_persona,
     clear_custom_metrics,
     eval,
@@ -570,13 +572,14 @@ class TestEvalRegression:
 
 class TestEvalDimension:
     def test_all_dimensions(self):
-        assert len(EvalDimension) == 6
+        assert len(EvalDimension) == 7
         assert EvalDimension.RELEVANCE.value == "relevance"
         assert EvalDimension.SAFETY.value == "safety"
         assert EvalDimension.INSTRUCTION_ADHERENCE.value == "instruction_adherence"
         assert EvalDimension.TONE.value == "tone"
         assert EvalDimension.COMPLETENESS.value == "completeness"
         assert EvalDimension.CONCISENESS.value == "conciseness"
+        assert EvalDimension.ARTIFACT_CORRECTNESS.value == "artifact_correctness"
 
     def test_default_dimensions(self):
         assert len(DEFAULT_DIMENSIONS) == 3
@@ -1387,3 +1390,68 @@ class TestBenchmarkPersona:
         result = benchmark_persona("p", models=["m1"])
         assert "relevance" in result.dimension_scores["m1"]
         assert "safety" in result.dimension_scores["m1"]
+
+
+# ---------------------------------------------------------------------------
+# Artifact correctness tests
+# ---------------------------------------------------------------------------
+
+
+class TestExtractCodeBlocks:
+    def test_extract_python_blocks(self):
+        text = "Here is code:\n```python\nprint('hello')\n```\nDone."
+        blocks = _extract_code_blocks(text)
+        assert len(blocks) == 1
+        assert "print('hello')" in blocks[0]
+
+    def test_extract_plain_blocks(self):
+        text = "```\nx = 1\n```"
+        blocks = _extract_code_blocks(text)
+        assert len(blocks) == 1
+        assert "x = 1" in blocks[0]
+
+    def test_extract_multiple_blocks(self):
+        text = "```python\na = 1\n```\ntext\n```python\nb = 2\n```"
+        blocks = _extract_code_blocks(text)
+        assert len(blocks) == 2
+
+    def test_no_blocks(self):
+        assert _extract_code_blocks("No code here.") == []
+
+    def test_empty_string(self):
+        assert _extract_code_blocks("") == []
+
+
+class TestArtifactCorrectnessScorer:
+    def test_no_code_blocks_returns_zero(self):
+        score = artifact_correctness_scorer("q", "No code here")
+        assert score == 0.0
+
+    def test_valid_code_scores_one(self):
+        response = "```python\nprint('hello')\n```"
+        score = artifact_correctness_scorer("q", response)
+        assert score == 1.0
+
+    def test_invalid_code_scores_zero(self):
+        response = "```python\nraise ValueError('fail')\n```"
+        score = artifact_correctness_scorer("q", response)
+        assert score == 0.0
+
+    def test_expected_output_match(self):
+        response = "```python\nprint('hello world')\n```"
+        score = artifact_correctness_scorer("q", response, expected_output="hello world")
+        assert score == 1.0
+
+    def test_expected_output_mismatch(self):
+        response = "```python\nprint('goodbye')\n```"
+        score = artifact_correctness_scorer("q", response, expected_output="hello")
+        # Executes (0.5 * 1.0) + matches (0.5 * 0.0) = 0.5
+        assert score == 0.5
+
+    def test_mixed_valid_invalid(self):
+        response = "```python\nprint('ok')\n```\n```python\nraise Exception\n```"
+        score = artifact_correctness_scorer("q", response)
+        assert score == 0.5  # 1 of 2 succeeded
+
+    def test_artifact_correctness_dimension_exists(self):
+        assert EvalDimension.ARTIFACT_CORRECTNESS.value == "artifact_correctness"

@@ -827,3 +827,38 @@ def serve_ui(host: str, port: int, title: str) -> None:
     console.print(f"[green]Serving Talk Box TUI at[/green] http://{host}:{port}/")
     server = Server("talk-box ui", host=host, port=port, title=title)
     server.serve()
+
+
+@main.command()
+@click.option("--model", "-m", default=None, help="Model to use (provider:model).")
+@click.option("--persona", "-p", default=None, help="Persona name.")
+@click.option("--host", default="127.0.0.1", help="Host to bind to.")
+@click.option("--port", default=8568, type=int, help="Port to serve on.")
+def dev_playground(model: str | None, persona: str | None, host: str, port: int) -> None:
+    """Launch a dev-mode playground in the browser.
+
+    Opens an interactive chat interface with live diagnostics —
+    prompt inspector, guard log, tool trace, and timing.
+    """
+    console = Console()
+    import talk_box as tb
+
+    persona_name = persona or "default"
+    model_name = model or "echo:test"
+
+    try:
+        bot = tb.ChatBot(persona_name, model=model_name)
+    except Exception as exc:
+        console.print(f"[red]Failed to create bot:[/red] {exc}")
+        raise SystemExit(1)
+
+    try:
+        from talk_box.playground import playground as _playground
+
+        _playground(bot, host=host, port=port)
+    except ImportError:
+        console.print(
+            "[red]uvicorn/starlette required.[/red]\n"
+            "Install with: [bold]pip install uvicorn starlette[/bold]"
+        )
+        raise SystemExit(1)

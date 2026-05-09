@@ -377,3 +377,19 @@ class TestServeUI:
         assert "--host" in result.output
         assert "--port" in result.output
         assert "--title" in result.output
+
+
+# ---------------------------------------------------------------------------
+# TestDevPlayground
+# ---------------------------------------------------------------------------
+
+
+class TestDevPlayground:
+    def test_dev_playground_help(self):
+        """dev-playground --help displays options."""
+        result = _runner().invoke(main, ["dev-playground", "--help"])
+        assert result.exit_code == 0
+        assert "--model" in result.output
+        assert "--persona" in result.output
+        assert "--host" in result.output
+        assert "--port" in result.output
