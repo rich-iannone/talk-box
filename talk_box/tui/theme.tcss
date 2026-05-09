@@ -147,9 +147,32 @@ Screen {
     color: $text-muted;
 }
 
-#chat-input {
+#chat-input-bar {
     dock: bottom;
+    height: auto;
+    min-height: 3;
+    max-height: 10;
     margin: 0 1 0 1;
+}
+
+#chat-input {
+    width: 1fr;
+}
+
+#chat-input-buttons {
+    width: auto;
+    height: auto;
+    padding: 0 0 0 1;
+}
+
+#chat-send-btn {
+    min-width: 10;
+    margin: 0;
+}
+
+#chat-enter-toggle {
+    min-width: 12;
+    margin: 1 0 0 0;
 }
 
 #chat-sidebar {

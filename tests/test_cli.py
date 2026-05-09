@@ -235,3 +235,76 @@ class TestConfig:
     def test_config_list_empty(self):
         result = _runner().invoke(main, ["config", "list"])
         assert result.exit_code == 0
+
+
+class TestConfigInit:
+    """Tests for 'talk-box config init' command."""
+
+    def test_init_creates_file(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = _runner().invoke(main, ["config", "init"])
+        assert result.exit_code == 0
+        assert "Created" in result.output
+        assert (tmp_path / "talk-box.yml").is_file()
+
+    def test_init_with_model_persona(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = _runner().invoke(
+            main, ["config", "init", "--model", "ollama:llama3.3", "--persona", "analyst"]
+        )
+        assert result.exit_code == 0
+        assert "ollama:llama3.3" in result.output
+        assert "analyst" in result.output
+
+    def test_init_refuses_overwrite(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "talk-box.yml").write_text("existing: true\n")
+        result = _runner().invoke(main, ["config", "init"])
+        assert result.exit_code == 1
+        assert "already exists" in result.output
+
+    def test_init_force_overwrite(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "talk-box.yml").write_text("existing: true\n")
+        result = _runner().invoke(main, ["config", "init", "--force"])
+        assert result.exit_code == 0
+        assert "Created" in result.output
+
+
+class TestConfigProfile:
+    """Tests for 'talk-box config create-profile / delete-profile' commands."""
+
+    def test_create_profile(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("talk_box.config._PROFILES_DIR", tmp_path / "profiles")
+        result = _runner().invoke(
+            main,
+            ["config", "create-profile", "dev", "--model", "ollama:llama3.3", "--persona", "coder"],
+        )
+        assert result.exit_code == 0
+        assert "dev" in result.output
+        assert (tmp_path / "profiles" / "dev.yml").is_file()
+
+    def test_create_profile_with_guardrails(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("talk_box.config._PROFILES_DIR", tmp_path / "profiles")
+        result = _runner().invoke(
+            main,
+            ["config", "create-profile", "safe", "-g", "no_pii,no_code_exec"],
+        )
+        assert result.exit_code == 0
+        assert "no_pii" in result.output
+
+    def test_delete_profile(self, tmp_path, monkeypatch):
+        profiles_dir = tmp_path / "profiles"
+        profiles_dir.mkdir()
+        (profiles_dir / "old.yml").write_text("model: x\n")
+        monkeypatch.setattr("talk_box.config._GLOBAL_CONFIG_DIR", tmp_path)
+        result = _runner().invoke(main, ["config", "delete-profile", "old"])
+        assert result.exit_code == 0
+        assert "Deleted" in result.output
+        assert not (profiles_dir / "old.yml").exists()
+
+    def test_delete_profile_not_found(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("talk_box.config._GLOBAL_CONFIG_DIR", tmp_path)
+        result = _runner().invoke(main, ["config", "delete-profile", "ghost"])
+        assert result.exit_code == 1
+        assert "not found" in result.output

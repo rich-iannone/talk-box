@@ -536,8 +536,12 @@ def _merge_configs(base: TalkBoxConfig, override: TalkBoxConfig) -> TalkBoxConfi
         else base.default_persona,
         guardrails=override.guardrails if override.guardrails else base.guardrails,
         temperature=override.temperature if override.temperature is not None else base.temperature,
-        favorite_models=override.favorite_models if override.favorite_models else base.favorite_models,
-        favorite_personas=override.favorite_personas if override.favorite_personas else base.favorite_personas,
+        favorite_models=override.favorite_models
+        if override.favorite_models
+        else base.favorite_models,
+        favorite_personas=override.favorite_personas
+        if override.favorite_personas
+        else base.favorite_personas,
         allow_cloud=override.allow_cloud if not override.allow_cloud else base.allow_cloud,
         mode=override.mode if override.mode != TUIMode.FULL else base.mode,
         profiles={**base.profiles, **override.profiles},

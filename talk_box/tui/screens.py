@@ -21,9 +21,48 @@ from textual.widgets import (
     OptionList,
     Select,
     Static,
+    TextArea,
 )
 from textual.widgets.option_list import Option
 from textual.worker import Worker, WorkerState
+
+_GLOBAL_CONFIG_DIR = "__unset__"  # lazily resolved
+
+
+def _config_dir() -> str:
+    """Return the global config directory path."""
+    import os
+
+    return os.path.expanduser("~/.config/talk-box")
+
+
+class ChatInput(TextArea):
+    """Multi-line input with configurable Enter behaviour.
+
+    When ``enter_sends`` is True (default), Enter sends and Shift+Enter
+    inserts a newline.  When False, Enter inserts a newline and the user
+    must click the Send button.
+    """
+
+    enter_sends: bool = True
+
+    class Submitted(TextArea.Changed):
+        """Posted when the user submits the input."""
+
+        def __init__(self, text_area: TextArea) -> None:
+            super().__init__(text_area)
+            self.value = text_area.text
+
+    def _on_key(self, event) -> None:
+        if event.key == "enter" and self.enter_sends:
+            event.prevent_default()
+            event.stop()
+            self.post_message(self.Submitted(self))
+
+    def submit(self) -> None:
+        """Programmatically submit the current text (used by Send button)."""
+        self.post_message(self.Submitted(self))
+
 
 # ---------------------------------------------------------------------------
 # Command List (modal overlay)
@@ -351,6 +390,8 @@ class ChatScreen(Screen):
         self._active_model: str | None = None
         self._prompt_history: list[str] = []
         self._history_index: int = -1
+        self._output_format: str | None = None  # json, markdown, table
+        self._enter_sends: bool = True
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -362,10 +403,15 @@ class ChatScreen(Screen):
                         "[dim]Type a message below to start chatting.[/dim]",
                         id="chat-welcome-hint",
                     )
-                yield Input(
-                    placeholder="Type a message… (Enter to send)",
-                    id="chat-input",
-                )
+                with Horizontal(id="chat-input-bar"):
+                    yield ChatInput(
+                        "",
+                        id="chat-input",
+                        compact=True,
+                    )
+                    with Vertical(id="chat-input-buttons"):
+                        yield Button("Send", id="chat-send-btn", variant="primary")
+                        yield Button("⏎=Send", id="chat-enter-toggle", variant="default")
 
             # Sidebar
             with Vertical(id="chat-sidebar"):
@@ -464,7 +510,10 @@ class ChatScreen(Screen):
         except Exception:
             pass
 
-        self.query_one("#chat-input", Input).focus()
+        self.query_one("#chat-input", ChatInput).focus()
+
+        # Load persistent prompt history
+        self._load_prompt_history()
 
     def _init_bot(self) -> None:
         """Create a ChatBot from the resolved config."""
@@ -556,7 +605,16 @@ class ChatScreen(Screen):
                 )
             )
             self._update_sidebar()
-            self.query_one("#chat-input", Input).focus()
+            self.query_one("#chat-input", ChatInput).focus()
+        elif btn_id == "chat-send-btn":
+            self.query_one("#chat-input", ChatInput).submit()
+        elif btn_id == "chat-enter-toggle":
+            self._enter_sends = not self._enter_sends
+            ci = self.query_one("#chat-input", ChatInput)
+            ci.enter_sends = self._enter_sends
+            toggle = self.query_one("#chat-enter-toggle", Button)
+            toggle.label = "⏎=Send" if self._enter_sends else "⏎=Newline"
+            self.query_one("#chat-input", ChatInput).focus()
         elif btn_id.startswith("copy-chat-msg-"):
             msg_id = btn_id.removeprefix("copy-")
             try:
@@ -569,15 +627,21 @@ class ChatScreen(Screen):
                 pass
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle message submission."""
+        """Handle message submission from workspace or other Input widgets."""
+        pass
+
+    def on_chat_input_submitted(self, event: ChatInput.Submitted) -> None:
+        """Handle chat message submission from the multi-line ChatInput."""
         text = event.value.strip()
         if not text:
             return
-        event.input.value = ""
+        ta = self.query_one("#chat-input", ChatInput)
+        ta.clear()
 
         # Record in prompt history
         self._prompt_history.append(text)
         self._history_index = -1
+        self._save_prompt_history()
 
         # Slash commands
         if text.startswith("/"):
@@ -588,33 +652,36 @@ class ChatScreen(Screen):
         self._send_message(text)
 
     def on_key(self, event) -> None:
-        """Handle up/down arrows for prompt history."""
-        inp = self.query_one("#chat-input", Input)
-        if not inp.has_focus:
+        """Handle up/down arrows for prompt history in chat input."""
+        try:
+            ta = self.query_one("#chat-input", ChatInput)
+        except Exception:
+            return
+        if not ta.has_focus:
             return
         if not self._prompt_history:
             return
 
-        if event.key == "up":
+        if event.key == "up" and ta.text.strip() == "":
             if self._history_index == -1:
                 self._history_index = len(self._prompt_history) - 1
             elif self._history_index > 0:
                 self._history_index -= 1
             else:
                 return
-            inp.value = self._prompt_history[self._history_index]
-            inp.cursor_position = len(inp.value)
+            ta.clear()
+            ta.insert(self._prompt_history[self._history_index])
             event.prevent_default()
-        elif event.key == "down":
+        elif event.key == "down" and ta.text.strip() == "":
             if self._history_index == -1:
                 return
             if self._history_index < len(self._prompt_history) - 1:
                 self._history_index += 1
-                inp.value = self._prompt_history[self._history_index]
-                inp.cursor_position = len(inp.value)
+                ta.clear()
+                ta.insert(self._prompt_history[self._history_index])
             else:
                 self._history_index = -1
-                inp.value = ""
+                ta.clear()
             event.prevent_default()
 
     def _handle_slash_command(self, text: str) -> None:
@@ -637,6 +704,7 @@ class ChatScreen(Screen):
                 "  /load [name]       Load a saved session\n"
                 "  /export [format]   Export session (json, markdown)\n"
                 "  /attach <path>     Attach a file to the next message\n"
+                "  /format <type>     Set output format (json, markdown, table)\n"
                 "  /fav model <name>  Toggle model as favorite\n"
                 "  /fav persona <n>   Toggle persona as favorite\n"
                 "  /fav               List current favorites\n"
@@ -749,6 +817,9 @@ class ChatScreen(Screen):
         elif cmd == "/kg":
             self._show_kg_summary()
 
+        elif cmd == "/format":
+            self._set_output_format(arg)
+
         else:
             self._append_system_message(
                 f"Unknown command: [b]{cmd}[/b]. Type [b]/help[/b] for available commands."
@@ -772,7 +843,7 @@ class ChatScreen(Screen):
                 )
             )
             self._update_sidebar()
-            self.query_one("#chat-input", Input).focus()
+            self.query_one("#chat-input", ChatInput).focus()
 
         self.run_worker(_clear(), name="clear_chat")
 
@@ -878,8 +949,7 @@ class ChatScreen(Screen):
 
         if not path:
             self._append_system_message(
-                "Usage: [b]/attach <path>[/b]\n"
-                "  Attaches a file to the next message sent."
+                "Usage: [b]/attach <path>[/b]\n  Attaches a file to the next message sent."
             )
             return
 
@@ -1017,8 +1087,7 @@ class ChatScreen(Screen):
                 "model": self._active_model,
                 "persona": self._active_persona,
                 "messages": [
-                    {"role": m.role, "content": m.content}
-                    for m in self._conversation.messages
+                    {"role": m.role, "content": m.content} for m in self._conversation.messages
                 ],
             }
             with open(filepath, "w") as f:
@@ -1122,6 +1191,81 @@ class ChatScreen(Screen):
             lines.append("  [dim]Could not load knowledge graph[/dim]")
         self._append_system_message("\n".join(lines))
 
+    def _set_output_format(self, fmt: str) -> None:
+        """Set the output format for assistant responses."""
+        valid = {"json", "markdown", "table"}
+        if not fmt:
+            current = self._output_format or "default"
+            self._append_system_message(
+                f"[b]Output Format[/b]: {current}\n  Usage: /format json | markdown | table | off"
+            )
+            return
+        fmt = fmt.lower()
+        if fmt == "off":
+            self._output_format = None
+            self._append_system_message("Output format reset to [b]default[/b]")
+        elif fmt in valid:
+            self._output_format = fmt
+            self._append_system_message(f"Output format set to [b]{fmt}[/b]")
+        else:
+            self._append_system_message(
+                f"Unknown format: [b]{fmt}[/b]\n  Supported: json, markdown, table, off"
+            )
+
+    def _auto_save_session(self) -> None:
+        """Auto-save the current session after each exchange."""
+        import json
+        import os
+        from datetime import datetime
+
+        if not self._conversation or not self._conversation.messages:
+            return
+
+        sessions_dir = os.path.join(_config_dir(), "sessions")
+        os.makedirs(sessions_dir, exist_ok=True)
+        filepath = os.path.join(sessions_dir, "_autosave.json")
+
+        data = {
+            "name": "_autosave",
+            "saved_at": datetime.now().isoformat(),
+            "model": self._active_model,
+            "persona": self._active_persona,
+            "conversation": self._conversation.to_dict(),
+        }
+        try:
+            with open(filepath, "w") as f:
+                json.dump(data, f, indent=2)
+        except Exception:
+            pass
+
+    def _save_prompt_history(self) -> None:
+        """Persist prompt history to disk."""
+        import json
+        import os
+
+        history_path = os.path.join(_config_dir(), "prompt_history.json")
+        os.makedirs(os.path.dirname(history_path), exist_ok=True)
+        try:
+            # Keep last 200 entries
+            to_save = self._prompt_history[-200:]
+            with open(history_path, "w") as f:
+                json.dump(to_save, f)
+        except Exception:
+            pass
+
+    def _load_prompt_history(self) -> None:
+        """Load prompt history from disk."""
+        import json
+        import os
+
+        history_path = os.path.join(_config_dir(), "prompt_history.json")
+        try:
+            if os.path.isfile(history_path):
+                with open(history_path) as f:
+                    self._prompt_history = json.load(f)
+        except Exception:
+            self._prompt_history = []
+
     def _append_system_message(self, content: str) -> None:
         """Append a system/info message (not from user or assistant)."""
         container = self.query_one("#chat-messages", VerticalScroll)
@@ -1146,11 +1290,13 @@ class ChatScreen(Screen):
         if role == "user":
             label = "[b]You[/b]"
             classes = "chat-message chat-user"
+            display_content = f"{label}\n{content}"
         else:
             label = "[b]Assistant[/b]"
             classes = "chat-message chat-assistant"
+            display_content = self._render_assistant_display(content)
 
-        widget = Static(f"{label}\n{content}", id=msg_id, classes=classes)
+        widget = Static(display_content, id=msg_id, classes=classes)
         widget._raw_content = content
         copy_btn = Button("📋", id=f"copy-{msg_id}", classes="chat-copy-btn")
         wrapper = Horizontal(widget, copy_btn, classes=f"chat-msg-row {role}-row")
@@ -1174,14 +1320,21 @@ class ChatScreen(Screen):
             attachment_blocks = []
             for path, content in self._pending_attachments:
                 attachment_blocks.append(f'<file path="{path}">\n{content}\n</file>')
-            enriched = (
-                f"{text}\n\n--- Attached files ---\n"
-                + "\n\n".join(attachment_blocks)
-            )
+            enriched = f"{text}\n\n--- Attached files ---\n" + "\n\n".join(attachment_blocks)
             self._pending_attachments = []
 
         # Also enrich with auto-detected file references
         enriched = self._enrich_with_files(enriched)
+
+        # Inject output format instruction if set
+        if self._output_format:
+            fmt_instruction = {
+                "json": "Respond with valid JSON only.",
+                "markdown": "Respond in Markdown format.",
+                "table": "Respond using Markdown tables where appropriate.",
+            }.get(self._output_format, "")
+            if fmt_instruction:
+                enriched = f"[Output format: {fmt_instruction}]\n\n{enriched}"
 
         async def _do_stream():
             import asyncio
@@ -1258,9 +1411,12 @@ class ChatScreen(Screen):
                             )
 
                     # Add the completed exchange to conversation
-                    # Store original message (without injected file contents)
+                    # Store original message (without injected file/format prefixes)
                     original = text.split("\n\n--- Referenced files ---\n")[0]
                     original = original.split("\n\n--- Attached files ---\n")[0]
+                    if original.startswith("[Output format:"):
+                        # Strip the format instruction prefix
+                        original = original.split("\n\n", 1)[-1] if "\n\n" in original else original
                     self._conversation.add_message("user", original)
                     self._conversation.add_message("assistant", response_text)
 
@@ -1291,6 +1447,23 @@ class ChatScreen(Screen):
             parts.append("[dim]…[/dim]")
         return "\n".join(parts)
 
+    @staticmethod
+    def _render_assistant_display(content: str, *, thinking: str = "") -> "RenderableType":
+        """Render assistant content as Rich Markdown with optional thinking."""
+        from rich.console import Group
+        from rich.markdown import Markdown
+        from rich.text import Text
+
+        parts = []
+        parts.append(Text.from_markup("[b]Assistant[/b]"))
+        if thinking:
+            parts.append(Text.from_markup(f"[dim]💭 {thinking}[/dim]"))
+        if content:
+            parts.append(Markdown(content))
+        elif not thinking:
+            parts.append(Text.from_markup("[dim]…[/dim]"))
+        return Group(*parts)
+
     def _update_stream_widget(self, widget_id: str, display: str) -> None:
         """Update the streaming widget with new content (called on main thread)."""
         try:
@@ -1302,16 +1475,17 @@ class ChatScreen(Screen):
             pass
 
     def _finalize_stream_widget(self, widget_id: str, content: str, thinking: str = "") -> None:
-        """Finalize the streamed widget with raw content for copy (called on main thread)."""
+        """Finalize the streamed widget with rich markdown rendering (called on main thread)."""
         try:
             widget = self.query_one(f"#{widget_id}", Static)
-            display = self._format_stream_display(thinking, content)
+            display = self._render_assistant_display(content, thinking=thinking)
             widget.update(display)
             widget._raw_content = content
             widget.remove_class("chat-thinking")
             container = self.query_one("#chat-messages", VerticalScroll)
             container.scroll_end(animate=False)
             self._update_sidebar()
+            self._auto_save_session()
         except Exception:
             pass
 
@@ -1390,7 +1564,7 @@ class ChatScreen(Screen):
 
     def action_focus_input(self) -> None:
         """Refocus the chat input."""
-        self.query_one("#chat-input", Input).focus()
+        self.query_one("#chat-input", ChatInput).focus()
 
 
 # ---------------------------------------------------------------------------
@@ -1651,8 +1825,11 @@ class ProfileScreen(Screen):
                     ol.add_option(Option(name, id=name))
             else:
                 ol.add_option(
-                    Option("[dim]No profiles — create in ~/.config/talk-box/profiles/[/dim]",
-                           id="__empty", disabled=True)
+                    Option(
+                        "[dim]No profiles — create in ~/.config/talk-box/profiles/[/dim]",
+                        id="__empty",
+                        disabled=True,
+                    )
                 )
         except Exception:
             pass
@@ -2312,7 +2489,7 @@ class MemoryScreen(Screen):
         try:
             import os
 
-            from talk_box.memory import LongTermMemory, MemoryStore
+            from talk_box.memory import LongTermMemory
 
             db_path = os.path.expanduser("~/.config/talk-box/memory.db")
 
@@ -2346,8 +2523,12 @@ class MemoryScreen(Screen):
 
             lines.append("")
             lines.append("[b]Usage[/b]")
-            lines.append("  [dim]store = tb.MemoryStore(long_term_path='~/.config/talk-box/memory.db')[/dim]")
-            lines.append("  [dim]store.remember('key', 'value', tier=tb.MemoryTier.LONG_TERM)[/dim]")
+            lines.append(
+                "  [dim]store = tb.MemoryStore(long_term_path='~/.config/talk-box/memory.db')[/dim]"
+            )
+            lines.append(
+                "  [dim]store.remember('key', 'value', tier=tb.MemoryTier.LONG_TERM)[/dim]"
+            )
             lines.append("  [dim]store.recall('key')[/dim]")
         except Exception:
             lines = [

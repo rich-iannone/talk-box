@@ -420,7 +420,7 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "hello world"
+            inp.load_text("hello world")
             await pilot.press("enter")
             # Wait for worker to complete
             await pilot.pause()
@@ -474,7 +474,7 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/help"
+            inp.load_text("/help")
             await pilot.press("enter")
             await pilot.pause()
             # Should have a system message
@@ -489,7 +489,7 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/info"
+            inp.load_text("/info")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -504,12 +504,12 @@ class TestChatScreen:
             await pilot.pause()
             # Send a message first
             inp = app.screen.query_one("#chat-input")
-            inp.value = "hello"
+            inp.load_text("hello")
             await pilot.press("enter")
             await pilot.pause()
             await pilot.pause()
             # Now clear
-            inp.value = "/clear"
+            inp.load_text("/clear")
             await pilot.press("enter")
             await pilot.pause()
             await pilot.pause()
@@ -524,7 +524,7 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/foobar"
+            inp.load_text("/foobar")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -537,16 +537,18 @@ class TestChatScreen:
             app = pilot.app
             app._switch_to("chat")
             await pilot.pause()
+            # Reset history for clean test
+            baseline = len(app.screen._prompt_history)
             inp = app.screen.query_one("#chat-input")
-            inp.value = "first message"
+            inp.load_text("first message")
             await pilot.press("enter")
             await pilot.pause()
-            inp.value = "second message"
+            inp.load_text("second message")
             await pilot.press("enter")
             await pilot.pause()
-            assert len(app.screen._prompt_history) == 2
-            assert app.screen._prompt_history[0] == "first message"
-            assert app.screen._prompt_history[1] == "second message"
+            assert len(app.screen._prompt_history) == baseline + 2
+            assert app.screen._prompt_history[-2] == "first message"
+            assert app.screen._prompt_history[-1] == "second message"
 
     @pytest.mark.asyncio()
     async def test_chat_enrich_with_files(self, _fake_config, tmp_path, monkeypatch):
@@ -583,7 +585,7 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/save"
+            inp.load_text("/save")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -597,7 +599,7 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/load"
+            inp.load_text("/load")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -611,7 +613,7 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/attach"
+            inp.load_text("/attach")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -629,7 +631,7 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/attach data.csv"
+            inp.load_text("/attach data.csv")
             await pilot.press("enter")
             await pilot.pause()
             assert hasattr(app.screen, "_pending_attachments")
@@ -655,7 +657,7 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/fav"
+            inp.load_text("/fav")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -669,7 +671,7 @@ class TestChatScreen:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/fav bogus"
+            inp.load_text("/fav bogus")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -741,6 +743,7 @@ class TestFavoritesConfig:
         assert config_path.is_file()
 
         from yaml12 import read_yaml
+
         data = read_yaml(config_path)
         assert data["default_model"] == "openai:gpt-4o"
         assert data["default_persona"] == "data_analyst"
@@ -752,6 +755,7 @@ class TestFavoritesConfig:
         monkeypatch.setattr(config_mod, "_GLOBAL_CONFIG_PATH", tmp_path / "nope.yml")
 
         from talk_box.config import get_favorites
+
         models, personas = get_favorites()
         assert models == []
         assert personas == []
@@ -1080,7 +1084,7 @@ class TestNewSlashCommands:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/export"
+            inp.load_text("/export")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -1101,7 +1105,7 @@ class TestNewSlashCommands:
             app.screen._conversation.add_message("assistant", "hi")
 
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/export xml"
+            inp.load_text("/export xml")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -1114,9 +1118,7 @@ class TestNewSlashCommands:
         import os
 
         export_dir = tmp_path / "exports"
-        monkeypatch.setenv(
-            "HOME", str(tmp_path)
-        )  # redirect ~/.config to tmp
+        monkeypatch.setenv("HOME", str(tmp_path))  # redirect ~/.config to tmp
 
         async with TalkBoxApp().run_test() as pilot:
             app = pilot.app
@@ -1131,7 +1133,8 @@ class TestNewSlashCommands:
 
             # Patch the export dir
             monkeypatch.setattr(
-                os.path, "expanduser",
+                os.path,
+                "expanduser",
                 lambda p: str(tmp_path / ".config" / "talk-box" / "exports")
                 if "exports" in p
                 else os.path._real_expanduser(p)  # type: ignore[attr-defined]
@@ -1152,7 +1155,7 @@ class TestNewSlashCommands:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/guards"
+            inp.load_text("/guards")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -1166,7 +1169,7 @@ class TestNewSlashCommands:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/memory"
+            inp.load_text("/memory")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -1180,7 +1183,7 @@ class TestNewSlashCommands:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/kg"
+            inp.load_text("/kg")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -1194,7 +1197,7 @@ class TestNewSlashCommands:
             app._switch_to("chat")
             await pilot.pause()
             inp = app.screen.query_one("#chat-input")
-            inp.value = "/help"
+            inp.load_text("/help")
             await pilot.press("enter")
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
@@ -1251,3 +1254,350 @@ class TestProfileScreenEnhanced:
             await pilot.pause()
             detail = app.screen.query_one("#profile-detail-content", Static)
             assert detail is not None
+
+
+class TestFormatCommand:
+    """Tests for the /format slash command."""
+
+    @pytest.mark.asyncio()
+    async def test_format_shows_current(self, _fake_config):
+        """/format with no arg shows current format."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            inp = app.screen.query_one("#chat-input")
+            inp.load_text("/format")
+            await pilot.press("enter")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            assert len(msgs) >= 1
+
+    @pytest.mark.asyncio()
+    async def test_format_set_json(self, _fake_config):
+        """/format json sets the output format."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            inp = app.screen.query_one("#chat-input")
+            inp.load_text("/format json")
+            await pilot.press("enter")
+            await pilot.pause()
+            assert app.screen._output_format == "json"
+
+    @pytest.mark.asyncio()
+    async def test_format_set_markdown(self, _fake_config):
+        """/format markdown sets the output format."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            inp = app.screen.query_one("#chat-input")
+            inp.load_text("/format markdown")
+            await pilot.press("enter")
+            await pilot.pause()
+            assert app.screen._output_format == "markdown"
+
+    @pytest.mark.asyncio()
+    async def test_format_set_table(self, _fake_config):
+        """/format table sets the output format."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            inp = app.screen.query_one("#chat-input")
+            inp.load_text("/format table")
+            await pilot.press("enter")
+            await pilot.pause()
+            assert app.screen._output_format == "table"
+
+    @pytest.mark.asyncio()
+    async def test_format_off(self, _fake_config):
+        """/format off resets the output format."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._output_format = "json"
+            inp = app.screen.query_one("#chat-input")
+            inp.load_text("/format off")
+            await pilot.press("enter")
+            await pilot.pause()
+            assert app.screen._output_format is None
+
+    @pytest.mark.asyncio()
+    async def test_format_invalid(self, _fake_config):
+        """/format with an invalid type shows an error."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            inp = app.screen.query_one("#chat-input")
+            inp.load_text("/format xml")
+            await pilot.press("enter")
+            await pilot.pause()
+            assert app.screen._output_format is None
+            msgs = app.screen.query(".chat-system")
+            assert len(msgs) >= 1
+
+
+class TestMultiLineInput:
+    """Tests for multi-line ChatInput widget."""
+
+    @pytest.mark.asyncio()
+    async def test_chat_input_is_textarea(self, _fake_config):
+        """Chat input is a TextArea-based ChatInput widget."""
+        from talk_box.tui.screens import ChatInput
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            inp = app.screen.query_one("#chat-input", ChatInput)
+            assert inp is not None
+
+    @pytest.mark.asyncio()
+    async def test_chat_input_clears_after_send(self, _fake_config):
+        """Chat input clears after sending a message."""
+        from talk_box.tui.screens import ChatInput
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            inp = app.screen.query_one("#chat-input", ChatInput)
+            inp.load_text("test message")
+            await pilot.press("enter")
+            await pilot.pause()
+            assert inp.text == ""
+
+    @pytest.mark.asyncio()
+    async def test_send_button_exists(self, _fake_config):
+        """Chat has a Send button."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            btn = app.screen.query_one("#chat-send-btn", Button)
+            assert btn is not None
+
+    @pytest.mark.asyncio()
+    async def test_enter_toggle_exists(self, _fake_config):
+        """Chat has an Enter-mode toggle button."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            toggle = app.screen.query_one("#chat-enter-toggle", Button)
+            assert toggle is not None
+            assert "Send" in str(toggle.label)
+
+    @pytest.mark.asyncio()
+    async def test_enter_toggle_switches_mode(self, _fake_config):
+        """Clicking the Enter toggle switches between Send and Newline modes."""
+        from talk_box.tui.screens import ChatInput
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+
+            ci = app.screen.query_one("#chat-input", ChatInput)
+            toggle = app.screen.query_one("#chat-enter-toggle", Button)
+
+            # Default: enter sends
+            assert app.screen._enter_sends is True
+            assert ci.enter_sends is True
+            assert "Send" in str(toggle.label)
+
+            # Click toggle → newline mode
+            await pilot.click("#chat-enter-toggle")
+            await pilot.pause()
+            assert app.screen._enter_sends is False
+            assert ci.enter_sends is False
+            assert "Newline" in str(toggle.label)
+
+            # Click again → back to send mode
+            await pilot.click("#chat-enter-toggle")
+            await pilot.pause()
+            assert app.screen._enter_sends is True
+            assert ci.enter_sends is True
+            assert "Send" in str(toggle.label)
+
+    @pytest.mark.asyncio()
+    async def test_send_button_submits(self, _fake_config):
+        """Clicking Send button submits the chat input text."""
+        from talk_box.tui.screens import ChatInput
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+
+            ci = app.screen.query_one("#chat-input", ChatInput)
+            ci.load_text("/info")
+            await pilot.click("#chat-send-btn")
+            await pilot.pause()
+
+            # /info produces a system message
+            msgs = app.screen.query(".chat-system")
+            assert len(msgs) >= 1
+
+    @pytest.mark.asyncio()
+    async def test_enter_newline_mode_does_not_send(self, _fake_config):
+        """In newline mode, Enter does not send the message."""
+        from talk_box.tui.screens import ChatInput
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+
+            # Switch to newline mode
+            ci = app.screen.query_one("#chat-input", ChatInput)
+            ci.enter_sends = False
+            app.screen._enter_sends = False
+
+            baseline = len(app.screen._prompt_history)
+            ci.load_text("/help")
+            await pilot.press("enter")
+            await pilot.pause()
+
+            # Should NOT have submitted (no new prompt history entry)
+            assert len(app.screen._prompt_history) == baseline
+
+
+class TestAutoSave:
+    """Tests for session auto-save."""
+
+    @pytest.mark.asyncio()
+    async def test_auto_save_method_exists(self, _fake_config):
+        """ChatScreen has the _auto_save_session method."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            assert hasattr(app.screen, "_auto_save_session")
+            # Calling with no conversation should be a no-op
+            app.screen._auto_save_session()
+
+    @pytest.mark.asyncio()
+    async def test_auto_save_writes_file(self, _fake_config, tmp_path, monkeypatch):
+        """Auto-save writes to _autosave.json."""
+        import os
+
+        monkeypatch.setattr(
+            "talk_box.tui.screens._config_dir",
+            lambda: str(tmp_path),
+        )
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+
+            from talk_box.conversation import Conversation
+
+            app.screen._conversation = Conversation()
+            app.screen._conversation.add_message("user", "hello")
+            app.screen._conversation.add_message("assistant", "hi")
+            app.screen._auto_save_session()
+
+            autosave = os.path.join(str(tmp_path), "sessions", "_autosave.json")
+            assert os.path.isfile(autosave)
+
+
+class TestPromptHistoryPersistence:
+    """Tests for persistent prompt history."""
+
+    @pytest.mark.asyncio()
+    async def test_save_load_prompt_history(self, _fake_config, tmp_path, monkeypatch):
+        """Prompt history persists to disk and reloads."""
+        monkeypatch.setattr(
+            "talk_box.tui.screens._config_dir",
+            lambda: str(tmp_path),
+        )
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._prompt_history = ["one", "two", "three"]
+            app.screen._save_prompt_history()
+
+            # Clear and reload
+            app.screen._prompt_history = []
+            app.screen._load_prompt_history()
+            assert app.screen._prompt_history == ["one", "two", "three"]
+
+
+class TestMarkdownRendering:
+    """Tests for Rich Markdown rendering in chat assistant messages."""
+
+    @pytest.mark.asyncio()
+    async def test_render_assistant_display_returns_group(self, _fake_config):
+        """_render_assistant_display returns a Rich Group renderable."""
+        from rich.console import Group
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            result = app.screen._render_assistant_display("Hello **world**")
+            assert isinstance(result, Group)
+
+    @pytest.mark.asyncio()
+    async def test_render_assistant_display_with_thinking(self, _fake_config):
+        """_render_assistant_display includes thinking section."""
+        from rich.console import Group
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            result = app.screen._render_assistant_display("Answer", thinking="pondering")
+            assert isinstance(result, Group)
+
+    @pytest.mark.asyncio()
+    async def test_append_assistant_message_uses_markdown(self, _fake_config):
+        """Assistant messages use Rich Markdown rendering."""
+        from rich.console import Group
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._append_message("assistant", "# Heading\n\n- item 1\n- item 2")
+            await pilot.pause()
+            widget = app.screen.query_one("#chat-msg-1", Static)
+            # The content should be a Group (markdown), not plain string
+            assert isinstance(widget.content, Group)
+
+    @pytest.mark.asyncio()
+    async def test_append_user_message_stays_plain(self, _fake_config):
+        """User messages remain plain text, not markdown."""
+        from rich.console import Group
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._append_message("user", "Hello there")
+            await pilot.pause()
+            widget = app.screen.query_one("#chat-msg-1", Static)
+            # User messages are plain strings, not Group
+            assert not isinstance(widget.content, Group)
+
+    @pytest.mark.asyncio()
+    async def test_raw_content_preserved_for_copy(self, _fake_config):
+        """_raw_content attribute stores original text for clipboard copy."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            original = "```python\nprint('hello')\n```"
+            app.screen._append_message("assistant", original)
+            await pilot.pause()
+            widget = app.screen.query_one("#chat-msg-1", Static)
+            assert widget._raw_content == original

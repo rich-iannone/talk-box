@@ -588,6 +588,140 @@ def config_list() -> None:
     console.print(table)
 
 
+@config.command("init")
+@click.option(
+    "--model", "-m", default=None, help="Default model (e.g. anthropic:claude-sonnet-4-6)."
+)
+@click.option("--persona", "-p", default=None, help="Default persona (e.g. data_analyst).")
+@click.option("--force", is_flag=True, help="Overwrite existing talk-box.yml.")
+def config_init(
+    model: str | None,
+    persona: str | None,
+    *,
+    force: bool,
+) -> None:
+    """Create a project talk-box.yml in the current directory.
+
+    Generates a starter config file. If --model or --persona are
+    omitted, the file is created with sensible defaults.
+
+    Examples:
+
+        talk-box config init
+
+        talk-box config init --model anthropic:claude-sonnet-4-6 --persona data_analyst
+    """
+    from pathlib import Path
+
+    from yaml12 import write_yaml
+
+    console = Console()
+    config_path = Path("talk-box.yml")
+
+    if config_path.is_file() and not force:
+        console.print(f"[yellow]{config_path} already exists.[/yellow] Use --force to overwrite.")
+        raise SystemExit(1)
+
+    data: dict = {}
+    if model:
+        data["default_model"] = model
+    if persona:
+        data["default_persona"] = persona
+
+    # Always include some commented guidance via populated keys
+    data.setdefault("allow_cloud", True)
+    data.setdefault("guardrails", [])
+    data.setdefault("trusted_commands", ["python", "uv", "pytest"])
+
+    write_yaml(data, config_path)
+    console.print(f"[green]Created {config_path}[/green]")
+
+    if model:
+        console.print(f"  Model:   {model}")
+    if persona:
+        console.print(f"  Persona: {persona}")
+
+    console.print(
+        "\nEdit the file to customize, or use [bold]talk-box config set KEY VALUE[/bold]."
+    )
+
+
+@config.command("create-profile")
+@click.argument("name")
+@click.option("--model", "-m", default=None, help="Model for this profile.")
+@click.option("--persona", "-p", default=None, help="Persona for this profile.")
+@click.option("--temperature", "-t", default=None, type=float, help="Temperature setting.")
+@click.option("--guardrails", "-g", default=None, help="Comma-separated guardrail names.")
+def config_create_profile(
+    name: str,
+    model: str | None,
+    persona: str | None,
+    temperature: float | None,
+    guardrails: str | None,
+) -> None:
+    """Create a named profile.
+
+    Profiles bundle model, persona, guardrails, and temperature
+    into a reusable configuration stored in
+    ``~/.config/talk-box/profiles/NAME.yml``.
+
+    Examples:
+
+        talk-box config create-profile research --model anthropic:claude-sonnet-4-6 --persona data_analyst
+
+        talk-box config create-profile support -m ollama:llama3.3 -p customer_support -g no_pii
+    """
+    from talk_box.config import ProfileConfig, save_profile
+
+    console = Console()
+
+    guard_list = [g.strip() for g in guardrails.split(",")] if guardrails else []
+
+    profile = ProfileConfig(
+        name=name,
+        model=model,
+        persona=persona,
+        temperature=temperature,
+        guardrails=guard_list,
+    )
+
+    path = save_profile(profile)
+    console.print(f"[green]Profile '{name}' saved to {path}[/green]")
+
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column(style="bold cyan")
+    table.add_column()
+    table.add_row("Model", model or "—")
+    table.add_row("Persona", persona or "—")
+    table.add_row("Temperature", str(temperature) if temperature is not None else "—")
+    table.add_row("Guardrails", ", ".join(guard_list) if guard_list else "—")
+    console.print(table)
+
+
+@config.command("delete-profile")
+@click.argument("name")
+def config_delete_profile(name: str) -> None:
+    """Delete a named profile.
+
+    Removes the profile YAML file from ``~/.config/talk-box/profiles/``.
+
+    Example:
+
+        talk-box config delete-profile old-profile
+    """
+    from talk_box.config import global_config_dir
+
+    console = Console()
+    path = global_config_dir() / "profiles" / f"{name}.yml"
+
+    if not path.is_file():
+        console.print(f"[red]Profile not found: {name}[/red]")
+        raise SystemExit(1)
+
+    path.unlink()
+    console.print(f"[green]Deleted profile '{name}'[/green]")
+
+
 # ---------------------------------------------------------------------------
 # ui
 # ---------------------------------------------------------------------------
