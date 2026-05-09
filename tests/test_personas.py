@@ -1,5 +1,5 @@
 import pytest
-import yaml
+from yaml12 import format_yaml
 from pathlib import Path
 
 from talk_box.personas._loader import (
@@ -65,7 +65,7 @@ def sample_persona_dict():
 def sample_persona_yaml(tmp_path, sample_persona_dict):
     """Write a sample persona YAML to a temp file."""
     path = tmp_path / "test_persona.yaml"
-    path.write_text(yaml.dump(sample_persona_dict), encoding="utf-8")
+    path.write_text(format_yaml(sample_persona_dict), encoding="utf-8")
     return path
 
 
