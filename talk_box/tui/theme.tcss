@@ -1,0 +1,190 @@
+/* Talk Box TUI Theme
+ *
+ * Design tokens that carry to the desktop app (Phase 8).
+ * Textual CSS — see https://textual.textualize.io/css_types/
+ */
+
+/* -- Persona category colors ---------------------------------------------- */
+/* Used in persona browser badges and profile indicators */
+/* $technical: #00bcd4; */
+/* $data: #4caf50; */
+/* $business: #ff9800; */
+/* $creative: #e91e63; */
+/* $education: #9c27b0; */
+
+/* -- Freshness indicators ------------------------------------------------- */
+/* $fresh: #4caf50; */
+/* $aging: #ff9800; */
+/* $stale: #f44336; */
+
+/* -- Eval score colors ---------------------------------------------------- */
+/* $score_high: #4caf50; */
+/* $score_mid: #ff9800; */
+/* $score_low: #f44336; */
+
+
+/* -- Screen layout -------------------------------------------------------- */
+
+Screen {
+    layout: vertical;
+}
+
+#screen-container {
+    height: 1fr;
+}
+
+#placeholder {
+    padding: 2 4;
+    text-align: center;
+    width: 60;
+}
+
+/* -- Welcome screen ------------------------------------------------------- */
+
+/* -- Home screen ---------------------------------------------------------- */
+
+#home-scroll {
+    padding: 1 2;
+}
+
+.home-panel {
+    border: solid $primary;
+    padding: 1 2;
+    margin: 0 0 1 0;
+}
+
+#home-profile-panel {
+    max-width: 72;
+}
+
+#home-profile-title,
+#home-actions-title,
+#home-status-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#home-columns {
+    height: auto;
+    max-width: 72;
+}
+
+#home-actions-panel {
+    width: 1fr;
+    margin-right: 1;
+}
+
+#home-actions-panel Button {
+    width: 100%;
+    margin: 0 0 1 0;
+}
+
+#home-status-panel {
+    width: 1fr;
+}
+
+/* -- Chat screen ---------------------------------------------------------- */
+
+#chat-layout {
+    height: 1fr;
+}
+
+#chat-main {
+    width: 3fr;
+}
+
+#chat-messages {
+    height: 1fr;
+    padding: 1 2;
+}
+
+.chat-message {
+    padding: 1 2;
+    margin: 0 0 1 0;
+    width: 100%;
+}
+
+.chat-user {
+    background: $primary 15%;
+    border-left: thick $primary;
+}
+
+.chat-assistant {
+    background: $surface;
+    border-left: thick $secondary;
+}
+
+#chat-input {
+    dock: bottom;
+    margin: 0 1 0 1;
+}
+
+#chat-sidebar {
+    width: 28;
+    border-left: solid $primary;
+    padding: 1 1;
+}
+
+#chat-sidebar-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#chat-welcome-hint {
+    padding: 2 4;
+    text-align: center;
+}
+
+/* -- Command list modal --------------------------------------------------- */
+
+CommandListScreen {
+    align: center middle;
+}
+
+#command-list-panel {
+    width: 40;
+    max-height: 24;
+    padding: 1 2;
+    border: solid $primary;
+    background: $surface;
+}
+
+#command-list {
+    padding: 0 1;
+}
+
+/* -- Welcome screen content ----------------------------------------------- */
+
+#welcome-panel {
+    width: 64;
+    padding: 2 4;
+    align: center middle;
+}
+
+#welcome-title {
+    text-align: center;
+    padding: 1 0;
+    text-style: bold;
+}
+
+#welcome-subtitle {
+    text-align: center;
+    padding: 0 0 1 0;
+    color: $text-muted;
+}
+
+#welcome-env {
+    padding: 1 2;
+    margin: 1 0;
+    border: solid $primary;
+}
+
+#welcome-start {
+    width: 100%;
+    margin: 1 0 0 0;
+}
+
+#welcome-skip {
+    width: 100%;
+    margin: 0 0 1 0;
+}

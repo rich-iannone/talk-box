@@ -580,3 +580,22 @@ def config_list() -> None:
             table.add_row(name, "[red]error[/red]", "", "")
 
     console.print(table)
+
+
+# ---------------------------------------------------------------------------
+# ui
+# ---------------------------------------------------------------------------
+
+
+@main.command()
+def ui() -> None:
+    """Launch the Talk Box TUI application.
+
+    Opens the full interactive terminal interface for building,
+    configuring, and chatting with AI assistants. Press Escape
+    for command-mode shortcuts, or : for the command palette.
+    """
+    from talk_box.tui import TalkBoxApp
+
+    app = TalkBoxApp()
+    app.run()
