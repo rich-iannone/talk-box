@@ -190,6 +190,10 @@ class TalkBoxConfig:
     guardrails: list[str] = field(default_factory=list)
     temperature: float | None = None
 
+    # Favorites
+    favorite_models: list[str] = field(default_factory=list)
+    favorite_personas: list[str] = field(default_factory=list)
+
     # Model restrictions
     allow_cloud: bool = True
 
@@ -223,6 +227,10 @@ class TalkBoxConfig:
             d["guardrails"] = self.guardrails
         if self.temperature is not None:
             d["temperature"] = self.temperature
+        if self.favorite_models:
+            d["favorite_models"] = self.favorite_models
+        if self.favorite_personas:
+            d["favorite_personas"] = self.favorite_personas
         if not self.allow_cloud:
             d["allow_cloud"] = False
         if self.mode != TUIMode.FULL:
@@ -496,6 +504,8 @@ def _parse_config_dict(data: dict[str, Any]) -> TalkBoxConfig:
         default_persona=data.get("default_persona"),
         guardrails=data.get("guardrails", []),
         temperature=data.get("temperature"),
+        favorite_models=data.get("favorite_models", []),
+        favorite_personas=data.get("favorite_personas", []),
         allow_cloud=data.get("allow_cloud", True),
         mode=_parse_mode(str(data.get("mode", "full"))),
         profiles=profiles,
@@ -526,6 +536,8 @@ def _merge_configs(base: TalkBoxConfig, override: TalkBoxConfig) -> TalkBoxConfi
         else base.default_persona,
         guardrails=override.guardrails if override.guardrails else base.guardrails,
         temperature=override.temperature if override.temperature is not None else base.temperature,
+        favorite_models=override.favorite_models if override.favorite_models else base.favorite_models,
+        favorite_personas=override.favorite_personas if override.favorite_personas else base.favorite_personas,
         allow_cloud=override.allow_cloud if not override.allow_cloud else base.allow_cloud,
         mode=override.mode if override.mode != TUIMode.FULL else base.mode,
         profiles={**base.profiles, **override.profiles},
@@ -702,3 +714,69 @@ def global_config_dir() -> Path:
 def project_config_path(start: Path | None = None) -> Path | None:
     """Find the nearest ``talk-box.yml`` searching upward from *start*."""
     return _find_project_config(start)
+
+
+def persist_defaults(
+    *,
+    model: str | None = None,
+    persona: str | None = None,
+) -> None:
+    """Persist default model and/or persona to the global config.
+
+    Reads the existing global config, updates the specified fields,
+    and writes it back. Only fields with non-None values are updated.
+    """
+    config = _load_yaml_file(_GLOBAL_CONFIG_PATH) if _GLOBAL_CONFIG_PATH.is_file() else {}
+    if model is not None:
+        config["default_model"] = model
+    if persona is not None:
+        config["default_persona"] = persona
+    _GLOBAL_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    write_yaml(config, _GLOBAL_CONFIG_PATH)
+
+
+def toggle_favorite_model(model: str) -> bool:
+    """Toggle a model in the favorites list. Returns True if added, False if removed."""
+    config = _load_yaml_file(_GLOBAL_CONFIG_PATH) if _GLOBAL_CONFIG_PATH.is_file() else {}
+    favs = config.get("favorite_models", [])
+    if not isinstance(favs, list):
+        favs = []
+    if model in favs:
+        favs.remove(model)
+        added = False
+    else:
+        favs.append(model)
+        added = True
+    config["favorite_models"] = favs
+    _GLOBAL_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    write_yaml(config, _GLOBAL_CONFIG_PATH)
+    return added
+
+
+def toggle_favorite_persona(persona: str) -> bool:
+    """Toggle a persona in the favorites list. Returns True if added, False if removed."""
+    config = _load_yaml_file(_GLOBAL_CONFIG_PATH) if _GLOBAL_CONFIG_PATH.is_file() else {}
+    favs = config.get("favorite_personas", [])
+    if not isinstance(favs, list):
+        favs = []
+    if persona in favs:
+        favs.remove(persona)
+        added = False
+    else:
+        favs.append(persona)
+        added = True
+    config["favorite_personas"] = favs
+    _GLOBAL_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    write_yaml(config, _GLOBAL_CONFIG_PATH)
+    return added
+
+
+def get_favorites() -> tuple[list[str], list[str]]:
+    """Return (favorite_models, favorite_personas) from global config."""
+    config = _load_yaml_file(_GLOBAL_CONFIG_PATH) if _GLOBAL_CONFIG_PATH.is_file() else {}
+    models = config.get("favorite_models", [])
+    personas = config.get("favorite_personas", [])
+    return (
+        models if isinstance(models, list) else [],
+        personas if isinstance(personas, list) else [],
+    )

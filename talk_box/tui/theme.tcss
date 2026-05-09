@@ -139,6 +139,14 @@ Screen {
     color: $text-muted;
 }
 
+.chat-system {
+    background: $surface;
+    border-left: thick $warning;
+    padding: 1 2;
+    margin: 0 4 1 0;
+    color: $text-muted;
+}
+
 #chat-input {
     dock: bottom;
     margin: 0 1 0 1;
@@ -175,6 +183,107 @@ Screen {
 #chat-new-btn {
     width: 100%;
     margin: 1 0 0 0;
+}
+
+/* -- Workspace screen ----------------------------------------------------- */
+
+#workspace-layout {
+    height: 1fr;
+}
+
+#workspace-tree-panel {
+    width: 24;
+    border-right: solid $primary;
+    padding: 0 1;
+}
+
+#workspace-tree-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#workspace-tree {
+    height: 1fr;
+}
+
+#workspace-modified-list {
+    height: auto;
+    max-height: 6;
+    color: $warning;
+    padding: 1 0 0 0;
+}
+
+#workspace-viewer-panel {
+    width: 1fr;
+}
+
+#workspace-viewer-title {
+    text-style: bold;
+    padding: 0 1;
+}
+
+#workspace-viewer-scroll {
+    height: 1fr;
+    padding: 0 2;
+}
+
+#workspace-approval-bar {
+    height: 3;
+    padding: 0 1;
+    dock: bottom;
+}
+
+#workspace-approval-bar.hidden {
+    display: none;
+}
+
+#workspace-approval-bar Button {
+    margin: 0 1 0 0;
+    min-width: 10;
+}
+
+#workspace-change-info {
+    width: 1fr;
+    content-align: right middle;
+    color: $text-muted;
+}
+
+#workspace-agent-panel {
+    width: 24;
+    border-left: solid $primary;
+    padding: 0 1;
+}
+
+#workspace-agent-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#workspace-agent-status {
+    height: auto;
+    padding: 0 0 1 0;
+}
+
+#workspace-plan-title {
+    text-style: bold;
+    padding: 1 0 0 0;
+    border-top: solid $primary;
+}
+
+#workspace-plan-scroll {
+    height: 1fr;
+    padding: 0;
+}
+
+#workspace-agent-stats {
+    height: auto;
+    padding: 1 0 0 0;
+    color: $text-muted;
+}
+
+#workspace-input {
+    dock: bottom;
+    margin: 0 1 0 1;
 }
 
 /* -- Model Browser screen ------------------------------------------------- */
@@ -233,6 +342,24 @@ Screen {
 
 #persona-detail-scroll {
     height: 1fr;
+}
+
+#persona-use-btn {
+    dock: bottom;
+    margin: 1 0 0 0;
+    width: 100%;
+}
+
+#model-use-btn {
+    dock: bottom;
+    margin: 1 0 0 0;
+    width: 100%;
+}
+
+#profile-use-btn {
+    dock: bottom;
+    margin: 1 0 0 0;
+    width: 100%;
 }
 
 /* -- Command list modal --------------------------------------------------- */
@@ -441,6 +568,16 @@ CommandListScreen {
 
 #kg-table {
     height: 1fr;
+}
+
+#kg-detail-scroll {
+    height: auto;
+    max-height: 12;
+    padding: 1 0 0 0;
+}
+
+#kg-detail {
+    padding: 0 1;
 }
 
 /* -- Memory Inspector screen ---------------------------------------------- */

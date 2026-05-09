@@ -14,6 +14,7 @@ from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
     DataTable,
+    DirectoryTree,
     Footer,
     Header,
     Input,
@@ -348,6 +349,8 @@ class ChatScreen(Screen):
         self._message_count = 0
         self._active_persona: str | None = None
         self._active_model: str | None = None
+        self._prompt_history: list[str] = []
+        self._history_index: int = -1
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -386,26 +389,58 @@ class ChatScreen(Screen):
         yield Footer()
 
     def _get_model_options(self) -> list[tuple[str, str]]:
-        """Build model select options."""
+        """Build model select options, with favorites first."""
         options: list[tuple[str, str]] = []
+        fav_models: list[str] = []
+        try:
+            from talk_box.config import get_favorites
+
+            fav_models, _ = get_favorites()
+        except Exception:
+            pass
+
+        # Add favorites at the top with a star prefix
+        seen: set[str] = set()
+        for fav in fav_models:
+            options.append((f"⭐ {fav}", fav))
+            seen.add(fav)
+
         try:
             from talk_box.models import list_models
 
             for p in list_models():
                 label = f"{p.provider}:{p.model}"
-                options.append((label, label))
+                if label not in seen:
+                    options.append((label, label))
+                    seen.add(label)
         except Exception:
             pass
         return options
 
     def _get_persona_options(self) -> list[tuple[str, str]]:
-        """Build persona select options."""
+        """Build persona select options, with favorites first."""
         options: list[tuple[str, str]] = []
+        fav_personas: list[str] = []
+        try:
+            from talk_box.config import get_favorites
+
+            _, fav_personas = get_favorites()
+        except Exception:
+            pass
+
+        # Add favorites at the top with a star prefix
+        seen: set[str] = set()
+        for fav in fav_personas:
+            options.append((f"⭐ {fav}", fav))
+            seen.add(fav)
+
         try:
             from talk_box.personas._loader import list_personas
 
             for name in list_personas():
-                options.append((name, name))
+                if name not in seen:
+                    options.append((name, name))
+                    seen.add(name)
         except Exception:
             pass
         return options
@@ -487,11 +522,22 @@ class ChatScreen(Screen):
             self._rebuild_bot()
             self._conversation = None
             self._update_sidebar()
+            self._persist_defaults()
         elif event.select.id == "chat-persona-select":
             self._active_persona = str(event.value) if event.value != Select.BLANK else None
             self._rebuild_bot()
             self._conversation = None
             self._update_sidebar()
+            self._persist_defaults()
+
+    def _persist_defaults(self) -> None:
+        """Save the current model/persona as defaults in global config."""
+        try:
+            from talk_box.config import persist_defaults
+
+            persist_defaults(model=self._active_model, persona=self._active_persona)
+        except Exception:
+            pass
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle New Chat and copy buttons."""
@@ -528,8 +574,562 @@ class ChatScreen(Screen):
         if not text:
             return
         event.input.value = ""
+
+        # Record in prompt history
+        self._prompt_history.append(text)
+        self._history_index = -1
+
+        # Slash commands
+        if text.startswith("/"):
+            self._handle_slash_command(text)
+            return
+
         self._append_message("user", text)
         self._send_message(text)
+
+    def on_key(self, event) -> None:
+        """Handle up/down arrows for prompt history."""
+        inp = self.query_one("#chat-input", Input)
+        if not inp.has_focus:
+            return
+        if not self._prompt_history:
+            return
+
+        if event.key == "up":
+            if self._history_index == -1:
+                self._history_index = len(self._prompt_history) - 1
+            elif self._history_index > 0:
+                self._history_index -= 1
+            else:
+                return
+            inp.value = self._prompt_history[self._history_index]
+            inp.cursor_position = len(inp.value)
+            event.prevent_default()
+        elif event.key == "down":
+            if self._history_index == -1:
+                return
+            if self._history_index < len(self._prompt_history) - 1:
+                self._history_index += 1
+                inp.value = self._prompt_history[self._history_index]
+                inp.cursor_position = len(inp.value)
+            else:
+                self._history_index = -1
+                inp.value = ""
+            event.prevent_default()
+
+    def _handle_slash_command(self, text: str) -> None:
+        """Process slash commands."""
+        parts = text.split(None, 1)
+        cmd = parts[0].lower()
+        arg = parts[1].strip() if len(parts) > 1 else ""
+
+        if cmd == "/help":
+            help_text = (
+                "[b]Slash Commands[/b]\n"
+                "  /help              Show this help\n"
+                "  /clear             Clear chat history\n"
+                "  /model <name>      Switch model\n"
+                "  /persona <name>    Switch persona\n"
+                "  /info              Show current session info\n"
+                "  /tokens            Show token usage estimate\n"
+                "  /history           Show conversation history\n"
+                "  /save [name]       Save session to disk\n"
+                "  /load [name]       Load a saved session\n"
+                "  /export [format]   Export session (json, markdown)\n"
+                "  /attach <path>     Attach a file to the next message\n"
+                "  /fav model <name>  Toggle model as favorite\n"
+                "  /fav persona <n>   Toggle persona as favorite\n"
+                "  /fav               List current favorites\n"
+                "  /guards            Show guardrail status\n"
+                "  /memory            Show memory tier summary\n"
+                "  /kg                Show knowledge graph stats\n"
+                "  /quit              Quit the app"
+            )
+            self._append_system_message(help_text)
+
+        elif cmd == "/clear":
+            self._do_clear()
+
+        elif cmd == "/model":
+            if arg:
+                self._active_model = arg
+                self._rebuild_bot()
+                self._conversation = None
+                self._update_sidebar()
+                # Update the select widget to match
+                try:
+                    self.query_one("#chat-model-select", Select).value = arg
+                except Exception:
+                    pass
+                self._append_system_message(f"Model changed to [b]{arg}[/b]")
+                self._persist_defaults()
+            else:
+                model = self._active_model or "echo mode"
+                self._append_system_message(f"Current model: [b]{model}[/b]")
+
+        elif cmd == "/persona":
+            if arg:
+                self._active_persona = arg
+                self._rebuild_bot()
+                self._conversation = None
+                self._update_sidebar()
+                try:
+                    self.query_one("#chat-persona-select", Select).value = arg
+                except Exception:
+                    pass
+                self._append_system_message(f"Persona changed to [b]{arg}[/b]")
+                self._persist_defaults()
+            else:
+                persona = self._active_persona or "none"
+                self._append_system_message(f"Current persona: [b]{persona}[/b]")
+
+        elif cmd == "/info":
+            model = self._active_model or "[dim]echo mode[/dim]"
+            persona = self._active_persona or "[dim]none[/dim]"
+            msgs = self._message_count
+            conv_turns = len(self._conversation.messages) if self._conversation else 0
+            info = (
+                f"[b]Session Info[/b]\n"
+                f"  Model:       {model}\n"
+                f"  Persona:     {persona}\n"
+                f"  Messages:    {msgs}\n"
+                f"  Conv turns:  {conv_turns}"
+            )
+            self._append_system_message(info)
+
+        elif cmd == "/tokens":
+            if self._conversation and self._conversation.messages:
+                total_chars = sum(len(m.content) for m in self._conversation.messages)
+                est_tokens = total_chars // 4  # rough estimate
+                self._append_system_message(
+                    f"[b]Token Estimate[/b]\n"
+                    f"  Conversation chars: {total_chars:,}\n"
+                    f"  Est. tokens:        ~{est_tokens:,}"
+                )
+            else:
+                self._append_system_message("No conversation history yet.")
+
+        elif cmd == "/history":
+            if self._conversation and self._conversation.messages:
+                lines = ["[b]Conversation History[/b]"]
+                for i, msg in enumerate(self._conversation.messages, 1):
+                    role = msg.role.capitalize()
+                    preview = msg.content[:80]
+                    if len(msg.content) > 80:
+                        preview += "…"
+                    lines.append(f"  {i}. [{role}] {preview}")
+                self._append_system_message("\n".join(lines))
+            else:
+                self._append_system_message("No conversation history yet.")
+
+        elif cmd == "/quit":
+            self.app.exit()
+
+        elif cmd == "/save":
+            self._save_session(arg)
+
+        elif cmd == "/load":
+            self._load_session(arg)
+
+        elif cmd == "/attach":
+            self._attach_file(arg)
+
+        elif cmd == "/fav":
+            self._handle_fav(arg)
+
+        elif cmd == "/export":
+            self._export_session(arg)
+
+        elif cmd == "/guards":
+            self._show_guards()
+
+        elif cmd == "/memory":
+            self._show_memory_summary()
+
+        elif cmd == "/kg":
+            self._show_kg_summary()
+
+        else:
+            self._append_system_message(
+                f"Unknown command: [b]{cmd}[/b]. Type [b]/help[/b] for available commands."
+            )
+
+    def _do_clear(self) -> None:
+        """Clear the chat (sync helper for slash command)."""
+        self._conversation = None
+        self._message_count = 0
+        self._prompt_history = []
+        self._history_index = -1
+        self._rebuild_bot()
+
+        async def _clear():
+            container = self.query_one("#chat-messages", VerticalScroll)
+            await container.remove_children()
+            await container.mount(
+                Static(
+                    "[dim]Chat cleared. Type a message to start.[/dim]",
+                    id="chat-welcome-hint",
+                )
+            )
+            self._update_sidebar()
+            self.query_one("#chat-input", Input).focus()
+
+        self.run_worker(_clear(), name="clear_chat")
+
+    def _save_session(self, name: str) -> None:
+        """Save current conversation to ~/.config/talk-box/sessions/."""
+        import json
+        import os
+        from datetime import datetime
+
+        if not self._conversation or not self._conversation.messages:
+            self._append_system_message("Nothing to save — no conversation yet.")
+            return
+
+        sessions_dir = os.path.expanduser("~/.config/talk-box/sessions")
+        os.makedirs(sessions_dir, exist_ok=True)
+
+        if not name:
+            name = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Sanitize filename
+        safe_name = "".join(c for c in name if c.isalnum() or c in "-_").strip()
+        if not safe_name:
+            safe_name = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        filepath = os.path.join(sessions_dir, f"{safe_name}.json")
+
+        session_data = {
+            "name": safe_name,
+            "saved_at": datetime.now().isoformat(),
+            "model": self._active_model,
+            "persona": self._active_persona,
+            "conversation": self._conversation.to_dict(),
+        }
+
+        with open(filepath, "w") as f:
+            json.dump(session_data, f, indent=2)
+
+        self._append_system_message(f"Session saved: [b]{safe_name}[/b]\n  {filepath}")
+
+    def _load_session(self, name: str) -> None:
+        """Load a saved session from ~/.config/talk-box/sessions/."""
+        import json
+        import os
+
+        sessions_dir = os.path.expanduser("~/.config/talk-box/sessions")
+
+        if not name:
+            # List available sessions
+            if not os.path.isdir(sessions_dir):
+                self._append_system_message("No saved sessions found.")
+                return
+            files = sorted(
+                [f for f in os.listdir(sessions_dir) if f.endswith(".json")],
+                reverse=True,
+            )
+            if not files:
+                self._append_system_message("No saved sessions found.")
+                return
+            lines = ["[b]Saved Sessions[/b] (use /load <name>)"]
+            for f in files[:20]:
+                lines.append(f"  • {f.removesuffix('.json')}")
+            self._append_system_message("\n".join(lines))
+            return
+
+        # Load specific session
+        safe_name = "".join(c for c in name if c.isalnum() or c in "-_").strip()
+        filepath = os.path.join(sessions_dir, f"{safe_name}.json")
+
+        if not os.path.isfile(filepath):
+            self._append_system_message(f"Session not found: [b]{safe_name}[/b]")
+            return
+
+        try:
+            from talk_box.conversation import Conversation
+
+            with open(filepath) as f:
+                data = json.load(f)
+
+            self._conversation = Conversation.from_dict(data["conversation"])
+            if data.get("model"):
+                self._active_model = data["model"]
+            if data.get("persona"):
+                self._active_persona = data["persona"]
+            self._rebuild_bot()
+            self._update_sidebar()
+
+            # Replay messages into UI
+            async def _replay():
+                container = self.query_one("#chat-messages", VerticalScroll)
+                await container.remove_children()
+                for msg in self._conversation.messages:
+                    self._append_message(msg.role, msg.content)
+                self._update_sidebar()
+
+            self.run_worker(_replay(), name="load_session")
+            self._append_system_message(f"Session loaded: [b]{safe_name}[/b]")
+        except Exception as e:
+            self._append_system_message(f"Error loading session: {e}")
+
+    def _attach_file(self, path: str) -> None:
+        """Attach a file — its contents will be included in the next message."""
+        import os
+
+        if not path:
+            self._append_system_message(
+                "Usage: [b]/attach <path>[/b]\n"
+                "  Attaches a file to the next message sent."
+            )
+            return
+
+        # Resolve relative to cwd
+        full_path = os.path.join(os.getcwd(), path) if not os.path.isabs(path) else path
+
+        if not os.path.isfile(full_path):
+            self._append_system_message(f"File not found: [b]{path}[/b]")
+            return
+
+        try:
+            content = open(full_path, errors="replace").read()  # noqa: SIM115
+            if len(content) > 50_000:
+                content = content[:50_000] + "\n\n[... truncated ...]"
+
+            # Store attachment for next message
+            if not hasattr(self, "_pending_attachments"):
+                self._pending_attachments = []
+            self._pending_attachments.append((path, content))
+
+            size_kb = os.path.getsize(full_path) / 1024
+            self._append_system_message(
+                f"Attached: [b]{path}[/b] ({size_kb:.1f} KB)\n"
+                "  Will be included with your next message."
+            )
+        except Exception as e:
+            self._append_system_message(f"Error reading file: {e}")
+
+    def _handle_fav(self, arg: str) -> None:
+        """Handle /fav slash command for toggling favorites."""
+        parts = arg.split(None, 1) if arg else []
+
+        if not parts:
+            # List current favorites
+            try:
+                from talk_box.config import get_favorites
+
+                fav_models, fav_personas = get_favorites()
+                lines = ["[b]Favorites[/b]"]
+                lines.append("")
+                lines.append("  [b]Models:[/b]")
+                if fav_models:
+                    for m in fav_models:
+                        lines.append(f"    ⭐ {m}")
+                else:
+                    lines.append("    [dim]none[/dim]")
+                lines.append("")
+                lines.append("  [b]Personas:[/b]")
+                if fav_personas:
+                    for p in fav_personas:
+                        lines.append(f"    ⭐ {p}")
+                else:
+                    lines.append("    [dim]none[/dim]")
+                lines.append("")
+                lines.append("  [dim]Toggle with: /fav model <name> or /fav persona <name>[/dim]")
+                self._append_system_message("\n".join(lines))
+            except Exception:
+                self._append_system_message("Could not load favorites.")
+            return
+
+        kind = parts[0].lower()
+        name = parts[1].strip() if len(parts) > 1 else ""
+
+        if kind == "model" and name:
+            try:
+                from talk_box.config import toggle_favorite_model
+
+                added = toggle_favorite_model(name)
+                action = "added to" if added else "removed from"
+                self._append_system_message(f"⭐ [b]{name}[/b] {action} favorite models.")
+                self._refresh_selects()
+            except Exception as e:
+                self._append_system_message(f"Error: {e}")
+
+        elif kind == "persona" and name:
+            try:
+                from talk_box.config import toggle_favorite_persona
+
+                added = toggle_favorite_persona(name)
+                action = "added to" if added else "removed from"
+                self._append_system_message(f"⭐ [b]{name}[/b] {action} favorite personas.")
+                self._refresh_selects()
+            except Exception as e:
+                self._append_system_message(f"Error: {e}")
+
+        else:
+            self._append_system_message(
+                "Usage: [b]/fav model <name>[/b] or [b]/fav persona <name>[/b]\n"
+                "  Or just [b]/fav[/b] to list current favorites."
+            )
+
+    def _refresh_selects(self) -> None:
+        """Rebuild the model and persona Select widgets with updated options."""
+        try:
+            model_sel = self.query_one("#chat-model-select", Select)
+            model_sel.set_options(self._get_model_options())
+            if self._active_model:
+                model_sel.value = self._active_model
+        except Exception:
+            pass
+        try:
+            persona_sel = self.query_one("#chat-persona-select", Select)
+            persona_sel.set_options(self._get_persona_options())
+            if self._active_persona:
+                persona_sel.value = self._active_persona
+        except Exception:
+            pass
+
+    def _export_session(self, fmt: str) -> None:
+        """Export the current session to a file."""
+        import json
+        import os
+        from datetime import datetime
+
+        if not self._conversation or not self._conversation.messages:
+            self._append_system_message("Nothing to export — no conversation yet.")
+            return
+
+        fmt = fmt.lower() if fmt else "json"
+        if fmt not in ("json", "markdown", "md"):
+            self._append_system_message(
+                "Supported formats: [b]json[/b], [b]markdown[/b]\n"
+                "  Usage: /export json  or  /export markdown"
+            )
+            return
+
+        sessions_dir = os.path.expanduser("~/.config/talk-box/exports")
+        os.makedirs(sessions_dir, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        if fmt == "json":
+            filepath = os.path.join(sessions_dir, f"chat_{ts}.json")
+            data = {
+                "exported_at": datetime.now().isoformat(),
+                "model": self._active_model,
+                "persona": self._active_persona,
+                "messages": [
+                    {"role": m.role, "content": m.content}
+                    for m in self._conversation.messages
+                ],
+            }
+            with open(filepath, "w") as f:
+                json.dump(data, f, indent=2)
+        else:
+            # Markdown
+            filepath = os.path.join(sessions_dir, f"chat_{ts}.md")
+            lines = [
+                f"# Chat Export — {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                "",
+                f"**Model:** {self._active_model or 'echo mode'}",
+                f"**Persona:** {self._active_persona or 'none'}",
+                "",
+                "---",
+                "",
+            ]
+            for msg in self._conversation.messages:
+                role = "**You**" if msg.role == "user" else "**Assistant**"
+                lines.append(f"### {role}")
+                lines.append("")
+                lines.append(msg.content)
+                lines.append("")
+            with open(filepath, "w") as f:
+                f.write("\n".join(lines))
+
+        self._append_system_message(f"Exported to [b]{filepath}[/b]")
+
+    def _show_guards(self) -> None:
+        """Show guardrail status in chat."""
+        lines = ["[b]Guardrails[/b]"]
+        try:
+            from talk_box.config import load_config
+
+            config = load_config()
+            resolved = config.resolve()
+            active = resolved.guardrails or []
+
+            if active:
+                for g in active:
+                    lines.append(f"  ✅ {g}")
+            else:
+                lines.append("  [dim]No guardrails active[/dim]")
+
+            lines.append("")
+            lines.append("  Available guards:")
+            for name, _phase, _desc in _BUILTIN_GUARDS:
+                marker = "●" if name in active else "○"
+                lines.append(f"    {marker} {name}")
+        except Exception:
+            lines.append("  [dim]Could not load guardrail info[/dim]")
+        self._append_system_message("\n".join(lines))
+
+    def _show_memory_summary(self) -> None:
+        """Show memory tier summary in chat."""
+        import os
+
+        lines = ["[b]Memory Summary[/b]"]
+        try:
+            from talk_box.memory import LongTermMemory
+
+            db_path = os.path.expanduser("~/.config/talk-box/memory.db")
+            if os.path.isfile(db_path):
+                ltm = LongTermMemory(path=db_path)
+                entries = ltm.entries()
+                lines.append(f"  Long-term: {len(entries)} entries ({db_path})")
+                ltm.close()
+            else:
+                lines.append("  Long-term: [dim]no database[/dim]")
+        except Exception:
+            lines.append("  Long-term: [dim]unavailable[/dim]")
+
+        # Working memory (session)
+        if self._conversation and self._conversation.messages:
+            lines.append(f"  Working:   {len(self._conversation.messages)} messages in session")
+        else:
+            lines.append("  Working:   [dim]empty[/dim]")
+
+        self._append_system_message("\n".join(lines))
+
+    def _show_kg_summary(self) -> None:
+        """Show knowledge graph summary in chat."""
+        lines = ["[b]Knowledge Graph[/b]"]
+        try:
+            from talk_box.knowledge_graph import KnowledgeGraph, NodeType
+
+            kg = KnowledgeGraph()
+            docs = kg.node_count(node_type=NodeType.DOCUMENT)
+            entities = kg.node_count(node_type=NodeType.ENTITY)
+            topics = kg.node_count(node_type=NodeType.TOPIC)
+            edges = kg.edge_count()
+            lines.append(f"  Documents:  {docs}")
+            lines.append(f"  Entities:   {entities}")
+            lines.append(f"  Topics:     {topics}")
+            lines.append(f"  Edges:      {edges}")
+
+            if docs + entities + topics == 0:
+                lines.append("")
+                lines.append("  [dim]No data yet. Sync with:[/dim]")
+                lines.append("  [dim]tb.MarkdownDir('./docs/').sync(kg)[/dim]")
+        except Exception:
+            lines.append("  [dim]Could not load knowledge graph[/dim]")
+        self._append_system_message("\n".join(lines))
+
+    def _append_system_message(self, content: str) -> None:
+        """Append a system/info message (not from user or assistant)."""
+        container = self.query_one("#chat-messages", VerticalScroll)
+        self._message_count += 1
+        msg_id = f"chat-msg-{self._message_count}"
+        widget = Static(content, id=msg_id, classes="chat-message chat-system")
+        container.mount(widget)
+        container.scroll_end(animate=False)
 
     def _append_message(self, role: str, content: str) -> None:
         """Add a message bubble to the chat area."""
@@ -568,17 +1168,67 @@ class ChatScreen(Screen):
         except Exception:
             pass
 
+        # Include pending attachments
+        enriched = text
+        if hasattr(self, "_pending_attachments") and self._pending_attachments:
+            attachment_blocks = []
+            for path, content in self._pending_attachments:
+                attachment_blocks.append(f'<file path="{path}">\n{content}\n</file>')
+            enriched = (
+                f"{text}\n\n--- Attached files ---\n"
+                + "\n\n".join(attachment_blocks)
+            )
+            self._pending_attachments = []
+
+        # Also enrich with auto-detected file references
+        enriched = self._enrich_with_files(enriched)
+
         async def _do_stream():
             import asyncio
 
             loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, self._stream_response, text, thinking_id)
+            await loop.run_in_executor(None, self._stream_response, enriched, thinking_id)
 
         self.run_worker(
             _do_stream(),
             name="chat_response",
             group="chat",
         )
+
+    def _enrich_with_files(self, text: str) -> str:
+        """Detect file references in the message and append their contents."""
+        import os
+        import re
+
+        # Match patterns like filename.ext or path/to/file.ext
+        # Must have an extension to avoid false positives
+        pattern = r'(?:^|\s|["\'])([a-zA-Z0-9_./-]+\.[a-zA-Z0-9]+)(?:\s|["\']|$|[?,!;:])'
+        matches = re.findall(pattern, text)
+        if not matches:
+            return text
+
+        attached = []
+        seen = set()
+        for match in matches:
+            if match in seen:
+                continue
+            seen.add(match)
+            path = os.path.join(os.getcwd(), match)
+            if os.path.isfile(path):
+                try:
+                    content = open(path, errors="replace").read()  # noqa: SIM115
+                    # Cap at 50K chars to avoid blowing context
+                    if len(content) > 50_000:
+                        content = content[:50_000] + "\n\n[... truncated ...]"
+                    attached.append(f'<file path="{match}">\n{content}\n</file>')
+                except Exception:
+                    pass
+
+        if not attached:
+            return text
+
+        files_block = "\n\n".join(attached)
+        return f"{text}\n\n--- Referenced files ---\n{files_block}"
 
     def _stream_response(self, text: str, widget_id: str) -> None:
         """Stream the LLM response, updating the widget chunk by chunk (runs in thread)."""
@@ -608,7 +1258,10 @@ class ChatScreen(Screen):
                             )
 
                     # Add the completed exchange to conversation
-                    self._conversation.add_message("user", text)
+                    # Store original message (without injected file contents)
+                    original = text.split("\n\n--- Referenced files ---\n")[0]
+                    original = original.split("\n\n--- Attached files ---\n")[0]
+                    self._conversation.add_message("user", original)
                     self._conversation.add_message("assistant", response_text)
 
                 except Exception as e:
@@ -691,7 +1344,41 @@ class ChatScreen(Screen):
         model = self._active_model or "[dim]echo mode[/dim]"
         persona = self._active_persona or "[dim]none[/dim]"
         user_msgs = self._message_count // 2 if self._message_count > 0 else 0
-        return f"\n  Messages: {user_msgs} sent"
+
+        lines = [
+            f"  Model:    {model}",
+            f"  Persona:  {persona}",
+            "",
+            f"  Messages: {user_msgs}",
+        ]
+
+        # Token estimate from conversation
+        if self._conversation and self._conversation.messages:
+            total_chars = sum(len(m.content) for m in self._conversation.messages)
+            est_tokens = total_chars // 4
+            lines.append(f"  Tokens:   ~{est_tokens:,}")
+        else:
+            lines.append("  Tokens:   0")
+
+        # Context window usage
+        if self._active_model:
+            try:
+                from talk_box.models import get_model_profile
+
+                profile = get_model_profile(self._active_model)
+                if profile and profile.context_window:
+                    total_chars = (
+                        sum(len(m.content) for m in self._conversation.messages)
+                        if self._conversation and self._conversation.messages
+                        else 0
+                    )
+                    est_tokens = total_chars // 4
+                    pct = (est_tokens / profile.context_window) * 100
+                    lines.append(f"  Context:  {pct:.0f}% of {profile.context_window:,}")
+            except Exception:
+                pass
+
+        return "\n".join(lines)
 
     def _update_sidebar(self) -> None:
         """Refresh the sidebar info."""
@@ -712,16 +1399,214 @@ class ChatScreen(Screen):
 
 
 class WorkspaceScreen(Screen):
-    """Agentic file editing with diff view and approval toolbar."""
+    """Agentic file editing with file tree, source viewer, agent panel, and chat."""
 
-    BINDINGS = []
+    BINDINGS = [
+        Binding("ctrl+a", "accept_change", "Accept", show=True),
+        Binding("ctrl+r", "reject_change", "Reject", show=True),
+    ]
+
+    _pending_changes: list[dict] = []
+    _current_change_idx: int = 0
 
     def compose(self) -> ComposeResult:
-        yield from _placeholder(
-            "Workspace",
-            "File tree, diff view, agent task panel, and approval toolbar.\n\n"
-            "[dim]Agentic workspace coming later in Phase 7b.[/dim]",
+        import os
+
+        yield Header(show_clock=False)
+        with Horizontal(id="workspace-layout"):
+            # Left: File tree
+            with Vertical(id="workspace-tree-panel"):
+                yield Static("[b]Files[/b]", id="workspace-tree-title")
+                yield DirectoryTree(os.getcwd(), id="workspace-tree")
+                yield Static("", id="workspace-modified-list")
+            # Center: Source / Diff viewer
+            with Vertical(id="workspace-viewer-panel"):
+                yield Static("[b]Source Viewer[/b]", id="workspace-viewer-title")
+                with VerticalScroll(id="workspace-viewer-scroll"):
+                    yield Static(
+                        "[dim]Select a file from the tree to view its contents.[/dim]",
+                        id="workspace-viewer-content",
+                    )
+                # Approval toolbar (hidden until changes pending)
+                with Horizontal(id="workspace-approval-bar", classes="hidden"):
+                    yield Button("Accept", id="workspace-accept-btn", variant="success")
+                    yield Button("Reject", id="workspace-reject-btn", variant="error")
+                    yield Button("Skip", id="workspace-skip-btn")
+                    yield Static("", id="workspace-change-info")
+            # Right: Agent panel
+            with Vertical(id="workspace-agent-panel"):
+                yield Static("[b]Agent[/b]", id="workspace-agent-title")
+                yield Static("", id="workspace-agent-status")
+                yield Static("[b]Plan[/b]", id="workspace-plan-title")
+                with VerticalScroll(id="workspace-plan-scroll"):
+                    yield Static(
+                        "[dim]No active plan. Send a task below.[/dim]",
+                        id="workspace-plan-content",
+                    )
+                yield Static("", id="workspace-agent-stats")
+        # Bottom: Chat input
+        yield Input(
+            placeholder="Describe a task… (e.g., 'Refactor to use dataclasses')",
+            id="workspace-input",
         )
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Set up the workspace with agent status."""
+        self._pending_changes = []
+        self._current_change_idx = 0
+        self._update_agent_status()
+
+    def _update_agent_status(self) -> None:
+        """Refresh agent status panel."""
+        try:
+            from talk_box.config import load_config
+
+            config = load_config()
+            resolved = config.resolve()
+            model = resolved.model or "default"
+            persona = resolved.persona or "none"
+        except Exception:
+            model = "default"
+            persona = "none"
+
+        status_lines = [
+            f"  Model:   [b]{model}[/b]",
+            f"  Persona: [b]{persona}[/b]",
+            "  Status:  [dim]idle[/dim]",
+        ]
+        try:
+            self.query_one("#workspace-agent-status", Static).update("\n".join(status_lines))
+        except Exception:
+            pass
+
+    _BINARY_EXTENSIONS = frozenset(
+        {
+            ".pyc",
+            ".pyo",
+            ".so",
+            ".dylib",
+            ".dll",
+            ".exe",
+            ".bin",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".ico",
+            ".webp",
+            ".bmp",
+            ".zip",
+            ".gz",
+            ".tar",
+            ".bz2",
+            ".xz",
+            ".7z",
+            ".jar",
+            ".whl",
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".ppt",
+            ".pptx",
+            ".db",
+            ".sqlite",
+            ".sqlite3",
+            ".wasm",
+            ".o",
+            ".a",
+            ".mp3",
+            ".mp4",
+            ".wav",
+            ".avi",
+            ".mov",
+            ".mkv",
+            ".ttf",
+            ".otf",
+            ".woff",
+            ".woff2",
+            ".eot",
+        }
+    )
+
+    def on_directory_tree_file_selected(self, event: DirectoryTree.FileSelected) -> None:
+        """Show file contents when a file is selected in the tree."""
+        path = event.path
+        title = self.query_one("#workspace-viewer-title", Static)
+        content = self.query_one("#workspace-viewer-content", Static)
+        title.update(f"[b]{path.name}[/b]")
+
+        if path.suffix.lower() in self._BINARY_EXTENSIONS:
+            content.update(f"[dim]Binary file ({path.suffix})[/dim]")
+            return
+
+        try:
+            text = path.read_text(errors="replace")
+            # Check for binary content (null bytes)
+            if "\x00" in text[:1024]:
+                content.update("[dim]Binary file[/dim]")
+                return
+            # Truncate very large files
+            lines = text.splitlines()
+            if len(lines) > 500:
+                display = "\n".join(lines[:500])
+                display += f"\n\n… {len(lines) - 500} more lines …"
+            else:
+                display = text
+            # Use plain Text to avoid Rich markup parsing of file contents
+            from rich.text import Text
+
+            content.update(Text(display))
+        except Exception as e:
+            from rich.text import Text
+
+            content.update(Text(f"Cannot read file: {e}"))
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Handle task submission."""
+        text = event.value.strip()
+        if not text:
+            return
+        event.input.value = ""
+
+        plan_content = self.query_one("#workspace-plan-content", Static)
+        plan_content.update(
+            f"[b]Task:[/b] {text}\n\n"
+            "  1. ⬜ Analyze codebase\n"
+            "  2. ⬜ Plan changes\n"
+            "  3. ⬜ Generate edits\n"
+            "  4. ⬜ Review & approve\n"
+            "  5. ⬜ Run tests\n\n"
+            "[dim]Agent execution coming in a future update.[/dim]"
+        )
+
+        # Update status to show task received
+        try:
+            status = self.query_one("#workspace-agent-status", Static)
+            current = status.renderable
+            status.update(
+                str(current).replace(
+                    "Status:  [dim]idle[/dim]",
+                    "Status:  [yellow]task received[/yellow]",
+                )
+            )
+        except Exception:
+            pass
+
+    def action_accept_change(self) -> None:
+        """Accept the current proposed change."""
+        if not self._pending_changes:
+            return
+        # Placeholder for accepting file changes
+        self.notify("Change accepted", severity="information")
+
+    def action_reject_change(self) -> None:
+        """Reject the current proposed change."""
+        if not self._pending_changes:
+            return
+        self.notify("Change rejected", severity="warning")
 
 
 # ---------------------------------------------------------------------------
@@ -734,55 +1619,51 @@ class ProfileScreen(Screen):
 
     BINDINGS = []
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selected_profile: str | None = None
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
         with Horizontal(id="profile-layout"):
             with Vertical(id="profile-list-panel"):
                 yield Static("[b]Profiles[/b]", id="profile-list-title")
-                with VerticalScroll(id="profile-list-scroll"):
-                    yield Static("", id="profile-list-content")
+                yield OptionList(id="profile-list")
             with Vertical(id="profile-detail-panel"):
                 yield Static("[b]Profile Details[/b]", id="profile-detail-title")
-                yield Static(
-                    "[dim]Select a profile from the list.[/dim]",
-                    id="profile-detail-content",
-                )
+                with VerticalScroll(id="profile-list-scroll"):
+                    yield Static(
+                        "[dim]Select a profile from the list.[/dim]",
+                        id="profile-detail-content",
+                    )
+                yield Button("Use Profile", id="profile-use-btn", variant="primary")
         yield Footer()
 
     def on_mount(self) -> None:
         """Populate the profile list."""
+        ol = self.query_one("#profile-list", OptionList)
         try:
-            from talk_box.config import list_profiles, load_config
+            from talk_box.config import list_profiles
 
-            config = load_config()
-            active = config.default_profile
             names = list_profiles()
-
-            lines: list[str] = []
-            if active:
-                lines.append(f"  Active: [b]{active}[/b]")
-                lines.append("")
-
             if names:
                 for name in names:
-                    marker = "▸" if name == active else " "
-                    lines.append(f"{marker} {name}")
+                    ol.add_option(Option(name, id=name))
             else:
-                lines.append("[dim]No profiles found.[/dim]")
-                lines.append("")
-                lines.append("[dim]Create profiles in[/dim]")
-                lines.append("[dim]~/.config/talk-box/profiles/[/dim]")
-
-            self.query_one("#profile-list-content", Static).update("\n".join(lines))
-
-            # Show first / active profile detail
-            detail_name = active or (names[0] if names else None)
-            if detail_name:
-                self._show_profile_detail(detail_name)
+                ol.add_option(
+                    Option("[dim]No profiles — create in ~/.config/talk-box/profiles/[/dim]",
+                           id="__empty", disabled=True)
+                )
         except Exception:
-            self.query_one("#profile-list-content", Static).update(
-                "[dim]Could not load profiles[/dim]"
-            )
+            pass
+
+    def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
+        """Show detail for the highlighted profile."""
+        if event.option.id is None or str(event.option.id).startswith("__"):
+            return
+        name = str(event.option.id)
+        self._selected_profile = name
+        self._show_profile_detail(name)
 
     def _show_profile_detail(self, name: str) -> None:
         """Display profile details in the detail panel."""
@@ -808,6 +1689,33 @@ class ProfileScreen(Screen):
                 f"[dim]Could not load profile: {name}[/dim]"
             )
 
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle Use Profile button — apply model/persona and go to Chat."""
+        if event.button.id == "profile-use-btn" and self._selected_profile:
+            try:
+                from talk_box.config import load_profile, persist_defaults
+
+                profile = load_profile(self._selected_profile)
+                if profile.model:
+                    persist_defaults(model=profile.model)
+                if profile.persona:
+                    persist_defaults(persona=profile.persona)
+
+                self.app._switch_to("chat")  # type: ignore[attr-defined]
+                try:
+                    chat = self.app.screen
+                    if profile.model:
+                        chat._active_model = profile.model
+                    if profile.persona:
+                        chat._active_persona = profile.persona
+                    chat._rebuild_bot()
+                    chat._conversation = None
+                    chat._update_sidebar()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
 
 # ---------------------------------------------------------------------------
 # Screen 6: Persona Browser & Editor
@@ -818,6 +1726,10 @@ class PersonaScreen(Screen):
     """Browse personas grouped by category with detail panel."""
 
     BINDINGS = []
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selected_persona: str | None = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -832,6 +1744,7 @@ class PersonaScreen(Screen):
                         "[dim]Highlight a persona to see its details.[/dim]",
                         id="persona-detail-content",
                     )
+                yield Button("Use in Chat", id="persona-use-btn", variant="primary")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -893,8 +1806,27 @@ class PersonaScreen(Screen):
             detail = "\n".join(line for line in lines if line is not None)
         except Exception:
             detail = f"[dim]{name}[/dim]"
+        self._selected_persona = name
         self.query_one("#persona-detail-title", Static).update(f"[b]{name}[/b]")
         self.query_one("#persona-detail-content", Static).update(detail)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle Use in Chat button."""
+        if event.button.id == "persona-use-btn" and self._selected_persona:
+            self.app._switch_to("chat")  # type: ignore[attr-defined]
+            # Set persona on the chat screen
+            try:
+                chat = self.app.screen
+                chat._active_persona = self._selected_persona
+                chat._rebuild_bot()
+                chat._conversation = None
+                chat._update_sidebar()
+                try:
+                    chat.query_one("#chat-persona-select", Select).value = self._selected_persona
+                except Exception:
+                    pass
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -982,6 +1914,10 @@ class ModelScreen(Screen):
 
     BINDINGS = []
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selected_model: str | None = None
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
         with Vertical(id="model-layout"):
@@ -989,6 +1925,7 @@ class ModelScreen(Screen):
             yield DataTable(id="model-table")
             with Vertical(id="model-detail-panel"):
                 yield Static("", id="model-detail")
+                yield Button("Use in Chat", id="model-use-btn", variant="primary")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -1045,6 +1982,7 @@ class ModelScreen(Screen):
         if event.row_key is None:
             return
         key = str(event.row_key.value)
+        self._selected_model = key
         try:
             from talk_box.models import get_model_profile
 
@@ -1072,6 +2010,23 @@ class ModelScreen(Screen):
         except Exception:
             detail = f"[dim]{key}[/dim]"
         self.query_one("#model-detail", Static).update(detail)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle Use in Chat button."""
+        if event.button.id == "model-use-btn" and self._selected_model:
+            self.app._switch_to("chat")  # type: ignore[attr-defined]
+            try:
+                chat = self.app.screen
+                chat._active_model = self._selected_model
+                chat._rebuild_bot()
+                chat._conversation = None
+                chat._update_sidebar()
+                try:
+                    chat.query_one("#chat-model-select", Select).value = self._selected_model
+                except Exception:
+                    pass
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -1259,6 +2214,8 @@ class KnowledgeScreen(Screen):
             with Horizontal(id="kg-stats"):
                 yield Static("", id="kg-stats-content")
             yield DataTable(id="kg-table")
+            with VerticalScroll(id="kg-detail-scroll"):
+                yield Static("", id="kg-detail")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -1270,11 +2227,11 @@ class KnowledgeScreen(Screen):
         try:
             from talk_box.knowledge_graph import KnowledgeGraph, NodeType
 
-            kg = KnowledgeGraph()
-            docs = kg.node_count(node_type=NodeType.DOCUMENT)
-            entities = kg.node_count(node_type=NodeType.ENTITY)
-            topics = kg.node_count(node_type=NodeType.TOPIC)
-            edges = kg.edge_count()
+            self._kg = KnowledgeGraph()
+            docs = self._kg.node_count(node_type=NodeType.DOCUMENT)
+            entities = self._kg.node_count(node_type=NodeType.ENTITY)
+            topics = self._kg.node_count(node_type=NodeType.TOPIC)
+            edges = self._kg.edge_count()
 
             stats = (
                 f"  Documents: {docs}  |  Entities: {entities}  |  "
@@ -1282,12 +2239,51 @@ class KnowledgeScreen(Screen):
             )
             self.query_one("#kg-stats-content", Static).update(stats)
 
-            for node in kg.list_nodes(limit=50):
+            for node in self._kg.list_nodes(limit=50):
                 table.add_row(node.id, node.node_type.value, node.name, key=node.id)
         except Exception:
+            self._kg = None
             self.query_one("#kg-stats-content", Static).update(
                 "  [dim]No knowledge graph loaded[/dim]"
             )
+
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        """Show detail for the highlighted node."""
+        if event.row_key is None or not hasattr(self, "_kg") or self._kg is None:
+            return
+        node_id = str(event.row_key.value)
+        try:
+            node = self._kg.get_node(node_id)
+            if node is None:
+                return
+            lines = [
+                f"[b]{node.name}[/b]",
+                f"  ID:   {node.id}",
+                f"  Type: {node.node_type.value}",
+            ]
+            if node.content:
+                preview = node.content[:300]
+                if len(node.content) > 300:
+                    preview += "…"
+                lines.append("")
+                lines.append("  [b]Content:[/b]")
+                lines.append(f"  {preview}")
+            if node.metadata:
+                lines.append("")
+                lines.append("  [b]Metadata:[/b]")
+                for k, v in list(node.metadata.items())[:10]:
+                    lines.append(f"    {k}: {v}")
+            # Show connected edges
+            edges = self._kg.get_edges(node_id)
+            if edges:
+                lines.append("")
+                lines.append(f"  [b]Connections:[/b] ({len(edges)})")
+                for edge in edges[:8]:
+                    other = edge.target if edge.source == node_id else edge.source
+                    lines.append(f"    → {edge.relation}: {other}")
+            self.query_one("#kg-detail", Static).update("\n".join(lines))
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -1309,24 +2305,65 @@ class MemoryScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Show memory tier overview."""
-        lines = [
-            "[b]Working Memory[/b]",
-            "  In-conversation key-value store. Lost when the conversation ends.",
-            "  API: WorkingMemory().set(key, value) / .get(key)",
-            "",
-            "[b]Short-Term Memory[/b]",
-            "  Session memory with TTL and max-entry eviction.",
-            "  API: ShortTermMemory(max_entries=100, default_ttl=3600)",
-            "",
-            "[b]Long-Term Memory[/b]",
-            "  Persistent SQLite-backed memory.",
-            "  API: LongTermMemory(path) / MemoryStore(path)",
-            "",
-            "[b]Retention Policies[/b]",
-            "  Control memory lifecycle with RetentionPolicy.",
-            "  Personas can specify retention rules for automatic cleanup.",
-        ]
+        """Show memory tier overview with live data."""
+        lines: list[str] = []
+
+        # Try to load the default long-term memory store
+        try:
+            import os
+
+            from talk_box.memory import LongTermMemory, MemoryStore
+
+            db_path = os.path.expanduser("~/.config/talk-box/memory.db")
+
+            lines.append("[b]Working Memory[/b]")
+            lines.append("  In-conversation key-value store. Ephemeral.")
+            lines.append("")
+
+            lines.append("[b]Short-Term Memory[/b]")
+            lines.append("  Session memory with TTL and eviction.")
+            lines.append("")
+
+            lines.append("[b]Long-Term Memory[/b]")
+            if os.path.isfile(db_path):
+                ltm = LongTermMemory(path=db_path)
+                entries = ltm.entries()
+                lines.append(f"  Database: {db_path}")
+                lines.append(f"  Entries:  {len(entries)}")
+                if entries:
+                    lines.append("")
+                    lines.append("  [b]Recent entries:[/b]")
+                    for entry in entries[:15]:
+                        preview = str(entry.value)[:60]
+                        if len(str(entry.value)) > 60:
+                            preview += "…"
+                        tags_str = f" [{', '.join(entry.tags)}]" if entry.tags else ""
+                        lines.append(f"    {entry.key}{tags_str}: {preview}")
+                ltm.close()
+            else:
+                lines.append(f"  Database: [dim]not found[/dim] ({db_path})")
+                lines.append("  No persistent memories stored yet.")
+
+            lines.append("")
+            lines.append("[b]Usage[/b]")
+            lines.append("  [dim]store = tb.MemoryStore(long_term_path='~/.config/talk-box/memory.db')[/dim]")
+            lines.append("  [dim]store.remember('key', 'value', tier=tb.MemoryTier.LONG_TERM)[/dim]")
+            lines.append("  [dim]store.recall('key')[/dim]")
+        except Exception:
+            lines = [
+                "[b]Working Memory[/b]",
+                "  In-conversation key-value store. Lost when the conversation ends.",
+                "  API: WorkingMemory().set(key, value) / .get(key)",
+                "",
+                "[b]Short-Term Memory[/b]",
+                "  Session memory with TTL and max-entry eviction.",
+                "  API: ShortTermMemory(max_entries=100, default_ttl=3600)",
+                "",
+                "[b]Long-Term Memory[/b]",
+                "  Persistent SQLite-backed memory.",
+                "  API: LongTermMemory(path) / MemoryStore(path)",
+            ]
+
         self.query_one("#memory-tiers", Static).update("\n".join(lines))
 
 
