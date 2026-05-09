@@ -502,3 +502,125 @@ class TestWrapCallable:
         import talk_box
 
         assert "wrap_callable" in talk_box.__all__
+
+
+class TestDiscoverEntryPointSkills:
+    """Tests for discover_entry_point_skills."""
+
+    def test_discover_returns_list(self):
+        from talk_box.skills import _reset_cache, discover_entry_point_skills
+
+        _reset_cache()
+        # No third-party packages with talk_box.skills entry points installed,
+        # so this should return an empty list without error
+        result = discover_entry_point_skills()
+        assert isinstance(result, list)
+
+    def test_discover_entry_point_skills_in_all(self):
+        import talk_box
+
+        assert "discover_entry_point_skills" in talk_box.__all__
+
+    def test_discover_registers_in_cache(self, monkeypatch):
+        """Mock entry points to verify skills are cached."""
+        from talk_box.skills import (
+            SkillDefinition,
+            _reset_cache,
+            discover_entry_point_skills,
+            get_skill,
+        )
+
+        _reset_cache()
+
+        mock_skill = SkillDefinition(
+            name="ep_skill",
+            display_name="EP Skill",
+            category="test",
+            description="From entry point",
+            instructions="Do the thing",
+            constraints=[],
+            tools=[],
+            tags=[],
+            metadata={},
+        )
+
+        class FakeEP:
+            def load(self):
+                return lambda: mock_skill
+
+        class FakeEPs:
+            def select(self, group):
+                return [FakeEP()]
+
+        monkeypatch.setattr(
+            "talk_box.skills.entry_points",
+            lambda: FakeEPs(),
+        )
+
+        result = discover_entry_point_skills()
+        assert len(result) == 1
+        assert result[0].name == "ep_skill"
+        assert get_skill("ep_skill").description == "From entry point"
+
+    def test_discover_handles_list_return(self, monkeypatch):
+        """Entry point can return a list of skills."""
+        from talk_box.skills import (
+            SkillDefinition,
+            _reset_cache,
+            discover_entry_point_skills,
+        )
+
+        _reset_cache()
+
+        skills = [
+            SkillDefinition(
+                name=f"ep_{i}",
+                display_name=f"EP {i}",
+                category="test",
+                description="",
+                instructions="",
+                constraints=[],
+                tools=[],
+                tags=[],
+                metadata={},
+            )
+            for i in range(3)
+        ]
+
+        class FakeEP:
+            def load(self):
+                return lambda: skills
+
+        class FakeEPs:
+            def select(self, group):
+                return [FakeEP()]
+
+        monkeypatch.setattr(
+            "talk_box.skills.entry_points",
+            lambda: FakeEPs(),
+        )
+
+        result = discover_entry_point_skills()
+        assert len(result) == 3
+
+    def test_discover_skips_broken_entry_points(self, monkeypatch):
+        """Broken entry points are skipped without error."""
+        from talk_box.skills import _reset_cache, discover_entry_point_skills
+
+        _reset_cache()
+
+        class FakeEP:
+            def load(self):
+                raise ImportError("broken package")
+
+        class FakeEPs:
+            def select(self, group):
+                return [FakeEP()]
+
+        monkeypatch.setattr(
+            "talk_box.skills.entry_points",
+            lambda: FakeEPs(),
+        )
+
+        result = discover_entry_point_skills()
+        assert result == []

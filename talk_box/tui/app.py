@@ -98,6 +98,9 @@ class TalkBoxApp(App):
     _shown_vscode_hint: bool = False
     """Track whether the VS Code first-run hint has been shown."""
 
+    _simple_mode: bool = False
+    """When True, only the chat screen is available (no tabs, no command list)."""
+
     # -- Compose --------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
@@ -114,6 +117,24 @@ class TalkBoxApp(App):
             load_dotenv()
         except ImportError:
             pass
+
+        # Detect simple mode from config
+        try:
+            from talk_box.config import TUIMode, load_config
+
+            cfg = load_config()
+            if cfg.mode == TUIMode.SIMPLE:
+                self._simple_mode = True
+        except Exception:
+            pass
+
+        if self._simple_mode:
+            # Simple mode: only install the chat screen
+            self.install_screen(ChatScreen, name="chat")
+            self.push_screen("chat")
+            self._current_screen_id = "chat"
+            self.sub_title = "Chat"
+            return
 
         # Install all screens
         for _key, screen_id, _label, screen_cls in SCREEN_NAV:
@@ -149,6 +170,8 @@ class TalkBoxApp(App):
 
     def action_open_command_list(self) -> None:
         """Show the command list modal."""
+        if self._simple_mode:
+            return  # no navigation in simple mode
         if self.command_mode:
             return  # already open
         self.command_mode = True

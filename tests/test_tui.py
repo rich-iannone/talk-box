@@ -1859,3 +1859,49 @@ class TestHomeScreenProjectConfig:
             status = app.screen.query_one("#home-status-summary", Static)
             text = str(status._Static__content)
             assert "Project" in text
+
+
+class TestSimpleMode:
+    """Tests for mode: simple (chat-only TUI)."""
+
+    @pytest.mark.asyncio()
+    async def test_simple_mode_shows_chat(self, _fake_config, monkeypatch):
+        """In simple mode, the app starts on the chat screen."""
+        from talk_box import config as config_mod
+        from talk_box.config import TUIMode
+
+        def fake_load_config(**kwargs):
+            return config_mod.TalkBoxConfig(mode=TUIMode.SIMPLE)
+
+        monkeypatch.setattr(config_mod, "load_config", fake_load_config)
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            await pilot.pause()
+            assert app._simple_mode is True
+            assert app._current_screen_id == "chat"
+
+    @pytest.mark.asyncio()
+    async def test_simple_mode_blocks_command_list(self, _fake_config, monkeypatch):
+        """In simple mode, command list does not open."""
+        from talk_box import config as config_mod
+        from talk_box.config import TUIMode
+
+        def fake_load_config(**kwargs):
+            return config_mod.TalkBoxConfig(mode=TUIMode.SIMPLE)
+
+        monkeypatch.setattr(config_mod, "load_config", fake_load_config)
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            await pilot.pause()
+            app.action_open_command_list()
+            assert app.command_mode is False
+
+    @pytest.mark.asyncio()
+    async def test_full_mode_is_default(self, _fake_config):
+        """Without mode:simple, the app loads normally."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            await pilot.pause()
+            assert app._simple_mode is False

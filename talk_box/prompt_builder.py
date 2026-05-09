@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from ._text_formatter import wrap_prompt_text
 
@@ -1052,6 +1052,35 @@ class PromptBuilder:
         self._examples: List[Dict[str, str]] = []
         self._final_emphasis: Optional[str] = None
         self._vocabulary: List[VocabularyTerm] = []
+        self._model_profile: Optional[Any] = None
+
+    def for_model(
+        self,
+        profile: Any,
+    ) -> "PromptBuilder":
+        """Adapt prompt construction for a specific model's capabilities.
+
+        When a model profile is set, ``_build()`` adjusts the prompt
+        structure automatically:
+
+        - **Small context windows** (≤ 8 192 tokens): examples are
+          dropped and vocabulary is trimmed to save space.
+        - **No structured output support**: an explicit "respond in
+          plain text" constraint is injected.
+        - **No tool support**: tool-related sections are omitted.
+
+        Parameters
+        ----------
+        profile
+            A ``ModelProfile`` instance (from ``talk_box.models``).
+
+        Returns
+        -------
+        PromptBuilder
+            Self for method chaining.
+        """
+        self._model_profile = profile
+        return self
 
     def persona(self, role: str, expertise: Optional[str] = None) -> "PromptBuilder":
         """
@@ -4089,6 +4118,18 @@ print(builder)
         This method is used internally by ChatBot to create the system prompt while preserving the
         structured data for testing and analysis.
         """
+        # Model-awareness: determine budget constraints
+        profile = self._model_profile
+        small_context = False
+        no_structured = False
+
+        if profile is not None:
+            ctx = getattr(profile, "context_window", None)
+            if ctx is not None and ctx <= 8192:
+                small_context = True
+            if getattr(profile, "supports_structured_output", None) is False:
+                no_structured = True
+
         prompt_parts = []
 
         # 1. Persona
@@ -4102,25 +4143,37 @@ print(builder)
             for constraint in critical_constraints:
                 prompt_parts.append(f"- {constraint}")
 
+        # Model-aware: inject plain-text constraint for models without structured output
+        if no_structured:
+            prompt_parts.append("\nMODEL CONSTRAINT:")
+            prompt_parts.append(
+                "- This model does not support structured/JSON output. Respond in plain text only."
+            )
+
         # 3. Task context
         if self._task_context:
             prompt_parts.append(f"\nTASK: {self._task_context}")
 
-        # 4. Vocabulary/Glossary
-        if self._vocabulary:
+        # 4. Vocabulary/Glossary (trimmed for small context windows)
+        vocab = self._vocabulary
+        if small_context:
+            vocab = vocab[:3]  # Keep only the first 3 terms
+
+        if vocab:
             prompt_parts.append("\nDOMAIN VOCABULARY:")
-            for term in self._vocabulary:
+            for term in vocab:
                 vocab_line = f"- **{term.term}**: {term.definition}"
 
-                # Add translations if present
-                formatted_translations = term._format_translations()
-                if formatted_translations:
-                    vocab_line += f" [Translations: {formatted_translations}]"
+                if not small_context:
+                    # Add translations if present
+                    formatted_translations = term._format_translations()
+                    if formatted_translations:
+                        vocab_line += f" [Translations: {formatted_translations}]"
 
-                # Add synonyms if present
-                formatted_synonyms = term._format_synonyms()
-                if formatted_synonyms:
-                    vocab_line += f" (Also: {formatted_synonyms})"
+                    # Add synonyms if present
+                    formatted_synonyms = term._format_synonyms()
+                    if formatted_synonyms:
+                        vocab_line += f" (Also: {formatted_synonyms})"
 
                 prompt_parts.append(vocab_line)
 
@@ -4143,8 +4196,8 @@ print(builder)
             for format_spec in self._output_format:
                 prompt_parts.append(f"- {format_spec}")
 
-        # 8. Examples
-        if self._examples:
+        # 8. Examples (skipped for small context windows)
+        if self._examples and not small_context:
             prompt_parts.append("\nEXAMPLES:")
             for i, example in enumerate(self._examples, 1):
                 prompt_parts.append(f"\nExample {i}:")

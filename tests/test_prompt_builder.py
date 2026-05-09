@@ -3,6 +3,7 @@ from talk_box import (
     PromptBuilder,
     Priority,
     PromptSection,
+    VocabularyTerm,
     architectural_analysis_prompt,
     code_review_prompt,
     debugging_prompt,
@@ -318,3 +319,94 @@ class TestPriority:
         assert sorted_priorities[1] == Priority.HIGH
         assert sorted_priorities[2] == Priority.LOW  # "low" comes before "medium" alphabetically
         assert sorted_priorities[3] == Priority.MEDIUM
+
+
+class TestModelAwarePromptBuilder:
+    """Tests for model-aware prompt adaptation via for_model()."""
+
+    def test_for_model_returns_self(self):
+        from talk_box.models import ModelProfile
+
+        pb = PromptBuilder()
+        result = pb.for_model(ModelProfile(provider="ollama", model="llama3.3"))
+        assert result is pb
+
+    def test_small_context_drops_examples(self):
+        from talk_box.models import ModelProfile
+
+        pb = (
+            PromptBuilder()
+            .persona("analyst")
+            .task_context("analyze data")
+            .example("input A", "output A")
+            .example("input B", "output B")
+        )
+
+        # Without model: examples present
+        text_full = str(pb)
+        assert "EXAMPLES" in text_full
+        assert "input A" in text_full
+
+        # With small context model: examples dropped
+        small = ModelProfile(provider="ollama", model="phi4", context_window=4096)
+        pb.for_model(small)
+        text_small = str(pb)
+        assert "EXAMPLES" not in text_small
+        assert "input A" not in text_small
+
+    def test_small_context_trims_vocabulary(self):
+        from talk_box.models import ModelProfile
+
+        pb = PromptBuilder()
+        for i in range(6):
+            pb.vocabulary(VocabularyTerm(term=f"term_{i}", definition=f"def {i}"))
+
+        small = ModelProfile(provider="ollama", model="phi4", context_window=4096)
+        pb.for_model(small)
+        text = str(pb)
+
+        # Only first 3 terms should appear
+        assert "term_0" in text
+        assert "term_2" in text
+        assert "term_3" not in text
+
+    def test_no_structured_output_injects_constraint(self):
+        from talk_box.models import ModelProfile
+
+        pb = PromptBuilder().persona("coder").task_context("write code")
+
+        profile = ModelProfile(
+            provider="ollama",
+            model="phi4",
+            context_window=32768,
+            supports_structured_output=False,
+        )
+        pb.for_model(profile)
+        text = str(pb)
+        assert "plain text" in text.lower()
+        assert "MODEL CONSTRAINT" in text
+
+    def test_large_context_keeps_everything(self):
+        from talk_box.models import ModelProfile
+
+        pb = PromptBuilder().persona("analyst").example("in", "out")
+        for i in range(5):
+            pb.vocabulary(VocabularyTerm(term=f"t{i}", definition=f"d{i}"))
+
+        large = ModelProfile(
+            provider="anthropic",
+            model="claude-sonnet-4-6",
+            context_window=200000,
+            supports_structured_output=True,
+        )
+        pb.for_model(large)
+        text = str(pb)
+        assert "EXAMPLES" in text
+        assert "t4" in text
+        assert "MODEL CONSTRAINT" not in text
+
+    def test_no_model_profile_is_default(self):
+        """Without for_model(), the builder works as before."""
+        pb = PromptBuilder().persona("analyst").example("a", "b")
+        text = str(pb)
+        assert "EXAMPLES" in text

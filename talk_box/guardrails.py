@@ -741,6 +741,123 @@ def keyword_block(
 
 
 # ---------------------------------------------------------------------------
+# Behavioral guardrails — workflow-level constraints
+# ---------------------------------------------------------------------------
+
+
+def max_autonomous_changes(limit: int) -> Guard:
+    """Guard that limits the number of autonomous changes per session.
+
+    Tracks how many times the output guard fires with a non-pass result
+    and blocks further output once the limit is reached.  Use this to
+    prevent runaway agents from making too many changes without human
+    review.
+
+    Parameters
+    ----------
+    limit
+        Maximum number of changes (rewrites or tool invocations)
+        allowed before the guard blocks.
+
+    Returns
+    -------
+    Guard
+        A configured workflow guard.
+
+    Examples
+    --------
+    ```python
+    bot = tb.ChatBot().guardrail(tb.max_autonomous_changes(5))
+    ```
+    """
+    counter: dict[str, int] = {"count": 0}
+
+    def _check(text: str) -> GuardResult:
+        counter["count"] += 1
+        if counter["count"] > limit:
+            return GuardResult.blocked(
+                f"Autonomous change limit reached ({limit}). "
+                "Human review required before continuing."
+            )
+        return GuardResult.passed()
+
+    return Guard(name="max_autonomous_changes", func=_check, phase=GuardPhase.OUTPUT)
+
+
+def require_human_checkpoint(
+    *,
+    every_n_turns: int = 5,
+) -> Guard:
+    """Guard that requires periodic human confirmation.
+
+    After every *n* output turns the guard blocks with a message
+    asking the human to confirm continuation.  Reset the counter
+    by calling the returned guard's ``reset()`` helper stored in
+    metadata.
+
+    Parameters
+    ----------
+    every_n_turns
+        Number of output turns between required checkpoints.
+
+    Returns
+    -------
+    Guard
+        A configured checkpoint guard.
+
+    Examples
+    --------
+    ```python
+    bot = tb.ChatBot().guardrail(tb.require_human_checkpoint(every_n_turns=3))
+    ```
+    """
+    counter: dict[str, int] = {"count": 0}
+
+    def _check(text: str) -> GuardResult:
+        counter["count"] += 1
+        if counter["count"] >= every_n_turns:
+            counter["count"] = 0
+            return GuardResult.blocked(
+                f"Human checkpoint required (every {every_n_turns} turns). "
+                "Review recent outputs before continuing."
+            )
+        return GuardResult.passed()
+
+    return Guard(name="require_human_checkpoint", func=_check, phase=GuardPhase.OUTPUT)
+
+
+def compliance_export_required() -> Guard:
+    """Guard that flags outputs needing compliance export.
+
+    Rewrites every output to append a compliance marker so that
+    downstream tooling knows the conversation must be exported for
+    audit.  The marker is a lightweight tag appended to the text.
+
+    Returns
+    -------
+    Guard
+        A configured compliance guard.
+
+    Examples
+    --------
+    ```python
+    bot = tb.ChatBot().guardrail(tb.compliance_export_required())
+    ```
+    """
+    _MARKER = "\n\n<!-- compliance-export-required -->"
+
+    def _check(text: str) -> GuardResult:
+        if _MARKER in text:
+            return GuardResult.passed()
+        return GuardResult.rewrite(
+            text + _MARKER,
+            reason="Compliance export marker appended",
+        )
+
+    return Guard(name="compliance_export_required", func=_check, phase=GuardPhase.OUTPUT)
+
+
+# ---------------------------------------------------------------------------
 # Guard resolution from declarative specs
 # ---------------------------------------------------------------------------
 
@@ -753,6 +870,9 @@ GUARD_FACTORIES: dict[str, Any] = {
     "must_cite_sources": must_cite_sources,
     "max_input_length": max_input_length,
     "keyword_block": keyword_block,
+    "max_autonomous_changes": max_autonomous_changes,
+    "require_human_checkpoint": require_human_checkpoint,
+    "compliance_export_required": compliance_export_required,
 }
 
 

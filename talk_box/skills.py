@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass, field
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any, Callable
 
@@ -359,6 +360,64 @@ def discover_skills(
                     _cache[skill.name] = skill
             except Exception:
                 continue
+
+    return discovered
+
+
+def discover_entry_point_skills() -> list[SkillDefinition]:
+    """Discover skills registered via Python package entry points.
+
+    Third-party packages can register skills by declaring an entry point
+    in the ``talk_box.skills`` group.  Each entry point should be a
+    callable that returns a ``SkillDefinition`` (or a list of them).
+
+    In ``pyproject.toml``::
+
+        [project.entry-points."talk_box.skills"]
+        my_skill = "my_package.skills:get_skill"
+
+    The callable can return a single ``SkillDefinition`` or a list.
+    Discovered skills are automatically registered in the global cache.
+
+    Returns
+    -------
+    list[SkillDefinition]
+        Newly discovered skill definitions.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    skills = tb.discover_entry_point_skills()
+    for s in skills:
+        print(s.name)
+    ```
+    """
+    discovered: list[SkillDefinition] = []
+
+    eps = entry_points()
+    # Python 3.12+ returns a SelectableGroups; 3.9–3.11 returns a dict
+    group = (
+        eps.select(group="talk_box.skills")
+        if hasattr(eps, "select")
+        else eps.get("talk_box.skills", [])
+    )
+
+    for ep in group:
+        try:
+            factory = ep.load()
+            result = factory()
+            if isinstance(result, list):
+                for skill in result:
+                    if isinstance(skill, SkillDefinition):
+                        _cache[skill.name] = skill
+                        discovered.append(skill)
+            elif isinstance(result, SkillDefinition):
+                _cache[result.name] = result
+                discovered.append(result)
+        except Exception:
+            continue
 
     return discovered
 

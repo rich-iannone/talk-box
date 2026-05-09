@@ -919,3 +919,95 @@ class TestStateScopedGuardrails:
         assert review_guard.states == ["review"]
         assert review_guard.applies_to_state("review") is True
         assert review_guard.applies_to_state("chat") is False
+
+
+class TestBehavioralGuardrails:
+    """Tests for behavioral / workflow-level guardrails."""
+
+    def test_max_autonomous_changes_allows_within_limit(self):
+        from talk_box.guardrails import max_autonomous_changes
+
+        guard = max_autonomous_changes(3)
+        assert guard.name == "max_autonomous_changes"
+        assert guard.phase == GuardPhase.OUTPUT
+
+        # First 3 should pass
+        for _ in range(3):
+            result = guard.check("some output")
+            assert result.action == GuardAction.PASSED
+
+    def test_max_autonomous_changes_blocks_after_limit(self):
+        from talk_box.guardrails import max_autonomous_changes
+
+        guard = max_autonomous_changes(2)
+        guard.check("output 1")
+        guard.check("output 2")
+
+        result = guard.check("output 3")
+        assert result.action == GuardAction.BLOCKED
+        assert "limit reached" in result.reason.lower()
+
+    def test_require_human_checkpoint(self):
+        from talk_box.guardrails import require_human_checkpoint
+
+        guard = require_human_checkpoint(every_n_turns=3)
+        assert guard.name == "require_human_checkpoint"
+        assert guard.phase == GuardPhase.OUTPUT
+
+        # Turns 1 and 2 pass
+        assert guard.check("out 1").action == GuardAction.PASSED
+        assert guard.check("out 2").action == GuardAction.PASSED
+
+        # Turn 3 blocks (checkpoint required)
+        result = guard.check("out 3")
+        assert result.action == GuardAction.BLOCKED
+        assert "checkpoint" in result.reason.lower()
+
+        # Counter resets after block, so next 2 pass again
+        assert guard.check("out 4").action == GuardAction.PASSED
+        assert guard.check("out 5").action == GuardAction.PASSED
+
+    def test_compliance_export_required(self):
+        from talk_box.guardrails import compliance_export_required
+
+        guard = compliance_export_required()
+        assert guard.name == "compliance_export_required"
+        assert guard.phase == GuardPhase.OUTPUT
+
+        result = guard.check("Some response text")
+        assert result.action == GuardAction.REWRITTEN
+        assert "compliance-export-required" in result.message
+
+    def test_compliance_export_idempotent(self):
+        from talk_box.guardrails import compliance_export_required
+
+        guard = compliance_export_required()
+        result = guard.check("Text\n\n<!-- compliance-export-required -->")
+        assert result.action == GuardAction.PASSED
+
+    def test_behavioral_guards_in_pipeline(self):
+        pipeline = GuardPipeline()
+        from talk_box.guardrails import max_autonomous_changes
+
+        pipeline.add(max_autonomous_changes(2))
+
+        r1 = pipeline.run("out 1", GuardPhase.OUTPUT)
+        assert not r1.blocked
+        r2 = pipeline.run("out 2", GuardPhase.OUTPUT)
+        assert not r2.blocked
+        r3 = pipeline.run("out 3", GuardPhase.OUTPUT)
+        assert r3.blocked
+
+    def test_behavioral_guards_in_factory_registry(self):
+        from talk_box.guardrails import GUARD_FACTORIES
+
+        assert "max_autonomous_changes" in GUARD_FACTORIES
+        assert "require_human_checkpoint" in GUARD_FACTORIES
+        assert "compliance_export_required" in GUARD_FACTORIES
+
+    def test_behavioral_guards_in_all(self):
+        import talk_box
+
+        assert "max_autonomous_changes" in talk_box.__all__
+        assert "require_human_checkpoint" in talk_box.__all__
+        assert "compliance_export_required" in talk_box.__all__
