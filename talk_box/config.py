@@ -217,6 +217,9 @@ class TalkBoxConfig:
     # Notifications
     notifications: NotificationsConfig = field(default_factory=NotificationsConfig)
 
+    # Tools enabled for chat sessions
+    tools: list[str] = field(default_factory=list)
+
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {}
         if self.default_model is not None:
@@ -245,6 +248,8 @@ class TalkBoxConfig:
             d["autonomous"] = self.autonomous.to_dict()
         if self.notifications.webhook_url is not None:
             d["notifications"] = self.notifications.to_dict()
+        if self.tools:
+            d["tools"] = self.tools
         return d
 
     def get_profile(self, name: str) -> ProfileConfig:
@@ -367,6 +372,7 @@ class TalkBoxConfig:
             persona=resolved_persona,
             temperature=resolved_temp,
             guardrails=resolved_guards,
+            tools=list(self.tools),
         )
 
 
@@ -378,6 +384,7 @@ class ResolvedConfig:
     persona: str | None = None
     temperature: float | None = None
     guardrails: list[str] = field(default_factory=list)
+    tools: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -478,6 +485,7 @@ _VALID_TOP_KEYS = frozenset(
         "trusted_commands",
         "autonomous",
         "notifications",
+        "tools",
     }
 )
 
@@ -500,6 +508,7 @@ _KEY_COLLECTION_TYPES: dict[str, type] = {
     "knowledge": dict,
     "autonomous": dict,
     "notifications": dict,
+    "tools": list,
 }
 
 
@@ -635,6 +644,7 @@ def _parse_config_dict(data: dict[str, Any]) -> TalkBoxConfig:
         trusted_commands=trusted,
         autonomous=autonomous,
         notifications=notifications,
+        tools=data.get("tools", []),
     )
 
 
@@ -677,6 +687,7 @@ def _merge_configs(base: TalkBoxConfig, override: TalkBoxConfig) -> TalkBoxConfi
         notifications=override.notifications
         if override.notifications.webhook_url is not None
         else base.notifications,
+        tools=override.tools if override.tools else base.tools,
     )
 
 

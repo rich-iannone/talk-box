@@ -1458,9 +1458,7 @@ def _run_code_safely(code: str, *, timeout: float = 10.0) -> tuple[bool, str]:
     import sys
     import tempfile
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".py", delete=False, encoding="utf-8"
-    ) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as f:
         f.write(code)
         f.flush()
         script_path = f.name

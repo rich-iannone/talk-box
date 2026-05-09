@@ -171,6 +171,7 @@ from talk_box.models import (
 )
 from talk_box.pathways import Pathways
 from talk_box.personas import PersonaDefinition, get_persona, list_personas, persona_categories
+from talk_box.playground import playground
 from talk_box.prompt_builder import (
     Priority,
     PromptBuilder,
@@ -193,7 +194,6 @@ from talk_box.routing import (
     classify_complexity,
     route,
 )
-from talk_box.playground import playground
 from talk_box.server import (
     ServerConfig,
     serve,

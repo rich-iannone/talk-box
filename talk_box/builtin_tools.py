@@ -585,6 +585,118 @@ def validate_email(context: ToolContext, email: str) -> ToolResult:
 
 
 # ============================================================================
+# TOOL BOX: WORKSPACE / FILE TOOLS
+# ============================================================================
+
+
+def _get_workspace_root() -> "Path":
+    """Return the workspace root (cwd)."""
+    from pathlib import Path
+
+    return Path.cwd()
+
+
+@tool(
+    description="Read the contents of a file in the working directory",
+    category=ToolCategory.FILE,
+    examples=[
+        "file_read('README.md') -> contents of README.md",
+        "file_read('src/main.py') -> contents of src/main.py",
+    ],
+    tags=["tool_box", "file", "read", "workspace"],
+)
+def file_read(context: ToolContext, path: str) -> ToolResult:
+    """Read a file from the working directory. Path is relative to the project root."""
+    from talk_box.workspace_tools import WorkspaceAgent
+
+    agent = WorkspaceAgent(root=_get_workspace_root())
+    result = agent.file_read(path)
+    if result.success:
+        return ToolResult(data=result.output, metadata={"path": result.path})
+    return ToolResult(data=None, success=False, error=result.output)
+
+
+@tool(
+    description="Write content to a file in the working directory (creates or overwrites)",
+    category=ToolCategory.FILE,
+    examples=[
+        "file_write('output.csv', 'col1,col2\\n1,2\\n3,4') -> writes CSV file",
+        "file_write('results/summary.txt', 'Analysis complete.') -> writes to nested path",
+    ],
+    tags=["tool_box", "file", "write", "workspace"],
+)
+def file_write(context: ToolContext, path: str, content: str) -> ToolResult:
+    """Write content to a file. Path is relative to the project root. Parent dirs are created."""
+    from talk_box.workspace_tools import WorkspaceAgent
+
+    agent = WorkspaceAgent(root=_get_workspace_root())
+    result = agent.file_write(path, content)
+    if result.success:
+        return ToolResult(data=result.output, metadata={"path": result.path})
+    return ToolResult(data=None, success=False, error=result.output)
+
+
+@tool(
+    description="Edit a file by replacing exact text with new text",
+    category=ToolCategory.FILE,
+    examples=[
+        "file_edit('config.py', 'debug = False', 'debug = True') -> replaces text in file",
+    ],
+    tags=["tool_box", "file", "edit", "workspace"],
+)
+def file_edit(context: ToolContext, path: str, old_text: str, new_text: str) -> ToolResult:
+    """Replace the first occurrence of old_text with new_text in a file."""
+    from talk_box.workspace_tools import WorkspaceAgent
+
+    agent = WorkspaceAgent(root=_get_workspace_root())
+    result = agent.file_edit(path, old_text, new_text)
+    if result.success:
+        return ToolResult(data=result.output, metadata={"path": result.path})
+    return ToolResult(data=None, success=False, error=result.output)
+
+
+@tool(
+    description="List files in the working directory (with optional glob pattern)",
+    category=ToolCategory.FILE,
+    examples=[
+        "list_files() -> list all files",
+        "list_files('.', '*.py') -> list Python files",
+        "list_files('src') -> list files in src/",
+    ],
+    tags=["tool_box", "file", "list", "workspace", "directory"],
+)
+def list_files(context: ToolContext, path: str = ".", pattern: str = "*") -> ToolResult:
+    """List files in a directory matching a glob pattern. Path is relative to the project root."""
+    from talk_box.workspace_tools import WorkspaceAgent
+
+    agent = WorkspaceAgent(root=_get_workspace_root())
+    result = agent.list_files(path, pattern=pattern)
+    if result.success:
+        return ToolResult(data=result.output, metadata={"path": path, "pattern": pattern})
+    return ToolResult(data=None, success=False, error=result.output)
+
+
+@tool(
+    description="Search for text in files within the working directory",
+    category=ToolCategory.FILE,
+    examples=[
+        "file_search('TODO', '**/*.py') -> find 'TODO' in Python files",
+        "file_search('import pandas') -> find pandas imports in all files",
+    ],
+    tags=["tool_box", "file", "search", "workspace", "grep"],
+)
+def file_search(context: ToolContext, query: str, glob: str = "**/*") -> ToolResult:
+    """Search for text in files matching a glob pattern."""
+    from talk_box.workspace_tools import WorkspaceAgent
+
+    agent = WorkspaceAgent(root=_get_workspace_root())
+    result = agent.file_search(query, glob=glob)
+    if result.success:
+        return ToolResult(data=result.output, metadata={"query": query, "glob": glob})
+    return ToolResult(data=None, success=False, error=result.output)
+
+
+# ============================================================================
 # TOOL BOX: REGISTRY AND EXPORT FUNCTIONS
 # ============================================================================
 
@@ -606,7 +718,22 @@ def get_all_tool_box_tools() -> List[str]:
         "path_info",
         "generate_uuid",
         "validate_email",
+        "file_read",
+        "file_write",
+        "file_edit",
+        "list_files",
+        "file_search",
     ]
+
+
+# Default tools enabled for TUI chat sessions
+DEFAULT_CHAT_TOOLS: List[str] = [
+    "file_read",
+    "file_write",
+    "file_edit",
+    "list_files",
+    "file_search",
+]
 
 
 def get_builtin_tool(name: str):
@@ -649,6 +776,11 @@ def get_builtin_tool(name: str):
         "path_info",
         "generate_uuid",
         "validate_email",
+        "file_read",
+        "file_write",
+        "file_edit",
+        "list_files",
+        "file_search",
     }
 
     if name not in available_tools:

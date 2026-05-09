@@ -583,6 +583,13 @@ class ChatScreen(Screen):
                     pass
             if resolved.temperature is not None:
                 bot = bot.temperature(resolved.temperature)
+
+            # Always enable default chat tools; merge with any config-specified tools
+            from talk_box.builtin_tools import DEFAULT_CHAT_TOOLS
+
+            effective_tools = list(dict.fromkeys(DEFAULT_CHAT_TOOLS + resolved.tools))
+            bot = bot.tools(effective_tools)
+            self._active_tools = effective_tools
             self._bot = bot
         except Exception:
             # Fall through to echo mode
@@ -604,6 +611,13 @@ class ChatScreen(Screen):
                     bot = bot.persona_pack(self._active_persona)
                 except Exception:
                     pass
+            # Re-apply active tools (defaults loaded in _init_bot)
+            if getattr(self, "_active_tools", None):
+                bot = bot.tools(self._active_tools)
+            else:
+                from talk_box.builtin_tools import DEFAULT_CHAT_TOOLS
+
+                bot = bot.tools(DEFAULT_CHAT_TOOLS)
             self._bot = bot
         except Exception:
             self._bot = None

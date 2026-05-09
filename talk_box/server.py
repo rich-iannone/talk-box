@@ -97,9 +97,7 @@ def _create_app(
 
         message = body.get("message")
         if not message or not isinstance(message, str):
-            return JSONResponse(
-                {"error": "'message' field required (string)"}, status_code=400
-            )
+            return JSONResponse({"error": "'message' field required (string)"}, status_code=400)
 
         try:
             response = bot.chat(message)
@@ -117,8 +115,7 @@ def _create_app(
                 "persona": getattr(bot, "persona_name", None),
                 "model": getattr(bot, "model", None),
                 "guardrails": [
-                    g.name if hasattr(g, "name") else str(g)
-                    for g in getattr(bot, "guardrails", [])
+                    g.name if hasattr(g, "name") else str(g) for g in getattr(bot, "guardrails", [])
                 ],
             }
         )

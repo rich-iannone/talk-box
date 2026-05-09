@@ -497,5 +497,131 @@ if __name__ == "__main__":
         assert data["characters_no_spaces"] < data["characters"]
 
 
+# ---------------------------------------------------------------------------
+# Workspace file tools
+# ---------------------------------------------------------------------------
+
+
+class TestWorkspaceFileTools:
+    def test_file_write_and_read(self, tmp_path, monkeypatch):
+        """file_write creates a file, file_read reads it back."""
+        from talk_box.builtin_tools import file_read, file_write
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        context = ToolContext()
+
+        # Write a file
+        wr = file_write(context, "test.txt", "hello world")
+        assert wr.success
+        assert "test.txt" in (wr.data or "")
+
+        # Read it back
+        rd = file_read(context, "test.txt")
+        assert rd.success
+        assert rd.data == "hello world"
+
+    def test_file_write_creates_dirs(self, tmp_path, monkeypatch):
+        """file_write creates parent directories."""
+        from talk_box.builtin_tools import file_write
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        context = ToolContext()
+
+        result = file_write(context, "sub/dir/output.txt", "nested content")
+        assert result.success
+        assert (tmp_path / "sub" / "dir" / "output.txt").read_text() == "nested content"
+
+    def test_file_read_not_found(self, tmp_path, monkeypatch):
+        """file_read returns error for missing file."""
+        from talk_box.builtin_tools import file_read
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        context = ToolContext()
+
+        result = file_read(context, "nope.txt")
+        assert not result.success
+
+    def test_file_edit(self, tmp_path, monkeypatch):
+        """file_edit replaces text in a file."""
+        from talk_box.builtin_tools import file_edit
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        context = ToolContext()
+
+        (tmp_path / "config.py").write_text("debug = False\nverbose = True\n")
+        result = file_edit(context, "config.py", "debug = False", "debug = True")
+        assert result.success
+        assert (tmp_path / "config.py").read_text() == "debug = True\nverbose = True\n"
+
+    def test_list_files(self, tmp_path, monkeypatch):
+        """list_files returns files in directory."""
+        from talk_box.builtin_tools import list_files
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        context = ToolContext()
+
+        (tmp_path / "a.py").write_text("# a")
+        (tmp_path / "b.txt").write_text("b")
+        (tmp_path / "sub").mkdir()
+        (tmp_path / "sub" / "c.py").write_text("# c")
+
+        result = list_files(context)
+        assert result.success
+        assert "a.py" in result.data
+        assert "b.txt" in result.data
+
+    def test_list_files_with_pattern(self, tmp_path, monkeypatch):
+        """list_files filters by glob pattern."""
+        from talk_box.builtin_tools import list_files
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        context = ToolContext()
+
+        (tmp_path / "a.py").write_text("# a")
+        (tmp_path / "b.txt").write_text("b")
+
+        result = list_files(context, pattern="*.py")
+        assert result.success
+        assert "a.py" in result.data
+        assert "b.txt" not in result.data
+
+    def test_file_search(self, tmp_path, monkeypatch):
+        """file_search finds text in files."""
+        from talk_box.builtin_tools import file_search
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        context = ToolContext()
+
+        (tmp_path / "main.py").write_text("import pandas as pd\nprint('hello')\n")
+        (tmp_path / "other.py").write_text("import numpy\n")
+
+        result = file_search(context, "pandas")
+        assert result.success
+        assert "pandas" in result.data
+        assert "main.py" in result.data
+
+    def test_file_write_path_traversal_blocked(self, tmp_path, monkeypatch):
+        """file_write rejects path traversal."""
+        from talk_box.builtin_tools import file_write
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        context = ToolContext()
+
+        result = file_write(context, "../../etc/passwd", "hacked")
+        assert not result.success
+        assert "traversal" in (result.error or "").lower()
+
+    def test_get_all_includes_workspace_tools(self):
+        """get_all_tool_box_tools includes the workspace tools."""
+        from talk_box.builtin_tools import get_all_tool_box_tools
+
+        tools = get_all_tool_box_tools()
+        assert "file_read" in tools
+        assert "file_write" in tools
+        assert "file_edit" in tools
+        assert "list_files" in tools
+        assert "file_search" in tools
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

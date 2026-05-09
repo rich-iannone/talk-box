@@ -127,6 +127,10 @@ class TestDefaults:
         assert cfg.notifications.on_failure == [NotificationChannel.DESKTOP]
         assert cfg.notifications.webhook_url is None
 
+    def test_default_tools(self):
+        cfg = TalkBoxConfig()
+        assert cfg.tools == []
+
 
 # ---------------------------------------------------------------------------
 # Cloud model detection
@@ -285,6 +289,16 @@ class TestResolve:
         cfg = TalkBoxConfig(guardrails=["pii", "off_topic"])
         resolved = cfg.resolve()
         assert resolved.guardrails == ["pii", "off_topic"]
+
+    def test_resolve_includes_tools(self):
+        cfg = TalkBoxConfig(tools=["file_read", "file_write", "list_files"])
+        resolved = cfg.resolve()
+        assert resolved.tools == ["file_read", "file_write", "list_files"]
+
+    def test_resolve_empty_tools_by_default(self):
+        cfg = TalkBoxConfig()
+        resolved = cfg.resolve()
+        assert resolved.tools == []
 
 
 # ---------------------------------------------------------------------------
@@ -499,6 +513,16 @@ class TestToDict:
         assert d["allow_cloud"] is False
         assert d["mode"] == "simple"
 
+    def test_config_to_dict_with_tools(self):
+        cfg = TalkBoxConfig(tools=["file_read", "file_write"])
+        d = cfg.to_dict()
+        assert d["tools"] == ["file_read", "file_write"]
+
+    def test_config_to_dict_empty_tools_omitted(self):
+        cfg = TalkBoxConfig()
+        d = cfg.to_dict()
+        assert "tools" not in d
+
 
 # ---------------------------------------------------------------------------
 # Edge cases
@@ -536,6 +560,18 @@ class TestEdgeCases:
 
         cfg = _parse_config_dict({"knowledge": "not_a_dict"})
         assert cfg.knowledge.sources == []
+
+    def test_parse_config_dict_tools(self):
+        from talk_box.config import _parse_config_dict
+
+        cfg = _parse_config_dict({"tools": ["file_read", "file_write", "list_files"]})
+        assert cfg.tools == ["file_read", "file_write", "list_files"]
+
+    def test_parse_config_dict_no_tools(self):
+        from talk_box.config import _parse_config_dict
+
+        cfg = _parse_config_dict({})
+        assert cfg.tools == []
 
     def test_empty_yaml_file(self, tmp_path):
         path = tmp_path / "talk-box.yml"
@@ -715,3 +751,11 @@ class TestValidateConfigDict:
         """None values for optional keys should not trigger type errors."""
         errors = validate_config_dict({"default_model": None, "temperature": None})
         assert errors == []
+
+    def test_tools_accepted(self):
+        errors = validate_config_dict({"tools": ["file_read", "file_write"]})
+        assert errors == []
+
+    def test_tools_wrong_type(self):
+        errors = validate_config_dict({"tools": "file_read"})
+        assert any("tools" in e for e in errors)

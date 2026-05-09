@@ -153,9 +153,7 @@ def _create_playground_app(bot: "ChatBot", title: str) -> Any:
 
         message = body.get("message")
         if not message or not isinstance(message, str):
-            return JSONResponse(
-                {"error": "'message' field required"}, status_code=400
-            )
+            return JSONResponse({"error": "'message' field required"}, status_code=400)
 
         start = time.perf_counter()
         try:
@@ -174,8 +172,7 @@ def _create_playground_app(bot: "ChatBot", title: str) -> Any:
             },
             "guards": {
                 "active": [
-                    g.name if hasattr(g, "name") else str(g)
-                    for g in getattr(bot, "guardrails", [])
+                    g.name if hasattr(g, "name") else str(g) for g in getattr(bot, "guardrails", [])
                 ],
                 "count": len(getattr(bot, "guardrails", [])),
             },
