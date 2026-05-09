@@ -405,3 +405,100 @@ class TestDiscoverSkills:
         found = discover_skills(str(skills_dir), scan_cwd=False)
         assert "source" in found[0].metadata
         assert "SKILL.md" in found[0].metadata["source"]
+
+
+class TestWrapCallable:
+    """Tests for wrap_callable() cross-tool orchestration."""
+
+    def test_wrap_simple_function(self):
+        from talk_box.skills import _reset_cache, wrap_callable
+
+        _reset_cache()
+
+        def word_count(text: str) -> int:
+            return len(text.split())
+
+        skill = wrap_callable(word_count, description="Count words")
+        assert skill.name == "word_count"
+        assert skill.description == "Count words"
+        assert skill.category == "wrapped"
+        assert "wrapped_callable" in skill.metadata
+        assert "params_schema" in skill.metadata
+
+    def test_wrap_uses_custom_name(self):
+        from talk_box.skills import _reset_cache, wrap_callable
+
+        _reset_cache()
+
+        def my_fn(x: int) -> int:
+            return x * 2
+
+        skill = wrap_callable(my_fn, name="doubler", description="Double a number")
+        assert skill.name == "doubler"
+
+    def test_wrap_extracts_params_schema(self):
+        from talk_box.skills import _reset_cache, wrap_callable
+
+        _reset_cache()
+
+        def analyze(text: str, verbose: bool = False, limit: int = 10) -> dict:
+            return {}
+
+        skill = wrap_callable(analyze)
+        schema = skill.metadata["params_schema"]
+        assert schema["properties"]["text"]["type"] == "string"
+        assert schema["properties"]["verbose"]["type"] == "boolean"
+        assert schema["properties"]["verbose"]["default"] is False
+        assert schema["properties"]["limit"]["type"] == "integer"
+        assert schema["properties"]["limit"]["default"] == 10
+        assert "text" in schema["required"]
+        assert "verbose" not in schema["required"]
+
+    def test_wrap_uses_docstring(self):
+        from talk_box.skills import _reset_cache, wrap_callable
+
+        _reset_cache()
+
+        def helper(x: str) -> str:
+            """Transform the input string."""
+            return x.upper()
+
+        skill = wrap_callable(helper)
+        assert "Transform the input string" in skill.instructions
+
+    def test_wrap_custom_schema(self):
+        from talk_box.skills import _reset_cache, wrap_callable
+
+        _reset_cache()
+
+        custom = {"type": "object", "properties": {"q": {"type": "string"}}}
+        skill = wrap_callable(lambda q: q, name="custom", params_schema=custom)
+        assert skill.metadata["params_schema"] == custom
+
+    def test_wrap_registers_in_cache(self):
+        from talk_box.skills import _reset_cache, get_skill, wrap_callable
+
+        _reset_cache()
+
+        def registered_fn(a: str) -> str:
+            return a
+
+        wrap_callable(registered_fn, register=True)
+        assert get_skill("registered_fn") is not None
+
+    def test_wrap_no_register(self):
+        from talk_box.skills import _reset_cache, get_skill, wrap_callable
+
+        _reset_cache()
+
+        def unregistered_fn(a: str) -> str:
+            return a
+
+        wrap_callable(unregistered_fn, register=False)
+        with pytest.raises(KeyError):
+            get_skill("unregistered_fn")
+
+    def test_all_contains_wrap_callable(self):
+        import talk_box
+
+        assert "wrap_callable" in talk_box.__all__

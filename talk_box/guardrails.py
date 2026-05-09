@@ -114,6 +114,26 @@ class Guard:
     name: str
     func: Callable[[str], GuardResult]
     phase: GuardPhase = GuardPhase.BOTH
+    states: list[str] | None = None
+
+    def applies_to_state(self, current_state: str | None) -> bool:
+        """Check whether this guard should run in the given pathway state.
+
+        Parameters
+        ----------
+        current_state
+            The current pathway state name, or ``None`` if no pathway is active.
+
+        Returns
+        -------
+        bool
+            ``True`` if the guard should run.
+        """
+        if self.states is None:
+            return True
+        if current_state is None:
+            return False
+        return current_state in self.states
 
     def check(self, text: str) -> GuardResult:
         """Run the guard against the given text.
@@ -145,6 +165,7 @@ def guardrail(
     *,
     name: str | None = None,
     phase: GuardPhase = GuardPhase.BOTH,
+    states: list[str] | None = None,
 ) -> Guard | Callable[[Callable[[str], GuardResult]], Guard]:
     """Decorator that turns a function into a composable guardrail.
 
@@ -158,6 +179,11 @@ def guardrail(
         Override the guard's display name (defaults to the function name).
     phase
         When to run: `"input"`, `"output"`, or `"both"` (default).
+    states
+        Optional list of pathway state names where this guard is active.
+        When ``None`` (the default), the guard runs in all states.
+        When set, the guard is skipped unless the current pathway state
+        matches one of the listed names.
 
     Returns
     -------
@@ -190,12 +216,12 @@ def guardrail(
     if func is not None:
         # Bare @guardrail usage
         guard_name = name or func.__name__
-        return Guard(name=guard_name, func=func, phase=phase)
+        return Guard(name=guard_name, func=func, phase=phase, states=states)
 
     # @guardrail(...) with arguments
     def decorator(fn: Callable[[str], GuardResult]) -> Guard:
         guard_name = name or fn.__name__
-        return Guard(name=guard_name, func=fn, phase=phase)
+        return Guard(name=guard_name, func=fn, phase=phase, states=states)
 
     return decorator
 
@@ -281,7 +307,13 @@ class GuardPipeline:
         if guard.name not in self._stats:
             self._stats[guard.name] = {"passed": 0, "blocked": 0, "rewritten": 0}
 
-    def run(self, text: str, phase: GuardPhase) -> GuardPipelineResult:
+    def run(
+        self,
+        text: str,
+        phase: GuardPhase,
+        *,
+        current_state: str | None = None,
+    ) -> GuardPipelineResult:
         """Run all applicable guards against the text.
 
         Parameters
@@ -291,6 +323,9 @@ class GuardPipeline:
         phase
             Current phase (`INPUT` or `OUTPUT`). Guards with matching
             phase or `BOTH` will run.
+        current_state
+            The current pathway state name.  Guards with a ``states``
+            restriction are skipped when the state doesn't match.
 
         Returns
         -------
@@ -303,6 +338,10 @@ class GuardPipeline:
         for guard in self._guards:
             # Skip guards not applicable to this phase
             if guard.phase != GuardPhase.BOTH and guard.phase != phase:
+                continue
+
+            # Skip guards not applicable to the current pathway state
+            if not guard.applies_to_state(current_state):
                 continue
 
             result = guard.check(current_text)

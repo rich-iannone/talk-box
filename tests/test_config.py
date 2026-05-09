@@ -561,3 +561,64 @@ class TestEdgeCases:
         )
         assert "global_profile" in cfg.profiles
         assert "project_profile" in cfg.profiles
+
+
+class TestAllowCloudEnforcement:
+    """Tests for allow_cloud config enforcement."""
+
+    def test_is_cloud_model(self):
+        from talk_box.config import TalkBoxConfig
+
+        cfg = TalkBoxConfig()
+        assert cfg.is_cloud_model("anthropic:claude-sonnet-4-6") is True
+        assert cfg.is_cloud_model("openai:gpt-4o") is True
+        assert cfg.is_cloud_model("google:gemini-2.5-flash") is True
+        assert cfg.is_cloud_model("ollama:llama3.3") is False
+        assert cfg.is_cloud_model("local:my-model") is False
+
+    def test_validate_model_blocks_cloud(self):
+        from talk_box.config import TalkBoxConfig
+
+        cfg = TalkBoxConfig(allow_cloud=False)
+        with pytest.raises(ValueError, match="blocked by allow_cloud"):
+            cfg.validate_model("anthropic:claude-sonnet-4-6")
+
+    def test_validate_model_allows_local(self):
+        from talk_box.config import TalkBoxConfig
+
+        cfg = TalkBoxConfig(allow_cloud=False)
+        cfg.validate_model("ollama:llama3.3")  # Should not raise
+
+    def test_validate_model_allows_cloud_when_enabled(self):
+        from talk_box.config import TalkBoxConfig
+
+        cfg = TalkBoxConfig(allow_cloud=True)
+        cfg.validate_model("anthropic:claude-sonnet-4-6")  # Should not raise
+
+    def test_resolve_rejects_cloud_model(self):
+        from talk_box.config import TalkBoxConfig
+
+        cfg = TalkBoxConfig(allow_cloud=False)
+        with pytest.raises(ValueError, match="blocked by allow_cloud"):
+            cfg.resolve(model="openai:gpt-4o")
+
+    def test_resolve_accepts_local_model(self):
+        from talk_box.config import TalkBoxConfig
+
+        cfg = TalkBoxConfig(allow_cloud=False)
+        resolved = cfg.resolve(model="ollama:llama3.3")
+        assert resolved.model == "ollama:llama3.3"
+
+    def test_allow_cloud_from_project_config(self, tmp_path):
+        from talk_box.config import load_config
+
+        # Create a project config with allow_cloud=false
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        write_yaml({"allow_cloud": False}, project_dir / "talk-box.yml")
+
+        # Also need a global config path that doesn't exist
+        global_path = tmp_path / "global" / "config.yml"
+
+        cfg = load_config(project_dir=project_dir, global_path=global_path)
+        assert cfg.allow_cloud is False

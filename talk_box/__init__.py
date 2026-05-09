@@ -195,6 +195,7 @@ from talk_box.skills import (
     load_skill,
     register_skill,
     skill_categories,
+    wrap_callable,
 )
 from talk_box.structured import (
     ExtractResult,
@@ -348,6 +349,7 @@ __all__ = [
     "register_skill",
     "load_skill",
     "skill_categories",
+    "wrap_callable",
     # Structured outputs
     "ExtractResult",
     "extract",

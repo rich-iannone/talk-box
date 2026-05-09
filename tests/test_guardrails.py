@@ -827,3 +827,95 @@ class TestPersonaDefaultGuards:
         assert "no_pii" in stats
         assert "disclaimer_required" in stats
         assert "max_response_length" in stats
+
+
+class TestStateScopedGuardrails:
+    """Tests for state-scoped guardrails (guards that only run in specific pathway states)."""
+
+    def _make_blocking_guard(self, name: str, **kwargs) -> Guard:
+        def block_all(text: str) -> GuardResult:
+            return GuardResult.blocked("Blocked by test guard")
+
+        return Guard(name=name, func=block_all, **kwargs)
+
+    def test_guard_no_states_runs_always(self):
+        guard = self._make_blocking_guard("always_on")
+        assert guard.states is None
+        assert guard.applies_to_state(None) is True
+        assert guard.applies_to_state("review") is True
+        assert guard.applies_to_state("anything") is True
+
+    def test_guard_with_states_matches(self):
+        guard = self._make_blocking_guard("review_only", states=["review", "escalation"])
+        assert guard.applies_to_state("review") is True
+        assert guard.applies_to_state("escalation") is True
+        assert guard.applies_to_state("greeting") is False
+        assert guard.applies_to_state(None) is False
+
+    def test_pipeline_skips_state_scoped_guard(self):
+        pipeline = GuardPipeline()
+
+        # A guard that only runs in "review" state
+        review_guard = self._make_blocking_guard("review_blocker", states=["review"])
+        pipeline.add(review_guard)
+
+        # In "greeting" state, should pass
+        result = pipeline.run("hello", GuardPhase.INPUT, current_state="greeting")
+        assert not result.blocked
+        assert result.text == "hello"
+
+    def test_pipeline_runs_state_scoped_guard_when_matching(self):
+        pipeline = GuardPipeline()
+
+        review_guard = self._make_blocking_guard("review_blocker", states=["review"])
+        pipeline.add(review_guard)
+
+        # In "review" state, should block
+        result = pipeline.run("hello", GuardPhase.INPUT, current_state="review")
+        assert result.blocked
+
+    def test_pipeline_state_scoped_with_no_state(self):
+        """State-scoped guard is skipped when no state is active."""
+        pipeline = GuardPipeline()
+
+        review_guard = self._make_blocking_guard("review_only", states=["review"])
+        pipeline.add(review_guard)
+
+        result = pipeline.run("hello", GuardPhase.INPUT, current_state=None)
+        assert not result.blocked
+
+    def test_pipeline_mixes_scoped_and_global_guards(self):
+        """Global guards run alongside state-scoped guards."""
+        pipeline = GuardPipeline()
+
+        # Global guard that rewrites
+        def rewrite_fn(text: str) -> GuardResult:
+            return GuardResult.rewrite(text.upper(), reason="uppercased")
+
+        global_guard = Guard(name="uppercaser", func=rewrite_fn)
+        pipeline.add(global_guard)
+
+        # State-scoped guard that blocks
+        scoped_guard = self._make_blocking_guard("scoped", states=["strict"])
+        pipeline.add(scoped_guard)
+
+        # In "normal" state: global runs (rewrite), scoped is skipped
+        result = pipeline.run("hello", GuardPhase.INPUT, current_state="normal")
+        assert not result.blocked
+        assert result.text == "HELLO"
+
+        # In "strict" state: global runs (rewrite), then scoped blocks
+        result2 = pipeline.run("hello", GuardPhase.INPUT, current_state="strict")
+        assert result2.blocked
+
+    def test_guardrail_decorator_with_states(self):
+        """The @guardrail decorator supports the states parameter."""
+        from talk_box.guardrails import guardrail
+
+        @guardrail(states=["review"])
+        def review_guard(text: str) -> GuardResult:
+            return GuardResult.blocked("Review mode only")
+
+        assert review_guard.states == ["review"]
+        assert review_guard.applies_to_state("review") is True
+        assert review_guard.applies_to_state("chat") is False

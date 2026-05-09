@@ -1786,3 +1786,76 @@ class TestCostCommand:
             await pilot.pause()
             msgs = app.screen.query(".chat-system")
             assert len(msgs) >= 1
+
+
+class TestAllowCloudTUI:
+    """Tests for allow_cloud enforcement in the TUI."""
+
+    @pytest.mark.asyncio()
+    async def test_model_command_blocks_cloud(self, _fake_config, monkeypatch):
+        """The /model command rejects cloud models when allow_cloud=false."""
+        from talk_box import config as config_mod
+
+        def fake_load_config(**kwargs):
+            return config_mod.TalkBoxConfig(allow_cloud=False)
+
+        monkeypatch.setattr(config_mod, "load_config", fake_load_config)
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            inp = app.screen.query_one("#chat-input")
+            inp.load_text("/model anthropic:claude-sonnet-4-6")
+            await pilot.press("enter")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = [str(m._Static__content) for m in msgs]
+            assert any("blocked" in t.lower() or "allow_cloud" in t for t in texts)
+            # Model should NOT have been changed
+            assert app.screen._active_model != "anthropic:claude-sonnet-4-6"
+
+    @pytest.mark.asyncio()
+    async def test_model_command_allows_local(self, _fake_config, monkeypatch):
+        """The /model command accepts local models when allow_cloud=false."""
+        from talk_box import config as config_mod
+
+        def fake_load_config(**kwargs):
+            return config_mod.TalkBoxConfig(allow_cloud=False)
+
+        monkeypatch.setattr(config_mod, "load_config", fake_load_config)
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            inp = app.screen.query_one("#chat-input")
+            inp.load_text("/model ollama:llama3.3")
+            await pilot.press("enter")
+            await pilot.pause()
+            assert app.screen._active_model == "ollama:llama3.3"
+
+    def test_is_cloud_model_static_method(self):
+        """ChatScreen._is_cloud_model classifies providers correctly."""
+        from talk_box.tui.screens import ChatScreen
+
+        assert ChatScreen._is_cloud_model("anthropic:claude-sonnet-4-6") is True
+        assert ChatScreen._is_cloud_model("openai:gpt-4o") is True
+        assert ChatScreen._is_cloud_model("google:gemini-2.5-flash") is True
+        assert ChatScreen._is_cloud_model("ollama:llama3.3") is False
+        assert ChatScreen._is_cloud_model("local:my-model") is False
+
+
+class TestHomeScreenProjectConfig:
+    """Tests for HomeScreen displaying project config status."""
+
+    @pytest.mark.asyncio()
+    async def test_home_shows_project_status(self, _fake_config):
+        """HomeScreen shows project config status in system status."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("home")
+            await pilot.pause()
+            status = app.screen.query_one("#home-status-summary", Static)
+            text = str(status._Static__content)
+            assert "Project" in text

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from yaml12 import parse_yaml
 
@@ -488,3 +489,136 @@ def create_skill(
         tags=tags or [],
         metadata=metadata or {},
     )
+
+
+# ---------------------------------------------------------------------------
+# Cross-tool orchestration: wrap_callable
+# ---------------------------------------------------------------------------
+
+# Type annotation → JSON Schema type mapping
+_TYPE_MAP: dict[type, str] = {
+    str: "string",
+    int: "integer",
+    float: "number",
+    bool: "boolean",
+    list: "array",
+    dict: "object",
+}
+
+
+def _params_schema_from_callable(fn: Callable[..., Any]) -> dict[str, Any]:
+    """Extract a JSON-Schema-style parameters description from *fn*'s signature.
+
+    Uses :mod:`inspect` to read parameter names, type annotations, and
+    defaults.  Parameters with no annotation default to ``"string"``.
+    """
+    sig = inspect.signature(fn)
+    properties: dict[str, Any] = {}
+    required: list[str] = []
+
+    for name, param in sig.parameters.items():
+        if name in ("self", "cls"):
+            continue
+
+        ann = param.annotation
+        json_type = "string"
+        if ann is not inspect.Parameter.empty:
+            json_type = _TYPE_MAP.get(ann, "string")
+
+        prop: dict[str, Any] = {"type": json_type}
+
+        if param.default is not inspect.Parameter.empty:
+            prop["default"] = param.default
+        else:
+            required.append(name)
+
+        properties[name] = prop
+
+    schema: dict[str, Any] = {
+        "type": "object",
+        "properties": properties,
+    }
+    if required:
+        schema["required"] = required
+    return schema
+
+
+def wrap_callable(
+    fn: Callable[..., Any],
+    name: str | None = None,
+    *,
+    description: str = "",
+    params_schema: dict[str, Any] | None = None,
+    category: str = "wrapped",
+    tags: list[str] | None = None,
+    register: bool = True,
+) -> SkillDefinition:
+    """Wrap any Python callable as a :class:`SkillDefinition`.
+
+    This turns an arbitrary function into a skill that agents can discover
+    and invoke.  The function's signature is introspected to build a
+    JSON-Schema parameter description, or you can supply one explicitly.
+
+    Parameters
+    ----------
+    fn
+        The Python callable to wrap.
+    name
+        Skill name.  Defaults to ``fn.__name__``.
+    description
+        One-line description of what this callable does.
+    params_schema
+        Explicit JSON-Schema dict for the function's parameters.
+        If ``None``, the schema is derived from the function's
+        type annotations and defaults.
+    category
+        Grouping category.  Defaults to ``"wrapped"``.
+    tags
+        Free-form tags for filtering and discovery.
+    register
+        Whether to register the skill in the global registry.
+
+    Returns
+    -------
+    SkillDefinition
+        A skill definition wrapping *fn*.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    def word_count(text: str) -> int:
+        return len(text.split())
+
+    skill = tb.wrap_callable(word_count, description="Count words in text")
+    ```
+    """
+    skill_name = name or fn.__name__
+    schema = params_schema or _params_schema_from_callable(fn)
+
+    # Build instructions from docstring if available
+    doc = inspect.getdoc(fn) or ""
+    instructions = description
+    if doc:
+        instructions = f"{description}\n\n{doc}".strip() if description else doc
+
+    skill = SkillDefinition(
+        name=skill_name,
+        display_name=skill_name.replace("_", " ").title(),
+        category=category,
+        description=description or (doc.split("\n")[0] if doc else ""),
+        instructions=instructions,
+        constraints=[],
+        tools=[skill_name],
+        tags=tags or [],
+        metadata={
+            "wrapped_callable": fn.__qualname__,
+            "params_schema": schema,
+        },
+    )
+
+    if register:
+        _cache[skill_name] = skill
+
+    return skill

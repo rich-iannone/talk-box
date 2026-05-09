@@ -347,6 +347,28 @@ class HomeScreen(Screen):
         except Exception:
             lines.append("  Profiles:    0 saved")
 
+        # Project config detection
+        try:
+            from talk_box.config import project_config_path
+
+            proj_path = project_config_path()
+            if proj_path is not None:
+                lines.append("  Project:     [green]talk-box.yml[/green] loaded")
+            else:
+                lines.append("  Project:     [dim]no talk-box.yml[/dim]")
+        except Exception:
+            pass
+
+        # allow_cloud status
+        try:
+            from talk_box.config import load_config
+
+            cfg = load_config()
+            if not cfg.allow_cloud:
+                lines.append("  Cloud:       [yellow]⚠ blocked[/yellow]")
+        except Exception:
+            pass
+
         return "\n".join(lines)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -438,16 +460,20 @@ class ChatScreen(Screen):
         """Build model select options, with favorites first."""
         options: list[tuple[str, str]] = []
         fav_models: list[str] = []
+        allow_cloud = True
         try:
-            from talk_box.config import get_favorites
+            from talk_box.config import get_favorites, load_config
 
             fav_models, _ = get_favorites()
+            allow_cloud = load_config().allow_cloud
         except Exception:
             pass
 
         # Add favorites at the top with a star prefix
         seen: set[str] = set()
         for fav in fav_models:
+            if not allow_cloud and self._is_cloud_model(fav):
+                continue
             options.append((f"⭐ {fav}", fav))
             seen.add(fav)
 
@@ -457,11 +483,29 @@ class ChatScreen(Screen):
             for p in list_models():
                 label = f"{p.provider}:{p.model}"
                 if label not in seen:
+                    if not allow_cloud and self._is_cloud_model(label):
+                        continue
                     options.append((label, label))
                     seen.add(label)
         except Exception:
             pass
         return options
+
+    @staticmethod
+    def _is_cloud_model(model_string: str) -> bool:
+        """Check whether a model string refers to a cloud provider."""
+        _cloud = {
+            "anthropic",
+            "openai",
+            "google",
+            "mistral",
+            "github",
+            "azure",
+            "bedrock",
+            "together",
+        }
+        provider = model_string.split(":")[0].lower() if ":" in model_string else model_string
+        return provider in _cloud
 
     def _get_persona_options(self) -> list[tuple[str, str]]:
         """Build persona select options, with favorites first."""
@@ -721,6 +765,19 @@ class ChatScreen(Screen):
 
         elif cmd == "/model":
             if arg:
+                # Enforce allow_cloud restriction
+                try:
+                    from talk_box.config import load_config
+
+                    cfg = load_config()
+                    if not cfg.allow_cloud and self._is_cloud_model(arg):
+                        self._append_system_message(
+                            f"⚠ Cloud model [b]{arg}[/b] is blocked by allow_cloud=false. "
+                            "Use a local model (e.g., ollama:*)."
+                        )
+                        return
+                except Exception:
+                    pass
                 self._active_model = arg
                 self._rebuild_bot()
                 self._conversation = None
@@ -2384,10 +2441,32 @@ class ModelScreen(Screen):
         table = self.query_one("#model-table", DataTable)
         table.cursor_type = "row"
         table.add_columns("Provider", "Model", "Context", "Tools", "Vision", "Cost")
+
+        # Check allow_cloud setting
+        allow_cloud = True
+        try:
+            from talk_box.config import load_config
+
+            allow_cloud = load_config().allow_cloud
+        except Exception:
+            pass
+
+        _cloud = {
+            "anthropic",
+            "openai",
+            "google",
+            "mistral",
+            "github",
+            "azure",
+            "bedrock",
+            "together",
+        }
         try:
             from talk_box.models import list_models
 
             for p in list_models():
+                if not allow_cloud and p.provider.lower() in _cloud:
+                    continue
                 ctx = f"{p.context_window:,}" if p.context_window else "—"
                 tools = "✓" if p.supports_tools else "✗"
                 vision = "✓" if p.supports_vision else "✗"
