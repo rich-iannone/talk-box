@@ -2,6 +2,7 @@ import pytest
 
 from talk_box.builder import ChatBot
 from talk_box.eval import (
+    BenchmarkResult,
     CustomMetric,
     DEFAULT_DIMENSIONS,
     EvalCase,
@@ -14,6 +15,7 @@ from talk_box.eval import (
     _parse_judge_response,
     _resolve_judge,
     _resolve_queries,
+    benchmark_persona,
     clear_custom_metrics,
     eval,
     eval_metric,
@@ -1222,3 +1224,166 @@ class TestCustomMetrics:
         summary = results.summary()
         assert "my_metric" in summary["dimensions"]
         assert "relevance" in summary["dimensions"]
+
+
+# ---------------------------------------------------------------------------
+# BenchmarkResult tests
+# ---------------------------------------------------------------------------
+
+
+class TestBenchmarkResult:
+    def test_ranking_order(self):
+        """ranking() returns models sorted by score descending."""
+        br = BenchmarkResult(
+            persona="tester",
+            scores={"model_a": 0.6, "model_b": 0.9, "model_c": 0.75},
+            dimension_scores={},
+            best_model="model_b",
+            passed_models=["model_b", "model_c"],
+            eval_results=EvalResults(),
+        )
+        ranked = br.ranking()
+        assert ranked[0] == ("model_b", 0.9)
+        assert ranked[1] == ("model_c", 0.75)
+        assert ranked[2] == ("model_a", 0.6)
+
+    def test_best_model(self):
+        br = BenchmarkResult(
+            persona="tester",
+            scores={"a": 0.5, "b": 0.8},
+            dimension_scores={},
+            best_model="b",
+            passed_models=["b"],
+            eval_results=EvalResults(),
+        )
+        assert br.best_model == "b"
+
+    def test_passed_models_filter(self):
+        br = BenchmarkResult(
+            persona="tester",
+            scores={"a": 0.5, "b": 0.8},
+            dimension_scores={},
+            best_model="b",
+            passed_models=["b"],
+            eval_results=EvalResults(),
+        )
+        assert "b" in br.passed_models
+        assert "a" not in br.passed_models
+
+
+class TestBenchmarkPersona:
+    def _get_eval_module(self):
+        import importlib
+
+        return importlib.import_module("talk_box.eval")
+
+    def test_benchmark_persona_delegates_to_eval_suite(self, monkeypatch):
+        """benchmark_persona wraps eval_suite and returns BenchmarkResult."""
+        eval_mod = self._get_eval_module()
+
+        fake_results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="model_a",
+                    query="hello",
+                    response="hi",
+                    scores=[EvalScore(dimension=EvalDimension.RELEVANCE, score=0.9)],
+                ),
+                EvalResult(
+                    variant="model_b",
+                    query="hello",
+                    response="hey",
+                    scores=[EvalScore(dimension=EvalDimension.RELEVANCE, score=0.6)],
+                ),
+            ],
+            config={"type": "suite"},
+        )
+        called_with: dict = {}
+
+        def _fake_eval_suite(
+            persona, *, models, queries, dimensions, judge, default_guards, scorecard_path
+        ):
+            called_with["persona"] = persona
+            called_with["models"] = models
+            return fake_results
+
+        monkeypatch.setattr(eval_mod, "eval_suite", _fake_eval_suite)
+
+        result = benchmark_persona(
+            "test_persona",
+            models=["model_a", "model_b"],
+            threshold=0.7,
+        )
+
+        assert isinstance(result, BenchmarkResult)
+        assert called_with["persona"] == "test_persona"
+        assert called_with["models"] == ["model_a", "model_b"]
+        assert result.best_model == "model_a"
+        assert "model_a" in result.passed_models
+        assert "model_b" not in result.passed_models
+        assert result.scores["model_a"] == 0.9
+        assert result.scores["model_b"] == 0.6
+
+    def test_benchmark_persona_all_pass(self, monkeypatch):
+        """All models pass when scores exceed threshold."""
+        eval_mod = self._get_eval_module()
+
+        fake_results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="m1",
+                    query="q",
+                    response="r",
+                    scores=[EvalScore(dimension=EvalDimension.RELEVANCE, score=0.8)],
+                ),
+                EvalResult(
+                    variant="m2",
+                    query="q",
+                    response="r",
+                    scores=[EvalScore(dimension=EvalDimension.RELEVANCE, score=0.75)],
+                ),
+            ],
+        )
+        monkeypatch.setattr(eval_mod, "eval_suite", lambda *a, **kw: fake_results)
+        result = benchmark_persona("p", models=["m1", "m2"], threshold=0.7)
+        assert len(result.passed_models) == 2
+
+    def test_benchmark_persona_none_pass(self, monkeypatch):
+        """No models pass when all scores are below threshold."""
+        eval_mod = self._get_eval_module()
+
+        fake_results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="m1",
+                    query="q",
+                    response="r",
+                    scores=[EvalScore(dimension=EvalDimension.RELEVANCE, score=0.3)],
+                ),
+            ],
+        )
+        monkeypatch.setattr(eval_mod, "eval_suite", lambda *a, **kw: fake_results)
+        result = benchmark_persona("p", models=["m1"], threshold=0.7)
+        assert result.passed_models == []
+
+    def test_benchmark_result_dimension_scores(self, monkeypatch):
+        """dimension_scores captures per-model per-dimension data."""
+        eval_mod = self._get_eval_module()
+
+        fake_results = EvalResults(
+            results=[
+                EvalResult(
+                    variant="m1",
+                    query="q",
+                    response="r",
+                    scores=[
+                        EvalScore(dimension=EvalDimension.RELEVANCE, score=0.9),
+                        EvalScore(dimension=EvalDimension.SAFETY, score=0.7),
+                    ],
+                ),
+            ],
+        )
+        monkeypatch.setattr(eval_mod, "eval_suite", lambda *a, **kw: fake_results)
+        result = benchmark_persona("p", models=["m1"])
+        assert "relevance" in result.dimension_scores["m1"]
+        assert "safety" in result.dimension_scores["m1"]

@@ -407,6 +407,69 @@ def models(
 
 
 # ---------------------------------------------------------------------------
+# skills
+# ---------------------------------------------------------------------------
+
+
+@main.command()
+@click.option("--category", "-c", default=None, help="Filter by category.")
+@click.argument("name", required=False)
+def skills(name: str | None, category: str | None) -> None:
+    """List available skill packs or show details for one.
+
+    Without arguments, lists all registered skills.  Pass a NAME to
+    see the full description and metadata for a single skill.
+    """
+    console = Console()
+    import talk_box as tb
+
+    if name is not None:
+        try:
+            skill = tb.get_skill(name)
+        except KeyError:
+            console.print(f"[red]Skill not found:[/red] {name}")
+            raise SystemExit(1)
+
+        version = skill.metadata.get("version", "—")
+        console.print(
+            Panel(
+                f"[bold]{skill.display_name}[/bold]\n\n"
+                f"[dim]Category:[/dim] {skill.category or '—'}\n"
+                f"[dim]Version:[/dim]  {version}\n\n"
+                f"{skill.description or 'No description.'}",
+                title="Skill Detail",
+                border_style="green",
+            )
+        )
+        return
+
+    skill_names = tb.list_skills()
+    all_skills = [tb.get_skill(n) for n in skill_names]
+    if category:
+        all_skills = [s for s in all_skills if s.category == category]
+
+    if not all_skills:
+        console.print("[yellow]No skills found.[/yellow]")
+        return
+
+    table = Table(title="Skill Packs", border_style="blue")
+    table.add_column("Name", style="bold cyan")
+    table.add_column("Category", style="green")
+    table.add_column("Version")
+    table.add_column("Description")
+
+    for s in sorted(all_skills, key=lambda x: x.name):
+        desc = (s.description or "")[:60]
+        if len(s.description or "") > 60:
+            desc += "…"
+        version = s.metadata.get("version", "—")
+        table.add_row(s.name, s.category or "—", version, desc)
+
+    console.print(table)
+    console.print(f"\n[dim]{len(all_skills)} skill(s)[/dim]")
+
+
+# ---------------------------------------------------------------------------
 # config
 # ---------------------------------------------------------------------------
 
@@ -739,3 +802,28 @@ def ui() -> None:
 
     app = TalkBoxApp()
     app.run()
+
+
+@main.command("serve-ui")
+@click.option("--host", default="localhost", help="Host to bind to.")
+@click.option("--port", "-p", default=8566, type=int, help="Port to serve on.")
+@click.option("--title", default="Talk Box", help="Browser page title.")
+def serve_ui(host: str, port: int, title: str) -> None:
+    """Serve the TUI in a web browser via textual-serve.
+
+    Requires the ``textual-serve`` package (``pip install textual-serve``).
+    The TUI will be accessible at http://<host>:<port>/ in any modern browser.
+    """
+    console = Console()
+    try:
+        from textual_serve.server import Server
+    except ImportError:
+        console.print(
+            "[red]textual-serve is not installed.[/red]\n"
+            "Install it with: [bold]pip install textual-serve[/bold]"
+        )
+        raise SystemExit(1)
+
+    console.print(f"[green]Serving Talk Box TUI at[/green] http://{host}:{port}/")
+    server = Server("talk-box ui", host=host, port=port, title=title)
+    server.serve()

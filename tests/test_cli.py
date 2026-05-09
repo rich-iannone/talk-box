@@ -308,3 +308,72 @@ class TestConfigProfile:
         result = _runner().invoke(main, ["config", "delete-profile", "ghost"])
         assert result.exit_code == 1
         assert "not found" in result.output
+
+
+# ---------------------------------------------------------------------------
+# TestSkills
+# ---------------------------------------------------------------------------
+
+
+class TestSkills:
+    def test_skills_list(self):
+        """skills command lists available skill packs."""
+        result = _runner().invoke(main, ["skills"])
+        assert result.exit_code == 0
+        assert "Skill Packs" in result.output
+        # We have at least the built-in skill packs
+        assert "skill(s)" in result.output
+
+    def test_skills_list_has_builtin(self):
+        """Built-in skills like polars should appear."""
+        result = _runner().invoke(main, ["skills"])
+        assert result.exit_code == 0
+        assert "polars" in result.output
+
+    def test_skills_show_detail(self):
+        """skills <name> shows detail panel."""
+        result = _runner().invoke(main, ["skills", "polars"])
+        assert result.exit_code == 0
+        assert "Skill Detail" in result.output
+
+    def test_skills_not_found(self):
+        """Unknown skill name returns exit code 1."""
+        result = _runner().invoke(main, ["skills", "nonexistent_skill_xyz"])
+        assert result.exit_code == 1
+        assert "not found" in result.output
+
+    def test_skills_filter_by_category(self):
+        """--category filters skills."""
+        result = _runner().invoke(main, ["skills", "--category", "data"])
+        assert result.exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# TestServeUI
+# ---------------------------------------------------------------------------
+
+
+class TestServeUI:
+    def test_serve_ui_missing_package(self, monkeypatch):
+        """serve-ui fails gracefully when textual-serve not installed."""
+        import builtins
+
+        real_import = builtins.__import__
+
+        def _block_textual_serve(name, *args, **kwargs):
+            if name == "textual_serve.server":
+                raise ImportError("no textual_serve")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", _block_textual_serve)
+        result = _runner().invoke(main, ["serve-ui"])
+        assert result.exit_code == 1
+        assert "textual-serve is not installed" in result.output
+
+    def test_serve_ui_help(self):
+        """serve-ui --help displays options."""
+        result = _runner().invoke(main, ["serve-ui", "--help"])
+        assert result.exit_code == 0
+        assert "--host" in result.output
+        assert "--port" in result.output
+        assert "--title" in result.output

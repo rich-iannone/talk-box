@@ -33,6 +33,7 @@ from talk_box.config import (
     load_profile,
     save_config,
     save_profile,
+    validate_config_dict,
 )
 from talk_box.connectors import (
     AppleNotes,
@@ -75,12 +76,14 @@ from talk_box.enrichment import (
     regex_enricher,
 )
 from talk_box.eval import (
+    BenchmarkResult,
     CustomMetric,
     EvalCase,
     EvalDimension,
     EvalResult,
     EvalResults,
     EvalScore,
+    benchmark_persona,
     clear_custom_metrics,
     eval,
     eval_metric,
@@ -275,6 +278,8 @@ __all__ = [
     "eval_model_update",
     "eval_regression",
     "eval_suite",
+    "benchmark_persona",
+    "BenchmarkResult",
     "clear_custom_metrics",
     "list_custom_metrics",
     "CustomMetric",
@@ -441,4 +446,5 @@ __all__ = [
     "load_profile",
     "save_profile",
     "list_profiles",
+    "validate_config_dict",
 ]

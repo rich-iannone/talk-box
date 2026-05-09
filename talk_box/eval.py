@@ -1019,6 +1019,131 @@ def eval_model_update(
     return results
 
 
+@dataclass
+class BenchmarkResult:
+    """Result of benchmarking a persona across models.
+
+    Attributes
+    ----------
+    persona
+        The persona name that was benchmarked.
+    scores
+        Mapping of model string to overall mean score (0.0–1.0).
+    dimension_scores
+        Mapping of model string to per-dimension scores.
+    best_model
+        The model with the highest overall score.
+    passed_models
+        Models that met the threshold.
+    eval_results
+        The underlying ``EvalResults`` for further analysis.
+    """
+
+    persona: str
+    scores: dict[str, float]
+    dimension_scores: dict[str, dict[str, float]]
+    best_model: str
+    passed_models: list[str]
+    eval_results: EvalResults
+
+    def ranking(self) -> list[tuple[str, float]]:
+        """Return models ranked by overall score (descending).
+
+        Returns
+        -------
+        list[tuple[str, float]]
+            List of ``(model, score)`` tuples, highest first.
+        """
+        return sorted(self.scores.items(), key=lambda x: x[1], reverse=True)
+
+
+def benchmark_persona(
+    persona: str,
+    *,
+    models: list[str],
+    queries: list[str | EvalCase] | None = None,
+    dimensions: list[EvalDimension] | None = None,
+    judge: str | "ChatBot | None" = None,
+    threshold: float = 0.7,
+    default_guards: bool = True,
+    scorecard_path: str | Path | None = None,
+) -> BenchmarkResult:
+    """Benchmark a persona across multiple models and rank them.
+
+    Runs the persona's test queries through each model, scores with a
+    judge, and returns a ``BenchmarkResult`` with per-model scores,
+    ranking, and pass/fail status.
+
+    This is a higher-level wrapper around ``eval_suite()`` focused on
+    answering: "Which model is best for this persona?"
+
+    Parameters
+    ----------
+    persona
+        Persona name (e.g., ``"code_reviewer"``).
+    models
+        List of ``provider:model`` strings to compare.
+    queries
+        Queries to evaluate. Falls back to persona ``test_queries``.
+    dimensions
+        Scoring dimensions. Defaults to relevance, safety, instruction_adherence.
+    judge
+        Judge model string or ChatBot.
+    threshold
+        Minimum acceptable overall score to count as "passed" (default 0.7).
+    default_guards
+        Whether to apply the persona's default guards.
+    scorecard_path
+        If provided, writes the scorecard JSON to this path.
+
+    Returns
+    -------
+    BenchmarkResult
+        Scores, ranking, best model, and pass/fail per model.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    result = tb.benchmark_persona(
+        "code_reviewer",
+        models=["anthropic:claude-sonnet-4-6", "ollama:qwen3:32b"],
+        judge="anthropic:claude-sonnet-4-6",
+    )
+
+    print(f"Best model: {result.best_model}")
+    for model, score in result.ranking():
+        print(f"  {model}: {score:.3f}")
+    ```
+    """
+    eval_results = eval_suite(
+        persona,
+        models=models,
+        queries=queries,
+        dimensions=dimensions,
+        judge=judge,
+        default_guards=default_guards,
+        scorecard_path=scorecard_path,
+    )
+
+    summary = eval_results.summary()
+    overall = summary["overall_scores"]
+    by_variant = summary["scores_by_variant"]
+
+    best = max(overall, key=overall.get) if overall else models[0]
+    passed = [m for m, s in overall.items() if s >= threshold]
+
+    return BenchmarkResult(
+        persona=persona,
+        scores=overall,
+        dimension_scores=by_variant,
+        best_model=best,
+        passed_models=passed,
+        eval_results=eval_results,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

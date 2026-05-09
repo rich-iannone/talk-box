@@ -459,6 +459,128 @@ def _parse_mode(value: str) -> TUIMode:
 
 
 # ---------------------------------------------------------------------------
+# Config schema validation
+# ---------------------------------------------------------------------------
+
+# Top-level keys accepted in talk-box.yml / config.yml
+_VALID_TOP_KEYS = frozenset(
+    {
+        "default_model",
+        "default_persona",
+        "guardrails",
+        "temperature",
+        "favorite_models",
+        "favorite_personas",
+        "allow_cloud",
+        "mode",
+        "profiles",
+        "knowledge",
+        "trusted_commands",
+        "autonomous",
+        "notifications",
+    }
+)
+
+# Expected types for top-level scalar keys
+_KEY_TYPES: dict[str, tuple[type, ...]] = {
+    "default_model": (str,),
+    "default_persona": (str,),
+    "temperature": (int, float),
+    "allow_cloud": (bool,),
+    "mode": (str,),
+}
+
+# Expected types for top-level collection keys
+_KEY_COLLECTION_TYPES: dict[str, type] = {
+    "guardrails": list,
+    "favorite_models": list,
+    "favorite_personas": list,
+    "trusted_commands": list,
+    "profiles": dict,
+    "knowledge": dict,
+    "autonomous": dict,
+    "notifications": dict,
+}
+
+
+def validate_config_dict(data: dict[str, Any]) -> list[str]:
+    """Validate a raw config dictionary against the Talk Box schema.
+
+    Returns a list of human-readable error strings.  An empty list
+    means the config is valid.
+
+    Parameters
+    ----------
+    data
+        Parsed YAML dictionary (from ``talk-box.yml`` or ``config.yml``).
+
+    Returns
+    -------
+    list[str]
+        Validation errors.  Empty if the config is valid.
+
+    Examples
+    --------
+    ```python
+    from talk_box.config import validate_config_dict
+
+    errors = validate_config_dict({"default_model": 42, "bogus": True})
+    # ["Unknown key: 'bogus'", "default_model: expected str, got int"]
+    ```
+    """
+    errors: list[str] = []
+
+    if not isinstance(data, dict):
+        return [f"Config must be a mapping, got {type(data).__name__}"]
+
+    # Check for unknown keys
+    for key in data:
+        if key not in _VALID_TOP_KEYS:
+            errors.append(f"Unknown key: '{key}'")
+
+    # Type-check scalar keys
+    for key, expected in _KEY_TYPES.items():
+        if key in data and data[key] is not None:
+            if not isinstance(data[key], expected):
+                names = "/".join(t.__name__ for t in expected)
+                errors.append(f"{key}: expected {names}, got {type(data[key]).__name__}")
+
+    # Type-check collection keys
+    for key, expected in _KEY_COLLECTION_TYPES.items():
+        if key in data and data[key] is not None:
+            if not isinstance(data[key], expected):
+                errors.append(
+                    f"{key}: expected {expected.__name__}, got {type(data[key]).__name__}"
+                )
+
+    # Validate mode value
+    if "mode" in data and isinstance(data["mode"], str):
+        if data["mode"] not in ("full", "simple"):
+            errors.append(f"mode: must be 'full' or 'simple', got '{data['mode']}'")
+
+    # Validate temperature range
+    if "temperature" in data and isinstance(data["temperature"], (int, float)):
+        if not (0.0 <= data["temperature"] <= 2.0):
+            errors.append(f"temperature: must be between 0.0 and 2.0, got {data['temperature']}")
+
+    # Validate profiles structure
+    if "profiles" in data and isinstance(data["profiles"], dict):
+        for name, pdata in data["profiles"].items():
+            if not isinstance(pdata, dict):
+                errors.append(f"profiles.{name}: expected mapping, got {type(pdata).__name__}")
+
+    # Validate guardrails is list of strings
+    if "guardrails" in data and isinstance(data["guardrails"], list):
+        for i, item in enumerate(data["guardrails"]):
+            if not isinstance(item, (str, dict)):
+                errors.append(
+                    f"guardrails[{i}]: expected str or mapping, got {type(item).__name__}"
+                )
+
+    return errors
+
+
+# ---------------------------------------------------------------------------
 # Config parsing from dict
 # ---------------------------------------------------------------------------
 

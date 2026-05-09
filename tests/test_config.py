@@ -26,6 +26,7 @@ from talk_box.config import (
     load_profile,
     save_config,
     save_profile,
+    validate_config_dict,
 )
 
 
@@ -622,3 +623,95 @@ class TestAllowCloudEnforcement:
 
         cfg = load_config(project_dir=project_dir, global_path=global_path)
         assert cfg.allow_cloud is False
+
+
+# ---------------------------------------------------------------------------
+# validate_config_dict tests
+# ---------------------------------------------------------------------------
+
+
+class TestValidateConfigDict:
+    def test_valid_config_no_errors(self):
+        errors = validate_config_dict(
+            {
+                "default_model": "ollama:llama3.3",
+                "default_persona": "coder",
+                "temperature": 0.7,
+                "mode": "simple",
+                "allow_cloud": False,
+                "guardrails": ["no_pii"],
+                "favorite_models": ["ollama:llama3.3"],
+            }
+        )
+        assert errors == []
+
+    def test_empty_dict_is_valid(self):
+        assert validate_config_dict({}) == []
+
+    def test_unknown_key(self):
+        errors = validate_config_dict({"bogus_key": True})
+        assert len(errors) == 1
+        assert "Unknown key" in errors[0]
+        assert "bogus_key" in errors[0]
+
+    def test_multiple_unknown_keys(self):
+        errors = validate_config_dict({"foo": 1, "bar": 2})
+        assert len(errors) == 2
+
+    def test_wrong_type_default_model(self):
+        errors = validate_config_dict({"default_model": 42})
+        assert any("default_model" in e and "str" in e for e in errors)
+
+    def test_wrong_type_temperature(self):
+        errors = validate_config_dict({"temperature": "hot"})
+        assert any("temperature" in e for e in errors)
+
+    def test_wrong_type_allow_cloud(self):
+        errors = validate_config_dict({"allow_cloud": "yes"})
+        assert any("allow_cloud" in e for e in errors)
+
+    def test_invalid_mode_value(self):
+        errors = validate_config_dict({"mode": "turbo"})
+        assert any("mode" in e and "turbo" in e for e in errors)
+
+    def test_valid_mode_values(self):
+        assert validate_config_dict({"mode": "full"}) == []
+        assert validate_config_dict({"mode": "simple"}) == []
+
+    def test_temperature_out_of_range_high(self):
+        errors = validate_config_dict({"temperature": 3.0})
+        assert any("temperature" in e and "between" in e for e in errors)
+
+    def test_temperature_out_of_range_low(self):
+        errors = validate_config_dict({"temperature": -0.5})
+        assert any("temperature" in e for e in errors)
+
+    def test_temperature_valid_boundary(self):
+        assert validate_config_dict({"temperature": 0.0}) == []
+        assert validate_config_dict({"temperature": 2.0}) == []
+
+    def test_guardrails_wrong_type(self):
+        errors = validate_config_dict({"guardrails": "no_pii"})
+        assert any("guardrails" in e for e in errors)
+
+    def test_guardrails_invalid_item(self):
+        errors = validate_config_dict({"guardrails": [42]})
+        assert any("guardrails[0]" in e for e in errors)
+
+    def test_profiles_wrong_type(self):
+        errors = validate_config_dict({"profiles": ["a", "b"]})
+        assert any("profiles" in e for e in errors)
+
+    def test_profiles_invalid_entry(self):
+        errors = validate_config_dict({"profiles": {"dev": "not_a_dict"}})
+        assert any("profiles.dev" in e for e in errors)
+
+    def test_not_a_dict(self):
+        errors = validate_config_dict("string")  # type: ignore[arg-type]
+        assert len(errors) == 1
+        assert "mapping" in errors[0]
+
+    def test_none_values_ignored(self):
+        """None values for optional keys should not trigger type errors."""
+        errors = validate_config_dict({"default_model": None, "temperature": None})
+        assert errors == []
