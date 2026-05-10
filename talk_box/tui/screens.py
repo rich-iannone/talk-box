@@ -1001,7 +1001,7 @@ class ChatScreen(Screen):
                 "  /capabilities      Show model capabilities\n"
                 "  /tokens            Show token usage\n"
                 "  /cost              Show session cost\n"
-                "  /tools             Show active tools\n"
+                "  /tools [on|off]    Manage active tools\n"
                 "  /history           Show conversation history\n"
                 "  /save [name]       Save session to disk\n"
                 "  /load [name]       Load a saved session\n"
@@ -1156,7 +1156,26 @@ class ChatScreen(Screen):
             self._show_capabilities()
 
         elif cmd == "/tools":
-            self._show_active_tools()
+            if not arg:
+                self._show_active_tools()
+            else:
+                sub_parts = arg.split(None, 1)
+                sub_cmd = sub_parts[0].lower()
+                sub_arg = sub_parts[1].strip() if len(sub_parts) > 1 else ""
+                if sub_cmd == "on" and sub_arg:
+                    self._toggle_tool(sub_arg, enable=True)
+                elif sub_cmd == "off" and sub_arg:
+                    self._toggle_tool(sub_arg, enable=False)
+                elif sub_cmd == "available":
+                    self._show_available_tools()
+                else:
+                    self._append_system_message(
+                        "[b]Usage:[/b]\n"
+                        "  /tools              List active tools\n"
+                        "  /tools on <name>    Enable a tool\n"
+                        "  /tools off <name>   Disable a tool\n"
+                        "  /tools available    List all available tools"
+                    )
 
         elif cmd == "/format":
             self._set_output_format(arg)
@@ -1694,6 +1713,76 @@ class ChatScreen(Screen):
             self._append_system_message("\n".join(lines))
         else:
             self._append_system_message("No tools are active.")
+
+    def _show_available_tools(self) -> None:
+        """Show all available builtin tools with active status."""
+        try:
+            from talk_box.builtin_tools import get_all_tool_box_tools
+
+            all_tools = get_all_tool_box_tools()
+        except Exception:
+            self._append_system_message("Could not load tool list.")
+            return
+        active = set(getattr(self, "_active_tools", None) or [])
+        lines = [f"[b]Available Tools[/b]  ({len(all_tools)})"]
+        for t in all_tools:
+            marker = "✓" if t in active else " "
+            lines.append(f"  [{marker}] {t}")
+        self._append_system_message("\n".join(lines))
+
+    def _toggle_tool(self, name: str, *, enable: bool) -> None:
+        """Enable or disable a tool by name, rebuild bot, and persist."""
+        try:
+            from talk_box.builtin_tools import get_all_tool_box_tools
+
+            available = get_all_tool_box_tools()
+        except Exception:
+            available = []
+
+        if name not in available:
+            self._append_system_message(
+                f"Unknown tool [b]{name}[/b]. Use [b]/tools available[/b] to see all tools."
+            )
+            return
+
+        active = list(getattr(self, "_active_tools", None) or [])
+        if enable:
+            if name in active:
+                self._append_system_message(f"Tool [b]{name}[/b] is already active.")
+                return
+            active.append(name)
+            self._active_tools = active
+            self._rebuild_bot()
+            self._conversation = None
+            self._append_system_message(f"Tool [b]{name}[/b] enabled.")
+        else:
+            if name not in active:
+                self._append_system_message(f"Tool [b]{name}[/b] is not active.")
+                return
+            active.remove(name)
+            self._active_tools = active
+            self._rebuild_bot()
+            self._conversation = None
+            self._append_system_message(f"Tool [b]{name}[/b] disabled.")
+
+        self._persist_tools_config()
+
+    def _persist_tools_config(self) -> None:
+        """Save current active tools to project talk-box.yml."""
+        try:
+            from yaml12 import read_yaml, write_yaml
+
+            from talk_box.config import project_config_path
+
+            path = project_config_path()
+            if path and path.is_file():
+                data = read_yaml(path) or {}
+            else:
+                return  # No project config — skip persistence
+            data["tools"] = list(self._active_tools) if self._active_tools else []
+            write_yaml(data, path)
+        except Exception:
+            pass
 
     def _set_output_format(self, fmt: str) -> None:
         """Set the output format for assistant responses."""

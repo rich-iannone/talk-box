@@ -1287,6 +1287,110 @@ class TestNewSlashCommands:
             assert "file_write" in texts
 
     @pytest.mark.asyncio()
+    async def test_slash_tools_on_enables_tool(self, _fake_config):
+        """/tools on <name> adds a tool to active tools."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_tools = ["file_read"]
+            app.screen._handle_slash_command("/tools on calculate")
+            await pilot.pause()
+            assert "calculate" in app.screen._active_tools
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "enabled" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_tools_off_disables_tool(self, _fake_config):
+        """/tools off <name> removes a tool from active tools."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_tools = ["file_read", "calculate"]
+            app.screen._handle_slash_command("/tools off calculate")
+            await pilot.pause()
+            assert "calculate" not in app.screen._active_tools
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "disabled" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_tools_on_unknown_shows_error(self, _fake_config):
+        """/tools on with unknown name shows error."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_tools = ["file_read"]
+            app.screen._handle_slash_command("/tools on nonexistent_tool")
+            await pilot.pause()
+            assert "file_read" in app.screen._active_tools
+            assert "nonexistent_tool" not in app.screen._active_tools
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "unknown" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_tools_on_already_active(self, _fake_config):
+        """/tools on with already-active tool shows message."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_tools = ["file_read"]
+            app.screen._handle_slash_command("/tools on file_read")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "already" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_tools_off_not_active(self, _fake_config):
+        """/tools off with inactive tool shows message."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_tools = ["file_read"]
+            app.screen._handle_slash_command("/tools off calculate")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "not active" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_tools_available_lists_all(self, _fake_config):
+        """/tools available lists all tools with active markers."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_tools = ["file_read"]
+            app.screen._handle_slash_command("/tools available")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "Available Tools" in texts
+            assert "file_read" in texts
+            assert "calculate" in texts
+
+    @pytest.mark.asyncio()
+    async def test_slash_tools_bad_subcommand_shows_usage(self, _fake_config):
+        """/tools with invalid subcommand shows usage help."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._handle_slash_command("/tools foobar")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "/tools on" in texts
+            assert "/tools off" in texts
+
+    @pytest.mark.asyncio()
     async def test_slash_tokens_with_usage(self, _fake_config):
         """/tokens shows real usage data when available."""
         async with TalkBoxApp().run_test() as pilot:
