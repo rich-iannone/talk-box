@@ -997,7 +997,11 @@ class ChatScreen(Screen):
                 "  /model <name>      Switch model\n"
                 "  /persona <name>    Switch persona\n"
                 "  /info              Show current session info\n"
-                "  /tokens            Show token usage estimate\n"
+                "  /system            Show the full system prompt\n"
+                "  /capabilities      Show model capabilities\n"
+                "  /tokens            Show token usage\n"
+                "  /cost              Show session cost\n"
+                "  /tools             Show active tools\n"
                 "  /history           Show conversation history\n"
                 "  /save [name]       Save session to disk\n"
                 "  /load [name]       Load a saved session\n"
@@ -1010,7 +1014,6 @@ class ChatScreen(Screen):
                 "  /guards            Show guardrail status\n"
                 "  /memory            Show memory tier summary\n"
                 "  /kg                Show knowledge graph stats\n"
-                "  /cost              Show estimated session cost\n"
                 "  /quit              Quit the app"
             )
             self._append_system_message(help_text)
@@ -1079,11 +1082,24 @@ class ChatScreen(Screen):
             self._append_system_message(info)
 
         elif cmd == "/tokens":
-            if self._conversation and self._conversation.messages:
+            # Use real SessionUsage if available, fall back to char-based estimate
+            usage = self._bot.get_usage() if self._bot else None
+            if usage and usage.turns > 0:
+                lines = [
+                    "[b]Token Usage[/b]",
+                    f"  Input tokens:   {usage.input_tokens:,}",
+                    f"  Output tokens:  {usage.output_tokens:,}",
+                    f"  Total tokens:   {usage.total_tokens:,}",
+                    f"  Turns:          {usage.turns}",
+                ]
+                if usage.total_cost > 0:
+                    lines.append(f"  Cost:           ${usage.total_cost:.4f}")
+                self._append_system_message("\n".join(lines))
+            elif self._conversation and self._conversation.messages:
                 total_chars = sum(len(m.content) for m in self._conversation.messages)
                 est_tokens = total_chars // 4  # rough estimate
                 self._append_system_message(
-                    f"[b]Token Estimate[/b]\n"
+                    f"[b]Token Estimate[/b] [dim](approx.)[/dim]\n"
                     f"  Conversation chars: {total_chars:,}\n"
                     f"  Est. tokens:        ~{est_tokens:,}"
                 )
@@ -1132,6 +1148,15 @@ class ChatScreen(Screen):
 
         elif cmd == "/cost":
             self._show_cost_estimate()
+
+        elif cmd == "/system":
+            self._show_system_prompt()
+
+        elif cmd == "/capabilities":
+            self._show_capabilities()
+
+        elif cmd == "/tools":
+            self._show_active_tools()
 
         elif cmd == "/format":
             self._set_output_format(arg)
@@ -1508,7 +1533,29 @@ class ChatScreen(Screen):
         self._append_system_message("\n".join(lines))
 
     def _show_cost_estimate(self) -> None:
-        """Show estimated session cost based on token usage and model pricing."""
+        """Show session cost — uses real SessionUsage data when available."""
+        # Try real usage data first
+        usage = self._bot.get_usage() if self._bot else None
+        if usage and usage.turns > 0:
+            model = self._active_model or "unknown"
+            is_free = "ollama" in model.lower() or "local" in model.lower()
+            lines = [
+                "[b]Session Cost[/b]",
+                f"  Model:          {model}",
+                f"  Input tokens:   {usage.input_tokens:,}",
+                f"  Output tokens:  {usage.output_tokens:,}",
+                f"  Turns:          {usage.turns}",
+            ]
+            if is_free:
+                lines.append("  Cost:           [green]$0.00 (local model)[/green]")
+            elif usage.total_cost > 0:
+                lines.append(f"  [b]Cost:          ${usage.total_cost:.4f}[/b]")
+            else:
+                lines.append("  Cost:           [dim]not available from provider[/dim]")
+            self._append_system_message("\n".join(lines))
+            return
+
+        # Fall back to character-based estimate
         # Approximate cost per 1M tokens (input/output) by model family
         _COST_TABLE: dict[str, tuple[float, float]] = {
             "claude-sonnet-4-6": (3.0, 15.0),
@@ -1576,6 +1623,79 @@ class ChatScreen(Screen):
             lines.append("  Cost:           [dim]unknown model — no pricing data[/dim]")
 
         self._append_system_message("\n".join(lines))
+
+    def _show_system_prompt(self) -> None:
+        """Show the full constructed system prompt."""
+        if self._bot is None:
+            self._append_system_message("No bot configured — running in echo mode.")
+            return
+        try:
+            prompt = self._bot.get_system_prompt()
+            if prompt:
+                # Truncate very long prompts for display
+                if len(prompt) > 5000:
+                    prompt = prompt[:5000] + "\n\n[dim]... (truncated at 5000 chars)[/dim]"
+                self._append_system_message(f"[b]System Prompt[/b]\n\n{prompt}")
+            else:
+                self._append_system_message("No system prompt configured.")
+        except Exception:
+            self._append_system_message("Could not retrieve the system prompt.")
+
+    def _show_capabilities(self) -> None:
+        """Show model capabilities from the model profile."""
+        model = self._active_model or "unknown"
+        lines = [f"[b]Model Capabilities[/b]  —  {model}"]
+
+        try:
+            from talk_box.models import get_model_profile
+
+            # Try provider:model key first, then just model name
+            profile = get_model_profile(model)
+            if profile is None and ":" in model:
+                profile = get_model_profile(model.split(":", 1)[1])
+
+            if profile:
+                lines.append(f"  Provider:           {profile.provider}")
+                lines.append(f"  Display name:       {profile.name}")
+                if profile.context_window:
+                    lines.append(f"  Context window:     {profile.context_window:,} tokens")
+                if profile.max_output_tokens:
+                    lines.append(f"  Max output tokens:  {profile.max_output_tokens:,}")
+
+                def _cap(val: bool | None) -> str:
+                    if val is True:
+                        return "[green]✓[/green]"
+                    if val is False:
+                        return "[red]✗[/red]"
+                    return "[dim]?[/dim]"
+
+                lines.append(f"  Tools:              {_cap(profile.supports_tools)}")
+                lines.append(f"  Vision:             {_cap(profile.supports_vision)}")
+                lines.append(
+                    f"  Structured output:  {_cap(profile.supports_structured_output)}"
+                )
+                lines.append(f"  Streaming:          {_cap(profile.supports_streaming)}")
+                if profile.cost_tier:
+                    lines.append(f"  Cost tier:          {profile.cost_tier.value}")
+                if profile.knowledge_cutoff:
+                    lines.append(f"  Knowledge cutoff:   {profile.knowledge_cutoff}")
+            else:
+                lines.append("  [dim]No model profile found — capabilities unknown.[/dim]")
+        except Exception:
+            lines.append("  [dim]Could not load model profiles.[/dim]")
+
+        self._append_system_message("\n".join(lines))
+
+    def _show_active_tools(self) -> None:
+        """Show the list of currently active tools."""
+        tools = getattr(self, "_active_tools", None)
+        if tools:
+            lines = [f"[b]Active Tools[/b]  ({len(tools)})"]
+            for t in tools:
+                lines.append(f"  • {t}")
+            self._append_system_message("\n".join(lines))
+        else:
+            self._append_system_message("No tools are active.")
 
     def _set_output_format(self, fmt: str) -> None:
         """Set the output format for assistant responses."""

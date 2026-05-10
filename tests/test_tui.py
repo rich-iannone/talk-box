@@ -1206,6 +1206,107 @@ class TestNewSlashCommands:
             assert "/guards" in texts
             assert "/memory" in texts
             assert "/kg" in texts
+            assert "/system" in texts
+            assert "/capabilities" in texts
+            assert "/tools" in texts
+
+    @pytest.mark.asyncio()
+    async def test_slash_system_no_bot(self, _fake_config):
+        """/system with no bot shows echo mode message."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._bot = None
+            app.screen._handle_slash_command("/system")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "echo mode" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_system_shows_prompt(self, _fake_config):
+        """/system shows the system prompt when a bot is configured."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            # Inject a mock bot with a known system prompt
+            from unittest.mock import MagicMock
+
+            mock_bot = MagicMock()
+            mock_bot.get_system_prompt.return_value = "You are a helpful test bot."
+            app.screen._bot = mock_bot
+            app.screen._handle_slash_command("/system")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "helpful test bot" in texts
+
+    @pytest.mark.asyncio()
+    async def test_slash_capabilities_no_profile(self, _fake_config):
+        """/capabilities with unknown model shows fallback."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_model = "unknown:model"
+            app.screen._handle_slash_command("/capabilities")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "capabilities" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_capabilities_with_profile(self, _fake_config):
+        """/capabilities with a known model shows profile details."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_model = "anthropic:claude-sonnet-4-6"
+            app.screen._handle_slash_command("/capabilities")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "anthropic" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_tools_shows_active(self, _fake_config):
+        """/tools shows the list of active tools."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_tools = ["file_read", "file_write"]
+            app.screen._handle_slash_command("/tools")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "file_read" in texts
+            assert "file_write" in texts
+
+    @pytest.mark.asyncio()
+    async def test_slash_tokens_with_usage(self, _fake_config):
+        """/tokens shows real usage data when available."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            from unittest.mock import MagicMock
+
+            from talk_box.usage import SessionUsage
+
+            usage = SessionUsage(input_tokens=100, output_tokens=50, turns=2, total_cost=0.001)
+            mock_bot = MagicMock()
+            mock_bot.get_usage.return_value = usage
+            app.screen._bot = mock_bot
+            app.screen._handle_slash_command("/tokens")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "100" in texts
+            assert "50" in texts
 
 
 class TestKnowledgeScreenDetail:
