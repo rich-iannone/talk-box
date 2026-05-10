@@ -777,10 +777,12 @@ class TestBatchApproval:
         import talk_box.builtin_tools as bt
 
         bt.set_batch_approval_callback(lambda pending: {})
-        bt.run_batch_approval([
-            {"name": "web_search", "input": {"query": "hello"}},
-            {"name": "list_files", "input": {"pattern": "*"}},
-        ])
+        bt.run_batch_approval(
+            [
+                {"name": "web_search", "input": {"query": "hello"}},
+                {"name": "list_files", "input": {"pattern": "*"}},
+            ]
+        )
         assert bt._batch_decisions == {}
         bt.set_batch_approval_callback(None)
 

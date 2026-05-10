@@ -677,11 +677,13 @@ def run_batch_approval(tool_calls: list[dict]) -> None:
         if name == "file_write":
             file_ops.append(("write", inp.get("path", ""), {"content": inp.get("content", "")}))
         elif name == "file_edit":
-            file_ops.append((
-                "edit",
-                inp.get("path", ""),
-                {"old_text": inp.get("old_text", ""), "new_text": inp.get("new_text", "")},
-            ))
+            file_ops.append(
+                (
+                    "edit",
+                    inp.get("path", ""),
+                    {"old_text": inp.get("old_text", ""), "new_text": inp.get("new_text", "")},
+                )
+            )
 
     if not file_ops:
         return

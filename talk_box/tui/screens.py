@@ -842,9 +842,11 @@ class ChatScreen(Screen):
 
         set_batch_approval_callback(_batch_approval)
         # Keep per-file callback as fallback for non-batched paths (e.g. chatlas fallback)
-        set_file_approval_callback(lambda action, path, details: _batch_approval(
-            [(action, path, details)]
-        ).get((action, path), False))
+        set_file_approval_callback(
+            lambda action, path, details: _batch_approval([(action, path, details)]).get(
+                (action, path), False
+            )
+        )
 
     def _uninstall_file_approval_callback(self) -> None:
         """Remove the file-approval callbacks (restores auto-approve)."""
