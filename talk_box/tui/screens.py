@@ -584,6 +584,8 @@ class ChatScreen(Screen):
         self._require_approvals: bool = True
         self._active_guards: list[str] = []
         self._active_traits: list[str] = []
+        self._kg_enabled: bool = False
+        self._kg: object | None = None  # KnowledgeGraph instance (lazy)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -1028,7 +1030,7 @@ class ChatScreen(Screen):
                 "  /guards [on|off]   Manage guardrails\n"
                 "  /traits [on|off]   Manage persona traits\n"
                 "  /memory            Show memory tier summary\n"
-                "  /kg                Show knowledge graph stats\n"
+                "  /kg [on|off|sync]  Manage knowledge context\n"
                 "  /quit              Quit the app"
             )
             self._append_system_message(help_text)
@@ -1200,7 +1202,27 @@ class ChatScreen(Screen):
             self._show_memory_summary()
 
         elif cmd == "/kg":
-            self._show_kg_summary()
+            if not arg:
+                self._show_kg_summary()
+            else:
+                sub_cmd = arg.strip().lower()
+                if sub_cmd == "on":
+                    self._toggle_kg(enable=True)
+                elif sub_cmd == "off":
+                    self._toggle_kg(enable=False)
+                elif sub_cmd == "sync":
+                    self._sync_kg_sources()
+                elif sub_cmd == "sources":
+                    self._show_kg_sources()
+                else:
+                    self._append_system_message(
+                        "[b]Usage:[/b]\n"
+                        "  /kg              Show knowledge graph stats\n"
+                        "  /kg on           Enable knowledge context in chat\n"
+                        "  /kg off          Disable knowledge context\n"
+                        "  /kg sync         Sync configured sources\n"
+                        "  /kg sources      Show configured knowledge sources"
+                    )
 
         elif cmd == "/cost":
             self._show_cost_estimate()
@@ -1718,13 +1740,29 @@ class ChatScreen(Screen):
 
         self._append_system_message("\n".join(lines))
 
+    def _get_kg_path(self) -> str:
+        """Return the persistent knowledge graph database path."""
+        import os
+
+        return os.path.join(os.path.expanduser("~/.config/talk-box"), "knowledge.db")
+
+    def _get_kg(self):
+        """Return the shared KnowledgeGraph instance (lazy init)."""
+        if self._kg is None:
+            from talk_box.knowledge_graph import KnowledgeGraph
+
+            self._kg = KnowledgeGraph(self._get_kg_path())
+        return self._kg
+
     def _show_kg_summary(self) -> None:
         """Show knowledge graph summary in chat."""
         lines = ["[b]Knowledge Graph[/b]"]
+        status = "on" if self._kg_enabled else "off"
+        lines.append(f"  Context injection: [b]{status}[/b]")
         try:
-            from talk_box.knowledge_graph import KnowledgeGraph, NodeType
+            from talk_box.knowledge_graph import NodeType
 
-            kg = KnowledgeGraph()
+            kg = self._get_kg()
             docs = kg.node_count(node_type=NodeType.DOCUMENT)
             entities = kg.node_count(node_type=NodeType.ENTITY)
             topics = kg.node_count(node_type=NodeType.TOPIC)
@@ -1736,11 +1774,142 @@ class ChatScreen(Screen):
 
             if docs + entities + topics == 0:
                 lines.append("")
-                lines.append("  [dim]No data yet. Sync with:[/dim]")
-                lines.append("  [dim]tb.MarkdownDir('./docs/').sync(kg)[/dim]")
+                lines.append("  [dim]No data yet. Use /kg sync to load sources.[/dim]")
         except Exception:
             lines.append("  [dim]Could not load knowledge graph[/dim]")
         self._append_system_message("\n".join(lines))
+
+    def _toggle_kg(self, *, enable: bool) -> None:
+        """Enable or disable knowledge context injection in chat."""
+        if enable:
+            if self._kg_enabled:
+                self._append_system_message("Knowledge context is already [b]on[/b].")
+                return
+            # Check if KG has any nodes
+            try:
+                kg = self._get_kg()
+                count = kg.node_count()
+                if count == 0:
+                    self._append_system_message(
+                        "Knowledge graph is empty. Use [b]/kg sync[/b] first to load sources."
+                    )
+                    return
+            except Exception:
+                pass
+            self._kg_enabled = True
+            self._append_system_message(
+                "Knowledge context [b]enabled[/b]. "
+                "Relevant knowledge will be injected into each message."
+            )
+        else:
+            if not self._kg_enabled:
+                self._append_system_message("Knowledge context is already [b]off[/b].")
+                return
+            self._kg_enabled = False
+            self._append_system_message("Knowledge context [b]disabled[/b].")
+
+    def _sync_kg_sources(self) -> None:
+        """Sync configured knowledge sources into the knowledge graph."""
+        try:
+            from talk_box.config import load_config
+
+            config = load_config()
+            sources = config.knowledge.sources if config.knowledge else []
+        except Exception:
+            sources = []
+
+        if not sources:
+            self._append_system_message(
+                "[b]No knowledge sources configured.[/b]\n"
+                "  Add sources to your talk-box.yml:\n"
+                "  [dim]knowledge:\n"
+                "    sources:\n"
+                "      - path: './docs/'\n"
+                "        type: markdown[/dim]"
+            )
+            return
+
+        try:
+            from talk_box.connectors import DirectoryConnector, MarkdownDir, sync
+
+            kg = self._get_kg()
+            connectors = []
+            for src in sources:
+                if src.type == "markdown":
+                    connectors.append(MarkdownDir(src.path))
+                else:
+                    connectors.append(DirectoryConnector(src.path))
+
+            result = sync(kg, *connectors)
+            self._append_system_message(
+                f"[b]Knowledge sync complete[/b]\n"
+                f"  Added:     {result.added}\n"
+                f"  Updated:   {result.updated}\n"
+                f"  Unchanged: {result.unchanged}"
+            )
+        except Exception as e:
+            self._append_system_message(f"Sync failed: {e}")
+
+    def _show_kg_sources(self) -> None:
+        """Show configured knowledge sources."""
+        try:
+            from talk_box.config import load_config
+
+            config = load_config()
+            sources = config.knowledge.sources if config.knowledge else []
+        except Exception:
+            sources = []
+
+        if not sources:
+            self._append_system_message(
+                "[b]Knowledge Sources[/b]\n  [dim]No sources configured.[/dim]"
+            )
+            return
+
+        lines = [f"[b]Knowledge Sources[/b]  ({len(sources)})"]
+        for src in sources:
+            lines.append(f"  • {src.path}  ({src.type})")
+        self._append_system_message("\n".join(lines))
+
+    def _enrich_with_knowledge(self, text: str) -> str:
+        """Search the knowledge graph and inject relevant context."""
+        if not self._kg_enabled:
+            return text
+        try:
+            kg = self._get_kg()
+            # Search with individual significant words (>3 chars) for broader matching
+            words = [w for w in text.split() if len(w) > 3]
+            seen_ids: set[str] = set()
+            all_nodes = []
+            for word in words[:5]:  # Cap at 5 search terms
+                for node in kg.search(word, limit=3):
+                    if node.id not in seen_ids:
+                        seen_ids.add(node.id)
+                        all_nodes.append(node)
+            # Also try full query as a phrase
+            for node in kg.search(text, limit=3):
+                if node.id not in seen_ids:
+                    seen_ids.add(node.id)
+                    all_nodes.append(node)
+
+            if not all_nodes:
+                return text
+
+            context_parts = []
+            for node in all_nodes[:5]:
+                # Cap each node's content at 2000 chars
+                content = node.content or ""
+                if len(content) > 2000:
+                    content = content[:2000] + "\n[... truncated ...]"
+                context_parts.append(
+                    f'<knowledge name="{node.name}" type="{node.node_type.value}">\n'
+                    f"{content}\n"
+                    f"</knowledge>"
+                )
+            knowledge_block = "\n\n".join(context_parts)
+            return f"{text}\n\n--- Knowledge context ---\n{knowledge_block}"
+        except Exception:
+            return text
 
     def _show_cost_estimate(self) -> None:
         """Show session cost — uses real SessionUsage data when available."""
@@ -2109,6 +2278,9 @@ class ChatScreen(Screen):
 
         # Also enrich with auto-detected file references
         enriched = self._enrich_with_files(enriched)
+
+        # Enrich with knowledge graph context (if enabled)
+        enriched = self._enrich_with_knowledge(enriched)
 
         # Inject output format instruction if set
         if self._output_format:
@@ -3467,9 +3639,12 @@ class KnowledgeScreen(Screen):
         table.add_columns("ID", "Type", "Name")
 
         try:
+            import os
+
             from talk_box.knowledge_graph import KnowledgeGraph, NodeType
 
-            self._kg = KnowledgeGraph()
+            kg_path = os.path.join(os.path.expanduser("~/.config/talk-box"), "knowledge.db")
+            self._kg = KnowledgeGraph(kg_path)
             docs = self._kg.node_count(node_type=NodeType.DOCUMENT)
             entities = self._kg.node_count(node_type=NodeType.ENTITY)
             topics = self._kg.node_count(node_type=NodeType.TOPIC)

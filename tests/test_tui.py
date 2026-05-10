@@ -1624,6 +1624,178 @@ class TestNewSlashCommands:
             assert "/traits on" in texts
             assert "/traits off" in texts
 
+    # -- Knowledge toggle tests --------------------------------------------
+
+    @pytest.mark.asyncio()
+    async def test_slash_kg_shows_summary(self, _fake_config):
+        """/kg shows knowledge graph summary."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._handle_slash_command("/kg")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "Knowledge Graph" in texts
+
+    @pytest.mark.asyncio()
+    async def test_slash_kg_on_empty_shows_warning(self, _fake_config):
+        """/kg on with empty graph shows sync suggestion."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            # Use a fresh in-memory KG (empty)
+            from talk_box.knowledge_graph import KnowledgeGraph
+
+            app.screen._kg = KnowledgeGraph(":memory:")
+            app.screen._handle_slash_command("/kg on")
+            await pilot.pause()
+            assert not app.screen._kg_enabled
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "sync" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_kg_on_with_data_enables(self, _fake_config):
+        """/kg on with data enables knowledge context."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            # Use a fresh in-memory KG with a test node
+            from talk_box.knowledge_graph import KnowledgeGraph, Node, NodeType
+
+            kg = KnowledgeGraph(":memory:")
+            kg.add_node(Node(id="test-1", node_type=NodeType.DOCUMENT, name="Test", content="test"))
+            app.screen._kg = kg
+            app.screen._handle_slash_command("/kg on")
+            await pilot.pause()
+            assert app.screen._kg_enabled
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "enabled" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_kg_off_disables(self, _fake_config):
+        """/kg off disables knowledge context."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._kg_enabled = True
+            app.screen._handle_slash_command("/kg off")
+            await pilot.pause()
+            assert not app.screen._kg_enabled
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "disabled" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_kg_on_already_enabled(self, _fake_config):
+        """/kg on when already enabled shows message."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._kg_enabled = True
+            app.screen._handle_slash_command("/kg on")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "already" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_kg_sources_no_config(self, _fake_config):
+        """/kg sources with no configured sources shows message."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._handle_slash_command("/kg sources")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "no sources" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_kg_bad_subcommand_shows_usage(self, _fake_config):
+        """/kg with invalid subcommand shows usage help."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._handle_slash_command("/kg foobar")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "/kg on" in texts
+            assert "/kg off" in texts
+
+    @pytest.mark.asyncio()
+    async def test_enrich_with_knowledge_disabled(self, _fake_config):
+        """_enrich_with_knowledge returns text unchanged when disabled."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._kg_enabled = False
+            result = app.screen._enrich_with_knowledge("hello world")
+            assert result == "hello world"
+
+    @pytest.mark.asyncio()
+    async def test_enrich_with_knowledge_enabled_injects(self, _fake_config):
+        """_enrich_with_knowledge injects matching nodes when enabled."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            from talk_box.knowledge_graph import KnowledgeGraph, Node, NodeType
+
+            kg = KnowledgeGraph(":memory:")
+            kg.add_node(
+                Node(
+                    id="enrich-1",
+                    node_type=NodeType.DOCUMENT,
+                    name="Python Guide",
+                    content="Python is a programming language",
+                )
+            )
+            app.screen._kg = kg
+            app.screen._kg_enabled = True
+            result = app.screen._enrich_with_knowledge("tell me about Python")
+            assert "Knowledge context" in result
+            assert "Python Guide" in result
+
+    @pytest.mark.asyncio()
+    async def test_enrich_with_knowledge_no_matches(self, _fake_config):
+        """_enrich_with_knowledge returns text unchanged when no matches."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            from talk_box.knowledge_graph import KnowledgeGraph
+
+            app.screen._kg = KnowledgeGraph(":memory:")
+            app.screen._kg_enabled = True
+            result = app.screen._enrich_with_knowledge("xyzzy_nonexistent_query_12345")
+            assert result == "xyzzy_nonexistent_query_12345"
+
+    @pytest.mark.asyncio()
+    async def test_kg_summary_shows_status(self, _fake_config):
+        """/kg summary shows on/off status."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._kg_enabled = True
+            app.screen._handle_slash_command("/kg")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "on" in texts.lower()
+
 
 class TestKnowledgeScreenDetail:
     """Tests for KnowledgeScreen node detail panel."""
