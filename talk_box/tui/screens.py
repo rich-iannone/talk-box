@@ -581,6 +581,7 @@ class ChatScreen(Screen):
         self._history_index: int = -1
         self._output_format: str | None = None  # json, markdown, table
         self._enter_sends: bool = True
+        self._require_approvals: bool = True
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -621,6 +622,11 @@ class ChatScreen(Screen):
                     allow_blank=True,
                 )
                 yield Button("New Chat", id="chat-new-btn", variant="warning")
+                yield Button(
+                    "🔒 Approvals: On",
+                    id="chat-approval-toggle",
+                    variant="success",
+                )
         yield Footer()
 
     def _get_model_options(self) -> list[tuple[str, str]]:
@@ -728,7 +734,8 @@ class ChatScreen(Screen):
 
     def _init_bot(self) -> None:
         """Create a ChatBot from the resolved config."""
-        self._install_file_approval_callback()
+        if self._require_approvals:
+            self._install_file_approval_callback()
         try:
             from talk_box.builder import ChatBot
             from talk_box.config import load_config
@@ -894,6 +901,18 @@ class ChatScreen(Screen):
             ci.enter_sends = self._enter_sends
             toggle = self.query_one("#chat-enter-toggle", Button)
             toggle.label = "⏎=Send" if self._enter_sends else "⏎=Newline"
+            self.query_one("#chat-input", ChatInput).focus()
+        elif btn_id == "chat-approval-toggle":
+            self._require_approvals = not self._require_approvals
+            toggle = self.query_one("#chat-approval-toggle", Button)
+            if self._require_approvals:
+                toggle.label = "🔒 Approvals: On"
+                toggle.variant = "success"
+                self._install_file_approval_callback()
+            else:
+                toggle.label = "🔓 Approvals: Off"
+                toggle.variant = "default"
+                self._uninstall_file_approval_callback()
             self.query_one("#chat-input", ChatInput).focus()
         elif btn_id.startswith("copy-chat-msg-"):
             msg_id = btn_id.removeprefix("copy-")

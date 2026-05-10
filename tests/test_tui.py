@@ -2103,3 +2103,38 @@ class TestFileApprovalScreen:
         screen = ChatScreen()
         assert hasattr(screen, "_install_file_approval_callback")
         assert hasattr(screen, "_uninstall_file_approval_callback")
+
+    def test_require_approvals_defaults_true(self):
+        """ChatScreen starts with approvals enabled."""
+        screen = ChatScreen()
+        assert screen._require_approvals is True
+
+    @pytest.mark.asyncio()
+    async def test_approval_toggle_button_exists(self, _fake_config):
+        """Sidebar contains the approval toggle button."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app.switch_screen("chat")
+            await pilot.pause()
+            toggle = app.screen.query_one("#chat-approval-toggle", Button)
+            assert "On" in str(toggle.label)
+
+    @pytest.mark.asyncio()
+    async def test_approval_toggle_off_and_on(self, _fake_config):
+        """Clicking the toggle flips state and label."""
+        async with TalkBoxApp().run_test(size=(120, 50)) as pilot:
+            app = pilot.app
+            app.switch_screen("chat")
+            await pilot.pause()
+            toggle = app.screen.query_one("#chat-approval-toggle", Button)
+            assert app.screen._require_approvals is True
+
+            toggle.press()
+            await pilot.pause()
+            assert app.screen._require_approvals is False
+            assert "Off" in str(toggle.label)
+
+            toggle.press()
+            await pilot.pause()
+            assert app.screen._require_approvals is True
+            assert "On" in str(toggle.label)
