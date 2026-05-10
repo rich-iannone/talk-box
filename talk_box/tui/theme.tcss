@@ -176,7 +176,7 @@ Screen {
 }
 
 #chat-sidebar {
-    width: 28;
+    width: 34;
     border-left: solid $primary;
     padding: 1 1;
 }
@@ -444,6 +444,41 @@ FileApprovalScreen {
 #file-approval-nav {
     text-align: center;
     padding: 1 0 0 0;
+}
+
+/* -- Checklist Picker Modal ---------------------------------------------- */
+
+ChecklistPickerModal {
+    align: center middle;
+}
+
+#checklist-panel {
+    width: 60;
+    max-height: 30;
+    padding: 1 2;
+    border: solid $primary;
+    background: $surface;
+}
+
+#checklist-title {
+    padding: 0 1 1 1;
+    text-style: bold;
+}
+
+#checklist-body {
+    max-height: 20;
+    overflow-y: auto;
+    padding: 0 1;
+}
+
+#checklist-buttons {
+    align: center middle;
+    padding: 1 0 0 0;
+    height: auto;
+}
+
+#checklist-buttons Button {
+    margin: 0 1;
 }
 
 /* -- Welcome screen content ----------------------------------------------- */

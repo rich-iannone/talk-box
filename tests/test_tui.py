@@ -1796,6 +1796,224 @@ class TestNewSlashCommands:
             texts = " ".join(str(m._Static__content) for m in msgs)
             assert "on" in texts.lower()
 
+    @pytest.mark.asyncio()
+    async def test_sidebar_shows_kg_status(self, _fake_config):
+        """Sidebar includes knowledge graph status."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            sidebar_text = app.screen._build_sidebar()
+            assert "KG:" in sidebar_text
+            assert "OFF" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_sidebar_shows_tools_count(self, _fake_config):
+        """Sidebar includes active tools count."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_tools = ["file_read", "file_write"]
+            sidebar_text = app.screen._build_sidebar()
+            assert "Tools:" in sidebar_text
+            assert "2" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_sidebar_shows_guards(self, _fake_config):
+        """Sidebar includes guard status."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_guards = ["no_pii"]
+            sidebar_text = app.screen._build_sidebar()
+            assert "Guards:" in sidebar_text
+            assert "1" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_sidebar_shows_traits(self, _fake_config):
+        """Sidebar includes active traits."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_traits = ["concise"]
+            sidebar_text = app.screen._build_sidebar()
+            assert "Traits:" in sidebar_text
+            assert "concise" in sidebar_text
+
+    # -- Sidebar action link tests -----------------------------------------
+
+    @pytest.mark.asyncio()
+    async def test_sidebar_shows_tools_link(self, _fake_config):
+        """Sidebar displays tools count with clickable link."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            sidebar_text = app.screen._build_sidebar()
+            assert "Tools:" in sidebar_text
+            assert "[…]" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_sidebar_shows_guards_link(self, _fake_config):
+        """Sidebar displays guards count with clickable link."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            sidebar_text = app.screen._build_sidebar()
+            assert "Guards:" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_sidebar_shows_traits_link(self, _fake_config):
+        """Sidebar displays traits with clickable link."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            sidebar_text = app.screen._build_sidebar()
+            assert "Traits:" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_sidebar_shows_kg_with_toggle(self, _fake_config):
+        """Sidebar displays KG status with toggle and settings link."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            sidebar_text = app.screen._build_sidebar()
+            assert "KG:" in sidebar_text
+            assert "⏻" in sidebar_text  # toggle switch
+            assert "OFF" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_kg_inline_toggle_on(self, _fake_config):
+        """KG inline toggle enables knowledge context when data exists."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            from talk_box.knowledge_graph import KnowledgeGraph, Node, NodeType
+
+            kg = KnowledgeGraph(":memory:")
+            kg.add_node(Node(id="btn-1", node_type=NodeType.DOCUMENT, name="T", content="x"))
+            app.screen._kg = kg
+            app.screen.action_toggle_kg_inline()
+            assert app.screen._kg_enabled
+            sidebar_text = app.screen._build_sidebar()
+            assert "ON" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_kg_inline_toggle_off(self, _fake_config):
+        """KG inline toggle disables knowledge context."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._kg_enabled = True
+            app.screen.action_toggle_kg_inline()
+            assert not app.screen._kg_enabled
+            sidebar_text = app.screen._build_sidebar()
+            assert "OFF" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_sidebar_friendly_model_name(self, _fake_config):
+        """Sidebar shows friendly model name instead of provider:model."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_model = "anthropic:claude-opus-4-7"
+            sidebar_text = app.screen._build_sidebar()
+            # Should show display name, not raw key
+            assert "Claude" in sidebar_text
+
+
+class TestChecklistPickerModal:
+    """Tests for the ChecklistPickerModal."""
+
+    @pytest.mark.asyncio()
+    async def test_checklist_modal_renders(self, _fake_config):
+        """Modal renders with title and items."""
+        from talk_box.tui.screens import ChecklistPickerModal
+
+        async with TalkBoxApp().run_test() as pilot:
+            items = [("alpha", "First"), ("beta", "Second")]
+            modal = ChecklistPickerModal("Test Title", items, ["alpha"])
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.push_screen(modal)
+            await pilot.pause()
+            title = app.screen.query_one("#checklist-title", Static)
+            assert "Test Title" in str(title._Static__content)
+            body = app.screen.query_one("#checklist-body", Static)
+            body_text = str(body._Static__content)
+            assert "alpha" in body_text
+            assert "beta" in body_text
+
+    @pytest.mark.asyncio()
+    async def test_checklist_modal_toggle(self, _fake_config):
+        """Toggling an item changes active state."""
+        from talk_box.tui.screens import ChecklistPickerModal
+
+        async with TalkBoxApp().run_test() as pilot:
+            items = [("alpha", ""), ("beta", "")]
+            modal = ChecklistPickerModal("Test", items, ["alpha"])
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.push_screen(modal)
+            await pilot.pause()
+            # alpha is active, toggle it off
+            modal.action_toggle_current()
+            assert "alpha" not in modal._active
+            # toggle it back on
+            modal.action_toggle_current()
+            assert "alpha" in modal._active
+
+    @pytest.mark.asyncio()
+    async def test_checklist_modal_navigation(self, _fake_config):
+        """Cursor navigation works."""
+        from talk_box.tui.screens import ChecklistPickerModal
+
+        async with TalkBoxApp().run_test() as pilot:
+            items = [("a", ""), ("b", ""), ("c", "")]
+            modal = ChecklistPickerModal("Test", items, [])
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.push_screen(modal)
+            await pilot.pause()
+            assert modal._cursor == 0
+            modal.action_cursor_down()
+            assert modal._cursor == 1
+            modal.action_cursor_down()
+            assert modal._cursor == 2
+            modal.action_cursor_up()
+            assert modal._cursor == 1
+
+    @pytest.mark.asyncio()
+    async def test_checklist_modal_confirm(self, _fake_config):
+        """Confirm returns sorted active items."""
+        from talk_box.tui.screens import ChecklistPickerModal
+
+        results = []
+
+        async with TalkBoxApp().run_test() as pilot:
+            items = [("beta", ""), ("alpha", "")]
+            modal = ChecklistPickerModal("Test", items, ["beta", "alpha"])
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.push_screen(modal, lambda r: results.append(r))
+            await pilot.pause()
+            modal.action_confirm()
+            await pilot.pause()
+        assert results == [["alpha", "beta"]]
+
 
 class TestKnowledgeScreenDetail:
     """Tests for KnowledgeScreen node detail panel."""

@@ -294,6 +294,111 @@ class FileApprovalScreen(ModalScreen[dict]):
 
 
 # ---------------------------------------------------------------------------
+# Checklist Picker Modal (reusable)
+# ---------------------------------------------------------------------------
+
+
+class ChecklistPickerModal(ModalScreen[list[str]]):
+    """Modal with a checklist of toggleable items.
+
+    Shows a list of items with checkboxes.  The user toggles items and
+    presses Enter/Done to confirm, or Escape to cancel.
+
+    Parameters
+    ----------
+    title
+        Modal heading.
+    items
+        All available items: list of ``(name, description)`` tuples.
+    active
+        Currently active item names.
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel", show=True, priority=True),
+        Binding("enter", "confirm", "Done", show=True, priority=True),
+        Binding("space", "toggle_current", "Toggle", show=True, priority=True),
+        Binding("up", "cursor_up", "↑", show=False, priority=True),
+        Binding("down", "cursor_down", "↓", show=False, priority=True),
+        Binding("k", "cursor_up", "Up", show=False, priority=True),
+        Binding("j", "cursor_down", "Down", show=False, priority=True),
+    ]
+
+    def __init__(
+        self,
+        title: str,
+        items: list[tuple[str, str]],
+        active: list[str],
+        *,
+        name: str | None = None,
+        id: str | None = None,
+        classes: str | None = None,
+    ) -> None:
+        super().__init__(name=name, id=id, classes=classes)
+        self._title = title
+        self._items = list(items)  # [(name, description), ...]
+        self._active = set(active)
+        self._cursor = 0
+
+    def compose(self) -> ComposeResult:
+        with Center():
+            with Vertical(id="checklist-panel"):
+                yield Static("", id="checklist-title")
+                yield Static("", id="checklist-body")
+                with Horizontal(id="checklist-buttons"):
+                    yield Button("Done", id="checklist-done-btn", variant="success")
+                    yield Button("Cancel", id="checklist-cancel-btn", variant="default")
+
+    def on_mount(self) -> None:
+        self._refresh_display()
+
+    def _refresh_display(self) -> None:
+        title_w = self.query_one("#checklist-title", Static)
+        title_w.update(f"[b]{self._title}[/b]  ({len(self._active)} active)")
+
+        lines = []
+        for i, (item_name, desc) in enumerate(self._items):
+            marker = "✓" if item_name in self._active else " "
+            cursor = "▸" if i == self._cursor else " "
+            desc_text = f"  [dim]{desc}[/dim]" if desc else ""
+            lines.append(f" {cursor} [{marker}] {item_name}{desc_text}")
+        self.query_one("#checklist-body", Static).update("\n".join(lines))
+
+    def action_toggle_current(self) -> None:
+        if not self._items:
+            return
+        item_name = self._items[self._cursor][0]
+        if item_name in self._active:
+            self._active.discard(item_name)
+        else:
+            self._active.add(item_name)
+        self._refresh_display()
+
+    def action_cursor_up(self) -> None:
+        if self._items:
+            self._cursor = (self._cursor - 1) % len(self._items)
+            self._refresh_display()
+
+    def action_cursor_down(self) -> None:
+        if self._items:
+            self._cursor = (self._cursor + 1) % len(self._items)
+            self._refresh_display()
+
+    def action_confirm(self) -> None:
+        self.dismiss(sorted(self._active))
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id or ""
+        if btn_id == "checklist-done-btn":
+            self.action_confirm()
+        elif btn_id == "checklist-cancel-btn":
+            self.action_cancel()
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -651,7 +756,8 @@ class ChatScreen(Screen):
         for fav in fav_models:
             if not allow_cloud and self._is_cloud_model(fav):
                 continue
-            options.append((f"⭐ {fav}", fav))
+            friendly = self._friendly_model_name(fav)
+            options.append((f"⭐ {friendly}", fav))
             seen.add(fav)
 
         try:
@@ -662,11 +768,25 @@ class ChatScreen(Screen):
                 if label not in seen:
                     if not allow_cloud and self._is_cloud_model(label):
                         continue
-                    options.append((label, label))
+                    friendly = p.name or label
+                    options.append((friendly, label))
                     seen.add(label)
         except Exception:
             pass
         return options
+
+    @staticmethod
+    def _friendly_model_name(model_key: str) -> str:
+        """Return a short display name for a model key, falling back to the key."""
+        try:
+            from talk_box.models import get_model_profile
+
+            profile = get_model_profile(model_key)
+            if profile:
+                return profile.name
+        except Exception:
+            pass
+        return model_key
 
     @staticmethod
     def _is_cloud_model(model_string: str) -> bool:
@@ -1592,6 +1712,7 @@ class ChatScreen(Screen):
             self._active_guards = active
             self._rebuild_bot()
             self._conversation = None
+            self._update_sidebar()
             self._append_system_message(f"Guardrail [b]{name}[/b] enabled.")
         else:
             if name not in active:
@@ -1601,6 +1722,7 @@ class ChatScreen(Screen):
             self._active_guards = active
             self._rebuild_bot()
             self._conversation = None
+            self._update_sidebar()
             self._append_system_message(f"Guardrail [b]{name}[/b] disabled.")
 
         try:
@@ -1679,6 +1801,7 @@ class ChatScreen(Screen):
             self._active_traits = active
             self._rebuild_bot()
             self._conversation = None
+            self._update_sidebar()
             self._append_system_message(f"Trait [b]{name}[/b] applied.")
         else:
             if name not in active:
@@ -1688,6 +1811,7 @@ class ChatScreen(Screen):
             self._active_traits = active
             self._rebuild_bot()
             self._conversation = None
+            self._update_sidebar()
             self._append_system_message(f"Trait [b]{name}[/b] removed.")
 
     @staticmethod
@@ -1797,6 +1921,7 @@ class ChatScreen(Screen):
             except Exception:
                 pass
             self._kg_enabled = True
+            self._update_sidebar()
             self._append_system_message(
                 "Knowledge context [b]enabled[/b]. "
                 "Relevant knowledge will be injected into each message."
@@ -1806,6 +1931,7 @@ class ChatScreen(Screen):
                 self._append_system_message("Knowledge context is already [b]off[/b].")
                 return
             self._kg_enabled = False
+            self._update_sidebar()
             self._append_system_message("Knowledge context [b]disabled[/b].")
 
     def _sync_kg_sources(self) -> None:
@@ -1841,6 +1967,7 @@ class ChatScreen(Screen):
                     connectors.append(DirectoryConnector(src.path))
 
             result = sync(kg, *connectors)
+            self._update_sidebar()
             self._append_system_message(
                 f"[b]Knowledge sync complete[/b]\n"
                 f"  Added:     {result.added}\n"
@@ -2063,6 +2190,133 @@ class ChatScreen(Screen):
 
         self._append_system_message("\n".join(lines))
 
+    # -- Sidebar action link handlers -------------------------------------
+
+    def action_open_tools_picker(self) -> None:
+        """Action handler for sidebar tools [...] link."""
+        self._open_tools_picker()
+
+    def action_open_guards_picker(self) -> None:
+        """Action handler for sidebar guards [...] link."""
+        self._open_guards_picker()
+
+    def action_open_traits_picker(self) -> None:
+        """Action handler for sidebar traits [...] link."""
+        self._open_traits_picker()
+
+    def action_toggle_kg_inline(self) -> None:
+        """Action handler for sidebar KG toggle switch."""
+        self._handle_kg_button()
+
+    def action_open_kg_screen(self) -> None:
+        """Action handler for sidebar KG [...] link — navigate to KG screen."""
+        try:
+            self.app._switch_to("knowledge")
+        except Exception:
+            pass
+
+    # -- Picker modal openers ---------------------------------------------
+
+    def _open_tools_picker(self) -> None:
+        """Open a modal to toggle tools on/off."""
+        try:
+            from talk_box.builtin_tools import get_all_tool_box_tools
+
+            all_tools = get_all_tool_box_tools()
+        except Exception:
+            self._append_system_message("Could not load tool list.")
+            return
+        active = list(getattr(self, "_active_tools", None) or [])
+        items = [(t, "") for t in all_tools]
+
+        def _on_dismiss(result: list[str] | None) -> None:
+            if result is None:
+                return  # cancelled
+            self._active_tools = result
+            self._rebuild_bot()
+            self._conversation = None
+            self._update_sidebar()
+            self._persist_tools_config()
+            self._append_system_message(f"Tools updated: {len(result)} active.")
+
+        self.app.push_screen(ChecklistPickerModal("Tools", items, active), _on_dismiss)
+
+    def _open_guards_picker(self) -> None:
+        """Open a modal to toggle guardrails on/off."""
+        items = [(name, desc) for name, _phase, desc in _BUILTIN_GUARDS]
+        active = list(getattr(self, "_active_guards", None) or [])
+
+        def _on_dismiss(result: list[str] | None) -> None:
+            if result is None:
+                return
+            self._active_guards = result
+            self._rebuild_bot()
+            self._conversation = None
+            self._update_sidebar()
+            try:
+                from talk_box.config import persist_guardrails
+
+                persist_guardrails(self._active_guards)
+            except Exception:
+                pass
+            self._append_system_message(f"Guardrails updated: {len(result)} active.")
+
+        self.app.push_screen(ChecklistPickerModal("Guardrails", items, active), _on_dismiss)
+
+    def _open_traits_picker(self) -> None:
+        """Open a modal to toggle persona traits on/off."""
+        if not self._active_persona:
+            self._append_system_message(
+                "Traits require an active persona. Set one with [b]/persona <name>[/b] first."
+            )
+            return
+
+        try:
+            from talk_box.traits import list_traits
+
+            all_traits = list_traits()
+        except Exception:
+            self._append_system_message("Could not load trait list.")
+            return
+        active = list(getattr(self, "_active_traits", None) or [])
+        items = [(t, "") for t in all_traits]
+
+        def _on_dismiss(result: list[str] | None) -> None:
+            if result is None:
+                return
+            self._active_traits = result
+            self._rebuild_bot()
+            self._conversation = None
+            self._update_sidebar()
+            self._append_system_message(f"Traits updated: {len(result)} active.")
+
+        self.app.push_screen(ChecklistPickerModal("Traits", items, active), _on_dismiss)
+
+    def _handle_kg_button(self) -> None:
+        """Toggle knowledge graph context from the sidebar link."""
+        if self._kg_enabled:
+            self._kg_enabled = False
+            self._update_sidebar()
+            self._append_system_message("Knowledge context [b]disabled[/b].")
+        else:
+            # Check if KG has nodes
+            try:
+                kg = self._get_kg()
+                count = kg.node_count()
+                if count == 0:
+                    self._append_system_message(
+                        "Knowledge graph is empty. Use [b]/kg sync[/b] to load sources first."
+                    )
+                    return
+            except Exception:
+                pass
+            self._kg_enabled = True
+            self._update_sidebar()
+            self._append_system_message(
+                "Knowledge context [b]enabled[/b]. "
+                "Relevant knowledge will be injected into each message."
+            )
+
     def _show_active_tools(self) -> None:
         """Show the list of currently active tools."""
         tools = getattr(self, "_active_tools", None)
@@ -2114,6 +2368,7 @@ class ChatScreen(Screen):
             self._active_tools = active
             self._rebuild_bot()
             self._conversation = None
+            self._update_sidebar()
             self._append_system_message(f"Tool [b]{name}[/b] enabled.")
         else:
             if name not in active:
@@ -2123,6 +2378,7 @@ class ChatScreen(Screen):
             self._active_tools = active
             self._rebuild_bot()
             self._conversation = None
+            self._update_sidebar()
             self._append_system_message(f"Tool [b]{name}[/b] disabled.")
 
         self._persist_tools_config()
@@ -2473,25 +2729,28 @@ class ChatScreen(Screen):
             self._update_sidebar()
 
     def _build_sidebar(self) -> str:
-        """Build sidebar info text."""
-        model = self._active_model or "[dim]echo mode[/dim]"
+        """Build sidebar info text with clickable action links."""
+        model_key = self._active_model
+        if model_key:
+            model = self._friendly_model_name(model_key)
+        else:
+            model = "[dim]echo mode[/dim]"
         persona = self._active_persona or "[dim]none[/dim]"
         user_msgs = self._message_count // 2 if self._message_count > 0 else 0
 
         lines = [
-            f"  Model:    {model}",
-            f"  Persona:  {persona}",
-            "",
-            f"  Messages: {user_msgs}",
+            f"  Model:   {model}",
+            f"  Persona: {persona}",
+            f"  Msgs:    {user_msgs}",
         ]
 
         # Token estimate from conversation
         if self._conversation and self._conversation.messages:
             total_chars = sum(len(m.content) for m in self._conversation.messages)
             est_tokens = total_chars // 4
-            lines.append(f"  Tokens:   ~{est_tokens:,}")
+            lines.append(f"  Tokens:  ~{est_tokens:,}")
         else:
-            lines.append("  Tokens:   0")
+            lines.append("  Tokens:  0")
 
         # Context window usage
         if self._active_model:
@@ -2507,9 +2766,45 @@ class ChatScreen(Screen):
                     )
                     est_tokens = total_chars // 4
                     pct = (est_tokens / profile.context_window) * 100
-                    lines.append(f"  Context:  {pct:.0f}% of {profile.context_window:,}")
+                    lines.append(f"  Context: {pct:.0f}% of {profile.context_window:,}")
             except Exception:
                 pass
+
+        # -- Concise config status with clickable [...] links ---------
+        lines.append("")
+
+        # Tools
+        tools = getattr(self, "_active_tools", None) or []
+        lines.append(f'  🔧 Tools:  {len(tools)} [@click="screen.open_tools_picker"][…][/]')
+
+        # Guards
+        guards = getattr(self, "_active_guards", None) or []
+        guard_val = str(len(guards)) if guards else "[dim]0[/dim]"
+        lines.append(f'  🛡️ Guards: {guard_val} [@click="screen.open_guards_picker"][…][/]')
+
+        # Traits
+        traits = getattr(self, "_active_traits", None) or []
+        if traits:
+            trait_val = ", ".join(traits)
+        else:
+            trait_val = "[dim]0[/dim]"
+        lines.append(f'  🎭 Traits: {trait_val} [@click="screen.open_traits_picker"][…][/]')
+
+        # Knowledge graph
+        if self._kg_enabled:
+            try:
+                kg = self._get_kg()
+                count = kg.node_count()
+                kg_val = f"ON ({count})"
+            except Exception:
+                kg_val = "ON"
+        else:
+            kg_val = "[dim]OFF[/dim]"
+        lines.append(
+            f"  📚 KG:     {kg_val}"
+            ' [@click="screen.toggle_kg_inline"]⏻[/]'
+            ' [@click="screen.open_kg_screen"][…][/]'
+        )
 
         return "\n".join(lines)
 
