@@ -776,7 +776,7 @@ class ChatScreen(Screen):
         yield Footer()
 
     def _get_model_options(self) -> list[tuple[str, str]]:
-        """Build model select options, with favorites first."""
+        """Build model select options, with favorites first, grouped by provider."""
         options: list[tuple[str, str]] = []
         fav_models: list[str] = []
         allow_cloud = True
@@ -797,17 +797,25 @@ class ChatScreen(Screen):
             options.append((f"⭐ {friendly}", fav))
             seen.add(fav)
 
+        # Group remaining models by provider
         try:
             from talk_box.models import list_models
 
+            by_provider: dict[str, list[tuple[str, str]]] = {}
             for p in list_models():
                 label = f"{p.provider}:{p.model}"
-                if label not in seen:
-                    if not allow_cloud and self._is_cloud_model(label):
-                        continue
-                    friendly = p.name or label
-                    options.append((friendly, label))
-                    seen.add(label)
+                if label in seen:
+                    continue
+                if not allow_cloud and self._is_cloud_model(label):
+                    continue
+                friendly = p.name or label
+                by_provider.setdefault(p.provider, []).append((friendly, label))
+                seen.add(label)
+
+            for provider, models in by_provider.items():
+                initial = provider[0].upper()
+                options.append((f"── {initial} ──", f"__header__{provider}"))
+                options.extend(models)
         except Exception:
             pass
         return options
@@ -879,6 +887,8 @@ class ChatScreen(Screen):
             model_sel = self.query_one("#chat-model-select", Select)
             if self._active_model:
                 model_sel.value = self._active_model
+            # Disable provider header options so they can't be selected
+            self._disable_model_headers(model_sel)
         except Exception:
             pass
         try:
@@ -973,7 +983,12 @@ class ChatScreen(Screen):
     def on_select_changed(self, event: Select.Changed) -> None:
         """Handle model or persona selection changes."""
         if event.select.id == "chat-model-select":
-            self._active_model = str(event.value) if event.value != Select.BLANK else None
+            val = str(event.value) if event.value != Select.BLANK else None
+            # Ignore provider header selections
+            if val and val.startswith("__header__"):
+                event.select.clear()
+                return
+            self._active_model = val
             self._rebuild_bot()
             self._conversation = None
             self._update_sidebar()

@@ -131,7 +131,7 @@ _register(
     ModelProfile(
         provider="anthropic",
         model="claude-opus-4-7",
-        display_name="Claude Opus 4 (July)",
+        display_name="Claude Opus 4.7",
         context_window=200_000,
         max_output_tokens=32_000,
         supports_tools=True,
@@ -144,7 +144,7 @@ _register(
     ModelProfile(
         provider="anthropic",
         model="claude-sonnet-4-6",
-        display_name="Claude Sonnet 4 (June)",
+        display_name="Claude Sonnet 4.6",
         context_window=200_000,
         max_output_tokens=16_000,
         supports_tools=True,
@@ -157,7 +157,7 @@ _register(
     ModelProfile(
         provider="anthropic",
         model="claude-haiku-4-5",
-        display_name="Claude Haiku 4 (May)",
+        display_name="Claude Haiku 4.5",
         context_window=200_000,
         max_output_tokens=8_192,
         supports_tools=True,
