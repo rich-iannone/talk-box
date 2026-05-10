@@ -803,6 +803,9 @@ class ChatScreen(Screen):
 
             by_provider: dict[str, list[tuple[str, str]]] = {}
             for p in list_models():
+                # Skip hardcoded Ollama profiles — we'll query live instead
+                if p.provider == "ollama":
+                    continue
                 label = f"{p.provider}:{p.model}"
                 if label in seen:
                     continue
@@ -811,6 +814,25 @@ class ChatScreen(Screen):
                 friendly = p.name or label
                 by_provider.setdefault(p.provider, []).append((friendly, label))
                 seen.add(label)
+
+            # Add actually-installed Ollama models
+            try:
+                from talk_box.models import detect_ollama
+
+                status = detect_ollama(timeout=1.0)
+                if status.available and status.models:
+                    ollama_items: list[tuple[str, str]] = []
+                    for model_name in status.models:
+                        # Strip ":latest" tag for cleaner display
+                        display = model_name.removesuffix(":latest")
+                        label = f"ollama:{display}"
+                        if label not in seen:
+                            ollama_items.append((display, label))
+                            seen.add(label)
+                    if ollama_items:
+                        by_provider["ollama"] = ollama_items
+            except Exception:
+                pass
 
             for provider, models in by_provider.items():
                 initial = provider[0].upper()
@@ -2688,7 +2710,61 @@ class ChatScreen(Screen):
                     self._conversation.add_message("assistant", response_text)
 
                 except Exception as e:
-                    response_text = f"Error: {e}"
+                    err_msg = str(e)
+                    # Auto-retry without tools if model doesn't support them
+                    if "does not support tools" in err_msg or (
+                        "invalid_request_error" in err_msg and "tools" in err_msg
+                    ):
+                        thinking_text = ""
+                        response_text = ""
+                        self.app.call_from_thread(
+                            self._update_stream_widget,
+                            widget_id,
+                            "[b]Assistant[/b]\n[dim]Model doesn't support tools — retrying without…[/dim]",
+                        )
+                        try:
+                            # Create a clean bot copy with tools fully disabled
+                            from copy import deepcopy
+
+                            no_tools_config = deepcopy(self._bot._config)
+                            no_tools_config["tools"] = []
+                            no_tools_config["tool_box_enabled"] = False
+                            from talk_box.builder import ChatBot
+
+                            no_tools_bot = ChatBot()
+                            no_tools_bot._config = no_tools_config
+                            no_tools_bot._llm_enabled = True
+                            for phase, chunk in no_tools_bot._stream_with_thinking(
+                                text, self._conversation
+                            ):
+                                if phase == "thinking":
+                                    thinking_text += chunk
+                                    display = self._format_stream_display(thinking_text, "")
+                                    self.app.call_from_thread(
+                                        self._update_stream_widget, widget_id, display
+                                    )
+                                elif phase == "text":
+                                    response_text += chunk
+                                    display = self._format_stream_display(
+                                        thinking_text, response_text
+                                    )
+                                    self.app.call_from_thread(
+                                        self._update_stream_widget, widget_id, display
+                                    )
+                            original = text.split("\n\n--- Referenced files ---\n")[0]
+                            original = original.split("\n\n--- Attached files ---\n")[0]
+                            if original.startswith("[Output format:"):
+                                original = (
+                                    original.split("\n\n", 1)[-1]
+                                    if "\n\n" in original
+                                    else original
+                                )
+                            self._conversation.add_message("user", original)
+                            self._conversation.add_message("assistant", response_text)
+                        except Exception as e2:
+                            response_text = f"Error: {e2}"
+                    else:
+                        response_text = f"Error: {e}"
             else:
                 response_text = f"Echo: {text}"
         except Exception as e:
