@@ -467,8 +467,16 @@ ChecklistPickerModal {
 
 #checklist-body {
     max-height: 20;
-    overflow-y: auto;
     padding: 0 1;
+}
+
+.checklist-item {
+    height: 1;
+    width: 100%;
+}
+
+.checklist-item:hover {
+    background: $primary 20%;
 }
 
 #checklist-buttons {

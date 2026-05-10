@@ -10,6 +10,7 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Center, Horizontal, Vertical, VerticalScroll
+from textual.events import Click
 from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
@@ -344,7 +345,7 @@ class ChecklistPickerModal(ModalScreen[list[str]]):
         with Center():
             with Vertical(id="checklist-panel"):
                 yield Static("", id="checklist-title")
-                yield Static("", id="checklist-body")
+                yield VerticalScroll(id="checklist-body")
                 with Horizontal(id="checklist-buttons"):
                     yield Button("Done", id="checklist-done-btn", variant="success")
                     yield Button("Cancel", id="checklist-cancel-btn", variant="default")
@@ -352,17 +353,53 @@ class ChecklistPickerModal(ModalScreen[list[str]]):
     def on_mount(self) -> None:
         self._refresh_display()
 
+    def _item_label(self, index: int) -> str:
+        """Build the display label for an item at *index*."""
+        item_name, desc = self._items[index]
+        marker = "✓" if item_name in self._active else " "
+        cursor = "▸" if index == self._cursor else " "
+        desc_text = f"  [dim]{desc}[/dim]" if desc else ""
+        return f" {cursor} \\[{marker}] {item_name}{desc_text}"
+
     def _refresh_display(self) -> None:
         title_w = self.query_one("#checklist-title", Static)
         title_w.update(f"[b]{self._title}[/b]  ({len(self._active)} active)")
 
-        lines = []
-        for i, (item_name, desc) in enumerate(self._items):
-            marker = "✓" if item_name in self._active else " "
-            cursor = "▸" if i == self._cursor else " "
-            desc_text = f"  [dim]{desc}[/dim]" if desc else ""
-            lines.append(f" {cursor} [{marker}] {item_name}{desc_text}")
-        self.query_one("#checklist-body", Static).update("\n".join(lines))
+        body = self.query_one("#checklist-body", VerticalScroll)
+        # Update labels in-place if widgets already exist
+        existing = body.query("Static")
+        if len(existing) == len(self._items):
+            for i in range(len(self._items)):
+                existing[i].update(self._item_label(i))
+        else:
+            body.remove_children()
+            for i in range(len(self._items)):
+                body.mount(
+                    Static(
+                        self._item_label(i),
+                        id=f"chk-item-{i}",
+                        classes="checklist-item",
+                    )
+                )
+
+    def on_click(self, event: Click) -> None:
+        """Handle mouse clicks on checklist items."""
+        # Find if the click target is one of our item widgets
+        widget = event.widget
+        widget_id = getattr(widget, "id", "") or ""
+        if widget_id.startswith("chk-item-"):
+            try:
+                index = int(widget_id.removeprefix("chk-item-"))
+            except ValueError:
+                return
+            if 0 <= index < len(self._items):
+                self._cursor = index
+                item_name = self._items[index][0]
+                if item_name in self._active:
+                    self._active.discard(item_name)
+                else:
+                    self._active.add(item_name)
+                self._refresh_display()
 
     def action_toggle_current(self) -> None:
         if not self._items:

@@ -1949,10 +1949,12 @@ class TestChecklistPickerModal:
             await pilot.pause()
             title = app.screen.query_one("#checklist-title", Static)
             assert "Test Title" in str(title._Static__content)
-            body = app.screen.query_one("#checklist-body", Static)
-            body_text = str(body._Static__content)
-            assert "alpha" in body_text
-            assert "beta" in body_text
+            # Body is now a VerticalScroll with individual Static items
+            items_found = app.screen.query(".checklist-item")
+            assert len(items_found) == 2
+            all_text = " ".join(str(w._Static__content) for w in items_found)
+            assert "alpha" in all_text
+            assert "beta" in all_text
 
     @pytest.mark.asyncio()
     async def test_checklist_modal_toggle(self, _fake_config):
