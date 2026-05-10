@@ -2773,14 +2773,49 @@ class ChatScreen(Screen):
         # -- Concise config status with clickable [...] links ---------
         lines.append("")
 
+        # Usable width inside sidebar (width 34 - 1 border - 2 padding)
+        _W = 31
+
+        def _vis_width(text: str) -> int:
+            """Return the visible display width of *text*, accounting for
+            double-width emoji/CJK characters and stripping Rich markup."""
+            import re
+            import unicodedata
+
+            stripped = re.sub(r"\[/?[^\]]*\]", "", text)
+            w = 0
+            for ch in stripped:
+                cat = unicodedata.east_asian_width(ch)
+                w += 2 if cat in ("W", "F") else 1
+            return w
+
+        def _config_line(
+            label: str,
+            value: str,
+            click_action: str,
+            *,
+            extra_links: str = "",
+        ) -> str:
+            """Build a config line with value left-aligned and [...] right-aligned."""
+            vis_label_w = _vis_width(label)
+            vis_value_w = _vis_width(value)
+            vis_extra_w = _vis_width(extra_links)
+            # "[…]" → the ellipsis char is single-width = 3 visible cols ([…])
+            link_vis = 3 + vis_extra_w
+            pad = _W - vis_label_w - vis_value_w - link_vis
+            if pad < 1:
+                pad = 1
+            link = f'[@click="screen.{click_action}"][…][/]'
+            return f"{label}{value}{' ' * pad}{extra_links}{link}"
+
         # Tools
         tools = getattr(self, "_active_tools", None) or []
-        lines.append(f'  🔧 Tools:  {len(tools)} [@click="screen.open_tools_picker"][…][/]')
+        lines.append(_config_line("  Tools:  ", str(len(tools)), "open_tools_picker"))
 
         # Guards
         guards = getattr(self, "_active_guards", None) or []
         guard_val = str(len(guards)) if guards else "[dim]0[/dim]"
-        lines.append(f'  🛡️ Guards: {guard_val} [@click="screen.open_guards_picker"][…][/]')
+        lines.append(_config_line("  Guards: ", guard_val, "open_guards_picker"))
 
         # Traits
         traits = getattr(self, "_active_traits", None) or []
@@ -2788,7 +2823,7 @@ class ChatScreen(Screen):
             trait_val = ", ".join(traits)
         else:
             trait_val = "[dim]0[/dim]"
-        lines.append(f'  🎭 Traits: {trait_val} [@click="screen.open_traits_picker"][…][/]')
+        lines.append(_config_line("  Traits: ", trait_val, "open_traits_picker"))
 
         # Knowledge graph
         if self._kg_enabled:
@@ -2800,11 +2835,8 @@ class ChatScreen(Screen):
                 kg_val = "ON"
         else:
             kg_val = "[dim]OFF[/dim]"
-        lines.append(
-            f"  📚 KG:     {kg_val}"
-            ' [@click="screen.toggle_kg_inline"]⏻[/]'
-            ' [@click="screen.open_kg_screen"][…][/]'
-        )
+        kg_extra = '[@click="screen.toggle_kg_inline"]⏻[/] '
+        lines.append(_config_line("  KG:     ", kg_val, "open_kg_screen", extra_links=kg_extra))
 
         return "\n".join(lines)
 
