@@ -2017,6 +2017,327 @@ class TestChecklistPickerModal:
         assert results == [["alpha", "beta"]]
 
 
+class TestSessionHistoryModal:
+    """Tests for the SessionHistoryModal."""
+
+    @pytest.mark.asyncio()
+    async def test_session_history_modal_renders(self, _fake_config):
+        """Modal renders with title and session items."""
+        from talk_box.tui.screens import SessionHistoryModal
+
+        sessions = [
+            {
+                "name": "my-chat",
+                "saved_at": "2025-01-15T10:30:00",
+                "model": "anthropic:claude-sonnet-4-6",
+                "persona": "coder",
+                "messages": 4,
+            },
+            {
+                "name": "debug-session",
+                "saved_at": "2025-01-14T08:00:00",
+                "model": "ollama:llama3",
+                "persona": "",
+                "messages": 10,
+            },
+        ]
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            modal = SessionHistoryModal(sessions)
+            app.push_screen(modal)
+            await pilot.pause()
+            title = app.screen.query_one("#session-history-title", Static)
+            assert "2 saved" in str(title._Static__content)
+            items_found = app.screen.query(".session-item")
+            assert len(items_found) == 2
+            all_text = " ".join(str(w._Static__content) for w in items_found)
+            assert "my-chat" in all_text
+            assert "debug-session" in all_text
+
+    @pytest.mark.asyncio()
+    async def test_session_history_empty(self, _fake_config):
+        """Modal shows empty state message when no sessions exist."""
+        from talk_box.tui.screens import SessionHistoryModal
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            modal = SessionHistoryModal([])
+            app.push_screen(modal)
+            await pilot.pause()
+            title = app.screen.query_one("#session-history-title", Static)
+            assert "0 saved" in str(title._Static__content)
+            empty_w = app.screen.query_one("#session-empty", Static)
+            assert "No saved sessions" in str(empty_w._Static__content)
+
+    @pytest.mark.asyncio()
+    async def test_session_history_navigation(self, _fake_config):
+        """Cursor navigation works."""
+        from talk_box.tui.screens import SessionHistoryModal
+
+        sessions = [
+            {"name": "a", "saved_at": "", "model": "", "persona": "", "messages": 0},
+            {"name": "b", "saved_at": "", "model": "", "persona": "", "messages": 0},
+            {"name": "c", "saved_at": "", "model": "", "persona": "", "messages": 0},
+        ]
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            modal = SessionHistoryModal(sessions)
+            app.push_screen(modal)
+            await pilot.pause()
+            assert modal._cursor == 0
+            modal.action_cursor_down()
+            assert modal._cursor == 1
+            modal.action_cursor_down()
+            assert modal._cursor == 2
+            modal.action_cursor_up()
+            assert modal._cursor == 1
+
+    @pytest.mark.asyncio()
+    async def test_session_history_select(self, _fake_config):
+        """Selecting a session returns its name."""
+        from talk_box.tui.screens import SessionHistoryModal
+
+        results = []
+        sessions = [
+            {
+                "name": "chat-001",
+                "saved_at": "",
+                "model": "",
+                "persona": "",
+                "messages": 2,
+                "_filename": "chat-001",
+            },
+            {
+                "name": "chat-002",
+                "saved_at": "",
+                "model": "",
+                "persona": "",
+                "messages": 5,
+                "_filename": "chat-002",
+            },
+        ]
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            modal = SessionHistoryModal(sessions)
+            app.push_screen(modal, lambda r: results.append(r))
+            await pilot.pause()
+            modal.action_cursor_down()
+            modal.action_select_session()
+            await pilot.pause()
+        assert results == ["chat-002"]
+
+    @pytest.mark.asyncio()
+    async def test_session_history_cancel(self, _fake_config):
+        """Cancel returns None."""
+        from talk_box.tui.screens import SessionHistoryModal
+
+        results = []
+        sessions = [{"name": "x", "saved_at": "", "model": "", "persona": "", "messages": 0}]
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            modal = SessionHistoryModal(sessions)
+            app.push_screen(modal, lambda r: results.append(r))
+            await pilot.pause()
+            modal.action_cancel()
+            await pilot.pause()
+        assert results == [None]
+
+    @pytest.mark.asyncio()
+    async def test_session_history_delete(self, _fake_config, tmp_path):
+        """Deleting a session removes it from the list and disk."""
+        import json
+
+        from talk_box.tui.screens import SessionHistoryModal
+
+        # Create a fake sessions directory with a file
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        session_data = {
+            "name": "deleteme",
+            "saved_at": "",
+            "model": "",
+            "persona": "",
+            "conversation": {"messages": []},
+        }
+        (sessions_dir / "deleteme.json").write_text(json.dumps(session_data))
+
+        sessions = [
+            {
+                "name": "deleteme",
+                "saved_at": "",
+                "model": "",
+                "persona": "",
+                "messages": 0,
+                "_filename": "deleteme",
+            },
+            {
+                "name": "keepme",
+                "saved_at": "",
+                "model": "",
+                "persona": "",
+                "messages": 0,
+                "_filename": "keepme",
+            },
+        ]
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            modal = SessionHistoryModal(sessions)
+            app.push_screen(modal)
+            await pilot.pause()
+            # Patch _config_dir to use tmp_path
+            with patch("talk_box.tui.screens._config_dir", return_value=str(tmp_path)):
+                await modal.action_delete_session()
+                await pilot.pause()
+            assert len(modal._sessions) == 1
+            assert modal._sessions[0]["name"] == "keepme"
+            assert not (sessions_dir / "deleteme.json").exists()
+
+    @pytest.mark.asyncio()
+    async def test_session_history_click(self, _fake_config):
+        """Clicking a session item moves the cursor."""
+        from textual.events import Click
+
+        from talk_box.tui.screens import SessionHistoryModal
+
+        sessions = [
+            {"name": "a", "saved_at": "", "model": "", "persona": "", "messages": 0},
+            {"name": "b", "saved_at": "", "model": "", "persona": "", "messages": 0},
+        ]
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            modal = SessionHistoryModal(sessions)
+            app.push_screen(modal)
+            await pilot.pause()
+            assert modal._cursor == 0
+            # Simulate click on second item
+            item_widget = app.screen.query_one("#session-item-1", Static)
+            fake_click = Click(
+                widget=item_widget,
+                x=0,
+                y=0,
+                delta_x=0,
+                delta_y=0,
+                button=1,
+                shift=False,
+                meta=False,
+                ctrl=False,
+                screen_x=0,
+                screen_y=0,
+            )
+            modal.on_click(fake_click)
+            assert modal._cursor == 1
+
+
+class TestSessionHistorySidebar:
+    """Tests for session history sidebar integration."""
+
+    @pytest.mark.asyncio()
+    async def test_sidebar_shows_saved_count(self, _fake_config):
+        """Sidebar shows Saved count with clickable link."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            sidebar_text = app.screen._build_sidebar()
+            assert "Saved:" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_sidebar_saved_link(self, _fake_config):
+        """Sidebar Saved line has clickable [...] link."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            sidebar_text = app.screen._build_sidebar()
+            assert "open_session_history" in sidebar_text
+
+    @pytest.mark.asyncio()
+    async def test_count_saved_sessions(self, _fake_config, tmp_path):
+        """_count_saved_sessions counts only non-autosave JSON files."""
+        import json
+
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        (sessions_dir / "chat1.json").write_text(json.dumps({"name": "chat1"}))
+        (sessions_dir / "chat2.json").write_text(json.dumps({"name": "chat2"}))
+        (sessions_dir / "_autosave.json").write_text(json.dumps({"name": "_autosave"}))
+        (sessions_dir / "readme.txt").write_text("not a session")
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            with patch("talk_box.tui.screens._config_dir", return_value=str(tmp_path)):
+                count = app.screen._count_saved_sessions()
+            assert count == 3  # chat1 + chat2 + _autosave
+
+    @pytest.mark.asyncio()
+    async def test_list_saved_sessions(self, _fake_config, tmp_path):
+        """_list_saved_sessions returns metadata sorted newest-first."""
+        import json
+
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        (sessions_dir / "old.json").write_text(
+            json.dumps(
+                {
+                    "name": "old",
+                    "saved_at": "2025-01-01T00:00:00",
+                    "model": "ollama:llama3",
+                    "persona": "",
+                    "conversation": {"messages": [{"role": "user", "content": "hi"}]},
+                }
+            )
+        )
+        (sessions_dir / "new.json").write_text(
+            json.dumps(
+                {
+                    "name": "new",
+                    "saved_at": "2025-06-01T12:00:00",
+                    "model": "anthropic:claude-sonnet-4-6",
+                    "persona": "coder",
+                    "conversation": {
+                        "messages": [
+                            {"role": "user", "content": "a"},
+                            {"role": "assistant", "content": "b"},
+                        ]
+                    },
+                }
+            )
+        )
+        (sessions_dir / "_autosave.json").write_text(json.dumps({"name": "_autosave"}))
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            with patch("talk_box.tui.screens._config_dir", return_value=str(tmp_path)):
+                sessions = app.screen._list_saved_sessions()
+            assert len(sessions) == 3  # new + old + autosave
+            assert sessions[0]["name"] == "new"  # newest first
+            # autosave has name "(last session)"
+            autosave_names = [s["name"] for s in sessions if s["_filename"] == "_autosave"]
+            assert autosave_names == ["(last session)"]
+            named = [s for s in sessions if s["_filename"] != "_autosave"]
+            assert named[0]["messages"] == 2
+            assert named[1]["messages"] == 1
+
+
 class TestKnowledgeScreenDetail:
     """Tests for KnowledgeScreen node detail panel."""
 

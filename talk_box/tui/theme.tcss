@@ -489,6 +489,49 @@ ChecklistPickerModal {
     margin: 0 1;
 }
 
+/* -- Session History Modal ----------------------------------------------- */
+
+SessionHistoryModal {
+    align: center middle;
+}
+
+#session-history-panel {
+    width: 70;
+    max-height: 30;
+    padding: 1 2;
+    border: solid $primary;
+    background: $surface;
+}
+
+#session-history-title {
+    padding: 0 1 1 1;
+    text-style: bold;
+}
+
+#session-history-body {
+    max-height: 20;
+    padding: 0 1;
+}
+
+.session-item {
+    height: 1;
+    width: 100%;
+}
+
+.session-item:hover {
+    background: $primary 20%;
+}
+
+#session-history-buttons {
+    align: center middle;
+    padding: 1 0 0 0;
+    height: auto;
+}
+
+#session-history-buttons Button {
+    margin: 0 1;
+}
+
 /* -- Welcome screen content ----------------------------------------------- */
 
 #welcome-panel {

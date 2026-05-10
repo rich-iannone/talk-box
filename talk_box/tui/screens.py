@@ -436,6 +436,191 @@ class ChecklistPickerModal(ModalScreen[list[str]]):
 
 
 # ---------------------------------------------------------------------------
+# Session History Modal
+# ---------------------------------------------------------------------------
+
+
+class SessionHistoryModal(ModalScreen[str | None]):
+    """Modal showing saved sessions with cursor navigation.
+
+    Displays a list of saved sessions from ``~/.config/talk-box/sessions/``.
+    Users can navigate with arrow keys and select a session to load, or
+    press ``d`` to delete the highlighted session.
+
+    Returns the filename (without ``.json``) of the selected session, or
+    ``None`` if cancelled.
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Close", show=True, priority=True),
+        Binding("enter", "select_session", "Load", show=True, priority=True),
+        Binding("up", "cursor_up", "↑", show=False, priority=True),
+        Binding("down", "cursor_down", "↓", show=False, priority=True),
+        Binding("k", "cursor_up", "Up", show=False, priority=True),
+        Binding("j", "cursor_down", "Down", show=False, priority=True),
+        Binding("d", "delete_session", "Delete", show=True, priority=True),
+    ]
+
+    def __init__(
+        self,
+        sessions: list[dict],
+        *,
+        name: str | None = None,
+        id: str | None = None,
+        classes: str | None = None,
+    ) -> None:
+        super().__init__(name=name, id=id, classes=classes)
+        self._sessions = sessions  # [{name, saved_at, model, persona, messages}, ...]
+        self._cursor = 0
+
+    def compose(self) -> ComposeResult:
+        with Center():
+            with Vertical(id="session-history-panel"):
+                yield Static("", id="session-history-title")
+                yield VerticalScroll(id="session-history-body")
+                with Horizontal(id="session-history-buttons"):
+                    yield Button("Load", id="session-load-btn", variant="success")
+                    yield Button("Close", id="session-close-btn", variant="default")
+
+    def on_mount(self) -> None:
+        self._refresh_display()
+
+    def _item_label(self, index: int) -> str:
+        """Build display label for a session at *index*."""
+        s = self._sessions[index]
+        cursor = "▸" if index == self._cursor else " "
+        name = s.get("name", "untitled")
+        # Format date nicely
+        saved_at = s.get("saved_at", "")
+        if saved_at:
+            try:
+                from datetime import datetime
+
+                dt = datetime.fromisoformat(saved_at)
+                date_str = dt.strftime("%b %d %H:%M")
+            except Exception:
+                date_str = saved_at[:16]
+        else:
+            date_str = ""
+        model = s.get("model", "")
+        if model:
+            # Show just the short model name
+            model = model.split(":")[-1] if ":" in model else model
+        msgs = s.get("messages", 0)
+        persona = s.get("persona", "")
+
+        line = f" {cursor} [b]{name}[/b]"
+        meta_parts = []
+        if date_str:
+            meta_parts.append(date_str)
+        if msgs:
+            meta_parts.append(f"{msgs} msgs")
+        if model:
+            meta_parts.append(model)
+        if persona:
+            meta_parts.append(persona)
+        if meta_parts:
+            line += f"  [dim]{' · '.join(meta_parts)}[/dim]"
+        return line
+
+    def _refresh_display(self) -> None:
+        title_w = self.query_one("#session-history-title", Static)
+        count = len(self._sessions)
+        title_w.update(f"[b]Session History[/b]  ({count} saved)")
+
+        body = self.query_one("#session-history-body", VerticalScroll)
+        if not self._sessions:
+            existing = body.query("Static")
+            if len(existing) != 1 or (existing[0].id or "") != "session-empty":
+                body.remove_children()
+                body.mount(
+                    Static(
+                        "[dim]No saved sessions.\nUse /save <name> to save the current chat.[/dim]",
+                        id="session-empty",
+                    )
+                )
+            return
+        existing = body.query(".session-item")
+        if len(existing) == len(self._sessions):
+            for i in range(len(self._sessions)):
+                existing[i].update(self._item_label(i))
+        else:
+            body.remove_children()
+            for i in range(len(self._sessions)):
+                body.mount(
+                    Static(
+                        self._item_label(i),
+                        id=f"session-item-{i}",
+                        classes="session-item",
+                    )
+                )
+
+    def on_click(self, event: Click) -> None:
+        """Handle mouse clicks on session items."""
+        widget = event.widget
+        widget_id = getattr(widget, "id", "") or ""
+        if widget_id.startswith("session-item-"):
+            try:
+                index = int(widget_id.removeprefix("session-item-"))
+            except ValueError:
+                return
+            if 0 <= index < len(self._sessions):
+                self._cursor = index
+                self._refresh_display()
+
+    def action_cursor_up(self) -> None:
+        if self._sessions:
+            self._cursor = (self._cursor - 1) % len(self._sessions)
+            self._refresh_display()
+
+    def action_cursor_down(self) -> None:
+        if self._sessions:
+            self._cursor = (self._cursor + 1) % len(self._sessions)
+            self._refresh_display()
+
+    def action_select_session(self) -> None:
+        if self._sessions:
+            s = self._sessions[self._cursor]
+            self.dismiss(s.get("_filename", s.get("name")))
+        else:
+            self.dismiss(None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+    async def action_delete_session(self) -> None:
+        """Delete the highlighted session file from disk."""
+        import os
+
+        if not self._sessions:
+            return
+        session = self._sessions[self._cursor]
+        filename = session.get("_filename", session.get("name", ""))
+        if not filename or filename == "_autosave":
+            return  # Don't delete autosave
+        sessions_dir = os.path.join(_config_dir(), "sessions")
+        filepath = os.path.join(sessions_dir, f"{filename}.json")
+        try:
+            os.remove(filepath)
+        except OSError:
+            return
+        self._sessions.pop(self._cursor)
+        if self._cursor >= len(self._sessions) and self._sessions:
+            self._cursor = len(self._sessions) - 1
+        # Force full rebuild: await removal so IDs are freed
+        body = self.query_one("#session-history-body", VerticalScroll)
+        await body.remove_children()
+        self._refresh_display()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id or ""
+        if btn_id == "session-load-btn":
+            self.action_select_session()
+        elif btn_id == "session-close-btn":
+            self.action_cancel()
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -1089,6 +1274,8 @@ class ChatScreen(Screen):
         """Handle New Chat and copy buttons."""
         btn_id = event.button.id or ""
         if btn_id == "chat-new-btn":
+            # Auto-save current session before clearing
+            self._auto_save_session()
             self._conversation = None
             self._message_count = 0
             self._rebuild_bot()
@@ -1567,7 +1754,17 @@ class ChatScreen(Screen):
                 container = self.query_one("#chat-messages", VerticalScroll)
                 await container.remove_children()
                 for msg in self._conversation.messages:
-                    self._append_message(msg.role, msg.content)
+                    role = msg.role
+                    content = msg.content
+                    # Handle sessions saved with swapped (role, content) args
+                    if role not in ("user", "assistant", "system", "function") and content in (
+                        "user",
+                        "assistant",
+                        "system",
+                        "function",
+                    ):
+                        role, content = content, role
+                    self._append_message(role, content)
                 self._update_sidebar()
 
             self.run_worker(_replay(), name="load_session")
@@ -2289,6 +2486,10 @@ class ChatScreen(Screen):
         except Exception:
             pass
 
+    def action_open_session_history(self) -> None:
+        """Action handler for sidebar Saved [...] link — open session history modal."""
+        self._open_session_history()
+
     # -- Picker modal openers ---------------------------------------------
 
     def _open_tools_picker(self) -> None:
@@ -2390,6 +2591,69 @@ class ChatScreen(Screen):
                 "Knowledge context [b]enabled[/b]. "
                 "Relevant knowledge will be injected into each message."
             )
+
+    # -- Session history helpers ------------------------------------------
+
+    def _count_saved_sessions(self) -> int:
+        """Return the number of saved session files (including autosave)."""
+        import os
+
+        sessions_dir = os.path.join(_config_dir(), "sessions")
+        if not os.path.isdir(sessions_dir):
+            return 0
+        return sum(1 for f in os.listdir(sessions_dir) if f.endswith(".json"))
+
+    def _list_saved_sessions(self) -> list[dict]:
+        """List saved sessions with metadata, sorted newest-first."""
+        import json
+        import os
+
+        sessions_dir = os.path.join(_config_dir(), "sessions")
+        if not os.path.isdir(sessions_dir):
+            return []
+
+        sessions: list[dict] = []
+        for fname in os.listdir(sessions_dir):
+            if not fname.endswith(".json"):
+                continue
+            filepath = os.path.join(sessions_dir, fname)
+            try:
+                with open(filepath) as f:
+                    data = json.load(f)
+                msg_count = 0
+                conv = data.get("conversation", {})
+                if isinstance(conv, dict):
+                    msg_count = len(conv.get("messages", []))
+                name = data.get("name", fname.removesuffix(".json"))
+                if name == "_autosave":
+                    name = "(last session)"
+                sessions.append(
+                    {
+                        "name": name,
+                        "saved_at": data.get("saved_at", ""),
+                        "model": data.get("model", ""),
+                        "persona": data.get("persona", ""),
+                        "messages": msg_count,
+                        "_filename": fname.removesuffix(".json"),
+                    }
+                )
+            except Exception:
+                continue
+
+        # Sort by saved_at descending (newest first)
+        sessions.sort(key=lambda s: s.get("saved_at", ""), reverse=True)
+        return sessions
+
+    def _open_session_history(self) -> None:
+        """Open the session history modal."""
+        sessions = self._list_saved_sessions()
+
+        def _on_dismiss(result: str | None) -> None:
+            if result is None:
+                return  # cancelled
+            self._load_session(result)
+
+        self.app.push_screen(SessionHistoryModal(sessions), _on_dismiss)
 
     def _show_active_tools(self) -> None:
         """Show the list of currently active tools."""
@@ -2706,8 +2970,8 @@ class ChatScreen(Screen):
                     if original.startswith("[Output format:"):
                         # Strip the format instruction prefix
                         original = original.split("\n\n", 1)[-1] if "\n\n" in original else original
-                    self._conversation.add_message("user", original)
-                    self._conversation.add_message("assistant", response_text)
+                    self._conversation.add_message(original, "user")
+                    self._conversation.add_message(response_text, "assistant")
 
                 except Exception as e:
                     err_msg = str(e)
@@ -2759,8 +3023,8 @@ class ChatScreen(Screen):
                                     if "\n\n" in original
                                     else original
                                 )
-                            self._conversation.add_message("user", original)
-                            self._conversation.add_message("assistant", response_text)
+                            self._conversation.add_message(original, "user")
+                            self._conversation.add_message(response_text, "assistant")
                         except Exception as e2:
                             response_text = f"Error: {e2}"
                     else:
@@ -2965,6 +3229,11 @@ class ChatScreen(Screen):
             kg_val = "[dim]OFF[/dim]"
         kg_extra = '[@click="screen.toggle_kg_inline"]⏻[/] '
         lines.append(_config_line("  KG:     ", kg_val, "open_kg_screen", extra_links=kg_extra))
+
+        # Session history
+        saved = self._count_saved_sessions()
+        hist_val = str(saved) if saved else "[dim]0[/dim]"
+        lines.append(_config_line("  Saved:  ", hist_val, "open_session_history"))
 
         return "\n".join(lines)
 
