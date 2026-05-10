@@ -582,6 +582,8 @@ class ChatScreen(Screen):
         self._output_format: str | None = None  # json, markdown, table
         self._enter_sends: bool = True
         self._require_approvals: bool = True
+        self._active_guards: list[str] = []
+        self._active_traits: list[str] = []
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -765,6 +767,12 @@ class ChatScreen(Screen):
             effective_tools = list(dict.fromkeys(DEFAULT_CHAT_TOOLS + resolved.tools))
             bot = bot.tools(effective_tools)
             self._active_tools = effective_tools
+
+            # Load guardrails from config
+            if resolved.guardrails:
+                self._active_guards = list(resolved.guardrails)
+                bot = self._apply_guards_to_bot(bot, self._active_guards)
+
             self._bot = bot
         except Exception:
             # Fall through to echo mode
@@ -793,6 +801,12 @@ class ChatScreen(Screen):
                 from talk_box.builtin_tools import DEFAULT_CHAT_TOOLS
 
                 bot = bot.tools(DEFAULT_CHAT_TOOLS)
+            # Re-apply active traits to persona
+            if getattr(self, "_active_traits", None) and self._active_persona:
+                bot = self._apply_traits_to_bot(bot, self._active_traits)
+            # Re-apply active guardrails
+            if getattr(self, "_active_guards", None):
+                bot = self._apply_guards_to_bot(bot, self._active_guards)
             self._bot = bot
         except Exception:
             self._bot = None
@@ -1011,7 +1025,8 @@ class ChatScreen(Screen):
                 "  /fav model <name>  Toggle model as favorite\n"
                 "  /fav persona <n>   Toggle persona as favorite\n"
                 "  /fav               List current favorites\n"
-                "  /guards            Show guardrail status\n"
+                "  /guards [on|off]   Manage guardrails\n"
+                "  /traits [on|off]   Manage persona traits\n"
                 "  /memory            Show memory tier summary\n"
                 "  /kg                Show knowledge graph stats\n"
                 "  /quit              Quit the app"
@@ -1138,7 +1153,48 @@ class ChatScreen(Screen):
             self._export_session(arg)
 
         elif cmd == "/guards":
-            self._show_guards()
+            if not arg:
+                self._show_guards()
+            else:
+                sub_parts = arg.split(None, 1)
+                sub_cmd = sub_parts[0].lower()
+                sub_arg = sub_parts[1].strip() if len(sub_parts) > 1 else ""
+                if sub_cmd == "on" and sub_arg:
+                    self._toggle_guard(sub_arg, enable=True)
+                elif sub_cmd == "off" and sub_arg:
+                    self._toggle_guard(sub_arg, enable=False)
+                elif sub_cmd == "available":
+                    self._show_available_guards()
+                else:
+                    self._append_system_message(
+                        "[b]Usage:[/b]\n"
+                        "  /guards              Show active guardrails\n"
+                        "  /guards on <name>    Enable a guardrail\n"
+                        "  /guards off <name>   Disable a guardrail\n"
+                        "  /guards available    List all guardrails"
+                    )
+
+        elif cmd == "/traits":
+            if not arg:
+                self._show_active_traits()
+            else:
+                sub_parts = arg.split(None, 1)
+                sub_cmd = sub_parts[0].lower()
+                sub_arg = sub_parts[1].strip() if len(sub_parts) > 1 else ""
+                if sub_cmd == "on" and sub_arg:
+                    self._toggle_trait(sub_arg, enable=True)
+                elif sub_cmd == "off" and sub_arg:
+                    self._toggle_trait(sub_arg, enable=False)
+                elif sub_cmd == "available":
+                    self._show_available_traits()
+                else:
+                    self._append_system_message(
+                        "[b]Usage:[/b]\n"
+                        "  /traits              Show active traits\n"
+                        "  /traits on <name>    Apply a trait\n"
+                        "  /traits off <name>   Remove a trait\n"
+                        "  /traits available    List all traits"
+                    )
 
         elif cmd == "/memory":
             self._show_memory_summary()
@@ -1477,28 +1533,163 @@ class ChatScreen(Screen):
 
     def _show_guards(self) -> None:
         """Show guardrail status in chat."""
-        lines = ["[b]Guardrails[/b]"]
-        try:
-            from talk_box.config import load_config
-
-            config = load_config()
-            resolved = config.resolve()
-            active = resolved.guardrails or []
-
-            if active:
-                for g in active:
-                    lines.append(f"  ✅ {g}")
-            else:
-                lines.append("  [dim]No guardrails active[/dim]")
-
-            lines.append("")
-            lines.append("  Available guards:")
-            for name, _phase, _desc in _BUILTIN_GUARDS:
-                marker = "●" if name in active else "○"
-                lines.append(f"    {marker} {name}")
-        except Exception:
-            lines.append("  [dim]Could not load guardrail info[/dim]")
+        active = getattr(self, "_active_guards", None) or []
+        lines = [f"[b]Active Guardrails[/b]  ({len(active)})"]
+        if active:
+            for g in active:
+                lines.append(f"  • {g}")
+        else:
+            lines.append("  [dim]No guardrails active[/dim]")
         self._append_system_message("\n".join(lines))
+
+    def _show_available_guards(self) -> None:
+        """Show all available guardrails with active status."""
+        active = set(getattr(self, "_active_guards", None) or [])
+        lines = [f"[b]Available Guardrails[/b]  ({len(_BUILTIN_GUARDS)})"]
+        for name, phase, desc in _BUILTIN_GUARDS:
+            marker = "✓" if name in active else " "
+            lines.append(f"  [{marker}] {name}  ({phase}) — {desc}")
+        self._append_system_message("\n".join(lines))
+
+    def _toggle_guard(self, name: str, *, enable: bool) -> None:
+        """Enable or disable a guardrail by name, rebuild bot, and persist."""
+        known = {n for n, _, _ in _BUILTIN_GUARDS}
+        if name not in known:
+            self._append_system_message(
+                f"Unknown guardrail [b]{name}[/b]. "
+                "Use [b]/guards available[/b] to see all guardrails."
+            )
+            return
+
+        active = list(getattr(self, "_active_guards", None) or [])
+        if enable:
+            if name in active:
+                self._append_system_message(f"Guardrail [b]{name}[/b] is already active.")
+                return
+            active.append(name)
+            self._active_guards = active
+            self._rebuild_bot()
+            self._conversation = None
+            self._append_system_message(f"Guardrail [b]{name}[/b] enabled.")
+        else:
+            if name not in active:
+                self._append_system_message(f"Guardrail [b]{name}[/b] is not active.")
+                return
+            active.remove(name)
+            self._active_guards = active
+            self._rebuild_bot()
+            self._conversation = None
+            self._append_system_message(f"Guardrail [b]{name}[/b] disabled.")
+
+        try:
+            from talk_box.config import persist_guardrails
+
+            persist_guardrails(self._active_guards)
+        except Exception:
+            pass
+
+    @staticmethod
+    def _apply_guards_to_bot(bot, guard_names: list[str]) -> "ChatBot":
+        """Resolve guard names and add them to a ChatBot."""
+        try:
+            from talk_box.guardrails import resolve_guards
+
+            for guard in resolve_guards(guard_names):
+                bot = bot.guardrail(guard)
+        except Exception:
+            pass
+        return bot
+
+    def _show_active_traits(self) -> None:
+        """Show the list of currently active traits."""
+        active = getattr(self, "_active_traits", None) or []
+        if active:
+            lines = [f"[b]Active Traits[/b]  ({len(active)})"]
+            for t in active:
+                lines.append(f"  • {t}")
+            self._append_system_message("\n".join(lines))
+        else:
+            self._append_system_message("No traits are active.")
+
+    def _show_available_traits(self) -> None:
+        """Show all available traits with active status."""
+        try:
+            from talk_box.traits import list_traits
+
+            all_traits = list_traits()
+        except Exception:
+            self._append_system_message("Could not load trait list.")
+            return
+        active = set(getattr(self, "_active_traits", None) or [])
+        lines = [f"[b]Available Traits[/b]  ({len(all_traits)})"]
+        for t in all_traits:
+            marker = "✓" if t in active else " "
+            lines.append(f"  [{marker}] {t}")
+        self._append_system_message("\n".join(lines))
+
+    def _toggle_trait(self, name: str, *, enable: bool) -> None:
+        """Enable or disable a trait by name, rebuild bot."""
+        try:
+            from talk_box.traits import list_traits
+
+            available = list_traits()
+        except Exception:
+            available = []
+
+        if name not in available:
+            self._append_system_message(
+                f"Unknown trait [b]{name}[/b]. Use [b]/traits available[/b] to see all traits."
+            )
+            return
+
+        if not self._active_persona:
+            self._append_system_message(
+                "Traits require an active persona. Set one with [b]/persona <name>[/b] first."
+            )
+            return
+
+        active = list(getattr(self, "_active_traits", None) or [])
+        if enable:
+            if name in active:
+                self._append_system_message(f"Trait [b]{name}[/b] is already active.")
+                return
+            active.append(name)
+            self._active_traits = active
+            self._rebuild_bot()
+            self._conversation = None
+            self._append_system_message(f"Trait [b]{name}[/b] applied.")
+        else:
+            if name not in active:
+                self._append_system_message(f"Trait [b]{name}[/b] is not active.")
+                return
+            active.remove(name)
+            self._active_traits = active
+            self._rebuild_bot()
+            self._conversation = None
+            self._append_system_message(f"Trait [b]{name}[/b] removed.")
+
+    @staticmethod
+    def _apply_traits_to_bot(bot, trait_names: list[str]) -> "ChatBot":
+        """Apply traits to the bot's active persona."""
+        try:
+            from talk_box.traits import apply_trait, get_trait
+
+            persona = bot._config.get("persona_definition")
+            if persona is None:
+                return bot
+            import copy
+
+            modified = copy.deepcopy(persona)
+            for name in trait_names:
+                try:
+                    trait = get_trait(name)
+                    modified = apply_trait(modified, trait)
+                except Exception:
+                    pass
+            bot._config["persona_definition"] = modified
+        except Exception:
+            pass
+        return bot
 
     def _show_memory_summary(self) -> None:
         """Show memory tier summary in chat."""

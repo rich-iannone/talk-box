@@ -1412,6 +1412,218 @@ class TestNewSlashCommands:
             assert "100" in texts
             assert "50" in texts
 
+    # -- Guard toggle tests ------------------------------------------------
+
+    @pytest.mark.asyncio()
+    async def test_slash_guards_shows_active(self, _fake_config):
+        """/guards shows the list of active guardrails."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_guards = ["no_pii"]
+            app.screen._handle_slash_command("/guards")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "no_pii" in texts
+
+    @pytest.mark.asyncio()
+    async def test_slash_guards_on_enables(self, _fake_config):
+        """/guards on <name> enables a guardrail."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_guards = []
+            app.screen._handle_slash_command("/guards on no_pii")
+            await pilot.pause()
+            assert "no_pii" in app.screen._active_guards
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "enabled" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_guards_off_disables(self, _fake_config):
+        """/guards off <name> disables a guardrail."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_guards = ["no_pii"]
+            app.screen._handle_slash_command("/guards off no_pii")
+            await pilot.pause()
+            assert "no_pii" not in app.screen._active_guards
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "disabled" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_guards_on_unknown_shows_error(self, _fake_config):
+        """/guards on with unknown name shows error."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_guards = []
+            app.screen._handle_slash_command("/guards on fake_guard")
+            await pilot.pause()
+            assert "fake_guard" not in app.screen._active_guards
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "unknown" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_guards_available_lists_all(self, _fake_config):
+        """/guards available lists all guardrails with active markers."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_guards = ["no_pii"]
+            app.screen._handle_slash_command("/guards available")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "Available Guardrails" in texts
+            assert "no_pii" in texts
+            assert "keyword_block" in texts
+
+    @pytest.mark.asyncio()
+    async def test_slash_guards_bad_subcommand_shows_usage(self, _fake_config):
+        """/guards with invalid subcommand shows usage help."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._handle_slash_command("/guards foobar")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "/guards on" in texts
+            assert "/guards off" in texts
+
+    # -- Trait toggle tests ------------------------------------------------
+
+    @pytest.mark.asyncio()
+    async def test_slash_traits_shows_active(self, _fake_config):
+        """/traits shows the list of active traits."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_traits = ["concise"]
+            app.screen._handle_slash_command("/traits")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "concise" in texts
+
+    @pytest.mark.asyncio()
+    async def test_slash_traits_no_active_shows_message(self, _fake_config):
+        """/traits with none active shows message."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_traits = []
+            app.screen._handle_slash_command("/traits")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "no traits" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_traits_on_requires_persona(self, _fake_config):
+        """/traits on without persona shows error."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_persona = None
+            app.screen._handle_slash_command("/traits on concise")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "persona" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_traits_on_enables(self, _fake_config):
+        """/traits on <name> adds a trait."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_persona = "analyst"
+            app.screen._active_traits = []
+            app.screen._handle_slash_command("/traits on concise")
+            await pilot.pause()
+            assert "concise" in app.screen._active_traits
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "applied" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_traits_off_removes(self, _fake_config):
+        """/traits off <name> removes a trait."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_persona = "analyst"
+            app.screen._active_traits = ["concise"]
+            app.screen._handle_slash_command("/traits off concise")
+            await pilot.pause()
+            assert "concise" not in app.screen._active_traits
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "removed" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_traits_on_unknown_shows_error(self, _fake_config):
+        """/traits on with unknown name shows error."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_persona = "analyst"
+            app.screen._active_traits = []
+            app.screen._handle_slash_command("/traits on nonexistent_trait")
+            await pilot.pause()
+            assert "nonexistent_trait" not in app.screen._active_traits
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "unknown" in texts.lower()
+
+    @pytest.mark.asyncio()
+    async def test_slash_traits_available_lists_all(self, _fake_config):
+        """/traits available lists all traits."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._active_traits = ["concise"]
+            app.screen._handle_slash_command("/traits available")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "Available Traits" in texts
+            assert "concise" in texts
+
+    @pytest.mark.asyncio()
+    async def test_slash_traits_bad_subcommand_shows_usage(self, _fake_config):
+        """/traits with invalid subcommand shows usage help."""
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("chat")
+            await pilot.pause()
+            app.screen._handle_slash_command("/traits foobar")
+            await pilot.pause()
+            msgs = app.screen.query(".chat-system")
+            texts = " ".join(str(m._Static__content) for m in msgs)
+            assert "/traits on" in texts
+            assert "/traits off" in texts
+
 
 class TestKnowledgeScreenDetail:
     """Tests for KnowledgeScreen node detail panel."""
