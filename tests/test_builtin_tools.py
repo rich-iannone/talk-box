@@ -623,5 +623,167 @@ class TestWorkspaceFileTools:
         assert "file_search" in tools
 
 
+class TestFileApprovalCallback:
+    def test_no_callback_auto_approves(self, tmp_path, monkeypatch):
+        """Without a callback, file_write succeeds immediately."""
+        from talk_box.builtin_tools import file_write, set_file_approval_callback
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        set_file_approval_callback(None)
+        context = ToolContext()
+
+        result = file_write(context, "test.txt", "hello")
+        assert result.success
+
+    def test_callback_approves(self, tmp_path, monkeypatch):
+        """Callback returning True allows the write."""
+        from talk_box.builtin_tools import file_write, set_file_approval_callback
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        approvals = []
+
+        def approve_all(action, path, details):
+            approvals.append((action, path))
+            return True
+
+        set_file_approval_callback(approve_all)
+        context = ToolContext()
+
+        result = file_write(context, "approved.txt", "content")
+        assert result.success
+        assert approvals == [("write", "approved.txt")]
+        set_file_approval_callback(None)  # cleanup
+
+    def test_callback_rejects_write(self, tmp_path, monkeypatch):
+        """Callback returning False blocks the write."""
+        from talk_box.builtin_tools import file_write, set_file_approval_callback
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        set_file_approval_callback(lambda action, path, details: False)
+        context = ToolContext()
+
+        result = file_write(context, "rejected.txt", "content")
+        assert not result.success
+        assert "rejected" in (result.error or "").lower()
+        assert not (tmp_path / "rejected.txt").exists()
+        set_file_approval_callback(None)
+
+    def test_callback_rejects_edit(self, tmp_path, monkeypatch):
+        """Callback returning False blocks file_edit."""
+        from talk_box.builtin_tools import file_edit, set_file_approval_callback
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        (tmp_path / "config.py").write_text("debug = False\n")
+        set_file_approval_callback(lambda action, path, details: False)
+        context = ToolContext()
+
+        result = file_edit(context, "config.py", "debug = False", "debug = True")
+        assert not result.success
+        # File should be unchanged
+        assert (tmp_path / "config.py").read_text() == "debug = False\n"
+        set_file_approval_callback(None)
+
+    def test_callback_receives_edit_details(self, tmp_path, monkeypatch):
+        """Edit callback receives old_text and new_text in details."""
+        from talk_box.builtin_tools import file_edit, set_file_approval_callback
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        (tmp_path / "data.py").write_text("x = 1\n")
+        captured = {}
+
+        def capture(action, path, details):
+            captured.update({"action": action, "path": path, "details": details})
+            return True
+
+        set_file_approval_callback(capture)
+        context = ToolContext()
+        file_edit(context, "data.py", "x = 1", "x = 2")
+
+        assert captured["action"] == "edit"
+        assert captured["details"]["old_text"] == "x = 1"
+        assert captured["details"]["new_text"] == "x = 2"
+        set_file_approval_callback(None)
+
+    def test_get_file_approval_callback(self):
+        """get_file_approval_callback returns current callback."""
+        from talk_box.builtin_tools import (
+            get_file_approval_callback,
+            set_file_approval_callback,
+        )
+
+        assert get_file_approval_callback() is None
+        cb = lambda a, p, d: True  # noqa: E731
+        set_file_approval_callback(cb)
+        assert get_file_approval_callback() is cb
+        set_file_approval_callback(None)
+
+
+class TestBatchApproval:
+    def test_run_batch_approval_no_callback(self):
+        """Without a batch callback, _batch_decisions stays empty."""
+        import talk_box.builtin_tools as bt
+
+        bt._batch_approval_callback = None
+        bt._batch_decisions = {}
+        bt.run_batch_approval([{"name": "file_write", "input": {"path": "a.txt", "content": "x"}}])
+        assert bt._batch_decisions == {}
+
+    def test_run_batch_approval_extracts_file_ops(self):
+        """Batch callback receives file ops extracted from tool calls."""
+        import talk_box.builtin_tools as bt
+
+        captured = []
+
+        def capture_batch(pending):
+            captured.extend(pending)
+            return {(a, p): True for a, p, _ in pending}
+
+        bt.set_batch_approval_callback(capture_batch)
+        tool_calls = [
+            {"name": "file_write", "input": {"path": "a.txt", "content": "aaa"}},
+            {"name": "file_read", "input": {"path": "b.txt"}},  # not a write
+            {"name": "file_edit", "input": {"path": "c.py", "old_text": "x", "new_text": "y"}},
+        ]
+        bt.run_batch_approval(tool_calls)
+
+        assert len(captured) == 2
+        assert captured[0] == ("write", "a.txt", {"content": "aaa"})
+        assert captured[1] == ("edit", "c.py", {"old_text": "x", "new_text": "y"})
+        bt.set_batch_approval_callback(None)
+
+    def test_batch_decisions_override_per_file_callback(self, tmp_path, monkeypatch):
+        """When batch decisions exist, per-file callback is not called."""
+        import talk_box.builtin_tools as bt
+
+        monkeypatch.setattr("talk_box.builtin_tools._get_workspace_root", lambda: tmp_path)
+        per_file_called = []
+        bt.set_file_approval_callback(lambda a, p, d: per_file_called.append(1) or True)
+        bt._batch_decisions = {("write", "approved.txt"): True, ("write", "rejected.txt"): False}
+
+        context = ToolContext()
+        r1 = bt.file_write(context, "approved.txt", "content")
+        assert r1.success
+        r2 = bt.file_write(context, "rejected.txt", "content")
+        assert not r2.success
+
+        # Per-file callback should NOT have been called
+        assert per_file_called == []
+
+        bt.set_file_approval_callback(None)
+        bt._batch_decisions = {}
+
+    def test_batch_decisions_skip_non_file_tools(self):
+        """Non-file tool calls are ignored by run_batch_approval."""
+        import talk_box.builtin_tools as bt
+
+        bt.set_batch_approval_callback(lambda pending: {})
+        bt.run_batch_approval([
+            {"name": "web_search", "input": {"query": "hello"}},
+            {"name": "list_files", "input": {"pattern": "*"}},
+        ])
+        assert bt._batch_decisions == {}
+        bt.set_batch_approval_callback(None)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

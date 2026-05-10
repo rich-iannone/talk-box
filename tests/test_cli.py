@@ -393,3 +393,22 @@ class TestDevPlayground:
         assert "--persona" in result.output
         assert "--host" in result.output
         assert "--port" in result.output
+
+
+class TestAsk:
+    def test_ask_help(self):
+        """ask --help displays all options."""
+        result = _runner().invoke(main, ["ask", "--help"])
+        assert result.exit_code == 0
+        assert "--model" in result.output
+        assert "--persona" in result.output
+        assert "--profile" in result.output
+        assert "--json" in result.output
+        assert "--raw" in result.output
+        assert "--tools" in result.output
+
+    def test_ask_no_question_no_stdin(self):
+        """ask with no question and no stdin exits with error."""
+        result = _runner().invoke(main, ["ask"])
+        assert result.exit_code != 0
+        assert "No question" in result.output

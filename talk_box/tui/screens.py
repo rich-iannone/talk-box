@@ -127,6 +127,173 @@ class CommandListScreen(ModalScreen):
 
 
 # ---------------------------------------------------------------------------
+# File Approval Modal
+# ---------------------------------------------------------------------------
+
+
+class FileApprovalScreen(ModalScreen[dict]):
+    """Modal that lets the user browse and approve/reject a batch of file changes.
+
+    Accepts a list of pending file operations.  The user can navigate with
+    ← / → (or ``h`` / ``l``), approve or reject each file individually, or
+    approve/reject all remaining files at once.  Dismisses with a dict
+    mapping ``(action, path)`` → ``bool`` for every file.
+    """
+
+    BINDINGS = [
+        Binding("y", "approve_current", "Approve", show=True, priority=True),
+        Binding("n", "reject_current", "Reject", show=True, priority=True),
+        Binding("a", "approve_rest", "Approve Rest", show=True, priority=True),
+        Binding("x", "reject_rest", "Reject Rest", show=True, priority=True),
+        Binding("left", "prev_file", "← Prev", show=True, priority=True),
+        Binding("right", "next_file", "→ Next", show=True, priority=True),
+        Binding("h", "prev_file", "Prev", show=False, priority=True),
+        Binding("l", "next_file", "Next", show=False, priority=True),
+        Binding("escape", "reject_current", "Reject", show=False, priority=True),
+    ]
+
+    def __init__(
+        self,
+        pending: list[tuple[str, str, dict]],
+        *,
+        name: str | None = None,
+        id: str | None = None,
+        classes: str | None = None,
+    ) -> None:
+        super().__init__(name=name, id=id, classes=classes)
+        # Each element is (action, path, details)
+        self._pending = list(pending)
+        self._index = 0
+        # None = not yet decided, True = approved, False = rejected
+        self._decisions: dict[int, bool | None] = {i: None for i in range(len(pending))}
+
+    @property
+    def _current(self) -> tuple[str, str, dict]:
+        return self._pending[self._index]
+
+    @property
+    def _all_decided(self) -> bool:
+        return all(v is not None for v in self._decisions.values())
+
+    def compose(self) -> ComposeResult:
+        with Center():
+            with Vertical(id="file-approval-panel"):
+                yield Static("", id="file-approval-title")
+                yield Static("", id="file-approval-preview")
+                yield Static("", id="file-approval-nav")
+                with Horizontal(id="file-approval-buttons"):
+                    yield Button("Approve (y)", variant="success", id="file-approve-btn")
+                    yield Button("Approve Rest (a)", variant="success", id="file-approve-all-btn")
+                    yield Button("Reject (n)", variant="error", id="file-reject-btn")
+                    yield Button("Reject Rest (x)", variant="error", id="file-reject-all-btn")
+
+    def on_mount(self) -> None:
+        self._refresh_display()
+
+    def _refresh_display(self) -> None:
+        action, path, details = self._current
+        title = "Write file" if action == "write" else "Edit file"
+        decision = self._decisions[self._index]
+        status = ""
+        if decision is True:
+            status = " [green]✓ approved[/green]"
+        elif decision is False:
+            status = " [red]✗ rejected[/red]"
+
+        self.query_one("#file-approval-title", Static).update(
+            f"[b]{title}[/b]: [cyan]{path}[/cyan]{status}"
+        )
+
+        preview_lines: list[str] = []
+        if action == "write":
+            content = details.get("content", "")
+            lines = content.splitlines()
+            if len(lines) > 40:
+                preview_lines = lines[:40]
+                preview_lines.append(f"\n... ({len(lines) - 40} more lines)")
+            else:
+                preview_lines = lines
+        else:
+            old = details.get("old_text", "")
+            new = details.get("new_text", "")
+            preview_lines.append("--- old")
+            preview_lines.extend(f"- {l}" for l in old.splitlines())
+            preview_lines.append("+++ new")
+            preview_lines.extend(f"+ {l}" for l in new.splitlines())
+
+        self.query_one("#file-approval-preview", Static).update("\n".join(preview_lines))
+
+        # Navigation indicator
+        n = len(self._pending)
+        decided = sum(1 for v in self._decisions.values() if v is not None)
+        undecided = n - decided
+        nav = f"  File {self._index + 1} of {n}  |  {decided} decided, {undecided} remaining  "
+        if n > 1:
+            nav += " |  ← → to browse"
+        self.query_one("#file-approval-nav", Static).update(f"[dim]{nav}[/dim]")
+
+    def _advance_or_finish(self) -> None:
+        """Move to the next undecided file, or finish if all decided."""
+        if self._all_decided:
+            self._finish()
+            return
+        # Find next undecided
+        for offset in range(1, len(self._pending) + 1):
+            idx = (self._index + offset) % len(self._pending)
+            if self._decisions[idx] is None:
+                self._index = idx
+                self._refresh_display()
+                return
+
+    def _finish(self) -> None:
+        """Dismiss with the full decisions dict."""
+        result = {}
+        for i, (action, path, _details) in enumerate(self._pending):
+            result[(action, path)] = bool(self._decisions[i])
+        self.dismiss(result)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "file-approve-btn":
+            self.action_approve_current()
+        elif event.button.id == "file-approve-all-btn":
+            self.action_approve_rest()
+        elif event.button.id == "file-reject-btn":
+            self.action_reject_current()
+        elif event.button.id == "file-reject-all-btn":
+            self.action_reject_rest()
+
+    def action_approve_current(self) -> None:
+        self._decisions[self._index] = True
+        self._advance_or_finish()
+
+    def action_reject_current(self) -> None:
+        self._decisions[self._index] = False
+        self._advance_or_finish()
+
+    def action_approve_rest(self) -> None:
+        for i, v in self._decisions.items():
+            if v is None:
+                self._decisions[i] = True
+        self._finish()
+
+    def action_reject_rest(self) -> None:
+        for i, v in self._decisions.items():
+            if v is None:
+                self._decisions[i] = False
+        self._finish()
+
+    def action_prev_file(self) -> None:
+        if len(self._pending) > 1:
+            self._index = (self._index - 1) % len(self._pending)
+            self._refresh_display()
+
+    def action_next_file(self) -> None:
+        if len(self._pending) > 1:
+            self._index = (self._index + 1) % len(self._pending)
+            self._refresh_display()
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -561,6 +728,7 @@ class ChatScreen(Screen):
 
     def _init_bot(self) -> None:
         """Create a ChatBot from the resolved config."""
+        self._install_file_approval_callback()
         try:
             from talk_box.builder import ChatBot
             from talk_box.config import load_config
@@ -636,6 +804,58 @@ class ChatScreen(Screen):
             self._conversation = None
             self._update_sidebar()
             self._persist_defaults()
+
+    # -- File approval integration -----------------------------------------
+
+    _approval_all_decision: str | None = None
+
+    def _reset_approval_all(self) -> None:
+        """Clear the approve/reject-all latch (call before each LLM turn)."""
+        self._approval_all_decision = None
+
+    def _install_file_approval_callback(self) -> None:
+        """Register a batch approval callback that shows a multi-file modal."""
+        import threading
+
+        from talk_box.builtin_tools import set_batch_approval_callback, set_file_approval_callback
+
+        screen_ref = self  # capture reference for the closure
+
+        def _batch_approval(
+            pending: list[tuple[str, str, dict]],
+        ) -> dict[tuple[str, str], bool]:
+            """Block the worker thread, show a multi-file modal, return decisions."""
+            event = threading.Event()
+            result: list[dict[tuple[str, str], bool]] = []
+
+            def _on_dismiss(decisions: dict[tuple[str, str], bool]) -> None:
+                result.append(decisions)
+                event.set()
+
+            def _push_modal() -> None:
+                modal = FileApprovalScreen(pending)
+                screen_ref.app.push_screen(modal, callback=_on_dismiss)
+
+            screen_ref.app.call_from_thread(_push_modal)
+            event.wait()
+            return result[0] if result else {(a, p): False for a, p, _ in pending}
+
+        set_batch_approval_callback(_batch_approval)
+        # Keep per-file callback as fallback for non-batched paths (e.g. chatlas fallback)
+        set_file_approval_callback(lambda action, path, details: _batch_approval(
+            [(action, path, details)]
+        ).get((action, path), False))
+
+    def _uninstall_file_approval_callback(self) -> None:
+        """Remove the file-approval callbacks (restores auto-approve)."""
+        from talk_box.builtin_tools import set_batch_approval_callback, set_file_approval_callback
+
+        set_file_approval_callback(None)
+        set_batch_approval_callback(None)
+
+    def on_unmount(self) -> None:
+        """Clean up when the screen is removed."""
+        self._uninstall_file_approval_callback()
 
     def _persist_defaults(self) -> None:
         """Save the current model/persona as defaults in global config."""
@@ -1530,6 +1750,9 @@ class ChatScreen(Screen):
 
     def _stream_response(self, text: str, widget_id: str) -> None:
         """Stream the LLM response, updating the widget chunk by chunk (runs in thread)."""
+
+        # Reset the approve/reject-all latch for this new exchange
+        self._reset_approval_all()
 
         thinking_text = ""
         response_text = ""

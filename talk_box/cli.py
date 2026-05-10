@@ -791,6 +791,122 @@ def config_delete_profile(name: str) -> None:
 
 
 @main.command()
+@click.argument("question", required=False, default=None)
+@click.option("--model", "-m", default=None, help="Model to use (provider:model).")
+@click.option("--persona", "-p", default=None, help="Persona name.")
+@click.option("--profile", default=None, help="Named profile from talk-box.yml.")
+@click.option("--json", "output_json", is_flag=True, help="Output structured JSON.")
+@click.option("--raw", is_flag=True, help="Output only response text (no formatting).")
+@click.option("--tools/--no-tools", default=True, help="Enable/disable file tools.")
+def ask(
+    question: str | None,
+    model: str | None,
+    persona: str | None,
+    profile: str | None,
+    output_json: bool,
+    raw: bool,
+    tools: bool,
+) -> None:
+    """Send a single message and print the response.
+
+    Reads from stdin if no QUESTION is provided:
+
+        echo "explain this" | talk-box ask
+
+        cat error.log | talk-box ask "what went wrong?"
+    """
+    import json
+    import time
+
+    console = Console()
+
+    # Build the message: positional arg + optional stdin
+    stdin_text = ""
+    if not sys.stdin.isatty():
+        stdin_text = sys.stdin.read().strip()
+
+    if question and stdin_text:
+        message = f"{question}\n\n{stdin_text}"
+    elif question:
+        message = question
+    elif stdin_text:
+        message = stdin_text
+    else:
+        console.print("[red]No question provided.[/red] Pass a question or pipe stdin.")
+        raise SystemExit(1)
+
+    # Load config and resolve
+    from talk_box.config import load_config
+
+    try:
+        cfg = load_config()
+        resolved = cfg.resolve(model=model, persona=persona, profile=profile)
+    except (KeyError, ValueError) as exc:
+        console.print(f"[red]Config error:[/red] {exc}")
+        raise SystemExit(2)
+
+    # Build the ChatBot
+    from talk_box.builder import ChatBot
+
+    bot = ChatBot()
+
+    if resolved.model:
+        if ":" in resolved.model:
+            bot = bot.provider_model(resolved.model)
+        else:
+            bot = bot.model(resolved.model)
+
+    if resolved.persona:
+        try:
+            bot = bot.persona_pack(resolved.persona)
+        except Exception:
+            pass
+
+    if resolved.temperature is not None:
+        bot = bot.temperature(resolved.temperature)
+
+    # Enable tools
+    if tools:
+        from talk_box.builtin_tools import DEFAULT_CHAT_TOOLS
+
+        effective_tools = list(dict.fromkeys(DEFAULT_CHAT_TOOLS + resolved.tools))
+        bot = bot.tools(effective_tools)
+
+    # Send the message
+    start = time.time()
+    try:
+        from talk_box.conversation import Conversation
+
+        convo = Conversation()
+        convo = bot.chat(message, convo)
+        last = convo.get_last_message()
+        response = last.content if last else ""
+    except Exception as exc:
+        if output_json:
+            console.print(json.dumps({"error": str(exc)}, indent=2))
+        else:
+            console.print(f"[red]Error:[/red] {exc}")
+        raise SystemExit(1)
+
+    elapsed = time.time() - start
+
+    # Output
+    if output_json:
+        result = {
+            "message": message,
+            "response": response,
+            "model": resolved.model,
+            "persona": resolved.persona,
+            "elapsed_seconds": round(elapsed, 2),
+        }
+        console.print(json.dumps(result, indent=2))
+    elif raw:
+        click.echo(response)
+    else:
+        console.print(Panel(response, title="Response", border_style="blue"))
+
+
+@main.command()
 def ui() -> None:
     """Launch the Talk Box TUI application.
 

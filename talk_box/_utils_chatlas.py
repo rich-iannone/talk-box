@@ -334,6 +334,11 @@ class ChatlasAdapter:
                     if not tool_use_blocks:
                         return
 
+                    # Batch-approve file operations before executing any tools
+                    from talk_box.builtin_tools import run_batch_approval
+
+                    run_batch_approval(tool_use_blocks)
+
                     # Execute tool calls and build tool results
                     tool_results: list[dict[str, Any]] = []
                     for tool_call in tool_use_blocks:

@@ -379,6 +379,11 @@ class ChatBot:
         self._current_preset = None
         self._llm_enabled = False
 
+        # Token usage tracking
+        from talk_box.usage import SessionUsage
+
+        self._usage = SessionUsage()
+
         # Initialize guard pipeline
         from talk_box.guardrails import GuardPipeline
 
@@ -2642,6 +2647,23 @@ class ChatBot:
             "llm_status": getattr(self, "_llm_status", "unknown"),
         }
 
+    def get_usage(self) -> "SessionUsage":
+        """Get the accumulated token usage and cost for this chatbot's session.
+
+        Returns
+        -------
+        SessionUsage
+            Token counts and estimated cost across all chat turns.
+
+        Examples
+        --------
+        >>> bot = ChatBot().model("gpt-4")
+        >>> convo = bot.chat("Hello!")
+        >>> usage = bot.get_usage()
+        >>> print(usage.total_tokens, usage.total_cost)
+        """
+        return self._usage
+
     def verbose(self, enabled: bool = True) -> "ChatBot":
         """Enable or disable verbose diagnostic output during chat interactions.
 
@@ -3062,6 +3084,9 @@ class ChatBot:
         else:
             # Handle regular string messages
             response = adapter.chat_with_session(chat_session, message)
+
+        # Track token usage
+        self._usage.update_from_chat_session(chat_session)
 
         return response.content
 

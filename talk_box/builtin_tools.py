@@ -596,6 +596,99 @@ def _get_workspace_root() -> "Path":
     return Path.cwd()
 
 
+# ---------------------------------------------------------------------------
+# File change approval callback
+# ---------------------------------------------------------------------------
+
+# When set, file_write and file_edit call this before writing.
+# Signature: (action: str, path: str, details: dict) -> bool
+# Return True to approve, False to reject.
+_file_approval_callback: "Callable[[str, str, dict], bool] | None" = None
+
+# Batch approval hook — called BEFORE tool execution with all pending file ops.
+# Signature: (pending: list[tuple[str, str, dict]]) -> dict[tuple[str, str], bool]
+# Returns a mapping of (action, path) → approved for each pending op.
+_batch_approval_callback: "Callable[[list[tuple[str, str, dict]]], dict[tuple[str, str], bool]] | None" = None  # noqa: E501
+
+# Pre-recorded batch decisions from the most recent batch approval call.
+_batch_decisions: dict[tuple[str, str], bool] = {}
+
+
+def set_file_approval_callback(
+    callback: "Callable[[str, str, dict], bool] | None",
+) -> None:
+    """Set a callback for approving file writes and edits.
+
+    Parameters
+    ----------
+    callback
+        A callable ``(action, path, details) -> bool``. *action* is
+        ``"write"`` or ``"edit"``, *path* is the relative file path,
+        and *details* is a dict with operation-specific info
+        (``content`` for writes, ``old_text``/``new_text`` for edits).
+        Return ``True`` to approve the operation, ``False`` to reject.
+        Pass ``None`` to disable approval (auto-approve everything).
+    """
+    global _file_approval_callback
+    _file_approval_callback = callback
+
+
+def set_batch_approval_callback(
+    callback: "Callable[[list[tuple[str, str, dict]]], dict[tuple[str, str], bool]] | None",
+) -> None:
+    """Set a batch approval callback invoked before tool execution.
+
+    The callback receives a list of ``(action, path, details)`` tuples for
+    all file-modifying tool calls in the current batch.  It returns a dict
+    mapping ``(action, path)`` → ``bool`` (approved or not).
+    """
+    global _batch_approval_callback
+    _batch_approval_callback = callback
+
+
+def get_file_approval_callback():
+    """Return the current file approval callback (or ``None``)."""
+    return _file_approval_callback
+
+
+def get_batch_approval_callback():
+    """Return the current batch approval callback (or ``None``)."""
+    return _batch_approval_callback
+
+
+def run_batch_approval(tool_calls: list[dict]) -> None:
+    """Extract file ops from a tool-call batch and invoke the batch approval callback.
+
+    Called by the tool execution loop *before* executing any tools.
+    Stores decisions in ``_batch_decisions`` so that individual
+    ``file_write`` / ``file_edit`` callbacks can look them up.
+    """
+    global _batch_decisions
+    _batch_decisions = {}
+
+    if _batch_approval_callback is None:
+        return
+
+    # Collect file-modifying tool calls
+    file_ops: list[tuple[str, str, dict]] = []
+    for tc in tool_calls:
+        name = tc.get("name", "")
+        inp = tc.get("input", {})
+        if name == "file_write":
+            file_ops.append(("write", inp.get("path", ""), {"content": inp.get("content", "")}))
+        elif name == "file_edit":
+            file_ops.append((
+                "edit",
+                inp.get("path", ""),
+                {"old_text": inp.get("old_text", ""), "new_text": inp.get("new_text", "")},
+            ))
+
+    if not file_ops:
+        return
+
+    _batch_decisions = _batch_approval_callback(file_ops)
+
+
 @tool(
     description="Read the contents of a file in the working directory",
     category=ToolCategory.FILE,
@@ -629,6 +722,24 @@ def file_write(context: ToolContext, path: str, content: str) -> ToolResult:
     """Write content to a file. Path is relative to the project root. Parent dirs are created."""
     from talk_box.workspace_tools import WorkspaceAgent
 
+    # Check batch decisions first, then per-file callback
+    batch_key = ("write", path)
+    if batch_key in _batch_decisions:
+        if not _batch_decisions[batch_key]:
+            return ToolResult(
+                data=None,
+                success=False,
+                error=f"File write to '{path}' was rejected by the user.",
+            )
+    elif _file_approval_callback is not None:
+        approved = _file_approval_callback("write", path, {"content": content})
+        if not approved:
+            return ToolResult(
+                data=None,
+                success=False,
+                error=f"File write to '{path}' was rejected by the user.",
+            )
+
     agent = WorkspaceAgent(root=_get_workspace_root())
     result = agent.file_write(path, content)
     if result.success:
@@ -647,6 +758,26 @@ def file_write(context: ToolContext, path: str, content: str) -> ToolResult:
 def file_edit(context: ToolContext, path: str, old_text: str, new_text: str) -> ToolResult:
     """Replace the first occurrence of old_text with new_text in a file."""
     from talk_box.workspace_tools import WorkspaceAgent
+
+    # Check batch decisions first, then per-file callback
+    batch_key = ("edit", path)
+    if batch_key in _batch_decisions:
+        if not _batch_decisions[batch_key]:
+            return ToolResult(
+                data=None,
+                success=False,
+                error=f"File edit to '{path}' was rejected by the user.",
+            )
+    elif _file_approval_callback is not None:
+        approved = _file_approval_callback(
+            "edit", path, {"old_text": old_text, "new_text": new_text}
+        )
+        if not approved:
+            return ToolResult(
+                data=None,
+                success=False,
+                error=f"File edit to '{path}' was rejected by the user.",
+            )
 
     agent = WorkspaceAgent(root=_get_workspace_root())
     result = agent.file_edit(path, old_text, new_text)

@@ -238,6 +238,7 @@ from talk_box.traits import (
     register_trait,
     trait_categories,
 )
+from talk_box.usage import SessionUsage
 
 # Make key classes available at package level
 __all__ = [
@@ -459,4 +460,6 @@ __all__ = [
     "ServerConfig",
     # Playground
     "playground",
+    # Usage tracking
+    "SessionUsage",
 ]

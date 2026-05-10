@@ -1905,3 +1905,201 @@ class TestSimpleMode:
             app = pilot.app
             await pilot.pause()
             assert app._simple_mode is False
+
+
+# ---------------------------------------------------------------------------
+# File Approval Modal
+# ---------------------------------------------------------------------------
+
+
+class TestFileApprovalScreen:
+    def test_file_approval_screen_importable(self):
+        from talk_box.tui.screens import FileApprovalScreen
+
+        assert FileApprovalScreen is not None
+
+    def test_file_approval_screen_instantiates_single(self):
+        from talk_box.tui.screens import FileApprovalScreen
+
+        modal = FileApprovalScreen([("write", "test.txt", {"content": "hello"})])
+        assert len(modal._pending) == 1
+        assert modal._pending[0] == ("write", "test.txt", {"content": "hello"})
+
+    def test_file_approval_screen_instantiates_multi(self):
+        from talk_box.tui.screens import FileApprovalScreen
+
+        ops = [
+            ("write", "a.txt", {"content": "aaa"}),
+            ("edit", "b.py", {"old_text": "x", "new_text": "y"}),
+        ]
+        modal = FileApprovalScreen(ops)
+        assert len(modal._pending) == 2
+        assert modal._index == 0
+
+    @pytest.mark.asyncio()
+    async def test_approve_single_file(self, _fake_config):
+        """Pressing 'y' on a single-file modal returns approved dict."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        results = []
+
+        async with TalkBoxApp().run_test() as pilot:
+            modal = FileApprovalScreen([("write", "test.txt", {"content": "hi"})])
+            pilot.app.push_screen(modal, callback=lambda r: results.append(r))
+            await pilot.pause()
+            await pilot.press("y")
+            await pilot.pause()
+
+        assert results == [{("write", "test.txt"): True}]
+
+    @pytest.mark.asyncio()
+    async def test_reject_single_file(self, _fake_config):
+        """Pressing 'n' on a single-file modal returns rejected dict."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        results = []
+
+        async with TalkBoxApp().run_test() as pilot:
+            modal = FileApprovalScreen([("write", "out.txt", {"content": "data"})])
+            pilot.app.push_screen(modal, callback=lambda r: results.append(r))
+            await pilot.pause()
+            await pilot.press("n")
+            await pilot.pause()
+
+        assert results == [{("write", "out.txt"): False}]
+
+    @pytest.mark.asyncio()
+    async def test_escape_rejects(self, _fake_config):
+        """Pressing Escape rejects the current file."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        results = []
+
+        async with TalkBoxApp().run_test() as pilot:
+            modal = FileApprovalScreen([("edit", "f.py", {"old_text": "a", "new_text": "b"})])
+            pilot.app.push_screen(modal, callback=lambda r: results.append(r))
+            await pilot.pause()
+            await pilot.press("escape")
+            await pilot.pause()
+
+        assert results == [{("edit", "f.py"): False}]
+
+    @pytest.mark.asyncio()
+    async def test_approve_rest_approves_all(self, _fake_config):
+        """Pressing 'a' approves all undecided files."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        results = []
+        ops = [
+            ("write", "a.txt", {"content": "x"}),
+            ("write", "b.txt", {"content": "y"}),
+        ]
+
+        async with TalkBoxApp().run_test() as pilot:
+            modal = FileApprovalScreen(ops)
+            pilot.app.push_screen(modal, callback=lambda r: results.append(r))
+            await pilot.pause()
+            await pilot.press("a")
+            await pilot.pause()
+
+        assert results == [{("write", "a.txt"): True, ("write", "b.txt"): True}]
+
+    @pytest.mark.asyncio()
+    async def test_reject_rest_rejects_all(self, _fake_config):
+        """Pressing 'x' rejects all undecided files."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        results = []
+        ops = [
+            ("write", "a.txt", {"content": "x"}),
+            ("edit", "b.py", {"old_text": "1", "new_text": "2"}),
+        ]
+
+        async with TalkBoxApp().run_test() as pilot:
+            modal = FileApprovalScreen(ops)
+            pilot.app.push_screen(modal, callback=lambda r: results.append(r))
+            await pilot.pause()
+            await pilot.press("x")
+            await pilot.pause()
+
+        assert results == [{("write", "a.txt"): False, ("edit", "b.py"): False}]
+
+    @pytest.mark.asyncio()
+    async def test_navigate_and_approve_individually(self, _fake_config):
+        """Navigate right, reject second, then approve first."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        results = []
+        ops = [
+            ("write", "a.txt", {"content": "aaa"}),
+            ("write", "b.txt", {"content": "bbb"}),
+        ]
+
+        async with TalkBoxApp().run_test() as pilot:
+            modal = FileApprovalScreen(ops)
+            pilot.app.push_screen(modal, callback=lambda r: results.append(r))
+            await pilot.pause()
+            # Navigate to file 2
+            await pilot.press("right")
+            await pilot.pause()
+            # Reject file 2
+            await pilot.press("n")
+            await pilot.pause()
+            # Auto-advances to file 1 (the remaining undecided)
+            # Approve file 1
+            await pilot.press("y")
+            await pilot.pause()
+
+        assert len(results) == 1
+        assert results[0][("write", "a.txt")] is True
+        assert results[0][("write", "b.txt")] is False
+
+    @pytest.mark.asyncio()
+    async def test_shows_path_in_title(self, _fake_config):
+        """Modal title includes the file path."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        async with TalkBoxApp().run_test() as pilot:
+            modal = FileApprovalScreen([("write", "important.md", {"content": "# Hi"})])
+            pilot.app.push_screen(modal)
+            await pilot.pause()
+            title_widget = pilot.app.screen.query_one("#file-approval-title", Static)
+            assert "important.md" in str(title_widget.render())
+            await pilot.press("escape")
+
+    @pytest.mark.asyncio()
+    async def test_shows_file_count(self, _fake_config):
+        """Nav indicator shows file count."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        async with TalkBoxApp().run_test() as pilot:
+            ops = [
+                ("write", "a.txt", {"content": "x"}),
+                ("write", "b.txt", {"content": "y"}),
+                ("write", "c.txt", {"content": "z"}),
+            ]
+            modal = FileApprovalScreen(ops)
+            pilot.app.push_screen(modal)
+            await pilot.pause()
+            nav_widget = pilot.app.screen.query_one("#file-approval-nav", Static)
+            rendered = str(nav_widget.render())
+            assert "1 of 3" in rendered
+            await pilot.press("a")  # approve all to dismiss
+
+    def test_install_callback_sets_global(self):
+        """_install_file_approval_callback sets batch and per-file callbacks."""
+        from talk_box.builtin_tools import (
+            get_batch_approval_callback,
+            get_file_approval_callback,
+            set_batch_approval_callback,
+            set_file_approval_callback,
+        )
+
+        set_file_approval_callback(None)
+        set_batch_approval_callback(None)
+        assert get_file_approval_callback() is None
+        assert get_batch_approval_callback() is None
+
+        screen = ChatScreen()
+        assert hasattr(screen, "_install_file_approval_callback")
+        assert hasattr(screen, "_uninstall_file_approval_callback")
