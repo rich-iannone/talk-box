@@ -1671,9 +1671,7 @@ class ChatScreen(Screen):
 
                 lines.append(f"  Tools:              {_cap(profile.supports_tools)}")
                 lines.append(f"  Vision:             {_cap(profile.supports_vision)}")
-                lines.append(
-                    f"  Structured output:  {_cap(profile.supports_structured_output)}"
-                )
+                lines.append(f"  Structured output:  {_cap(profile.supports_structured_output)}")
                 lines.append(f"  Streaming:          {_cap(profile.supports_streaming)}")
                 if profile.cost_tier:
                     lines.append(f"  Cost tier:          {profile.cost_tier.value}")
