@@ -57,8 +57,8 @@ class TestAppCreation:
         app = TalkBoxApp()
         assert app.TITLE == "Talk Box"
 
-    def test_screen_nav_has_13_entries(self):
-        assert len(SCREEN_NAV) == 13
+    def test_screen_nav_has_14_entries(self):
+        assert len(SCREEN_NAV) == 14
 
     def test_screen_nav_keys_are_unique(self):
         keys = [k for k, *_ in SCREEN_NAV]
@@ -97,11 +97,11 @@ class TestScreenClasses:
     def test_screen_is_importable(self, screen_cls):
         assert screen_cls is not None
 
-    def test_all_14_screens_exist(self):
-        # 13 in SCREEN_NAV + WelcomeScreen
+    def test_all_15_screens_exist(self):
+        # 14 in SCREEN_NAV + WelcomeScreen
         screen_classes = {cls for *_, cls in SCREEN_NAV}
         screen_classes.add(WelcomeScreen)
-        assert len(screen_classes) == 14
+        assert len(screen_classes) == 15
 
 
 # ---------------------------------------------------------------------------
@@ -1051,6 +1051,115 @@ class TestMemoryScreen:
             await pilot.pause()
             tiers = app.screen.query_one("#memory-tiers")
             assert tiers is not None
+
+
+class TestSessionsScreen:
+    """Tests for the Sessions ledger screen."""
+
+    @pytest.mark.asyncio()
+    async def test_sessions_screen_renders(self, _fake_config):
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("sessions")
+            await pilot.pause()
+            table = app.screen.query_one("#sessions-table", DataTable)
+            assert table is not None
+
+    @pytest.mark.asyncio()
+    async def test_sessions_shows_sessions(self, _fake_config, tmp_path):
+        import json
+
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        (sessions_dir / "test1.json").write_text(
+            json.dumps(
+                {
+                    "name": "Test Chat",
+                    "saved_at": "2025-06-01T12:00:00",
+                    "model": "ollama:llama3",
+                    "conversation": {"messages": [{"role": "user", "content": "hi"}]},
+                }
+            )
+        )
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("sessions")
+            await pilot.pause()
+            with patch("talk_box.tui.screens._config_dir", return_value=str(tmp_path)):
+                app.screen._load_sessions()
+            assert len(app.screen._sessions) == 1
+            assert app.screen._sessions[0]["name"] == "Test Chat"
+
+    @pytest.mark.asyncio()
+    async def test_sessions_archive_and_unarchive(self, _fake_config, tmp_path):
+        import json
+        import os
+
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        (sessions_dir / "chat1.json").write_text(
+            json.dumps(
+                {
+                    "name": "Archive Me",
+                    "saved_at": "2025-06-01T12:00:00",
+                    "conversation": {"messages": []},
+                }
+            )
+        )
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("sessions")
+            await pilot.pause()
+            with patch("talk_box.tui.screens._config_dir", return_value=str(tmp_path)):
+                app.screen._load_sessions()
+                assert not app.screen._sessions[0].get("_archived")
+
+                # Archive it
+                app.screen.action_archive_selected()
+                assert os.path.isfile(str(sessions_dir / "archive" / "chat1.json"))
+                assert not os.path.isfile(str(sessions_dir / "chat1.json"))
+
+                # Unarchive it
+                app.screen._load_sessions()
+                app.screen.action_unarchive_selected()
+                assert os.path.isfile(str(sessions_dir / "chat1.json"))
+                assert not os.path.isfile(str(sessions_dir / "archive" / "chat1.json"))
+
+    @pytest.mark.asyncio()
+    async def test_sessions_includes_archived(self, _fake_config, tmp_path):
+        import json
+
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        archive_dir = sessions_dir / "archive"
+        archive_dir.mkdir()
+        (sessions_dir / "active.json").write_text(
+            json.dumps(
+                {
+                    "name": "Active",
+                    "saved_at": "2025-06-01T12:00:00",
+                    "conversation": {"messages": []},
+                }
+            )
+        )
+        (archive_dir / "old.json").write_text(
+            json.dumps(
+                {"name": "Old", "saved_at": "2025-01-01T00:00:00", "conversation": {"messages": []}}
+            )
+        )
+
+        async with TalkBoxApp().run_test() as pilot:
+            app = pilot.app
+            app._switch_to("sessions")
+            await pilot.pause()
+            with patch("talk_box.tui.screens._config_dir", return_value=str(tmp_path)):
+                app.screen._load_sessions()
+            assert len(app.screen._sessions) == 2
+            archived = [s for s in app.screen._sessions if s.get("_archived")]
+            assert len(archived) == 1
+            assert archived[0]["name"] == "Old"
 
 
 class TestEvalScreen:

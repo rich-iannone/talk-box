@@ -98,6 +98,49 @@ Screen {
     color: $text-muted;
 }
 
+#home-sessions-view-all {
+    padding: 0 2;
+    margin: 0 0 1 0;
+    color: $accent;
+}
+
+/* -- Sessions screen ------------------------------------------------------ */
+
+#sessions-layout {
+    height: 1fr;
+}
+
+#sessions-left {
+    width: 2fr;
+    padding: 1 2;
+}
+
+#sessions-right {
+    width: 1fr;
+    padding: 1 2;
+    border-left: solid $primary;
+}
+
+#sessions-title {
+    padding: 0 0 1 0;
+}
+
+#sessions-detail-title {
+    padding: 0 0 1 0;
+}
+
+#sessions-detail-scroll {
+    height: 1fr;
+}
+
+#sessions-detail-content {
+    padding: 1 0;
+}
+
+#sessions-table {
+    height: 1fr;
+}
+
 /* -- Chat screen ---------------------------------------------------------- */
 
 #chat-layout {

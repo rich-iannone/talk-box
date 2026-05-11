@@ -37,11 +37,11 @@ def _config_dir() -> str:
     return os.path.expanduser("~/.config/talk-box")
 
 
-def _list_saved_sessions() -> list[dict]:
+def _list_saved_sessions(*, include_archived: bool = False) -> list[dict]:
     """List saved sessions with metadata, sorted newest-first.
 
     Returns a list of dicts with keys: name, saved_at, model, persona,
-    messages, _filename.
+    messages, _filename, _archived.
     """
     import json
     import os
@@ -50,31 +50,41 @@ def _list_saved_sessions() -> list[dict]:
     if not os.path.isdir(sessions_dir):
         return []
 
+    archive_dir = os.path.join(sessions_dir, "archive")
+
+    dirs_to_scan: list[tuple[str, bool]] = [(sessions_dir, False)]
+    if include_archived and os.path.isdir(archive_dir):
+        dirs_to_scan.append((archive_dir, True))
+
     sessions: list[dict] = []
-    for fname in os.listdir(sessions_dir):
-        if not fname.endswith(".json"):
-            continue
-        filepath = os.path.join(sessions_dir, fname)
-        try:
-            with open(filepath) as f:
-                data = json.load(f)
-            msg_count = 0
-            conv = data.get("conversation", {})
-            if isinstance(conv, dict):
-                msg_count = len(conv.get("messages", []))
-            name = data.get("name", fname.removesuffix(".json"))
-            sessions.append(
-                {
-                    "name": name,
-                    "saved_at": data.get("saved_at", ""),
-                    "model": data.get("model", ""),
-                    "persona": data.get("persona", ""),
-                    "messages": msg_count,
-                    "_filename": fname.removesuffix(".json"),
-                }
-            )
-        except Exception:
-            continue
+    for scan_dir, is_archived in dirs_to_scan:
+        for fname in os.listdir(scan_dir):
+            if not fname.endswith(".json"):
+                continue
+            filepath = os.path.join(scan_dir, fname)
+            if not os.path.isfile(filepath):
+                continue
+            try:
+                with open(filepath) as f:
+                    data = json.load(f)
+                msg_count = 0
+                conv = data.get("conversation", {})
+                if isinstance(conv, dict):
+                    msg_count = len(conv.get("messages", []))
+                name = data.get("name", fname.removesuffix(".json"))
+                sessions.append(
+                    {
+                        "name": name,
+                        "saved_at": data.get("saved_at", ""),
+                        "model": data.get("model", ""),
+                        "persona": data.get("persona", ""),
+                        "messages": msg_count,
+                        "_filename": fname.removesuffix(".json"),
+                        "_archived": is_archived,
+                    }
+                )
+            except Exception:
+                continue
 
     sessions.sort(key=lambda s: s.get("saved_at", ""), reverse=True)
     return sessions
@@ -639,8 +649,8 @@ class SessionHistoryModal(ModalScreen[str | None]):
             return
         session = self._sessions[self._cursor]
         filename = session.get("_filename", session.get("name", ""))
-        if not filename or filename == "_autosave":
-            return  # Don't delete autosave
+        if not filename:
+            return
         sessions_dir = os.path.join(_config_dir(), "sessions")
         filepath = os.path.join(sessions_dir, f"{filename}.json")
         try:
@@ -809,6 +819,10 @@ class HomeScreen(Screen):
             # Right column: recent sessions
             with VerticalScroll(id="home-right"):
                 yield Static("[b]Recent Sessions[/b]", id="home-sessions-title")
+                yield Static(
+                    "[@click=screen.view_all_sessions]View all sessions →[/]",
+                    id="home-sessions-view-all",
+                )
         yield Footer()
 
     def _build_profile_summary(self) -> str:
@@ -912,7 +926,7 @@ class HomeScreen(Screen):
         return "\n".join(lines)
 
     @staticmethod
-    def _session_tile_content(s: dict) -> str:
+    def _session_tile_content(s: dict, index: int = 0) -> str:
         """Build the rich text content for a single session tile."""
         name = s.get("name", "untitled")
         saved_at = s.get("saved_at", "")
@@ -922,14 +936,10 @@ class HomeScreen(Screen):
                 from datetime import datetime
 
                 dt = datetime.fromisoformat(saved_at)
-                date_str = dt.strftime("%b %d %H:%M")
+                date_str = dt.strftime("%Y-%m-%dT%H:%M")
             except Exception:
                 date_str = saved_at[:16]
         msgs = s.get("messages", 0)
-        model = s.get("model", "")
-        if model:
-            model = model.split(":")[-1] if ":" in model else model
-        persona = s.get("persona", "")
 
         line1 = f"[b]{name}[/b]"
         meta_parts: list[str] = []
@@ -937,10 +947,8 @@ class HomeScreen(Screen):
             meta_parts.append(date_str)
         if msgs:
             meta_parts.append(f"{msgs} msgs")
-        if model:
-            meta_parts.append(model)
-        if persona:
-            meta_parts.append(persona)
+        archive_link = f"[@click=screen.archive_session({index})]archive[/]"
+        meta_parts.append(archive_link)
         line2 = f"[dim]{' · '.join(meta_parts)}[/dim]" if meta_parts else ""
         return f"{line1}\n{line2}" if line2 else line1
 
@@ -981,6 +989,35 @@ class HomeScreen(Screen):
         self.app._pending_new_chat = True  # type: ignore[attr-defined]
         self.app._switch_to("chat")  # type: ignore[attr-defined]
 
+    def action_view_all_sessions(self) -> None:
+        """Navigate to the full Sessions ledger screen."""
+        self.app._switch_to("sessions")  # type: ignore[attr-defined]
+
+    def action_archive_session(self, index: int) -> None:
+        """Move a session file to the archive subdirectory."""
+        import os
+        import shutil
+
+        sessions = _list_saved_sessions()
+        if index < 0 or index >= len(sessions):
+            return
+        session = sessions[index]
+        filename = session.get("_filename", "")
+        if not filename:
+            return
+
+        sessions_dir = os.path.join(_config_dir(), "sessions")
+        archive_dir = os.path.join(sessions_dir, "archive")
+        os.makedirs(archive_dir, exist_ok=True)
+
+        src = os.path.join(sessions_dir, f"{filename}.json")
+        dst = os.path.join(archive_dir, f"{filename}.json")
+        try:
+            shutil.move(src, dst)
+        except OSError:
+            return
+        self._refresh_session_tiles()
+
     def on_screen_resume(self) -> None:
         """Refresh session tiles when returning to the Home screen."""
         self._refresh_session_tiles()
@@ -1020,7 +1057,7 @@ class HomeScreen(Screen):
             for i, s in enumerate(sessions[:20]):
                 new_widgets.append(
                     Static(
-                        self._session_tile_content(s),
+                        self._session_tile_content(s, i),
                         id=f"home-session-{i}",
                         classes="home-session-tile",
                     )
@@ -4806,3 +4843,232 @@ class EvalScreen(Screen):
         for persona, model, overall, n_queries, date_str, path in entries[:20]:
             row_key = f"sc-{len(history_table.rows)}"
             history_table.add_row(persona, model, overall, n_queries, date_str, key=row_key)
+
+
+# ---------------------------------------------------------------------------
+# Screen 16: Sessions (Session Ledger)
+# ---------------------------------------------------------------------------
+
+
+class SessionsScreen(Screen):
+    """Full session ledger with all active and archived chats.
+
+    Two-column layout: left shows the session list (DataTable), right shows
+    a detail panel for the selected session with metadata and file paths.
+    """
+
+    BINDINGS = [
+        Binding("a", "archive_selected", "Archive", show=True),
+        Binding("u", "unarchive_selected", "Unarchive", show=True),
+        Binding("enter", "open_selected", "Open", show=True),
+        Binding("d", "delete_selected", "Delete", show=True),
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._sessions: list[dict] = []
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=False)
+        with Horizontal(id="sessions-layout"):
+            with Vertical(id="sessions-left"):
+                yield Static("[b]Session Ledger[/b]", id="sessions-title")
+                table = DataTable(id="sessions-table", cursor_type="row")
+                table.add_columns("Title", "Date", "Msgs", "Status", "File")
+                yield table
+            with Vertical(id="sessions-right"):
+                yield Static("[b]Session Detail[/b]", id="sessions-detail-title")
+                with VerticalScroll(id="sessions-detail-scroll"):
+                    yield Static(
+                        "[dim]Select a session to view details.[/dim]",
+                        id="sessions-detail-content",
+                    )
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self._load_sessions()
+
+    def on_screen_resume(self) -> None:
+        self._load_sessions()
+
+    def _load_sessions(self) -> None:
+        """Populate the data table with all sessions (active + archived)."""
+        self._sessions = _list_saved_sessions(include_archived=True)
+        table = self.query_one("#sessions-table", DataTable)
+        table.clear()
+
+        for s in self._sessions:
+            title = s.get("name", "untitled")
+            if len(title) > 40:
+                title = title[:40] + "\u2026"
+            saved_at = s.get("saved_at", "")
+            date_str = ""
+            if saved_at:
+                try:
+                    from datetime import datetime
+
+                    dt = datetime.fromisoformat(saved_at)
+                    date_str = dt.strftime("%Y-%m-%dT%H:%M")
+                except Exception:
+                    date_str = saved_at[:16]
+            msgs = str(s.get("messages", 0))
+            status = "[dim]archived[/dim]" if s.get("_archived") else "active"
+            filename = s.get("_filename", "")
+            table.add_row(title, date_str, msgs, status, filename)
+
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        """Show detail for the highlighted session."""
+        if event.cursor_row < 0 or event.cursor_row >= len(self._sessions):
+            return
+        s = self._sessions[event.cursor_row]
+        self._show_detail(s)
+
+    def _show_detail(self, s: dict) -> None:
+        """Build and display the detail panel for a session."""
+        import os
+
+        lines: list[str] = []
+        lines.append(f"[b]{s.get('name', 'untitled')}[/b]")
+        lines.append("")
+
+        saved_at = s.get("saved_at", "")
+        if saved_at:
+            lines.append(f"  Date:     {saved_at}")
+        lines.append(f"  Messages: {s.get('messages', 0)}")
+        model = s.get("model", "")
+        if model:
+            lines.append(f"  Model:    {model}")
+        persona = s.get("persona", "")
+        if persona:
+            lines.append(f"  Persona:  {persona}")
+        status = "Archived" if s.get("_archived") else "Active"
+        lines.append(f"  Status:   {status}")
+
+        # Show file path
+        filename = s.get("_filename", "")
+        if filename:
+            sessions_dir = os.path.join(_config_dir(), "sessions")
+            if s.get("_archived"):
+                filepath = os.path.join(sessions_dir, "archive", f"{filename}.json")
+            else:
+                filepath = os.path.join(sessions_dir, f"{filename}.json")
+            lines.append(f"  File:     {filepath}")
+
+            # Show file size
+            try:
+                size = os.path.getsize(filepath)
+                if size < 1024:
+                    size_str = f"{size} B"
+                elif size < 1024 * 1024:
+                    size_str = f"{size / 1024:.1f} KB"
+                else:
+                    size_str = f"{size / (1024 * 1024):.1f} MB"
+                lines.append(f"  Size:     {size_str}")
+            except OSError:
+                pass
+
+        try:
+            detail = self.query_one("#sessions-detail-content", Static)
+            detail.update("\n".join(lines))
+        except Exception:
+            pass
+
+    def _get_selected_index(self) -> int | None:
+        """Return the currently highlighted row index, or None."""
+        try:
+            table = self.query_one("#sessions-table", DataTable)
+            idx = table.cursor_row
+            if 0 <= idx < len(self._sessions):
+                return idx
+        except Exception:
+            pass
+        return None
+
+    def action_open_selected(self) -> None:
+        """Open the selected session in Chat."""
+        idx = self._get_selected_index()
+        if idx is None:
+            return
+        s = self._sessions[idx]
+        if s.get("_archived"):
+            self.app.notify("Unarchive the session first.", title="Archived")
+            return
+        filename = s.get("_filename", "")
+        if filename:
+            self.app._pending_session_load = filename  # type: ignore[attr-defined]
+            self.app._switch_to("chat")  # type: ignore[attr-defined]
+
+    def action_archive_selected(self) -> None:
+        """Move the selected session to the archive."""
+        import os
+        import shutil
+
+        idx = self._get_selected_index()
+        if idx is None:
+            return
+        s = self._sessions[idx]
+        if s.get("_archived"):
+            return  # Already archived
+        filename = s.get("_filename", "")
+        if not filename:
+            return
+
+        sessions_dir = os.path.join(_config_dir(), "sessions")
+        archive_dir = os.path.join(sessions_dir, "archive")
+        os.makedirs(archive_dir, exist_ok=True)
+
+        src = os.path.join(sessions_dir, f"{filename}.json")
+        dst = os.path.join(archive_dir, f"{filename}.json")
+        try:
+            shutil.move(src, dst)
+        except OSError:
+            return
+        self._load_sessions()
+
+    def action_unarchive_selected(self) -> None:
+        """Move the selected session back from the archive."""
+        import os
+        import shutil
+
+        idx = self._get_selected_index()
+        if idx is None:
+            return
+        s = self._sessions[idx]
+        if not s.get("_archived"):
+            return  # Not archived
+        filename = s.get("_filename", "")
+        if not filename:
+            return
+
+        sessions_dir = os.path.join(_config_dir(), "sessions")
+        archive_dir = os.path.join(sessions_dir, "archive")
+        src = os.path.join(archive_dir, f"{filename}.json")
+        dst = os.path.join(sessions_dir, f"{filename}.json")
+        try:
+            shutil.move(src, dst)
+        except OSError:
+            return
+        self._load_sessions()
+
+    def action_delete_selected(self) -> None:
+        """Permanently delete the selected session file."""
+        import os
+
+        idx = self._get_selected_index()
+        if idx is None:
+            return
+        s = self._sessions[idx]
+        filename = s.get("_filename", "")
+        if not filename:
+            return
+
+        sessions_dir = os.path.join(_config_dir(), "sessions")
+        if s.get("_archived"):
+            filepath = os.path.join(sessions_dir, "archive", f"{filename}.json")
+        else:
+            filepath = os.path.join(sessions_dir, f"{filename}.json")
+        try:
+            os.remove(filepath)
+        except OSError:
+            return
+        self._load_sessions()
