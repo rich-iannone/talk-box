@@ -63,8 +63,6 @@ def _list_saved_sessions() -> list[dict]:
             if isinstance(conv, dict):
                 msg_count = len(conv.get("messages", []))
             name = data.get("name", fname.removesuffix(".json"))
-            if name == "_autosave":
-                name = "(last session)"
             sessions.append(
                 {
                     "name": name,
@@ -811,20 +809,6 @@ class HomeScreen(Screen):
             # Right column: recent sessions
             with VerticalScroll(id="home-right"):
                 yield Static("[b]Recent Sessions[/b]", id="home-sessions-title")
-                sessions = _list_saved_sessions()
-                if not sessions:
-                    yield Static(
-                        "[dim]No saved sessions yet.[/dim]\n"
-                        "Start a chat and use [b]/save <name>[/b] to save it.",
-                        id="home-sessions-empty",
-                    )
-                else:
-                    for i, s in enumerate(sessions[:20]):
-                        yield Static(
-                            self._session_tile_content(s),
-                            id=f"home-session-{i}",
-                            classes="home-session-tile",
-                        )
         yield Footer()
 
     def _build_profile_summary(self) -> str:
@@ -979,18 +963,94 @@ class HomeScreen(Screen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle quick action button presses."""
         actions = {
-            "home-new-chat": "chat",
             "home-switch-profile": "profiles",
             "home-browse-models": "models",
             "home-browse-personas": "personas",
         }
-        target = actions.get(event.button.id or "")
+        btn_id = event.button.id or ""
+        if btn_id == "home-new-chat":
+            self.app._pending_new_chat = True  # type: ignore[attr-defined]
+            self.app._switch_to("chat")  # type: ignore[attr-defined]
+            return
+        target = actions.get(btn_id)
         if target:
             self.app._switch_to(target)  # type: ignore[attr-defined]
 
     def action_new_chat(self) -> None:
-        """Navigate to chat screen."""
+        """Navigate to a fresh chat screen."""
+        self.app._pending_new_chat = True  # type: ignore[attr-defined]
         self.app._switch_to("chat")  # type: ignore[attr-defined]
+
+    def on_screen_resume(self) -> None:
+        """Refresh session tiles when returning to the Home screen."""
+        self._refresh_session_tiles()
+
+    def on_mount(self) -> None:
+        """Populate session tiles on first mount."""
+        self._refresh_session_tiles()
+
+    def _refresh_session_tiles(self) -> None:
+        """Rebuild the session tile widgets in the right column."""
+        try:
+            right = self.query_one("#home-right", VerticalScroll)
+        except Exception:
+            return
+
+        # Collect IDs of old tiles to remove
+        old_ids = [
+            child.id
+            for child in right.children
+            if (getattr(child, "id", None) or "").startswith("home-session-")
+            or getattr(child, "id", None) == "home-sessions-empty"
+        ]
+
+        sessions = _list_saved_sessions()
+
+        # Build new widgets with fresh IDs that won't collide
+        new_widgets: list[Static] = []
+        if not sessions:
+            new_widgets.append(
+                Static(
+                    "[dim]No saved sessions yet.[/dim]\n"
+                    "Start a chat and use [b]/save <name>[/b] to save it.",
+                    id="home-sessions-empty",
+                )
+            )
+        else:
+            for i, s in enumerate(sessions[:20]):
+                new_widgets.append(
+                    Static(
+                        self._session_tile_content(s),
+                        id=f"home-session-{i}",
+                        classes="home-session-tile",
+                    )
+                )
+
+        # Only rebuild if tile content actually changed
+        new_ids = [w.id for w in new_widgets]
+        if old_ids == new_ids and old_ids:
+            # Just update the content of existing tiles
+            for w in new_widgets:
+                try:
+                    existing = right.query_one(f"#{w.id}", Static)
+                    existing.update(w.renderable)
+                except Exception:
+                    pass
+        else:
+            # Remove old, mount new (use run_worker to ensure proper sequencing)
+            async def _do_refresh():
+                to_remove = [
+                    child
+                    for child in right.children
+                    if (getattr(child, "id", None) or "").startswith("home-session-")
+                    or getattr(child, "id", None) == "home-sessions-empty"
+                ]
+                for child in to_remove:
+                    await child.remove()
+                for w in new_widgets:
+                    await right.mount(w)
+
+            self.run_worker(_do_refresh(), name="refresh_tiles", exclusive=True)
 
 
 # ---------------------------------------------------------------------------
@@ -1024,6 +1084,7 @@ class ChatScreen(Screen):
         self._active_traits: list[str] = []
         self._kg_enabled: bool = False
         self._kg: object | None = None  # KnowledgeGraph instance (lazy)
+        self._session_file_id: str | None = None  # unique file stem for autosave
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -1064,7 +1125,6 @@ class ChatScreen(Screen):
                     id="chat-persona-select",
                     allow_blank=True,
                 )
-                yield Button("New Chat", id="chat-new-btn", variant="warning")
                 yield Button(
                     "🔒 Approvals: On",
                     id="chat-approval-toggle",
@@ -1201,6 +1261,10 @@ class ChatScreen(Screen):
         self._init_bot()
         self._update_sidebar()
 
+        # Assign a session ID for the initial chat
+        if not self._session_file_id:
+            self._session_file_id = self._generate_session_id()
+
         # Hide back button in simple mode (no home screen)
         try:
             if getattr(self.app, "_simple_mode", False):
@@ -1239,11 +1303,35 @@ class ChatScreen(Screen):
         self._check_pending_session_load()
 
     def _check_pending_session_load(self) -> None:
-        """Load a session queued from the Home screen, if any."""
+        """Load a session queued from the Home screen, or reset for new chat."""
+        # New chat request — auto-save and reset
+        if getattr(self.app, "_pending_new_chat", False):
+            self.app._pending_new_chat = False  # type: ignore[attr-defined]
+            self._auto_save_session()
+            self._conversation = None
+            self._message_count = 0
+            self._session_file_id = self._generate_session_id()
+            self._rebuild_bot()
+            self.run_worker(self._reset_chat_ui(), name="new_chat")
+            return
+        # Session load request
         pending = getattr(self.app, "_pending_session_load", None)
         if pending:
             self.app._pending_session_load = None  # type: ignore[attr-defined]
             self._load_session(pending)
+
+    async def _reset_chat_ui(self) -> None:
+        """Clear the chat message area and show the welcome hint."""
+        container = self.query_one("#chat-messages", VerticalScroll)
+        await container.remove_children()
+        await container.mount(
+            Static(
+                "[dim]Type a message below to start chatting.[/dim]",
+                id="chat-welcome-hint",
+            )
+        )
+        self._update_sidebar()
+        self.query_one("#chat-input", ChatInput).focus()
 
     def _init_bot(self) -> None:
         """Create a ChatBot from the resolved config."""
@@ -1415,23 +1503,6 @@ class ChatScreen(Screen):
             except Exception:
                 pass
             return
-        elif btn_id == "chat-new-btn":
-            # Auto-save current session before clearing
-            self._auto_save_session()
-            self._conversation = None
-            self._message_count = 0
-            self._rebuild_bot()
-            # Clear messages
-            container = self.query_one("#chat-messages", VerticalScroll)
-            await container.remove_children()
-            await container.mount(
-                Static(
-                    "[dim]Type a message below to start chatting.[/dim]",
-                    id="chat-welcome-hint",
-                )
-            )
-            self._update_sidebar()
-            self.query_one("#chat-input", ChatInput).focus()
         elif btn_id == "chat-send-btn":
             self.query_one("#chat-input", ChatInput).submit()
         elif btn_id == "chat-enter-toggle":
@@ -1884,6 +1955,7 @@ class ChatScreen(Screen):
                 data = json.load(f)
 
             self._conversation = Conversation.from_dict(data["conversation"])
+            self._session_file_id = safe_name
             if data.get("model"):
                 self._active_model = data["model"]
             if data.get("persona"):
@@ -2864,8 +2936,27 @@ class ChatScreen(Screen):
                 f"Unknown format: [b]{fmt}[/b]\n  Supported: json, markdown, table, off"
             )
 
+    @staticmethod
+    def _generate_session_id() -> str:
+        """Generate a unique session file ID from the current timestamp."""
+        from datetime import datetime
+
+        return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    @staticmethod
+    def _session_title_from_messages(messages) -> str:
+        """Derive a short display title from the first user message."""
+        for msg in messages:
+            if msg.role == "user" and msg.content and msg.content.strip():
+                text = msg.content.strip().split("\n")[0]  # first line
+                # Truncate to ~50 chars at a word boundary
+                if len(text) > 50:
+                    text = text[:50].rsplit(" ", 1)[0] + "\u2026"
+                return text
+        return "untitled"
+
     def _auto_save_session(self) -> None:
-        """Auto-save the current session after each exchange."""
+        """Auto-save the current session to its unique file."""
         import json
         import os
         from datetime import datetime
@@ -2873,12 +2964,17 @@ class ChatScreen(Screen):
         if not self._conversation or not self._conversation.messages:
             return
 
+        if not self._session_file_id:
+            self._session_file_id = self._generate_session_id()
+
         sessions_dir = os.path.join(_config_dir(), "sessions")
         os.makedirs(sessions_dir, exist_ok=True)
-        filepath = os.path.join(sessions_dir, "_autosave.json")
+        filepath = os.path.join(sessions_dir, f"{self._session_file_id}.json")
+
+        title = self._session_title_from_messages(self._conversation.messages)
 
         data = {
-            "name": "_autosave",
+            "name": title,
             "saved_at": datetime.now().isoformat(),
             "model": self._active_model,
             "persona": self._active_persona,

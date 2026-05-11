@@ -458,12 +458,12 @@ class TestChatScreen:
             assert sel is not None
 
     @pytest.mark.asyncio()
-    async def test_chat_has_new_chat_button(self, _fake_config):
+    async def test_chat_has_approval_toggle(self, _fake_config):
         async with TalkBoxApp().run_test() as pilot:
             app = pilot.app
             app._switch_to("chat")
             await pilot.pause()
-            btn = app.screen.query_one("#chat-new-btn", Button)
+            btn = app.screen.query_one("#chat-approval-toggle", Button)
             assert btn is not None
 
     @pytest.mark.asyncio()
@@ -2268,14 +2268,14 @@ class TestSessionHistorySidebar:
 
     @pytest.mark.asyncio()
     async def test_count_saved_sessions(self, _fake_config, tmp_path):
-        """_count_saved_sessions counts only non-autosave JSON files."""
+        """_count_saved_sessions counts JSON session files."""
         import json
 
         sessions_dir = tmp_path / "sessions"
         sessions_dir.mkdir()
         (sessions_dir / "chat1.json").write_text(json.dumps({"name": "chat1"}))
         (sessions_dir / "chat2.json").write_text(json.dumps({"name": "chat2"}))
-        (sessions_dir / "_autosave.json").write_text(json.dumps({"name": "_autosave"}))
+        (sessions_dir / "chat3.json").write_text(json.dumps({"name": "chat3"}))
         (sessions_dir / "readme.txt").write_text("not a session")
 
         async with TalkBoxApp().run_test() as pilot:
@@ -2284,7 +2284,7 @@ class TestSessionHistorySidebar:
             await pilot.pause()
             with patch("talk_box.tui.screens._config_dir", return_value=str(tmp_path)):
                 count = app.screen._count_saved_sessions()
-            assert count == 3  # chat1 + chat2 + _autosave
+            assert count == 3  # chat1 + chat2 + chat3
 
     @pytest.mark.asyncio()
     async def test_list_saved_sessions(self, _fake_config, tmp_path):
@@ -2320,7 +2320,6 @@ class TestSessionHistorySidebar:
                 }
             )
         )
-        (sessions_dir / "_autosave.json").write_text(json.dumps({"name": "_autosave"}))
 
         async with TalkBoxApp().run_test() as pilot:
             app = pilot.app
@@ -2328,14 +2327,10 @@ class TestSessionHistorySidebar:
             await pilot.pause()
             with patch("talk_box.tui.screens._config_dir", return_value=str(tmp_path)):
                 sessions = app.screen._list_saved_sessions()
-            assert len(sessions) == 3  # new + old + autosave
+            assert len(sessions) == 2
             assert sessions[0]["name"] == "new"  # newest first
-            # autosave has name "(last session)"
-            autosave_names = [s["name"] for s in sessions if s["_filename"] == "_autosave"]
-            assert autosave_names == ["(last session)"]
-            named = [s for s in sessions if s["_filename"] != "_autosave"]
-            assert named[0]["messages"] == 2
-            assert named[1]["messages"] == 1
+            assert sessions[0]["messages"] == 2
+            assert sessions[1]["messages"] == 1
 
 
 class TestKnowledgeScreenDetail:
@@ -2614,7 +2609,7 @@ class TestAutoSave:
 
     @pytest.mark.asyncio()
     async def test_auto_save_writes_file(self, _fake_config, tmp_path, monkeypatch):
-        """Auto-save writes to _autosave.json."""
+        """Auto-save writes to a unique session file named by session ID."""
         import os
 
         monkeypatch.setattr(
@@ -2630,12 +2625,18 @@ class TestAutoSave:
             from talk_box.conversation import Conversation
 
             app.screen._conversation = Conversation()
-            app.screen._conversation.add_message("user", "hello")
-            app.screen._conversation.add_message("assistant", "hi")
+            app.screen._conversation.add_message("hello world", "user")
+            app.screen._conversation.add_message("hi", "assistant")
+            app.screen._session_file_id = "test_session_001"
             app.screen._auto_save_session()
 
-            autosave = os.path.join(str(tmp_path), "sessions", "_autosave.json")
-            assert os.path.isfile(autosave)
+            session_file = os.path.join(str(tmp_path), "sessions", "test_session_001.json")
+            assert os.path.isfile(session_file)
+            import json
+
+            with open(session_file) as f:
+                data = json.load(f)
+            assert data["name"] == "hello world"
 
 
 class TestPromptHistoryPersistence:

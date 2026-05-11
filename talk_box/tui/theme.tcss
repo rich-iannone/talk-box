@@ -233,11 +233,6 @@ Screen {
     margin: 0 0 0 0;
 }
 
-#chat-new-btn {
-    width: 100%;
-    margin: 1 0 0 0;
-}
-
 /* -- Workspace screen ----------------------------------------------------- */
 
 #workspace-layout {
