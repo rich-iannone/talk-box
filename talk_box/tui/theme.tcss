@@ -43,18 +43,25 @@ Screen {
 
 /* -- Home screen ---------------------------------------------------------- */
 
-#home-scroll {
+#home-layout {
+    height: 1fr;
+}
+
+#home-left {
+    width: 1fr;
     padding: 1 2;
+}
+
+#home-right {
+    width: 1fr;
+    padding: 1 2;
+    border-left: solid $primary;
 }
 
 .home-panel {
     border: solid $primary;
     padding: 1 2;
     margin: 0 0 1 0;
-}
-
-#home-profile-panel {
-    max-width: 72;
 }
 
 #home-profile-title,
@@ -64,29 +71,52 @@ Screen {
     padding: 0 0 1 0;
 }
 
-#home-columns {
-    height: auto;
-    max-width: 72;
-}
-
-#home-actions-panel {
-    width: 1fr;
-    margin-right: 1;
-}
-
 #home-actions-panel Button {
     width: 100%;
     margin: 0 0 1 0;
 }
 
-#home-status-panel {
-    width: 1fr;
+#home-sessions-title {
+    padding: 0 0 1 0;
+}
+
+.home-session-tile {
+    padding: 1 2;
+    margin: 0 0 1 0;
+    border: solid $primary;
+    height: auto;
+    width: 100%;
+}
+
+.home-session-tile:hover {
+    border: solid $accent;
+    background: $primary 15%;
+}
+
+#home-sessions-empty {
+    padding: 1 2;
+    color: $text-muted;
 }
 
 /* -- Chat screen ---------------------------------------------------------- */
 
 #chat-layout {
     height: 1fr;
+}
+
+#chat-back-btn {
+    width: auto;
+    min-width: 8;
+    height: 1;
+    margin: 0 0 0 0;
+    padding: 0 1;
+    border: none;
+    background: transparent;
+    color: $text-muted;
+}
+
+#chat-back-btn:hover {
+    color: $text;
 }
 
 #chat-main {

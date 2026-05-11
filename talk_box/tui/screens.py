@@ -37,6 +37,51 @@ def _config_dir() -> str:
     return os.path.expanduser("~/.config/talk-box")
 
 
+def _list_saved_sessions() -> list[dict]:
+    """List saved sessions with metadata, sorted newest-first.
+
+    Returns a list of dicts with keys: name, saved_at, model, persona,
+    messages, _filename.
+    """
+    import json
+    import os
+
+    sessions_dir = os.path.join(_config_dir(), "sessions")
+    if not os.path.isdir(sessions_dir):
+        return []
+
+    sessions: list[dict] = []
+    for fname in os.listdir(sessions_dir):
+        if not fname.endswith(".json"):
+            continue
+        filepath = os.path.join(sessions_dir, fname)
+        try:
+            with open(filepath) as f:
+                data = json.load(f)
+            msg_count = 0
+            conv = data.get("conversation", {})
+            if isinstance(conv, dict):
+                msg_count = len(conv.get("messages", []))
+            name = data.get("name", fname.removesuffix(".json"))
+            if name == "_autosave":
+                name = "(last session)"
+            sessions.append(
+                {
+                    "name": name,
+                    "saved_at": data.get("saved_at", ""),
+                    "model": data.get("model", ""),
+                    "persona": data.get("persona", ""),
+                    "messages": msg_count,
+                    "_filename": fname.removesuffix(".json"),
+                }
+            )
+        except Exception:
+            continue
+
+    sessions.sort(key=lambda s: s.get("saved_at", ""), reverse=True)
+    return sessions
+
+
 class ChatInput(TextArea):
     """Multi-line input with configurable Enter behaviour.
 
@@ -739,17 +784,16 @@ class HomeScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
-        with VerticalScroll(id="home-scroll"):
-            # Active profile panel
-            with Vertical(id="home-profile-panel", classes="home-panel"):
-                yield Static("[b]Active Profile[/b]", id="home-profile-title")
-                yield Static(
-                    self._build_profile_summary(),
-                    id="home-profile-summary",
-                )
+        with Horizontal(id="home-layout"):
+            # Left column: profile, actions, status
+            with VerticalScroll(id="home-left"):
+                with Vertical(id="home-profile-panel", classes="home-panel"):
+                    yield Static("[b]Active Profile[/b]", id="home-profile-title")
+                    yield Static(
+                        self._build_profile_summary(),
+                        id="home-profile-summary",
+                    )
 
-            # Quick actions + system status side by side
-            with Horizontal(id="home-columns"):
                 with Vertical(id="home-actions-panel", classes="home-panel"):
                     yield Static("[b]Quick Actions[/b]", id="home-actions-title")
                     yield Button("New Chat", id="home-new-chat", variant="primary")
@@ -763,6 +807,24 @@ class HomeScreen(Screen):
                         self._build_system_status(),
                         id="home-status-summary",
                     )
+
+            # Right column: recent sessions
+            with VerticalScroll(id="home-right"):
+                yield Static("[b]Recent Sessions[/b]", id="home-sessions-title")
+                sessions = _list_saved_sessions()
+                if not sessions:
+                    yield Static(
+                        "[dim]No saved sessions yet.[/dim]\n"
+                        "Start a chat and use [b]/save <name>[/b] to save it.",
+                        id="home-sessions-empty",
+                    )
+                else:
+                    for i, s in enumerate(sessions[:20]):
+                        yield Static(
+                            self._session_tile_content(s),
+                            id=f"home-session-{i}",
+                            classes="home-session-tile",
+                        )
         yield Footer()
 
     def _build_profile_summary(self) -> str:
@@ -865,6 +927,55 @@ class HomeScreen(Screen):
 
         return "\n".join(lines)
 
+    @staticmethod
+    def _session_tile_content(s: dict) -> str:
+        """Build the rich text content for a single session tile."""
+        name = s.get("name", "untitled")
+        saved_at = s.get("saved_at", "")
+        date_str = ""
+        if saved_at:
+            try:
+                from datetime import datetime
+
+                dt = datetime.fromisoformat(saved_at)
+                date_str = dt.strftime("%b %d %H:%M")
+            except Exception:
+                date_str = saved_at[:16]
+        msgs = s.get("messages", 0)
+        model = s.get("model", "")
+        if model:
+            model = model.split(":")[-1] if ":" in model else model
+        persona = s.get("persona", "")
+
+        line1 = f"[b]{name}[/b]"
+        meta_parts: list[str] = []
+        if date_str:
+            meta_parts.append(date_str)
+        if msgs:
+            meta_parts.append(f"{msgs} msgs")
+        if model:
+            meta_parts.append(model)
+        if persona:
+            meta_parts.append(persona)
+        line2 = f"[dim]{' · '.join(meta_parts)}[/dim]" if meta_parts else ""
+        return f"{line1}\n{line2}" if line2 else line1
+
+    def on_click(self, event) -> None:
+        """Handle clicks on session tiles."""
+        widget = event.widget
+        widget_id = getattr(widget, "id", "") or ""
+        if widget_id.startswith("home-session-"):
+            try:
+                index = int(widget_id.removeprefix("home-session-"))
+            except ValueError:
+                return
+            sessions = _list_saved_sessions()
+            if 0 <= index < len(sessions):
+                filename = sessions[index].get("_filename", sessions[index].get("name", ""))
+                # Store pending load so ChatScreen picks it up after mount
+                self.app._pending_session_load = filename  # type: ignore[attr-defined]
+                self.app._switch_to("chat")  # type: ignore[attr-defined]
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle quick action button presses."""
         actions = {
@@ -919,6 +1030,7 @@ class ChatScreen(Screen):
         with Horizontal(id="chat-layout"):
             # Main chat area
             with Vertical(id="chat-main"):
+                yield Button("← Back", id="chat-back-btn", variant="default")
                 with VerticalScroll(id="chat-messages"):
                     yield Static(
                         "[dim]Type a message below to start chatting.[/dim]",
@@ -1089,6 +1201,13 @@ class ChatScreen(Screen):
         self._init_bot()
         self._update_sidebar()
 
+        # Hide back button in simple mode (no home screen)
+        try:
+            if getattr(self.app, "_simple_mode", False):
+                self.query_one("#chat-back-btn", Button).display = False
+        except Exception:
+            pass
+
         # Pre-select config values in dropdowns
         try:
             model_sel = self.query_one("#chat-model-select", Select)
@@ -1109,6 +1228,22 @@ class ChatScreen(Screen):
 
         # Load persistent prompt history
         self._load_prompt_history()
+
+        # Load a session queued from the Home screen (must be after Select
+        # widgets are configured, since setting their values triggers
+        # on_select_changed which resets self._conversation to None).
+        self._check_pending_session_load()
+
+    def on_screen_resume(self) -> None:
+        """Called every time the screen becomes active (including after switch_screen)."""
+        self._check_pending_session_load()
+
+    def _check_pending_session_load(self) -> None:
+        """Load a session queued from the Home screen, if any."""
+        pending = getattr(self.app, "_pending_session_load", None)
+        if pending:
+            self.app._pending_session_load = None  # type: ignore[attr-defined]
+            self._load_session(pending)
 
     def _init_bot(self) -> None:
         """Create a ChatBot from the resolved config."""
@@ -1273,7 +1408,14 @@ class ChatScreen(Screen):
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle New Chat and copy buttons."""
         btn_id = event.button.id or ""
-        if btn_id == "chat-new-btn":
+        if btn_id == "chat-back-btn":
+            self._auto_save_session()
+            try:
+                self.app._switch_to("home")  # type: ignore[attr-defined]
+            except Exception:
+                pass
+            return
+        elif btn_id == "chat-new-btn":
             # Auto-save current session before clearing
             self._auto_save_session()
             self._conversation = None
@@ -1749,11 +1891,14 @@ class ChatScreen(Screen):
             self._rebuild_bot()
             self._update_sidebar()
 
-            # Replay messages into UI
+            # Replay messages into UI — capture conversation in closure so
+            # deferred on_select_changed events can't null it out.
+            loaded_conversation = self._conversation
+
             async def _replay():
                 container = self.query_one("#chat-messages", VerticalScroll)
                 await container.remove_children()
-                for msg in self._conversation.messages:
+                for msg in loaded_conversation.messages:
                     role = msg.role
                     content = msg.content
                     # Handle sessions saved with swapped (role, content) args
@@ -1765,6 +1910,8 @@ class ChatScreen(Screen):
                     ):
                         role, content = content, role
                     self._append_message(role, content)
+                # Re-assign in case on_select_changed cleared it while we ran
+                self._conversation = loaded_conversation
                 self._update_sidebar()
 
             self.run_worker(_replay(), name="load_session")
@@ -2596,53 +2743,11 @@ class ChatScreen(Screen):
 
     def _count_saved_sessions(self) -> int:
         """Return the number of saved session files (including autosave)."""
-        import os
-
-        sessions_dir = os.path.join(_config_dir(), "sessions")
-        if not os.path.isdir(sessions_dir):
-            return 0
-        return sum(1 for f in os.listdir(sessions_dir) if f.endswith(".json"))
+        return len(_list_saved_sessions())
 
     def _list_saved_sessions(self) -> list[dict]:
         """List saved sessions with metadata, sorted newest-first."""
-        import json
-        import os
-
-        sessions_dir = os.path.join(_config_dir(), "sessions")
-        if not os.path.isdir(sessions_dir):
-            return []
-
-        sessions: list[dict] = []
-        for fname in os.listdir(sessions_dir):
-            if not fname.endswith(".json"):
-                continue
-            filepath = os.path.join(sessions_dir, fname)
-            try:
-                with open(filepath) as f:
-                    data = json.load(f)
-                msg_count = 0
-                conv = data.get("conversation", {})
-                if isinstance(conv, dict):
-                    msg_count = len(conv.get("messages", []))
-                name = data.get("name", fname.removesuffix(".json"))
-                if name == "_autosave":
-                    name = "(last session)"
-                sessions.append(
-                    {
-                        "name": name,
-                        "saved_at": data.get("saved_at", ""),
-                        "model": data.get("model", ""),
-                        "persona": data.get("persona", ""),
-                        "messages": msg_count,
-                        "_filename": fname.removesuffix(".json"),
-                    }
-                )
-            except Exception:
-                continue
-
-        # Sort by saved_at descending (newest first)
-        sessions.sort(key=lambda s: s.get("saved_at", ""), reverse=True)
-        return sessions
+        return _list_saved_sessions()
 
     def _open_session_history(self) -> None:
         """Open the session history modal."""
