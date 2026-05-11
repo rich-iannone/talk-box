@@ -119,6 +119,109 @@ class ChatInput(TextArea):
 
 
 # ---------------------------------------------------------------------------
+# Screen descriptions (for info modals)
+# ---------------------------------------------------------------------------
+
+_SCREEN_DESCRIPTIONS: dict[str, str] = {
+    "home": (
+        "The Home screen is your dashboard. It shows your active profile, "
+        "system status, recent sessions, and lets you navigate to any other "
+        "screen with a single keypress."
+    ),
+    "chat": (
+        "The Chat screen is where you talk to an AI assistant. Messages stream "
+        "in real time. Use /save to persist a conversation, attach files, and "
+        "toggle tool-call approval."
+    ),
+    "workspace": (
+        "The Workspace screen provides a file browser rooted in the current "
+        "working directory. You can preview files and add them as context for "
+        "chat conversations."
+    ),
+    "sessions": (
+        "The Sessions screen is a full ledger of every saved conversation. "
+        "You can open, archive, unarchive, or delete sessions. Archived "
+        "sessions are kept but hidden from the Home screen."
+    ),
+    "personas": (
+        "The Personas screen lets you browse and select system prompts that "
+        "shape how the assistant behaves (its tone, expertise, and style)."
+    ),
+    "models": (
+        "The Models screen lists all available LLM backends including local "
+        "Ollama models and cloud providers. Select a model to use it in chat."
+    ),
+    "profiles": (
+        "Profiles bundle a model, persona, guardrails, and other settings "
+        "into a reusable configuration. Switch profiles to change your entire "
+        "setup at once."
+    ),
+    "traits": (
+        "Traits are reusable personality fragments (short directives like "
+        "'be concise' or 'use formal English') that can be layered onto any "
+        "persona."
+    ),
+    "guardrails": (
+        "Guardrails are safety rules that filter assistant responses. "
+        "Configure content policies, topic restrictions, and output "
+        "constraints here."
+    ),
+    "pathways": (
+        "Pathways are multi-step workflows that chain prompts together. "
+        "Design branching conversation flows and automate complex tasks."
+    ),
+    "skills": (
+        "Skills are packaged tool bundles the assistant can use (file I/O, "
+        "web search, code execution, and more). Enable or disable skills here."
+    ),
+    "knowledge": (
+        "The Knowledge screen manages document collections that the assistant "
+        "can search during conversations for grounded, citation-backed answers."
+    ),
+    "eval": (
+        "The Eval screen lets you run evaluation suites against your assistant "
+        "configuration to measure quality, safety, and consistency."
+    ),
+    "memory": (
+        "The Memory screen shows what the assistant remembers across sessions. "
+        "Review, edit, or clear stored facts and preferences."
+    ),
+}
+
+
+# ---------------------------------------------------------------------------
+# Screen Info Modal
+# ---------------------------------------------------------------------------
+
+
+class ScreenInfoModal(ModalScreen):
+    """Shows a description of a screen."""
+
+    BINDINGS = [
+        Binding("escape", "dismiss_modal", "Close", show=False, priority=True),
+        Binding("enter", "dismiss_modal", "Close", show=False, priority=True),
+    ]
+
+    def __init__(self, screen_label: str, screen_id: str) -> None:
+        super().__init__()
+        self._screen_label = screen_label
+        self._screen_id = screen_id
+
+    def compose(self) -> ComposeResult:
+        desc = _SCREEN_DESCRIPTIONS.get(self._screen_id, "No description available.")
+        with Center():
+            with Vertical(id="screen-info-panel"):
+                yield Static(
+                    f"[b]{self._screen_label}[/b]\n\n{desc}\n\n"
+                    "[dim]Press Enter or Escape to close[/dim]",
+                    id="screen-info-text",
+                )
+
+    def action_dismiss_modal(self) -> None:
+        self.dismiss(None)
+
+
+# ---------------------------------------------------------------------------
 # Command List (modal overlay)
 # ---------------------------------------------------------------------------
 
@@ -143,7 +246,6 @@ class CommandListScreen(ModalScreen):
         for key, _sid, label, _cls in SCREEN_NAV:
             lines.append(f"  [b]{key}[/b]  {label}")
         lines.append("")
-        lines.append("  [b]n[/b]  New Chat")
         lines.append("  [b]q[/b]  Quit")
         lines.append("\n[dim]Press a key or : to close[/dim]")
 
@@ -164,11 +266,6 @@ class CommandListScreen(ModalScreen):
                 event.prevent_default()
                 self.dismiss(screen_id)
                 return
-
-        if key == "n":
-            event.prevent_default()
-            self.dismiss("chat")
-            return
 
         if key == "q":
             event.prevent_default()
@@ -784,16 +881,16 @@ class WelcomeScreen(Screen):
 
 
 class HomeScreen(Screen):
-    """Landing screen with profile summary, quick actions, and system status."""
+    """Landing screen with profile summary, navigation, and system status."""
 
-    BINDINGS = [
-        Binding("n", "new_chat", "New Chat", show=True),
-    ]
+    BINDINGS = []
 
     def compose(self) -> ComposeResult:
+        from talk_box.tui.app import SCREEN_NAV
+
         yield Header(show_clock=False)
         with Horizontal(id="home-layout"):
-            # Left column: profile, actions, status
+            # Left column: profile, navigation, status
             with VerticalScroll(id="home-left"):
                 with Vertical(id="home-profile-panel", classes="home-panel"):
                     yield Static("[b]Active Profile[/b]", id="home-profile-title")
@@ -802,11 +899,19 @@ class HomeScreen(Screen):
                         id="home-profile-summary",
                     )
 
-                with Vertical(id="home-actions-panel", classes="home-panel"):
-                    yield Static("[b]Quick Actions[/b]", id="home-actions-title")
-                    yield Button("Switch Profile", id="home-switch-profile")
-                    yield Button("Browse Models", id="home-browse-models")
-                    yield Button("Browse Personas", id="home-browse-personas")
+                with Vertical(id="home-nav-panel", classes="home-panel"):
+                    yield Static("[b]Navigation[/b]", id="home-nav-title")
+                    max_len = max(len(lbl) for _, sid, lbl, _ in SCREEN_NAV if sid != "home")
+                    for key, sid, label, _cls in SCREEN_NAV:
+                        if sid == "home":
+                            continue
+                        padded = label.ljust(max_len)
+                        yield Static(
+                            f"  [b]{key}[/b]  {padded}"
+                            f"  [@click=screen.show_screen_info('{sid}')]ℹ[/]",
+                            id=f"home-nav-{sid}",
+                            classes="home-nav-row",
+                        )
 
                 with Vertical(id="home-status-panel", classes="home-panel"):
                     yield Static("[b]System Status[/b]", id="home-status-title")
@@ -969,26 +1074,35 @@ class HomeScreen(Screen):
                 self.app._pending_session_load = filename  # type: ignore[attr-defined]
                 self.app._switch_to("chat")  # type: ignore[attr-defined]
 
+    def on_key(self, event) -> None:
+        """Navigate to a screen by pressing its shortcut letter."""
+        from talk_box.tui.app import SCREEN_NAV
+
+        key = event.key
+        for nav_key, sid, _label, _cls in SCREEN_NAV:
+            if key == nav_key and sid != "home":
+                event.prevent_default()
+                self.app._switch_to(sid)  # type: ignore[attr-defined]
+                return
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle quick action button presses."""
-        actions = {
-            "home-switch-profile": "profiles",
-            "home-browse-models": "models",
-            "home-browse-personas": "personas",
-        }
+        """Handle button presses."""
         btn_id = event.button.id or ""
         if btn_id == "home-new-chat":
             self.app._pending_new_chat = True  # type: ignore[attr-defined]
             self.app._switch_to("chat")  # type: ignore[attr-defined]
             return
-        target = actions.get(btn_id)
-        if target:
-            self.app._switch_to(target)  # type: ignore[attr-defined]
 
-    def action_new_chat(self) -> None:
-        """Navigate to a fresh chat screen."""
-        self.app._pending_new_chat = True  # type: ignore[attr-defined]
-        self.app._switch_to("chat")  # type: ignore[attr-defined]
+    def action_show_screen_info(self, screen_id: str) -> None:
+        """Show the info modal for a screen."""
+        from talk_box.tui.app import SCREEN_NAV
+
+        label = screen_id
+        for _key, sid, lbl, _cls in SCREEN_NAV:
+            if sid == screen_id:
+                label = lbl
+                break
+        self.app.push_screen(ScreenInfoModal(label, screen_id))
 
     def action_view_all_sessions(self) -> None:
         """Navigate to the full Sessions ledger screen."""
@@ -1129,7 +1243,7 @@ class ChatScreen(Screen):
         with Horizontal(id="chat-layout"):
             # Main chat area
             with Vertical(id="chat-main"):
-                yield Button("← Back", id="chat-back-btn", variant="default")
+                yield Button("← Home", id="chat-back-btn", variant="default")
                 with VerticalScroll(id="chat-messages"):
                     yield Static(
                         "[dim]Type a message below to start chatting.[/dim]",

@@ -227,9 +227,12 @@ class TestCommandMode:
     async def test_keys_ignored_outside_command_mode(self, _fake_config):
         async with TalkBoxApp().run_test() as pilot:
             app = pilot.app
-            # Without entering command mode, pressing 'c' does nothing
+            # Navigate to chat first (Home has direct key nav)
             await pilot.press("c")
-            assert app._current_screen_id == "home"
+            assert app._current_screen_id == "chat"
+            # On Chat screen, pressing 'm' without command mode does nothing
+            await pilot.press("m")
+            assert app._current_screen_id == "chat"
 
     @pytest.mark.asyncio()
     async def test_all_nav_keys_work(self, _fake_config):
@@ -330,9 +333,9 @@ class TestHomeScreen:
             assert summary is not None
 
     @pytest.mark.asyncio()
-    async def test_home_has_actions_panel(self, _fake_config):
+    async def test_home_has_nav_panel(self, _fake_config):
         async with TalkBoxApp().run_test() as pilot:
-            panel = pilot.app.screen.query_one("#home-actions-panel")
+            panel = pilot.app.screen.query_one("#home-nav-panel")
             assert panel is not None
 
     @pytest.mark.asyncio()
@@ -361,10 +364,10 @@ class TestHomeScreen:
             assert app._current_screen_id == "chat"
 
     @pytest.mark.asyncio()
-    async def test_n_key_navigates_to_chat(self, _fake_config):
+    async def test_shortcut_key_navigates_to_chat(self, _fake_config):
         async with TalkBoxApp().run_test() as pilot:
             app = pilot.app
-            await pilot.press("n")
+            await pilot.press("c")
             assert app._current_screen_id == "chat"
 
     @pytest.mark.asyncio()

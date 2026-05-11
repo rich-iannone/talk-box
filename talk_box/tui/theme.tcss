@@ -65,15 +65,15 @@ Screen {
 }
 
 #home-profile-title,
-#home-actions-title,
+#home-nav-title,
 #home-status-title {
     text-style: bold;
     padding: 0 0 1 0;
 }
 
-#home-actions-panel Button {
-    width: 100%;
-    margin: 0 0 1 0;
+.home-nav-row {
+    height: auto;
+    padding: 0;
 }
 
 #home-sessions-header {
@@ -471,6 +471,24 @@ Screen {
 
 CommandListScreen {
     align: center middle;
+}
+
+/* -- Screen info modal ---------------------------------------------------- */
+
+ScreenInfoModal {
+    align: center middle;
+}
+
+#screen-info-panel {
+    width: 60;
+    max-height: 20;
+    padding: 2 3;
+    border: solid $accent;
+    background: $surface;
+}
+
+#screen-info-text {
+    padding: 0 1;
 }
 
 #command-list-panel {
