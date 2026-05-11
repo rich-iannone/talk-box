@@ -21,6 +21,52 @@ from talk_box.builder import ChatResponse
 from talk_box.presets import PresetManager
 
 
+def _tool_use_summary(tool_name: str, tool_input: dict[str, Any]) -> str:
+    """Build a one-line summary for a tool invocation shown in the chat stream.
+
+    For file_write and file_edit, this includes +N / -M line-change counts.
+    Other tools get an empty string (no extra summary).
+    """
+    import difflib
+
+    if tool_name == "file_write":
+        path = tool_input.get("path", "?")
+        content = tool_input.get("content", "")
+        new_lines = content.splitlines(keepends=True)
+
+        # Try reading the existing file to compute a real diff
+        old_lines: list[str] = []
+        try:
+            resolved = os.path.join(os.getcwd(), path)
+            with open(resolved) as f:
+                old_lines = f.readlines()
+        except (OSError, FileNotFoundError):
+            pass
+
+        if old_lines:
+            diff = list(difflib.unified_diff(old_lines, new_lines, lineterm=""))
+            added = sum(1 for l in diff if l.startswith("+") and not l.startswith("+++"))
+            removed = sum(1 for l in diff if l.startswith("-") and not l.startswith("---"))
+        else:
+            added = len(new_lines)
+            removed = 0
+
+        return f" -> Wrote '{path}'  [green]+{added}[/green]  [red]-{removed}[/red]"
+
+    elif tool_name == "file_edit":
+        path = tool_input.get("path", "?")
+        old_text = tool_input.get("old_text", "")
+        new_text = tool_input.get("new_text", "")
+        old_lines = old_text.splitlines(keepends=True)
+        new_lines = new_text.splitlines(keepends=True)
+        diff = list(difflib.unified_diff(old_lines, new_lines, lineterm=""))
+        added = sum(1 for l in diff if l.startswith("+") and not l.startswith("+++"))
+        removed = sum(1 for l in diff if l.startswith("-") and not l.startswith("---"))
+        return f" -> Edited '{path}'  [green]+{added}[/green]  [red]-{removed}[/red]"
+
+    return ""
+
+
 class ChatlasAdapter:
     """
     Adapter to integrate Talk Box with chatlas for real LLM interactions.
@@ -344,6 +390,10 @@ class ChatlasAdapter:
                     for tool_call in tool_use_blocks:
                         tool_name = tool_call["name"]
                         tool_input = tool_call["input"]
+
+                        # Compute summary BEFORE execution (file_write changes disk)
+                        summary = _tool_use_summary(tool_name, tool_input)
+
                         try:
                             tool_def = chat_session._tools.get(tool_name)
                             if tool_def:
@@ -361,6 +411,8 @@ class ChatlasAdapter:
                             }
                         )
                         yield ("text", f"\n\n*Used tool `{tool_name}`*\n\n")
+                        if summary:
+                            yield ("text", f"{summary}\n\n")
 
                     # Continue conversation with tool results
                     kwargs["messages"] = kwargs["messages"] + [

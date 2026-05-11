@@ -420,3 +420,73 @@ def test_chat_with_session_exception():
     assert result.metadata["provider"] == "openai"
     assert result.metadata["success"] is False
     assert "Network error" in result.metadata["error"]
+
+
+# ---------------------------------------------------------------------------
+# _tool_use_summary tests
+# ---------------------------------------------------------------------------
+
+
+class TestToolUseSummary:
+    """Tests for the _tool_use_summary helper."""
+
+    def test_file_write_new_file(self):
+        """New file write shows green +N and red -0."""
+        from talk_box._utils_chatlas import _tool_use_summary
+
+        result = _tool_use_summary("file_write", {"path": "new.txt", "content": "a\nb\nc\n"})
+        assert "Wrote" in result
+        assert "'new.txt'" in result
+        assert "[green]+3[/green]" in result
+        assert "[red]-0[/red]" in result
+
+    def test_file_write_overwrite(self, tmp_path):
+        """Overwriting an existing file shows green +N and red -M."""
+        import os
+
+        f = tmp_path / "exist.txt"
+        f.write_text("hello\nworld\n")
+
+        from talk_box._utils_chatlas import _tool_use_summary
+
+        old_cwd = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            result = _tool_use_summary(
+                "file_write", {"path": "exist.txt", "content": "hello\nuniverse\n"}
+            )
+        finally:
+            os.chdir(old_cwd)
+
+        assert "Wrote" in result
+        assert "'exist.txt'" in result
+        assert "[green]+1[/green]" in result
+        assert "[red]-1[/red]" in result
+
+    def test_file_edit_summary(self):
+        """Edit shows green +N and red -M based on old_text vs new_text."""
+        from talk_box._utils_chatlas import _tool_use_summary
+
+        result = _tool_use_summary(
+            "file_edit",
+            {"path": "app.py", "old_text": "x = 1\ny = 2", "new_text": "x = 99"},
+        )
+        assert "Edited" in result
+        assert "'app.py'" in result
+        assert "[green]+1[/green]" in result
+        assert "[red]-2[/red]" in result
+
+    def test_unknown_tool_returns_empty(self):
+        """Non-file tools return an empty summary."""
+        from talk_box._utils_chatlas import _tool_use_summary
+
+        result = _tool_use_summary("web_search", {"query": "hello"})
+        assert result == ""
+
+    def test_file_write_empty_content(self):
+        """Writing an empty file shows +0 green and -0 red."""
+        from talk_box._utils_chatlas import _tool_use_summary
+
+        result = _tool_use_summary("file_write", {"path": "empty.txt", "content": ""})
+        assert "[green]+0[/green]" in result
+        assert "[red]-0[/red]" in result

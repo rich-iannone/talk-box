@@ -523,9 +523,12 @@ FileApprovalScreen {
 }
 
 #file-approval-preview {
-    max-height: 24;
-    overflow-y: auto;
     padding: 1;
+    width: 100%;
+}
+
+#file-approval-diff {
+    max-height: 24;
     border: solid $primary-lighten-3;
     background: $surface-darken-1;
     margin: 0 1;

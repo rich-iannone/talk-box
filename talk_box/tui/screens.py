@@ -289,6 +289,9 @@ class FileApprovalScreen(ModalScreen[dict]):
     ← / → (or ``h`` / ``l``), approve or reject each file individually, or
     approve/reject all remaining files at once.  Dismisses with a dict
     mapping ``(action, path)`` → ``bool`` for every file.
+
+    Shows a unified diff view with color-coded additions (green) and
+    removals (red) for easy review of proposed changes.
     """
 
     BINDINGS = [
@@ -330,7 +333,8 @@ class FileApprovalScreen(ModalScreen[dict]):
         with Center():
             with Vertical(id="file-approval-panel"):
                 yield Static("", id="file-approval-title")
-                yield Static("", id="file-approval-preview")
+                with VerticalScroll(id="file-approval-diff"):
+                    yield Static("", id="file-approval-preview")
                 yield Static("", id="file-approval-nav")
                 with Horizontal(id="file-approval-buttons"):
                     yield Button("Approve (y)", variant="success", id="file-approve-btn")
@@ -355,24 +359,14 @@ class FileApprovalScreen(ModalScreen[dict]):
             f"[b]{title}[/b]: [cyan]{path}[/cyan]{status}"
         )
 
-        preview_lines: list[str] = []
-        if action == "write":
-            content = details.get("content", "")
-            lines = content.splitlines()
-            if len(lines) > 40:
-                preview_lines = lines[:40]
-                preview_lines.append(f"\n... ({len(lines) - 40} more lines)")
-            else:
-                preview_lines = lines
-        else:
-            old = details.get("old_text", "")
-            new = details.get("new_text", "")
-            preview_lines.append("--- old")
-            preview_lines.extend(f"- {l}" for l in old.splitlines())
-            preview_lines.append("+++ new")
-            preview_lines.extend(f"+ {l}" for l in new.splitlines())
+        preview_text = self._format_diff_preview(action, path, details)
+        self.query_one("#file-approval-preview", Static).update(preview_text)
 
-        self.query_one("#file-approval-preview", Static).update("\n".join(preview_lines))
+        # Scroll back to top when switching files
+        try:
+            self.query_one("#file-approval-diff", VerticalScroll).scroll_home(animate=False)
+        except Exception:
+            pass
 
         # Navigation indicator
         n = len(self._pending)
@@ -382,6 +376,134 @@ class FileApprovalScreen(ModalScreen[dict]):
         if n > 1:
             nav += " |  ← → to browse"
         self.query_one("#file-approval-nav", Static).update(f"[dim]{nav}[/dim]")
+
+    @staticmethod
+    def _format_diff_preview(action: str, path: str, details: dict) -> str:
+        """Build a color-coded unified diff preview for a file operation."""
+        import difflib
+        import os
+
+        def _escape(text: str) -> str:
+            """Escape Rich markup characters in diff content."""
+            return text.replace("[", "\\[").replace("]", "\\]")
+
+        def _diff_stats(diff_lines: list[str]) -> tuple[int, int]:
+            """Count added and removed lines (excluding --- / +++ headers)."""
+            added = sum(1 for l in diff_lines if l.startswith("+") and not l.startswith("+++"))
+            removed = sum(1 for l in diff_lines if l.startswith("-") and not l.startswith("---"))
+            return added, removed
+
+        def _summary(verb: str, filepath: str, added: int, removed: int) -> str:
+            return f"{verb} [cyan]'{_escape(filepath)}'[/cyan]  [green]+{added}[/green]  [red]-{removed}[/red]"
+
+        if action == "write":
+            new_content = details.get("content", "")
+            new_lines = new_content.splitlines(keepends=True)
+
+            # Try to read the existing file for a real diff
+            old_lines: list[str] = []
+            resolved = os.path.join(os.getcwd(), path)
+            try:
+                with open(resolved) as f:
+                    old_lines = f.readlines()
+            except (OSError, FileNotFoundError):
+                pass
+
+            if old_lines:
+                # Existing file being overwritten — show unified diff
+                diff = difflib.unified_diff(
+                    old_lines,
+                    new_lines,
+                    fromfile=f"a/{path}",
+                    tofile=f"b/{path}",
+                    lineterm="",
+                )
+                diff_list = list(diff)
+                added, removed = _diff_stats(diff_list)
+                header = _summary("Wrote", path, added, removed)
+                return header + "\n\n" + FileApprovalScreen._colorize_diff(diff_list)
+            else:
+                # New file — show all lines as additions
+                total = len(new_lines)
+                header = _summary("Wrote", path, total, 0)
+                out: list[str] = [header, ""]
+                out.append(f"[bold cyan]new file: {_escape(path)}[/bold cyan]")
+                display_lines = new_lines[:200]
+                for line in display_lines:
+                    out.append(f"[green]+{_escape(line.rstrip())}[/green]")
+                if total > 200:
+                    out.append(f"\n[dim]... ({total - 200} more lines)[/dim]")
+                return "\n".join(out)
+        else:
+            # Edit — compute diff from old_text → new_text in file context
+            old_text = details.get("old_text", "")
+            new_text = details.get("new_text", "")
+
+            # Try to read the full file for contextual diff
+            resolved = os.path.join(os.getcwd(), path)
+            try:
+                with open(resolved) as f:
+                    file_content = f.read()
+            except (OSError, FileNotFoundError):
+                file_content = None
+
+            if file_content is not None and old_text in file_content:
+                # Show diff of the file with the edit applied
+                edited = file_content.replace(old_text, new_text, 1)
+                old_lines = file_content.splitlines(keepends=True)
+                new_lines = edited.splitlines(keepends=True)
+                diff = difflib.unified_diff(
+                    old_lines,
+                    new_lines,
+                    fromfile=f"a/{path}",
+                    tofile=f"b/{path}",
+                    lineterm="",
+                )
+                diff_list = list(diff)
+                added, removed = _diff_stats(diff_list)
+                header = _summary("Edited", path, added, removed)
+                return header + "\n\n" + FileApprovalScreen._colorize_diff(diff_list)
+            else:
+                # Fallback: show old_text vs new_text directly
+                old_lines = old_text.splitlines(keepends=True)
+                new_lines = new_text.splitlines(keepends=True)
+                diff = difflib.unified_diff(
+                    old_lines,
+                    new_lines,
+                    fromfile="old",
+                    tofile="new",
+                    lineterm="",
+                )
+                diff_list = list(diff)
+                added, removed = _diff_stats(diff_list)
+                header = _summary("Edited", path, added, removed)
+                return header + "\n\n" + FileApprovalScreen._colorize_diff(diff_list)
+
+    @staticmethod
+    def _colorize_diff(diff_lines: list[str]) -> str:
+        """Apply Rich color markup to unified diff lines."""
+
+        def _escape(text: str) -> str:
+            return text.replace("[", "\\[").replace("]", "\\]")
+
+        if not diff_lines:
+            return "[dim]No changes detected.[/dim]"
+
+        out: list[str] = []
+        for line in diff_lines:
+            raw = line.rstrip("\n")
+            escaped = _escape(raw)
+            if raw.startswith("+++") or raw.startswith("---"):
+                out.append(f"[bold]{escaped}[/bold]")
+            elif raw.startswith("@@"):
+                out.append(f"[cyan]{escaped}[/cyan]")
+            elif raw.startswith("+"):
+                out.append(f"[green]{escaped}[/green]")
+            elif raw.startswith("-"):
+                out.append(f"[red]{escaped}[/red]")
+            else:
+                out.append(f"[dim]{escaped}[/dim]")
+        return "\n".join(out)
 
     def _advance_or_finish(self) -> None:
         """Move to the next undecided file, or finish if all decided."""

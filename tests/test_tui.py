@@ -3381,3 +3381,149 @@ class TestFileApprovalScreen:
             await pilot.pause()
             assert app.screen._require_approvals is True
             assert "On" in str(toggle.label)
+
+
+class TestDiffViewer:
+    """Tests for the inline diff viewer in FileApprovalScreen."""
+
+    def test_new_file_shows_additions(self):
+        """New file write shows all lines as green additions."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        result = FileApprovalScreen._format_diff_preview(
+            "write", "new_file.txt", {"content": "line1\nline2\nline3"}
+        )
+        assert "Wrote" in result
+        assert "new_file.txt" in result
+        assert "+3" in result
+        assert "new file:" in result
+        assert "[green]" in result
+        assert "line1" in result
+        assert "line2" in result
+        assert "line3" in result
+
+    def test_edit_shows_unified_diff(self):
+        """Edit shows red removals and green additions."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        result = FileApprovalScreen._format_diff_preview(
+            "edit", "nonexistent.py", {"old_text": "old_val = 1", "new_text": "new_val = 2"}
+        )
+        assert "Edited" in result
+        assert "nonexistent.py" in result
+        assert "+1" in result
+        assert "-1" in result
+        # Should contain diff markers
+        assert "[red]" in result
+        assert "[green]" in result
+        assert "old_val" in result
+        assert "new_val" in result
+
+    def test_edit_with_existing_file(self, tmp_path):
+        """Edit of an existing file shows context from the file."""
+        import os
+
+        file_path = tmp_path / "target.py"
+        file_path.write_text("alpha = 1\nbeta = 2\ngamma = 3\n")
+
+        from talk_box.tui.screens import FileApprovalScreen
+
+        old_cwd = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            result = FileApprovalScreen._format_diff_preview(
+                "edit", "target.py", {"old_text": "beta = 2", "new_text": "beta = 99"}
+            )
+        finally:
+            os.chdir(old_cwd)
+
+        assert "Edited" in result
+        assert "target.py" in result
+        assert "[red]" in result
+        assert "[green]" in result
+        assert "beta" in result
+
+    def test_write_overwrite_shows_diff(self, tmp_path):
+        """Overwriting an existing file shows a proper unified diff."""
+        import os
+
+        file_path = tmp_path / "existing.txt"
+        file_path.write_text("hello\nworld\n")
+
+        from talk_box.tui.screens import FileApprovalScreen
+
+        old_cwd = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            result = FileApprovalScreen._format_diff_preview(
+                "write", "existing.txt", {"content": "hello\nuniverse\n"}
+            )
+        finally:
+            os.chdir(old_cwd)
+
+        assert "Wrote" in result
+        assert "existing.txt" in result
+        assert "[red]" in result  # removed "world"
+        assert "[green]" in result  # added "universe"
+        assert "world" in result or "universe" in result
+
+    def test_colorize_diff_handles_empty(self):
+        """Empty diff list shows 'no changes' message."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        result = FileApprovalScreen._colorize_diff([])
+        assert "No changes" in result
+
+    def test_colorize_diff_marks_hunks(self):
+        """Hunk headers get cyan markup."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        lines = [
+            "--- a/file.py",
+            "+++ b/file.py",
+            "@@ -1,3 +1,3 @@",
+            " context",
+            "-old line",
+            "+new line",
+        ]
+        result = FileApprovalScreen._colorize_diff(lines)
+        assert "[bold]" in result  # --- and +++ lines
+        assert "[cyan]" in result  # @@ hunk header
+        assert "[red]" in result  # removed line
+        assert "[green]" in result  # added line
+        assert "[dim]" in result  # context line
+
+    def test_new_file_truncates_long_content(self):
+        """New file with >200 lines shows truncation notice."""
+        from talk_box.tui.screens import FileApprovalScreen
+
+        content = "\n".join(f"line {i}" for i in range(300))
+        result = FileApprovalScreen._format_diff_preview("write", "big.txt", {"content": content})
+        assert "Wrote" in result
+        assert "+300" in result
+        assert "100 more lines" in result
+
+    def test_summary_shows_stats(self, tmp_path):
+        """Summary line shows verb, filename, and +/- counts."""
+        import os
+
+        file_path = tmp_path / "stats.py"
+        file_path.write_text("a = 1\nb = 2\nc = 3\n")
+
+        from talk_box.tui.screens import FileApprovalScreen
+
+        old_cwd = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            result = FileApprovalScreen._format_diff_preview(
+                "write", "stats.py", {"content": "a = 1\nx = 9\nc = 3\n"}
+            )
+        finally:
+            os.chdir(old_cwd)
+
+        # First line should be the summary
+        first_line = result.split("\n")[0]
+        assert "Wrote" in first_line
+        assert "stats.py" in first_line
+        assert "+1" in first_line
+        assert "-1" in first_line
