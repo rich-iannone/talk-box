@@ -76,8 +76,27 @@ Screen {
     margin: 0 0 1 0;
 }
 
+#home-sessions-header {
+    height: auto;
+    width: 100%;
+    padding: 0 0 0 0;
+}
+
 #home-sessions-title {
-    padding: 0 0 1 0;
+    width: 1fr;
+    padding: 0;
+}
+
+#home-sessions-view-all {
+    width: auto;
+    padding: 0;
+    color: $accent;
+    text-align: right;
+}
+
+#home-new-chat {
+    width: 100%;
+    margin: 1 0;
 }
 
 .home-session-tile {
@@ -98,11 +117,6 @@ Screen {
     color: $text-muted;
 }
 
-#home-sessions-view-all {
-    padding: 0 2;
-    margin: 0 0 1 0;
-    color: $accent;
-}
 
 /* -- Sessions screen ------------------------------------------------------ */
 

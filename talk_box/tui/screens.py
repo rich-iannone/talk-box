@@ -804,7 +804,6 @@ class HomeScreen(Screen):
 
                 with Vertical(id="home-actions-panel", classes="home-panel"):
                     yield Static("[b]Quick Actions[/b]", id="home-actions-title")
-                    yield Button("New Chat", id="home-new-chat", variant="primary")
                     yield Button("Switch Profile", id="home-switch-profile")
                     yield Button("Browse Models", id="home-browse-models")
                     yield Button("Browse Personas", id="home-browse-personas")
@@ -816,13 +815,15 @@ class HomeScreen(Screen):
                         id="home-status-summary",
                     )
 
-            # Right column: recent sessions
+            # Right column: sessions
             with VerticalScroll(id="home-right"):
-                yield Static("[b]Recent Sessions[/b]", id="home-sessions-title")
-                yield Static(
-                    "[@click=screen.view_all_sessions]View all sessions →[/]",
-                    id="home-sessions-view-all",
-                )
+                with Horizontal(id="home-sessions-header"):
+                    yield Static("[b]Sessions[/b]", id="home-sessions-title")
+                    yield Static(
+                        "[@click=screen.view_all_sessions]View all… →[/]",
+                        id="home-sessions-view-all",
+                    )
+                yield Button("+ New Chat", id="home-new-chat", variant="primary")
         yield Footer()
 
     def _build_profile_summary(self) -> str:
