@@ -1039,6 +1039,146 @@ class SessionHistoryModal(ModalScreen[str | None]):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Capture / Replay viewer modal
+# ---------------------------------------------------------------------------
+
+
+class CaptureReplayModal(ModalScreen):
+    """Modal showing a captured conversation timeline with turn-by-turn detail.
+
+    Displays each user/assistant exchange with event types, timing, and
+    optional diff comparison when a replay result is provided.
+    """
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Close"),
+        Binding("q", "dismiss", "Close"),
+    ]
+
+    def __init__(
+        self,
+        capture: "ConversationCapture",
+        *,
+        diff_result: "DiffResult | None" = None,
+        title: str = "Conversation Capture",
+    ) -> None:
+        super().__init__()
+        self._capture = capture
+        self._diff_result = diff_result
+        self._title = title
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="capture-panel"):
+            yield Static(f"[b]{self._title}[/b]", id="capture-title")
+            with VerticalScroll(id="capture-scroll"):
+                yield Static(self._build_content(), id="capture-content")
+            with Horizontal(id="capture-buttons"):
+                yield Button("Close", id="capture-close-btn", variant="default")
+
+    def _build_content(self) -> str:
+        """Build the Rich-markup content for the capture viewer."""
+        import datetime
+
+        lines: list[str] = []
+        cap = self._capture
+
+        # Header info
+        lines.append(f"  Session: [b]{cap.session_id}[/b]")
+        lines.append(f"  Events:  {len(cap)}")
+        if cap.duration_ms is not None:
+            secs = cap.duration_ms / 1000
+            lines.append(f"  Duration: {secs:.1f}s")
+        if cap.metadata:
+            for k, v in list(cap.metadata.items())[:5]:
+                lines.append(f"  {k}: {v}")
+        lines.append("")
+
+        # If we have a diff result, show diff view
+        if self._diff_result:
+            lines.append("[b]Turn-by-Turn Comparison[/b]")
+            lines.append(f"  Overall similarity: {self._diff_result.similarity_score:.0%}")
+            summary = self._diff_result.summary()
+            lines.append(
+                f"  Identical: {summary['identical']}  "
+                f"Similar: {summary['similar']}  "
+                f"Changed: {summary['changed']}"
+            )
+            lines.append("")
+            for td in self._diff_result.turns:
+                status_icon = {
+                    "identical": "✅",
+                    "similar": "🟡",
+                    "changed": "🔴",
+                    "added": "➕",
+                    "removed": "➖",
+                }.get(td.status.value, "❓")
+                lines.append(
+                    f"  {status_icon} Turn {td.turn_number} "
+                    f"— {td.status.value} ({td.similarity:.0%})"
+                )
+                lines.append(f"    [dim]Prompt:[/dim] {td.prompt[:80]}")
+                if td.left_response:
+                    left_preview = td.left_response[:100].replace("\n", " ")
+                    lines.append(f"    [dim]{td.left_model or 'Original'}:[/dim] {left_preview}")
+                if td.right_response:
+                    right_preview = td.right_response[:100].replace("\n", " ")
+                    lines.append(f"    [dim]{td.right_model or 'Replay'}:[/dim] {right_preview}")
+                lines.append("")
+            return "\n".join(lines)
+
+        # Standard capture view: show turns
+        turns = cap.turns()
+        if turns:
+            lines.append(f"[b]Turns ({len(turns)})[/b]")
+            lines.append("")
+            for i, (prompt_evt, response_evt) in enumerate(turns, 1):
+                lines.append(f"  [b]Turn {i}[/b]")
+                # Prompt
+                prompt_text = prompt_evt.content[:120].replace("\n", " ")
+                ts = ""
+                if prompt_evt.timestamp:
+                    ts = datetime.datetime.fromtimestamp(prompt_evt.timestamp).strftime(" %H:%M:%S")
+                lines.append(f"    💬 [b]User{ts}:[/b] {prompt_text}")
+                # Response
+                if response_evt:
+                    resp_text = response_evt.content[:200].replace("\n", " ")
+                    model_tag = f" [{response_evt.model}]" if response_evt.model else ""
+                    timing = ""
+                    if response_evt.duration_ms:
+                        timing = f" ({response_evt.duration_ms:.0f}ms)"
+                    lines.append(f"    🤖 [b]Assistant{model_tag}{timing}:[/b] {resp_text}")
+                else:
+                    lines.append("    🤖 [dim]No response recorded[/dim]")
+                lines.append("")
+        else:
+            lines.append("[dim]No turns recorded.[/dim]")
+
+        # Other events (tool calls, guard checks, errors, etc.)
+        other_types = {"tool_call", "tool_result", "guard_check", "error", "pathway_transition"}
+        other_events = [e for e in cap.events if e.event_type.value in other_types]
+        if other_events:
+            lines.append(f"[b]Other Events ({len(other_events)})[/b]")
+            _ICONS = {
+                "tool_call": "🔧",
+                "tool_result": "📋",
+                "guard_check": "🛡️",
+                "error": "❌",
+                "pathway_transition": "🔀",
+            }
+            for evt in other_events:
+                icon = _ICONS.get(evt.event_type.value, "📎")
+                preview = evt.content[:100].replace("\n", " ")
+                lines.append(f"  {icon} {evt.event_type.value}: {preview}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "capture-close-btn":
+            self.dismiss()
+
+
 def _placeholder(title: str, description: str) -> ComposeResult:
     """Yield a centered placeholder for screens not yet implemented."""
     yield Header(show_clock=False)
@@ -1503,6 +1643,7 @@ class ChatScreen(Screen):
         self._last_kg_sources: list[KGCitation] = []  # citations from last KG enrichment
         self._kg_hint_shown: bool = False  # one-time onboarding hint
         self._session_file_id: str | None = None  # unique file stem for autosave
+        self._capture: object | None = None  # ConversationCapture instance
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -2059,6 +2200,7 @@ class ChatScreen(Screen):
                 "  /export [format]   Export session (json, markdown)\n"
                 "  /attach <path>     Attach a file to the next message\n"
                 "  /format <type>     Set output format (json, markdown, table)\n"
+                "  /capture           View conversation capture timeline\n"
                 "  /fav model <name>  Toggle model as favorite\n"
                 "  /fav persona <n>   Toggle persona as favorite\n"
                 "  /fav               List current favorites\n"
@@ -2298,6 +2440,9 @@ class ChatScreen(Screen):
         elif cmd == "/format":
             self._set_output_format(arg)
 
+        elif cmd == "/capture":
+            self._show_capture()
+
         else:
             self._append_system_message(
                 f"Unknown command: [b]{cmd}[/b]. Type [b]/help[/b] for available commands."
@@ -2309,6 +2454,7 @@ class ChatScreen(Screen):
         self._message_count = 0
         self._prompt_history = []
         self._history_index = -1
+        self._capture = None
         self._rebuild_bot()
 
         async def _clear():
@@ -2355,6 +2501,8 @@ class ChatScreen(Screen):
             "persona": self._active_persona,
             "conversation": self._conversation.to_dict(),
         }
+        if self._capture is not None and len(self._capture) > 0:
+            session_data["capture"] = self._capture.to_dict()
 
         with open(filepath, "w") as f:
             json.dump(session_data, f, indent=2)
@@ -2406,6 +2554,18 @@ class ChatScreen(Screen):
                 self._active_model = data["model"]
             if data.get("persona"):
                 self._active_persona = data["persona"]
+
+            # Restore capture if present
+            if "capture" in data:
+                try:
+                    from talk_box.capture import ConversationCapture
+
+                    self._capture = ConversationCapture.from_dict(data["capture"])
+                except Exception:
+                    self._capture = None
+            else:
+                self._capture = None
+
             self._rebuild_bot()
             self._update_sidebar()
 
@@ -3060,6 +3220,40 @@ class ChatScreen(Screen):
         except Exception:
             return text
 
+    def _ensure_capture(self) -> "ConversationCapture":
+        """Lazily create a ConversationCapture for this session."""
+        if self._capture is None:
+            from talk_box.capture import ConversationCapture
+
+            session_id = self._session_file_id or self._generate_session_id()
+            self._capture = ConversationCapture(
+                session_id=session_id,
+                metadata={
+                    "model": self._active_model or "",
+                    "persona": self._active_persona or "",
+                },
+            )
+        return self._capture
+
+    def _record_capture(self, prompt: str, response: str) -> None:
+        """Record a prompt/response pair in the conversation capture."""
+        try:
+            cap = self._ensure_capture()
+            cap.record_prompt(prompt)
+            cap.record_response(
+                response,
+                model=self._active_model or "",
+            )
+        except Exception:
+            pass
+
+    def _show_capture(self) -> None:
+        """Show the capture/replay viewer modal."""
+        if self._capture is None or len(self._capture) == 0:
+            self._append_system_message("[dim]No capture data yet. Send some messages first.[/dim]")
+            return
+        self.app.push_screen(CaptureReplayModal(self._capture, title="Session Capture"))
+
     def _show_cost_estimate(self) -> None:
         """Show session cost — uses real SessionUsage data when available."""
         # Try real usage data first
@@ -3512,6 +3706,8 @@ class ChatScreen(Screen):
             "persona": self._active_persona,
             "conversation": self._conversation.to_dict(),
         }
+        if self._capture is not None and len(self._capture) > 0:
+            data["capture"] = self._capture.to_dict()
         try:
             with open(filepath, "w") as f:
                 json.dump(data, f, indent=2)
@@ -3706,6 +3902,9 @@ class ChatScreen(Screen):
                     self._conversation.add_message(original, "user")
                     self._conversation.add_message(response_text, "assistant")
 
+                    # Record in capture
+                    self._record_capture(original, response_text)
+
                 except Exception as e:
                     err_msg = str(e)
                     # Auto-retry without tools if model doesn't support them
@@ -3758,6 +3957,9 @@ class ChatScreen(Screen):
                                 )
                             self._conversation.add_message(original, "user")
                             self._conversation.add_message(response_text, "assistant")
+
+                            # Record in capture
+                            self._record_capture(original, response_text)
                         except Exception as e2:
                             response_text = f"Error: {e2}"
                     else:

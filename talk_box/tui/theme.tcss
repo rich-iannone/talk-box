@@ -598,6 +598,36 @@ NoteInputModal {
 
 /* -- File Approval Modal ------------------------------------------------- */
 
+/* -- Capture / Replay Modal ---------------------------------------------- */
+CaptureReplayModal {
+    align: center middle;
+}
+
+#capture-panel {
+    width: 90;
+    height: 36;
+    padding: 1 2;
+    border: solid $accent;
+    background: $surface;
+}
+
+#capture-title {
+    padding: 0 0 1 0;
+}
+
+#capture-scroll {
+    height: 1fr;
+}
+
+#capture-buttons {
+    height: auto;
+    padding: 1 0 0 0;
+}
+
+#capture-buttons Button {
+    margin: 0 1 0 0;
+}
+
 FileApprovalScreen {
     align: center middle;
 }

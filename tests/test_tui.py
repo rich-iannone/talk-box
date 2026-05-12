@@ -4102,3 +4102,167 @@ class TestKnowledgeScreenEnrichment:
         options = select.set_options.call_args[0][0]
         assert len(options) == 2
         assert options[0] == ("GPT-4o", "openai:gpt-4o")
+
+
+# ---------------------------------------------------------------------------
+# Capture / Replay
+# ---------------------------------------------------------------------------
+
+
+class TestCaptureReplayModal:
+    """Tests for the CaptureReplayModal and capture recording in ChatScreen."""
+
+    def test_modal_compose(self):
+        """CaptureReplayModal composes without error."""
+        from talk_box.capture import ConversationCapture
+        from talk_box.tui.screens import CaptureReplayModal
+
+        cap = ConversationCapture(session_id="test-session")
+        cap.record_prompt("Hello")
+        cap.record_response("Hi there!", model="test-model")
+        modal = CaptureReplayModal(cap)
+        assert modal._capture is cap
+
+    def test_build_content_with_turns(self):
+        """_build_content renders turn data correctly."""
+        from talk_box.capture import ConversationCapture
+        from talk_box.tui.screens import CaptureReplayModal
+
+        cap = ConversationCapture(session_id="test-session")
+        cap.record_prompt("What is Python?")
+        cap.record_response("A programming language.", model="gpt-4o")
+        cap.record_prompt("Tell me more.")
+        cap.record_response("It's versatile.", model="gpt-4o")
+
+        modal = CaptureReplayModal(cap, title="Test Capture")
+        content = modal._build_content()
+        assert "test-session" in content
+        assert "Turn 1" in content
+        assert "Turn 2" in content
+        assert "What is Python?" in content
+        assert "A programming language." in content
+        assert "gpt-4o" in content
+
+    def test_build_content_with_diff(self):
+        """_build_content renders diff comparison when provided."""
+        from talk_box.capture import ConversationCapture
+        from talk_box.diff import diff
+        from talk_box.tui.screens import CaptureReplayModal
+
+        left = ConversationCapture(session_id="left")
+        left.record_prompt("Hello")
+        left.record_response("Hi!", model="model-a")
+
+        right = ConversationCapture(session_id="right")
+        right.record_prompt("Hello")
+        right.record_response("Hey there!", model="model-b")
+
+        diff_result = diff(left, right)
+        modal = CaptureReplayModal(left, diff_result=diff_result)
+        content = modal._build_content()
+        assert "Turn-by-Turn Comparison" in content
+        assert "similarity" in content.lower()
+
+    def test_build_content_with_tool_events(self):
+        """_build_content includes tool call events in Other Events section."""
+        from talk_box.capture import ConversationCapture
+        from talk_box.tui.screens import CaptureReplayModal
+
+        cap = ConversationCapture(session_id="tools-test")
+        cap.record_prompt("Read file.py")
+        cap.record_tool_call("file_read", arguments={"path": "file.py"})
+        cap.record_tool_result("file_read", "contents here", success=True)
+        cap.record_response("Here's the file.", model="test")
+
+        modal = CaptureReplayModal(cap)
+        content = modal._build_content()
+        assert "Other Events" in content
+        assert "tool_call" in content
+
+    def test_build_content_empty_capture(self):
+        """_build_content handles empty capture gracefully."""
+        from talk_box.capture import ConversationCapture
+        from talk_box.tui.screens import CaptureReplayModal
+
+        cap = ConversationCapture(session_id="empty")
+        modal = CaptureReplayModal(cap)
+        content = modal._build_content()
+        assert "No turns recorded" in content
+
+    def test_record_capture_creates_capture(self):
+        """_record_capture lazily creates a ConversationCapture."""
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._capture = None
+        screen._session_file_id = "test-id"
+        screen._active_model = "test-model"
+        screen._active_persona = "test-persona"
+
+        screen._record_capture("Hello", "Hi!")
+        assert screen._capture is not None
+        assert len(screen._capture) == 2
+        turns = screen._capture.turns()
+        assert len(turns) == 1
+        assert turns[0][0].content == "Hello"
+        assert turns[0][1].content == "Hi!"
+
+    def test_record_capture_appends_to_existing(self):
+        """_record_capture adds to an existing capture."""
+        from talk_box.capture import ConversationCapture
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._capture = ConversationCapture(session_id="existing")
+        screen._active_model = "model"
+        screen._active_persona = None
+        screen._session_file_id = "existing"
+
+        screen._record_capture("Q1", "A1")
+        screen._record_capture("Q2", "A2")
+        assert len(screen._capture) == 4
+        turns = screen._capture.turns()
+        assert len(turns) == 2
+
+    def test_show_capture_no_data(self):
+        """_show_capture shows a message when no capture exists."""
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._capture = None
+        screen._append_system_message = MagicMock()
+
+        screen._show_capture()
+        screen._append_system_message.assert_called_once()
+        assert "No capture data" in screen._append_system_message.call_args[0][0]
+
+    def test_do_clear_resets_capture(self):
+        """_do_clear resets _capture to None."""
+        from talk_box.capture import ConversationCapture
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._capture = ConversationCapture(session_id="x")
+        screen._conversation = None
+        screen._message_count = 0
+        screen._prompt_history = []
+        screen._history_index = -1
+        screen._bot = None
+        screen._active_model = None
+        screen._active_persona = None
+        screen._active_guards = []
+        screen._active_traits = []
+        screen._enter_sends = True
+        screen._output_format = None
+        screen._require_approvals = True
+
+        # Mock what _do_clear needs
+        from unittest.mock import MagicMock
+
+        screen._rebuild_bot = MagicMock()
+        screen.run_worker = MagicMock()
+
+        screen._do_clear()
+        assert screen._capture is None
