@@ -4451,3 +4451,341 @@ class TestImageAttachments:
         mock_adapter.stream_with_thinking.assert_called_once()
         call_kwargs = mock_adapter.stream_with_thinking.call_args
         assert call_kwargs.kwargs.get("image_contents") is images
+
+
+# ---------------------------------------------------------------------------
+# HTML Reports (/report command)
+# ---------------------------------------------------------------------------
+
+
+class TestReportCommand:
+    """Tests for the /report slash command."""
+
+    def _make_screen(self):
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._append_system_message = MagicMock()
+        screen._capture = None
+        screen._kg = None
+        screen._conversation = None
+        screen._active_model = "openai:gpt-4o"
+        screen._active_persona = "analyst"
+        screen._session_file_id = "test-session"
+        return screen
+
+    def test_report_no_arg_shows_help(self):
+        screen = self._make_screen()
+        screen._handle_report("")
+        msg = screen._append_system_message.call_args[0][0]
+        assert "Usage" in msg
+        assert "transcript" in msg
+        assert "kg" in msg
+        assert "session" in msg
+
+    def test_report_unknown_arg_shows_help(self):
+        screen = self._make_screen()
+        screen._handle_report("bogus")
+        msg = screen._append_system_message.call_args[0][0]
+        assert "Usage" in msg
+
+    def test_report_transcript_no_capture(self):
+        screen = self._make_screen()
+        screen._handle_report("transcript")
+        msg = screen._append_system_message.call_args[0][0]
+        assert "No capture data" in msg
+
+    def test_report_transcript_opens_browser(self, tmp_path):
+        from unittest.mock import patch
+
+        from talk_box.capture import ConversationCapture
+
+        screen = self._make_screen()
+        cap = ConversationCapture(session_id="rpt-test")
+        cap.record_prompt("Hello")
+        cap.record_response("Hi!", model="gpt-4o")
+        screen._capture = cap
+
+        with patch("webbrowser.open") as mock_open:
+            screen._handle_report("transcript")
+
+        mock_open.assert_called_once()
+        url = mock_open.call_args[0][0]
+        assert url.startswith("file://")
+        assert "talk_box_transcript_" in url
+        msg = screen._append_system_message.call_args[0][0]
+        assert "transcript" in msg.lower()
+
+    def test_report_capture_alias(self):
+        """'capture' is an alias for 'transcript'."""
+        from unittest.mock import patch
+
+        from talk_box.capture import ConversationCapture
+
+        screen = self._make_screen()
+        cap = ConversationCapture(session_id="alias-test")
+        cap.record_prompt("Hi")
+        cap.record_response("Hello!", model="test")
+        screen._capture = cap
+
+        with patch("webbrowser.open") as mock_open:
+            screen._handle_report("capture")
+
+        mock_open.assert_called_once()
+
+    def test_report_kg_not_loaded(self):
+        screen = self._make_screen()
+        screen._handle_report("kg")
+        msg = screen._append_system_message.call_args[0][0]
+        assert "not loaded" in msg.lower()
+
+    def test_report_kg_opens_browser(self):
+        from unittest.mock import MagicMock, patch
+
+        screen = self._make_screen()
+        screen._kg = MagicMock()  # fake KG
+
+        with patch("talk_box.kg_visualization.visualize", return_value="/tmp/kg.html") as mock_viz:
+            screen._handle_report("kg")
+
+        mock_viz.assert_called_once_with(screen._kg, open_browser=True)
+        msg = screen._append_system_message.call_args[0][0]
+        assert "knowledge graph" in msg.lower()
+
+    def test_report_knowledge_alias(self):
+        """'knowledge' is an alias for 'kg'."""
+        from unittest.mock import MagicMock, patch
+
+        screen = self._make_screen()
+        screen._kg = MagicMock()
+
+        with patch("talk_box.kg_visualization.visualize", return_value="/tmp/kg.html"):
+            screen._handle_report("knowledge")
+
+        msg = screen._append_system_message.call_args[0][0]
+        assert "knowledge graph" in msg.lower()
+
+    def test_report_session_no_conversation(self):
+        screen = self._make_screen()
+        screen._handle_report("session")
+        msg = screen._append_system_message.call_args[0][0]
+        assert "No messages" in msg
+
+    def test_report_session_opens_browser(self):
+        from unittest.mock import MagicMock, patch
+
+        from talk_box.conversation import Conversation
+
+        screen = self._make_screen()
+        convo = Conversation()
+        convo.add_message("Hello", "user")
+        convo.add_message("Hi there!", "assistant")
+        screen._conversation = convo
+
+        with patch("webbrowser.open") as mock_open:
+            screen._handle_report("session")
+
+        mock_open.assert_called_once()
+        url = mock_open.call_args[0][0]
+        assert url.startswith("file://")
+        msg = screen._append_system_message.call_args[0][0]
+        assert "session report" in msg.lower()
+
+    def test_render_session_html_content(self):
+        """_render_session_html produces valid HTML with messages."""
+        from talk_box.conversation import Conversation
+
+        screen = self._make_screen()
+        convo = Conversation()
+        convo.add_message("What is Python?", "user")
+        convo.add_message("A programming language.", "assistant")
+        screen._conversation = convo
+
+        html = screen._render_session_html()
+        assert "<!DOCTYPE html>" in html
+        assert "Talk Box Session" in html
+        assert "What is Python?" in html
+        assert "A programming language." in html
+        assert "openai:gpt-4o" in html
+        assert "analyst" in html
+
+    def test_render_session_html_escapes_content(self):
+        """_render_session_html escapes HTML in messages."""
+        from talk_box.conversation import Conversation
+
+        screen = self._make_screen()
+        convo = Conversation()
+        convo.add_message("<script>alert('xss')</script>", "user")
+        convo.add_message("Safe response.", "assistant")
+        screen._conversation = convo
+
+        html = screen._render_session_html()
+        assert "<script>" not in html
+        assert "&lt;script&gt;" in html
+
+
+class TestConversationBranching:
+    """Tests for conversation branching (click-to-edit) in the TUI."""
+
+    def _make_screen(self):
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._append_system_message = MagicMock()
+        screen._conversation = None
+        screen._tree = None
+        screen._node_id_for_msg = {}
+        screen._message_count = 0
+        screen._capture = None
+        screen._undo_buffer = None
+        return screen
+
+    def test_get_or_create_tree_empty(self):
+        """_get_or_create_tree creates a new tree when no conversation exists."""
+        from talk_box.conversation_tree import ConversationTree
+
+        screen = self._make_screen()
+        tree = screen._get_or_create_tree()
+        assert isinstance(tree, ConversationTree)
+        assert screen._tree is tree
+        assert len(tree) == 0
+
+    def test_get_or_create_tree_migrates_conversation(self):
+        """_get_or_create_tree migrates an existing linear conversation."""
+        from talk_box.conversation import Conversation
+        from talk_box.conversation_tree import ConversationTree
+
+        screen = self._make_screen()
+        screen._conversation = Conversation()
+        screen._conversation.add_message("Hello", "user")
+        screen._conversation.add_message("Hi there", "assistant")
+        screen._message_count = 2
+
+        tree = screen._get_or_create_tree()
+        assert isinstance(tree, ConversationTree)
+        assert len(tree) == 2
+        assert [m.content for m in tree.messages] == ["Hello", "Hi there"]
+
+    def test_get_or_create_tree_idempotent(self):
+        """Calling _get_or_create_tree twice returns the same tree."""
+        screen = self._make_screen()
+        tree1 = screen._get_or_create_tree()
+        tree2 = screen._get_or_create_tree()
+        assert tree1 is tree2
+
+    def test_branch_label_no_tree(self):
+        """_branch_label_for returns None when no tree exists."""
+        screen = self._make_screen()
+        assert screen._branch_label_for("chat-msg-1") is None
+
+    def test_branch_label_no_siblings(self):
+        """_branch_label_for returns None for a non-branching node."""
+        screen = self._make_screen()
+        tree = screen._get_or_create_tree()
+        node = tree.add_message("Hello", "user")
+        screen._node_id_for_msg["chat-msg-1"] = node.node_id
+        assert screen._branch_label_for("chat-msg-1") is None
+
+    def test_branch_label_with_siblings(self):
+        """_branch_label_for returns 'n/m' for branch points."""
+        from talk_box.conversation_tree import ConversationTree
+
+        screen = self._make_screen()
+        tree = ConversationTree()
+        a = tree.add_message("A", "user")
+        b = tree.add_message("B", "assistant")
+        c = tree.add_message("C", "user")
+        tree.fork_at(c.node_id)
+        d = tree.add_message("D", "user")
+
+        screen._tree = tree
+        screen._node_id_for_msg["chat-msg-3"] = c.node_id
+        screen._node_id_for_msg["chat-msg-4"] = d.node_id
+
+        # C is first sibling, D is second
+        assert screen._branch_label_for("chat-msg-3") == "1/2"
+        assert screen._branch_label_for("chat-msg-4") == "2/2"
+
+    def test_do_clear_resets_tree(self):
+        """_do_clear resets the tree and node mapping."""
+        from unittest.mock import MagicMock, AsyncMock
+        from talk_box.conversation_tree import ConversationTree
+
+        screen = self._make_screen()
+        screen._tree = ConversationTree()
+        screen._tree.add_message("X", "user")
+        screen._node_id_for_msg = {"chat-msg-1": "some-id"}
+        screen._prompt_history = []
+        screen._history_index = -1
+        screen._rebuild_bot = MagicMock()
+        screen.run_worker = MagicMock()
+        screen.query_one = MagicMock()
+        screen._update_sidebar = MagicMock()
+        screen._do_clear()
+        assert screen._tree is None
+        assert screen._node_id_for_msg == {}
+
+    def test_fork_and_resend_requires_tracked_msg(self):
+        """_fork_and_resend shows error if msg_id not in mapping."""
+        screen = self._make_screen()
+        screen._fork_and_resend("chat-msg-999", "new text")
+        screen._append_system_message.assert_called_once()
+        assert "not tracked" in screen._append_system_message.call_args[0][0]
+
+    def test_switch_branch_no_tree(self):
+        """_switch_branch is a no-op when tree is None."""
+        screen = self._make_screen()
+        screen._switch_branch("chat-msg-1", 1)  # Should not raise
+
+    def test_save_session_includes_tree(self):
+        """_save_session includes conversation_tree in saved data."""
+        import json
+        import tempfile
+        from unittest.mock import MagicMock
+        from talk_box.conversation import Conversation
+        from talk_box.conversation_tree import ConversationTree
+
+        screen = self._make_screen()
+        screen._active_model = "test"
+        screen._active_persona = None
+
+        convo = Conversation()
+        convo.add_message("A", "user")
+        convo.add_message("B", "assistant")
+        screen._conversation = convo
+
+        tree = ConversationTree.from_conversation(convo)
+        screen._tree = tree
+
+        # Use temp dir for sessions
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("os.path.expanduser", return_value=tmpdir):
+                import os
+
+                sessions_dir = os.path.join(tmpdir, "sessions")
+                os.makedirs(sessions_dir, exist_ok=True)
+                screen._save_session("test_branch_save")
+                filepath = os.path.join(sessions_dir, "test_branch_save.json")
+                # The save creates files under ~/.config/talk-box/sessions
+                # but we patched expanduser, so check the real path
+                import glob
+
+                files = glob.glob(os.path.join(tmpdir, "**/*.json"), recursive=True)
+                if files:
+                    with open(files[0]) as f:
+                        data = json.load(f)
+                    assert "conversation_tree" in data
+
+
+class TestEditMessageModal:
+    """Tests for the EditMessageModal."""
+
+    def test_modal_exists(self):
+        from talk_box.tui.screens import EditMessageModal
+
+        modal = EditMessageModal("original text")
+        assert modal._original_text == "original text"

@@ -323,6 +323,44 @@ class FileBrowserModal(ModalScreen[str | None]):
         self.dismiss(None)
 
 
+class EditMessageModal(ModalScreen[str | None]):
+    """Modal for editing a previous user message to create a branch.
+
+    Dismisses with the edited text or ``None`` on cancel.
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel", show=False, priority=True),
+    ]
+
+    def __init__(self, original_text: str) -> None:
+        super().__init__()
+        self._original_text = original_text
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="edit-msg-panel"):
+            yield Static(
+                "[b]Edit Message[/b] [dim](creates a new branch)[/dim]", id="edit-msg-title"
+            )
+            yield TextArea(self._original_text, id="edit-msg-body")
+            with Horizontal(id="edit-msg-buttons"):
+                yield Button("Send", variant="primary", id="edit-msg-send")
+                yield Button("Cancel", variant="default", id="edit-msg-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#edit-msg-body", TextArea).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "edit-msg-send":
+            text = self.query_one("#edit-msg-body", TextArea).text.strip()
+            self.dismiss(text if text else None)
+        else:
+            self.dismiss(None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
 class NoteInputModal(ModalScreen[tuple[str, str] | None]):
     """Modal with an optional name field and a large text area for note content.
 
@@ -1645,6 +1683,8 @@ class ChatScreen(Screen):
         self._session_file_id: str | None = None  # unique file stem for autosave
         self._capture: object | None = None  # ConversationCapture instance
         self._undo_buffer: object | None = None  # UndoBuffer instance
+        self._tree: object | None = None  # ConversationTree instance
+        self._node_id_for_msg: dict[str, str] = {}  # widget msg_id -> tree node_id
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -1871,6 +1911,8 @@ class ChatScreen(Screen):
             self._conversation = None
             self._message_count = 0
             self._session_file_id = self._generate_session_id()
+            self._tree = None
+            self._node_id_for_msg = {}
             self._rebuild_bot()
             self.run_worker(self._reset_chat_ui(), name="new_chat")
             return
@@ -2111,6 +2153,20 @@ class ChatScreen(Screen):
                 self.set_timer(1.5, lambda: setattr(event.button, "label", "📋"))
             except Exception:
                 pass
+        elif btn_id.startswith("edit-chat-msg-"):
+            msg_id = btn_id.removeprefix("edit-")
+            try:
+                widget = self.query_one(f"#{msg_id}", Static)
+                raw = getattr(widget, "_raw_content", "")
+                self._show_edit_modal(msg_id, raw)
+            except Exception:
+                pass
+        elif btn_id.startswith("br-prev-chat-msg-"):
+            msg_id = btn_id.removeprefix("br-prev-")
+            self._switch_branch(msg_id, -1)
+        elif btn_id.startswith("br-next-chat-msg-"):
+            msg_id = btn_id.removeprefix("br-next-")
+            self._switch_branch(msg_id, +1)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle message submission from workspace or other Input widgets."""
@@ -2134,7 +2190,10 @@ class ChatScreen(Screen):
             self._handle_slash_command(text)
             return
 
-        self._append_message("user", text)
+        # Track in conversation tree
+        tree = self._get_or_create_tree()
+        node = tree.add_message(text, "user")
+        self._append_message("user", text, node_id=node.node_id)
         self._send_message(text)
 
         # One-time KG onboarding hint after first user message
@@ -2220,6 +2279,7 @@ class ChatScreen(Screen):
                 "  /format <type>     Set output format (json, markdown, table)\n"
                 "  /capture           View conversation capture timeline\n"
                 "  /undo [all|list]   Undo file changes (last, all, or list)\n"
+                "  /report [type]     Open HTML report in browser (transcript, kg)\n"
                 "  /fav model <name>  Toggle model as favorite\n"
                 "  /fav persona <n>   Toggle persona as favorite\n"
                 "  /fav               List current favorites\n"
@@ -2465,6 +2525,9 @@ class ChatScreen(Screen):
         elif cmd == "/undo":
             self._handle_undo(arg)
 
+        elif cmd == "/report":
+            self._handle_report(arg)
+
         else:
             self._append_system_message(
                 f"Unknown command: [b]{cmd}[/b]. Type [b]/help[/b] for available commands."
@@ -2479,6 +2542,8 @@ class ChatScreen(Screen):
         self._capture = None
         if self._undo_buffer is not None:
             self._undo_buffer.clear()
+        self._tree = None
+        self._node_id_for_msg = {}
         self._rebuild_bot()
 
         async def _clear():
@@ -2527,6 +2592,8 @@ class ChatScreen(Screen):
         }
         if self._capture is not None and len(self._capture) > 0:
             session_data["capture"] = self._capture.to_dict()
+        if self._tree is not None:
+            session_data["conversation_tree"] = self._tree.to_dict()
 
         with open(filepath, "w") as f:
             json.dump(session_data, f, indent=2)
@@ -2590,28 +2657,53 @@ class ChatScreen(Screen):
             else:
                 self._capture = None
 
+            # Restore conversation tree if present
+            if "conversation_tree" in data:
+                try:
+                    from talk_box.conversation_tree import ConversationTree
+
+                    self._tree = ConversationTree.from_dict(data["conversation_tree"])
+                except Exception:
+                    self._tree = None
+            else:
+                self._tree = None
+            self._node_id_for_msg = {}
+
             self._rebuild_bot()
             self._update_sidebar()
 
             # Replay messages into UI — capture conversation in closure so
             # deferred on_select_changed events can't null it out.
             loaded_conversation = self._conversation
+            loaded_tree = self._tree
 
             async def _replay():
                 container = self.query_one("#chat-messages", VerticalScroll)
                 await container.remove_children()
-                for msg in loaded_conversation.messages:
-                    role = msg.role
-                    content = msg.content
-                    # Handle sessions saved with swapped (role, content) args
-                    if role not in ("user", "assistant", "system", "function") and content in (
-                        "user",
-                        "assistant",
-                        "system",
-                        "function",
-                    ):
-                        role, content = content, role
-                    self._append_message(role, content)
+                # If we have a tree, replay from its active path for proper node IDs
+                if loaded_tree is not None:
+                    for node in loaded_tree.active_path:
+                        self._append_message(
+                            node.message.role, node.message.content, node_id=node.node_id
+                        )
+                else:
+                    for msg in loaded_conversation.messages:
+                        role = msg.role
+                        content = msg.content
+                        # Handle sessions saved with swapped (role, content) args
+                        if role not in (
+                            "user",
+                            "assistant",
+                            "system",
+                            "function",
+                        ) and content in (
+                            "user",
+                            "assistant",
+                            "system",
+                            "function",
+                        ):
+                            role, content = content, role
+                        self._append_message(role, content)
                 # Re-assign in case on_select_changed cleared it while we ran
                 self._conversation = loaded_conversation
                 self._update_sidebar()
@@ -3375,6 +3467,137 @@ class ChatScreen(Screen):
                 "  /undo list         List undoable changes"
             )
 
+    def _handle_report(self, arg: str) -> None:
+        """Handle the /report slash command — generate and open HTML reports."""
+        import tempfile
+        import webbrowser
+
+        sub = arg.lower().strip()
+
+        if sub in ("transcript", "capture"):
+            # Export conversation capture as HTML transcript
+            if self._capture is None or len(self._capture) == 0:
+                self._append_system_message(
+                    "[dim]No capture data yet. Send some messages first.[/dim]"
+                )
+                return
+            try:
+                from talk_box.compliance import export_html
+
+                fd, tmp = tempfile.mkstemp(prefix="talk_box_transcript_", suffix=".html")
+                import os
+
+                os.close(fd)
+                export_html(
+                    self._capture,
+                    tmp,
+                    title=f"Session {self._session_file_id or 'untitled'}",
+                    metadata={
+                        "model": self._active_model or "unknown",
+                        "persona": self._active_persona or "none",
+                    },
+                )
+                webbrowser.open(f"file://{os.path.abspath(tmp)}")
+                self._append_system_message("📄 Opened conversation transcript in browser.")
+            except Exception as e:
+                self._append_system_message(f"Error generating transcript: {e}")
+
+        elif sub in ("kg", "knowledge"):
+            # Open KG visualization in browser
+            if self._kg is None:
+                self._append_system_message(
+                    "[dim]Knowledge graph not loaded. Use /kg on first.[/dim]"
+                )
+                return
+            try:
+                from talk_box.kg_visualization import visualize
+
+                path = visualize(self._kg, open_browser=True)
+                self._append_system_message(
+                    f"🔗 Opened knowledge graph visualization in browser.\n  [dim]{path}[/dim]"
+                )
+            except Exception as e:
+                self._append_system_message(f"Error generating KG visualization: {e}")
+
+        elif sub in ("session", "chat"):
+            # Export the conversation history as a simple HTML page
+            if self._conversation is None or len(self._conversation.messages) == 0:
+                self._append_system_message(
+                    "[dim]No messages yet. Start a conversation first.[/dim]"
+                )
+                return
+            try:
+                fd, tmp = tempfile.mkstemp(prefix="talk_box_session_", suffix=".html")
+                import os
+
+                os.close(fd)
+                html = self._render_session_html()
+                with open(tmp, "w") as f:
+                    f.write(html)
+                webbrowser.open(f"file://{os.path.abspath(tmp)}")
+                self._append_system_message("📄 Opened session report in browser.")
+            except Exception as e:
+                self._append_system_message(f"Error generating session report: {e}")
+
+        else:
+            self._append_system_message(
+                "[b]Usage:[/b] /report <type>\n"
+                "  [b]transcript[/b]  Conversation capture as HTML (with timing, tools, guards)\n"
+                "  [b]kg[/b]          Interactive knowledge graph visualization\n"
+                "  [b]session[/b]     Chat history as a clean HTML page"
+            )
+
+    def _render_session_html(self) -> str:
+        """Render the current conversation as a self-contained HTML page."""
+        import html as html_mod
+        from datetime import datetime
+
+        model = html_mod.escape(self._active_model or "unknown")
+        persona = html_mod.escape(self._active_persona or "none")
+        sid = html_mod.escape(self._session_file_id or "untitled")
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        rows: list[str] = []
+        for msg in self._conversation.messages:
+            role = msg.role
+            content = html_mod.escape(msg.content)
+            # Convert newlines to <br> for display
+            content = content.replace("\n", "<br>\n")
+            if role == "user":
+                bg = "#e3f2fd"
+                label = "You"
+                align = "margin-left:40px"
+            else:
+                bg = "#f5f5f5"
+                label = "Assistant"
+                align = "margin-right:40px"
+            rows.append(
+                f'<div style="padding:12px 16px;margin:8px 0;border-radius:8px;'
+                f'background:{bg};{align}">'
+                f'<div style="font-weight:bold;margin-bottom:4px;color:#555">{label}</div>'
+                f"<div>{content}</div></div>"
+            )
+
+        messages_html = "\n".join(rows)
+        return (
+            "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+            f"<title>Talk Box Session — {sid}</title>"
+            "<style>"
+            "body{font-family:-apple-system,system-ui,sans-serif;max-width:800px;"
+            "margin:40px auto;padding:0 20px;color:#333;line-height:1.6}"
+            "h1{color:#1a237e}  .meta{color:#666;font-size:0.9em;margin-bottom:24px}"
+            "</style></head><body>"
+            f"<h1>Talk Box Session</h1>"
+            f'<div class="meta">'
+            f"<strong>Session:</strong> {sid} &nbsp;|&nbsp; "
+            f"<strong>Model:</strong> {model} &nbsp;|&nbsp; "
+            f"<strong>Persona:</strong> {persona} &nbsp;|&nbsp; "
+            f"<strong>Generated:</strong> {now}"
+            f"</div>"
+            f"{messages_html}"
+            "</body></html>"
+        )
+
     def _show_cost_estimate(self) -> None:
         """Show session cost — uses real SessionUsage data when available."""
         # Try real usage data first
@@ -3829,6 +4052,8 @@ class ChatScreen(Screen):
         }
         if self._capture is not None and len(self._capture) > 0:
             data["capture"] = self._capture.to_dict()
+        if self._tree is not None:
+            data["conversation_tree"] = self._tree.to_dict()
         try:
             with open(filepath, "w") as f:
                 json.dump(data, f, indent=2)
@@ -3872,7 +4097,7 @@ class ChatScreen(Screen):
         container.mount(widget)
         container.scroll_end(animate=False)
 
-    def _append_message(self, role: str, content: str) -> None:
+    def _append_message(self, role: str, content: str, *, node_id: str | None = None) -> None:
         """Add a message bubble to the chat area."""
         container = self.query_one("#chat-messages", VerticalScroll)
 
@@ -3883,6 +4108,10 @@ class ChatScreen(Screen):
 
         self._message_count += 1
         msg_id = f"chat-msg-{self._message_count}"
+
+        # Track the mapping from widget ID to tree node ID
+        if node_id is not None:
+            self._node_id_for_msg[msg_id] = node_id
 
         if role == "user":
             label = "[b]You[/b]"
@@ -3895,11 +4124,132 @@ class ChatScreen(Screen):
 
         widget = Static(display_content, id=msg_id, classes=classes)
         widget._raw_content = content
-        copy_btn = Button("📋", id=f"copy-{msg_id}", classes="chat-copy-btn")
-        wrapper = Horizontal(widget, copy_btn, classes=f"chat-msg-row {role}-row")
+
+        buttons: list[Button] = []
+
+        # Branch navigation buttons (for nodes at branch points)
+        branch_label = self._branch_label_for(msg_id)
+        if branch_label:
+            buttons.append(Button("◀", id=f"br-prev-{msg_id}", classes="chat-branch-btn"))
+            buttons.append(
+                Static(branch_label, id=f"br-label-{msg_id}", classes="chat-branch-label")
+            )
+            buttons.append(Button("▶", id=f"br-next-{msg_id}", classes="chat-branch-btn"))
+
+        # Edit button for user messages
+        if role == "user":
+            buttons.append(Button("✏️", id=f"edit-{msg_id}", classes="chat-edit-btn"))
+
+        buttons.append(Button("📋", id=f"copy-{msg_id}", classes="chat-copy-btn"))
+        wrapper = Horizontal(widget, *buttons, classes=f"chat-msg-row {role}-row")
         container.mount(wrapper)
         container.scroll_end(animate=False)
         self._update_sidebar()
+
+    def _branch_label_for(self, msg_id: str) -> str | None:
+        """Return e.g. '2/3' if the message has sibling branches, else None."""
+        nid = self._node_id_for_msg.get(msg_id)
+        if nid is None or self._tree is None:
+            return None
+        from talk_box.conversation_tree import ConversationTree
+
+        tree: ConversationTree = self._tree  # type: ignore[assignment]
+        siblings = tree.sibling_ids(nid)
+        if len(siblings) <= 1:
+            return None
+        idx = siblings.index(nid) + 1
+        return f"{idx}/{len(siblings)}"
+
+    def _get_or_create_tree(self):
+        """Lazily create the conversation tree, migrating any existing linear conversation."""
+        if self._tree is not None:
+            return self._tree
+        from talk_box.conversation_tree import ConversationTree
+
+        if self._conversation and self._conversation.messages:
+            self._tree = ConversationTree.from_conversation(self._conversation)
+            # Rebuild node mapping for existing messages
+            for i, node in enumerate(self._tree.active_path, 1):
+                widget_id = f"chat-msg-{i}"
+                self._node_id_for_msg[widget_id] = node.node_id
+        else:
+            self._tree = ConversationTree()
+        return self._tree
+
+    def _fork_and_resend(self, msg_id: str, new_text: str) -> None:
+        """Fork the conversation at *msg_id* with *new_text* and re-send."""
+        tree = self._get_or_create_tree()
+        nid = self._node_id_for_msg.get(msg_id)
+        if nid is None:
+            self._append_system_message("Cannot branch: message not tracked.")
+            return
+
+        from talk_box.conversation_tree import ConversationTree
+
+        tree_typed: ConversationTree = tree  # type: ignore[assignment]
+
+        # Fork at the node (sets active tip to its parent)
+        tree_typed.fork_at(nid)
+
+        # Add the new user message as a sibling branch
+        new_node = tree_typed.add_message(new_text, "user")
+
+        # Rebuild the linear conversation from the new branch
+        self._conversation = tree_typed.to_linear()
+
+        # Rebuild the UI from the active path
+        async def _rebuild():
+            container = self.query_one("#chat-messages", VerticalScroll)
+            await container.remove_children()
+            self._message_count = 0
+            self._node_id_for_msg = {}
+            for node in tree_typed.active_path:
+                self._append_message(node.message.role, node.message.content, node_id=node.node_id)
+            # Now send the new message to the LLM
+            self._send_message(new_text)
+
+        self.run_worker(_rebuild(), name="branch_rebuild")
+
+    def _switch_branch(self, msg_id: str, direction: int) -> None:
+        """Switch to a sibling branch. direction: -1 (prev) or +1 (next)."""
+        tree = self._tree
+        if tree is None:
+            return
+        nid = self._node_id_for_msg.get(msg_id)
+        if nid is None:
+            return
+
+        from talk_box.conversation_tree import ConversationTree
+
+        tree_typed: ConversationTree = tree  # type: ignore[assignment]
+        siblings = tree_typed.sibling_ids(nid)
+        if len(siblings) <= 1:
+            return
+
+        idx = siblings.index(nid)
+        new_idx = (idx + direction) % len(siblings)
+        target_nid = siblings[new_idx]
+        tree_typed.switch_to_branch(target_nid)
+        self._conversation = tree_typed.to_linear()
+
+        async def _rebuild():
+            container = self.query_one("#chat-messages", VerticalScroll)
+            await container.remove_children()
+            self._message_count = 0
+            self._node_id_for_msg = {}
+            for node in tree_typed.active_path:
+                self._append_message(node.message.role, node.message.content, node_id=node.node_id)
+
+        self.run_worker(_rebuild(), name="branch_switch")
+
+    def _show_edit_modal(self, msg_id: str, original_text: str) -> None:
+        """Open an edit modal for the given user message."""
+
+        def _on_result(new_text: str | None) -> None:
+            if new_text and new_text != original_text:
+                self._fork_and_resend(msg_id, new_text)
+
+        self.app.push_screen(EditMessageModal(original_text), callback=_on_result)
 
     def _send_message(self, text: str) -> None:
         """Send a message via ChatBot, streaming the response."""
@@ -4035,6 +4385,12 @@ class ChatScreen(Screen):
                     self._conversation.add_message(original, "user")
                     self._conversation.add_message(response_text, "assistant")
 
+                    # Track assistant message in tree
+                    if self._tree is not None:
+                        asst_node = self._tree.add_message(response_text, "assistant")
+                        # Map the widget to the tree node
+                        self._node_id_for_msg[widget_id] = asst_node.node_id
+
                     # Record in capture
                     self._record_capture(original, response_text)
 
@@ -4090,6 +4446,11 @@ class ChatScreen(Screen):
                                 )
                             self._conversation.add_message(original, "user")
                             self._conversation.add_message(response_text, "assistant")
+
+                            # Track assistant message in tree
+                            if self._tree is not None:
+                                asst_node = self._tree.add_message(response_text, "assistant")
+                                self._node_id_for_msg[widget_id] = asst_node.node_id
 
                             # Record in capture
                             self._record_capture(original, response_text)

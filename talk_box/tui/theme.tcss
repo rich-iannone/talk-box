@@ -212,6 +212,72 @@ Screen {
     color: $text;
 }
 
+.chat-edit-btn {
+    width: 4;
+    min-width: 4;
+    height: 3;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: $text-muted;
+}
+
+.chat-edit-btn:hover {
+    background: $surface;
+    color: $text;
+}
+
+.chat-branch-btn {
+    width: 3;
+    min-width: 3;
+    height: 3;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: $text-muted;
+}
+
+.chat-branch-btn:hover {
+    background: $surface;
+    color: $text;
+}
+
+.chat-branch-label {
+    width: auto;
+    height: 3;
+    content-align: center middle;
+    color: $text-muted;
+}
+
+#edit-msg-panel {
+    width: 60;
+    height: auto;
+    max-height: 20;
+    background: $surface;
+    border: thick $primary;
+    padding: 1 2;
+}
+
+#edit-msg-title {
+    margin-bottom: 1;
+}
+
+#edit-msg-body {
+    height: 8;
+    margin-bottom: 1;
+}
+
+#edit-msg-buttons {
+    height: 3;
+    align: right middle;
+}
+
+#edit-msg-buttons Button {
+    margin-left: 1;
+}
+
 .chat-user {
     background: $primary 15%;
     border-left: thick $primary;
