@@ -14,12 +14,14 @@ from rich.table import Table
 # ---------------------------------------------------------------------------
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.version_option(package_name="talk-box")
-def main() -> None:
+@click.pass_context
+def main(ctx: click.Context) -> None:
     """Talk Box: build production AI assistants.
 
-    Use 'talk-box COMMAND --help' for details on each command.
+    Run with no arguments to launch the TUI, or use
+    'talk-box COMMAND --help' for details on each command.
     """
     try:
         from dotenv import load_dotenv
@@ -27,6 +29,12 @@ def main() -> None:
         load_dotenv()
     except ImportError:
         pass
+
+    if ctx.invoked_subcommand is None:
+        from talk_box.tui import TalkBoxApp
+
+        app = TalkBoxApp()
+        app.run()
 
 
 # ---------------------------------------------------------------------------

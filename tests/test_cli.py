@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from click.testing import CliRunner
 
 from talk_box.cli import main
@@ -36,9 +38,14 @@ class TestMainGroup:
         assert result.exit_code == 0
         assert "version" in result.output
 
-    def test_no_args_shows_help(self):
-        result = _runner().invoke(main, [])
-        assert "Usage" in result.output
+    def test_no_args_launches_tui(self):
+        """Bare `talk-box` (no subcommand) invokes the TUI."""
+        with patch("talk_box.tui.TalkBoxApp") as mock_app_cls:
+            mock_app = mock_app_cls.return_value
+            mock_app.run.return_value = None
+            result = _runner().invoke(main, [])
+            assert result.exit_code == 0
+            mock_app.run.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
