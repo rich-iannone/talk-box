@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Center, Horizontal, Vertical, VerticalScroll
+from textual.containers import Center, Grid, Horizontal, Vertical, VerticalScroll
 from textual.events import Click
 from textual.screen import ModalScreen, Screen
 from textual.widgets import (
@@ -1343,17 +1343,19 @@ class HomeScreen(Screen):
 
                 with Vertical(id="home-nav-panel", classes="home-panel"):
                     yield Static("[b]Navigation[/b]", id="home-nav-title")
-                    max_len = max(len(lbl) for _, sid, lbl, _ in SCREEN_NAV if sid != "home")
-                    for key, sid, label, _cls in SCREEN_NAV:
-                        if sid == "home":
-                            continue
-                        padded = label.ljust(max_len)
-                        yield Static(
-                            f"  [b]{key}[/b]  {padded}"
-                            f"  [@click=screen.show_screen_info('{sid}')]ℹ[/]",
-                            id=f"home-nav-{sid}",
-                            classes="home-nav-row",
-                        )
+                    nav_items = [
+                        (key, sid, label) for key, sid, label, _cls in SCREEN_NAV if sid != "home"
+                    ]
+                    max_len = max(len(lbl) for _, _, lbl in nav_items)
+                    with Grid(id="home-nav-grid"):
+                        for key, sid, label in nav_items:
+                            padded = label.ljust(max_len)
+                            yield Static(
+                                f"  [@click=screen.go_screen('{sid}')][b]{key}[/b]  {padded}[/]"
+                                f"  [@click=screen.show_screen_info('{sid}')]ℹ[/]",
+                                id=f"home-nav-{sid}",
+                                classes="home-nav-row",
+                            )
 
                 with Vertical(id="home-status-panel", classes="home-panel"):
                     yield Static("[b]System Status[/b]", id="home-status-title")
@@ -1534,6 +1536,10 @@ class HomeScreen(Screen):
             self.app._pending_new_chat = True  # type: ignore[attr-defined]
             self.app._switch_to("chat")  # type: ignore[attr-defined]
             return
+
+    def action_go_screen(self, screen_id: str) -> None:
+        """Navigate to a screen by ID (used by nav row click actions)."""
+        self.app._switch_to(screen_id)  # type: ignore[attr-defined]
 
     def action_show_screen_info(self, screen_id: str) -> None:
         """Show the info modal for a screen."""

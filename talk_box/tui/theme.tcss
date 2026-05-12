@@ -74,6 +74,17 @@ Screen {
 .home-nav-row {
     height: auto;
     padding: 0;
+    link-style: none;
+}
+
+.home-nav-row:hover {
+    background: $primary 15%;
+}
+
+#home-nav-grid {
+    grid-size: 2;
+    grid-gutter: 0 1;
+    height: auto;
 }
 
 #home-sessions-header {
