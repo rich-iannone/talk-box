@@ -255,7 +255,12 @@ class EnrichmentPipeline:
             meta = dict(doc_node.metadata)
             meta["_enriched"] = True
             meta["_enriched_at"] = time.time()
-            meta["_enriched_hash"] = meta.get("_content_hash", "")
+            # Compute content hash if not already set (e.g., manually-added nodes)
+            if not meta.get("_content_hash"):
+                import hashlib
+
+                meta["_content_hash"] = hashlib.sha256(doc_node.content.encode()).hexdigest()[:16]
+            meta["_enriched_hash"] = meta["_content_hash"]
             if result.summary:
                 meta["_summary"] = result.summary
             if result.topics:

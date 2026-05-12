@@ -7,6 +7,11 @@ this module so that screen installation and command-mode routing work.
 
 from __future__ import annotations
 
+# ---------------------------------------------------------------------------
+# KG citation data
+# ---------------------------------------------------------------------------
+from dataclasses import dataclass
+
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Center, Horizontal, Vertical, VerticalScroll
@@ -26,6 +31,22 @@ from textual.widgets import (
 )
 from textual.widgets.option_list import Option
 from textual.worker import Worker, WorkerState
+
+
+@dataclass(frozen=True)
+class KGCitation:
+    """A knowledge graph source cited in a chat response."""
+
+    node_id: str
+    name: str
+    node_type: str  # "document", "entity", "topic"
+    preview: str = ""  # first ~120 chars of content
+    source: str = ""  # URL or file path from metadata, if available
+
+    @property
+    def type_icon(self) -> str:
+        return {"document": "📄", "entity": "🏷️", "topic": "📌"}.get(self.node_type, "📎")
+
 
 _GLOBAL_CONFIG_DIR = "__unset__"  # lazily resolved
 
@@ -218,6 +239,127 @@ class ScreenInfoModal(ModalScreen):
                 )
 
     def action_dismiss_modal(self) -> None:
+        self.dismiss(None)
+
+
+class TextInputModal(ModalScreen[str | None]):
+    """Simple modal with a text input and submit/cancel buttons."""
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel", show=False, priority=True),
+    ]
+
+    def __init__(self, title: str, placeholder: str = "") -> None:
+        super().__init__()
+        self._title = title
+        self._placeholder = placeholder
+
+    def compose(self) -> ComposeResult:
+        with Center():
+            with Vertical(id="text-input-modal-panel"):
+                yield Static(f"[b]{self._title}[/b]", id="text-input-modal-title")
+                yield Input(placeholder=self._placeholder, id="text-input-modal-input")
+                with Horizontal(id="text-input-modal-buttons"):
+                    yield Button("Submit", variant="primary", id="text-input-modal-submit")
+                    yield Button("Cancel", variant="default", id="text-input-modal-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#text-input-modal-input", Input).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "text-input-modal-submit":
+            value = self.query_one("#text-input-modal-input", Input).value.strip()
+            self.dismiss(value if value else None)
+        else:
+            self.dismiss(None)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        value = event.value.strip()
+        self.dismiss(value if value else None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+class FileBrowserModal(ModalScreen[str | None]):
+    """Full-featured file browser using DirectoryTree."""
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel", show=False, priority=True),
+    ]
+
+    def __init__(self, start_path: str | None = None) -> None:
+        super().__init__()
+        import os
+
+        self._start_path = start_path or os.path.expanduser("~")
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="file-browser-panel"):
+            yield Static("[b]Select a File[/b]", id="file-browser-title")
+            yield Static("", id="file-browser-selected")
+            yield DirectoryTree(self._start_path, id="file-browser-tree")
+            with Horizontal(id="file-browser-buttons"):
+                yield Button("Open", variant="primary", id="file-browser-open")
+                yield Button("Cancel", variant="default", id="file-browser-cancel")
+
+    def on_mount(self) -> None:
+        self._selected_path: str | None = None
+        self.query_one("#file-browser-tree", DirectoryTree).focus()
+
+    def on_directory_tree_file_selected(self, event: DirectoryTree.FileSelected) -> None:
+        self._selected_path = str(event.path)
+        self.query_one("#file-browser-selected", Static).update(
+            f"  [dim]{self._selected_path}[/dim]"
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "file-browser-open":
+            self.dismiss(self._selected_path)
+        else:
+            self.dismiss(None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+class NoteInputModal(ModalScreen[tuple[str, str] | None]):
+    """Modal with an optional name field and a large text area for note content.
+
+    Dismisses with ``(name, content)`` or ``None``.
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel", show=False, priority=True),
+    ]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="note-input-panel"):
+            yield Static("[b]Add Note[/b]", id="note-input-title")
+            yield Input(placeholder="Name (optional)", id="note-input-name")
+            yield TextArea(id="note-input-body")
+            with Horizontal(id="note-input-buttons"):
+                yield Button("Save", variant="primary", id="note-input-save")
+                yield Button("Cancel", variant="default", id="note-input-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#note-input-name", Input).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "note-input-save":
+            self._submit()
+        else:
+            self.dismiss(None)
+
+    def _submit(self) -> None:
+        name = self.query_one("#note-input-name", Input).value.strip()
+        content = self.query_one("#note-input-body", TextArea).text.strip()
+        if not content:
+            self.dismiss(None)
+            return
+        self.dismiss((name, content))
+
+    def action_cancel(self) -> None:
         self.dismiss(None)
 
 
@@ -1358,6 +1500,8 @@ class ChatScreen(Screen):
         self._active_traits: list[str] = []
         self._kg_enabled: bool = False
         self._kg: object | None = None  # KnowledgeGraph instance (lazy)
+        self._last_kg_sources: list[KGCitation] = []  # citations from last KG enrichment
+        self._kg_hint_shown: bool = False  # one-time onboarding hint
         self._session_file_id: str | None = None  # unique file stem for autosave
 
     def compose(self) -> ComposeResult:
@@ -1834,6 +1978,29 @@ class ChatScreen(Screen):
         self._append_message("user", text)
         self._send_message(text)
 
+        # One-time KG onboarding hint after first user message
+        if not self._kg_hint_shown and not self._kg_enabled and self._message_count <= 2:
+            try:
+                kg = self._get_kg()
+                count = kg.node_count()
+            except Exception:
+                count = 0
+            self._kg_hint_shown = True
+            if count == 0:
+                self._append_system_message(
+                    "[dim]💡 [b]Tip:[/b] You can build a personal knowledge base "
+                    "that enriches every chat response.\n"
+                    '   /kg add "your note"  — add a quick note\n'
+                    "   /kg add file.md      — add a file\n"
+                    "   /kg sync             — sync configured sources\n"
+                    "   /kg on               — enable knowledge context[/dim]"
+                )
+            elif not self._kg_enabled:
+                self._append_system_message(
+                    f"[dim]💡 [b]Tip:[/b] Your knowledge graph has {count} nodes. "
+                    f"Enable it with [b]/kg on[/b] to enrich chat responses.[/dim]"
+                )
+
     def on_key(self, event) -> None:
         """Handle up/down arrows for prompt history in chat input."""
         try:
@@ -2082,6 +2249,9 @@ class ChatScreen(Screen):
                     self._sync_kg_sources()
                 elif sub_cmd == "sources":
                     self._show_kg_sources()
+                elif sub_cmd.startswith("add"):
+                    add_arg = arg.strip()[3:].strip()
+                    self._kg_add(add_arg)
                 else:
                     self._append_system_message(
                         "[b]Usage:[/b]\n"
@@ -2089,7 +2259,9 @@ class ChatScreen(Screen):
                         "  /kg on           Enable knowledge context in chat\n"
                         "  /kg off          Disable knowledge context\n"
                         "  /kg sync         Sync configured sources\n"
-                        "  /kg sources      Show configured knowledge sources"
+                        "  /kg sources      Show configured knowledge sources\n"
+                        '  /kg add "text"   Add a text note to the knowledge graph\n'
+                        "  /kg add <path>   Add a file to the knowledge graph"
                     )
 
         elif cmd == "/cost":
@@ -2762,8 +2934,80 @@ class ChatScreen(Screen):
             lines.append(f"  • {src.path}  ({src.type})")
         self._append_system_message("\n".join(lines))
 
+    def _kg_add(self, text: str) -> None:
+        """Add a text note or file to the knowledge graph via /kg add."""
+        import os
+
+        if not text:
+            self._append_system_message(
+                '[b]Usage:[/b]\n  /kg add "your note text here"\n  /kg add path/to/file.md'
+            )
+            return
+
+        try:
+            from talk_box.knowledge_graph import Node, NodeType
+
+            kg = self._get_kg()
+
+            # Quoted text → inline note
+            if (text.startswith('"') and text.endswith('"')) or (
+                text.startswith("'") and text.endswith("'")
+            ):
+                note = text[1:-1].strip()
+                if not note:
+                    self._append_system_message("[dim]Empty note — nothing added.[/dim]")
+                    return
+                # Derive a short title from the first line
+                title = note.split("\n")[0][:60]
+                node_id = f"note_{hash(note) & 0xFFFFFFFF:08x}"
+                kg.add_node(
+                    Node(
+                        id=node_id,
+                        node_type=NodeType.DOCUMENT,
+                        name=title,
+                        content=note,
+                    )
+                )
+                count = kg.node_count()
+                self._append_system_message(
+                    f"[green]✓[/green] Added note: [b]{title}[/b]\n  KG now has {count} nodes."
+                )
+                return
+
+            # Otherwise treat as a file path
+            path = os.path.join(os.getcwd(), text)
+            if not os.path.isfile(path):
+                self._append_system_message(
+                    f"[red]File not found:[/red] {text}\n"
+                    '  Tip: wrap text in quotes to add a note: /kg add "your note"'
+                )
+                return
+
+            content = open(path, errors="replace").read()  # noqa: SIM115
+            if len(content) > 100_000:
+                content = content[:100_000] + "\n\n[... truncated at 100K chars ...]"
+            title = os.path.basename(path)
+            node_id = f"file_{title}_{hash(content) & 0xFFFFFFFF:08x}"
+            kg.add_node(
+                Node(
+                    id=node_id,
+                    node_type=NodeType.DOCUMENT,
+                    name=title,
+                    content=content,
+                    metadata={"source": text},
+                )
+            )
+            count = kg.node_count()
+            self._append_system_message(
+                f"[green]✓[/green] Added file: [b]{title}[/b]  ({len(content):,} chars)\n"
+                f"  KG now has {count} nodes."
+            )
+        except Exception as e:
+            self._append_system_message(f"[red]Error adding to KG:[/red] {e}")
+
     def _enrich_with_knowledge(self, text: str) -> str:
         """Search the knowledge graph and inject relevant context."""
+        self._last_kg_sources = []
         if not self._kg_enabled:
             return text
         try:
@@ -2786,8 +3030,22 @@ class ChatScreen(Screen):
             if not all_nodes:
                 return text
 
+            matched = all_nodes[:5]
+            self._last_kg_sources = [
+                KGCitation(
+                    node_id=n.id,
+                    name=n.name,
+                    node_type=n.node_type.value,
+                    preview=(n.content or "")[:120].replace("\n", " ").strip(),
+                    source=n.metadata.get("source", "")
+                    or n.metadata.get("source_url", "")
+                    or n.metadata.get("source_path", ""),
+                )
+                for n in matched
+            ]
+
             context_parts = []
-            for node in all_nodes[:5]:
+            for node in matched:
                 # Cap each node's content at 2000 chars
                 content = node.content or ""
                 if len(content) > 2000:
@@ -3530,7 +3788,12 @@ class ChatScreen(Screen):
         return "\n".join(parts)
 
     @staticmethod
-    def _render_assistant_display(content: str, *, thinking: str = "") -> "RenderableType":
+    def _render_assistant_display(
+        content: str,
+        *,
+        thinking: str = "",
+        kg_sources: list[KGCitation] | list[str] | None = None,
+    ) -> "RenderableType":
         """Render assistant content as Rich Markdown with optional thinking."""
         from rich.console import Group
         from rich.markdown import Markdown
@@ -3544,6 +3807,20 @@ class ChatScreen(Screen):
             parts.append(Markdown(content))
         elif not thinking:
             parts.append(Text.from_markup("[dim]…[/dim]"))
+        if kg_sources:
+            source_lines = []
+            for src in kg_sources:
+                if isinstance(src, KGCitation):
+                    line = f"  {src.type_icon} [b]{src.name}[/b]"
+                    if src.source:
+                        line += f"  [dim]({src.source})[/dim]"
+                    if src.preview:
+                        line += f"\n     [dim]{src.preview}[/dim]"
+                    source_lines.append(line)
+                else:
+                    source_lines.append(f"  📎 {src}")
+            header = f"[dim]📚 Sources ({len(kg_sources)}):[/dim]"
+            parts.append(Text.from_markup(header + "\n" + "\n".join(source_lines)))
         return Group(*parts)
 
     def _update_stream_widget(self, widget_id: str, display: str) -> None:
@@ -3560,10 +3837,13 @@ class ChatScreen(Screen):
         """Finalize the streamed widget with rich markdown rendering (called on main thread)."""
         try:
             widget = self.query_one(f"#{widget_id}", Static)
-            display = self._render_assistant_display(content, thinking=thinking)
+            display = self._render_assistant_display(
+                content, thinking=thinking, kg_sources=self._last_kg_sources
+            )
             widget.update(display)
             widget._raw_content = content
             widget.remove_class("chat-thinking")
+            self._last_kg_sources = []  # consume after display
             container = self.query_one("#chat-messages", VerticalScroll)
             container.scroll_end(animate=False)
             self._update_sidebar()
@@ -4818,24 +5098,55 @@ class SkillScreen(Screen):
 class KnowledgeScreen(Screen):
     """Explore the knowledge graph and inspect nodes."""
 
-    BINDINGS = []
+    BINDINGS = [
+        Binding("a", "add_note", "Add Note"),
+        Binding("f", "add_file", "Add File"),
+        Binding("e", "enrich", "Enrich"),
+    ]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
-        with Vertical(id="kg-layout"):
-            yield Static("[b]Knowledge Graph[/b]", id="kg-title")
-            with Horizontal(id="kg-stats"):
-                yield Static("", id="kg-stats-content")
-            yield DataTable(id="kg-table")
-            with VerticalScroll(id="kg-detail-scroll"):
-                yield Static("", id="kg-detail")
+        with Horizontal(id="kg-outer"):
+            with Vertical(id="kg-layout"):
+                yield Button("← Home", id="kg-back-btn", variant="default")
+                with Horizontal(id="kg-stats"):
+                    yield Static("", id="kg-stats-content")
+                with Horizontal(id="kg-actions"):
+                    yield Button("+ Add Note (a)", id="kg-add-note-btn", variant="primary")
+                    yield Button("+ Add File (f)", id="kg-add-file-btn", variant="default")
+                    yield Button("Enrich (e)", id="kg-enrich-btn", variant="warning")
+                yield DataTable(id="kg-table")
+                with VerticalScroll(id="kg-detail-scroll"):
+                    yield Static("", id="kg-detail")
+            with Vertical(id="kg-enrich-panel"):
+                yield Static("[b]Enrichment[/b]", id="kg-enrich-title")
+                yield Select(
+                    [],
+                    prompt="Select model…",
+                    id="kg-model-select",
+                    allow_blank=True,
+                )
+                with Horizontal(id="kg-enrich-target"):
+                    yield Button("Enrich Selected", id="kg-enrich-selected-btn", variant="primary")
+                    yield Button("Enrich All", id="kg-enrich-all-btn", variant="default")
+                yield Static("", id="kg-enrich-status")
+                yield Static("[b]Chat[/b]  [dim]Ask about documents[/dim]", id="kg-chat-title")
+                with VerticalScroll(id="kg-chat-log"):
+                    yield Static("", id="kg-chat-messages")
+                yield Input(placeholder="Ask about your documents…", id="kg-chat-input")
         yield Footer()
 
     def on_mount(self) -> None:
         """Populate the knowledge graph summary."""
         table = self.query_one("#kg-table", DataTable)
         table.cursor_type = "row"
-        table.add_columns("ID", "Type", "Name")
+        table.add_columns("ID", "Type", "Name", "")
+
+        # Hide enrichment panel by default
+        self.query_one("#kg-enrich-panel").display = False
+
+        # Populate model picker
+        self._populate_models()
 
         try:
             import os
@@ -4856,18 +5167,34 @@ class KnowledgeScreen(Screen):
             self.query_one("#kg-stats-content", Static).update(stats)
 
             for node in self._kg.list_nodes(limit=50):
-                table.add_row(node.id, node.node_type.value, node.name, key=node.id)
+                table.add_row(node.id, node.node_type.value, node.name, "🗑", key=node.id)
         except Exception:
             self._kg = None
             self.query_one("#kg-stats-content", Static).update(
                 "  [dim]No knowledge graph loaded[/dim]"
             )
 
-    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
-        """Show detail for the highlighted node."""
+    def _populate_models(self) -> None:
+        """Fill the model picker with registered models."""
+        try:
+            from talk_box.models import list_models
+
+            profiles = list_models()
+            options = [(p.display_name or p.key, p.key) for p in profiles]
+            select = self.query_one("#kg-model-select", Select)
+            select.set_options(options)
+        except Exception:
+            pass
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Show full detail for the selected (clicked) node."""
         if event.row_key is None or not hasattr(self, "_kg") or self._kg is None:
             return
         node_id = str(event.row_key.value)
+        self._show_node_detail(node_id)
+
+    def _show_node_detail(self, node_id: str) -> None:
+        """Render full detail for a node in the detail panel."""
         try:
             node = self._kg.get_node(node_id)
             if node is None:
@@ -4900,6 +5227,472 @@ class KnowledgeScreen(Screen):
             self.query_one("#kg-detail", Static).update("\n".join(lines))
         except Exception:
             pass
+
+    def _delete_node_by_id(self, node_id: str) -> None:
+        """Delete a node by its ID and refresh the table."""
+        kg = self._ensure_kg()
+        if kg is None:
+            return
+        try:
+            node = kg.get_node(node_id)
+            name = node.name if node else node_id
+            kg.delete_node(node_id)
+            self._refresh_table()
+            self.query_one("#kg-detail", Static).update(f"[red]✗[/red] Deleted: [b]{name}[/b]")
+        except Exception as e:
+            self.query_one("#kg-detail", Static).update(f"[red]Error:[/red] {e}")
+
+    def _refresh_table(self) -> None:
+        """Reload the data table and stats."""
+        if not hasattr(self, "_kg") or self._kg is None:
+            return
+        from talk_box.knowledge_graph import KnowledgeGraph, NodeType
+
+        # Reconnect to pick up writes from worker threads
+        self._kg = KnowledgeGraph(self._kg.path)
+
+        table = self.query_one("#kg-table", DataTable)
+        table.clear()
+        for node in self._kg.list_nodes(limit=50):
+            table.add_row(node.id, node.node_type.value, node.name, "🗑", key=node.id)
+
+        docs = self._kg.node_count(node_type=NodeType.DOCUMENT)
+        entities = self._kg.node_count(node_type=NodeType.ENTITY)
+        topics = self._kg.node_count(node_type=NodeType.TOPIC)
+        edges = self._kg.edge_count()
+        stats = (
+            f"  Documents: {docs}  |  Entities: {entities}  |  Topics: {topics}  |  Edges: {edges}"
+        )
+        self.query_one("#kg-stats-content", Static).update(stats)
+
+    def _ensure_kg(self):
+        """Ensure KG is loaded, return it or None."""
+        if hasattr(self, "_kg") and self._kg is not None:
+            return self._kg
+        try:
+            import os
+
+            from talk_box.knowledge_graph import KnowledgeGraph
+
+            kg_path = os.path.join(os.path.expanduser("~/.config/talk-box"), "knowledge.db")
+            self._kg = KnowledgeGraph(kg_path)
+            return self._kg
+        except Exception:
+            return None
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "kg-back-btn":
+            try:
+                self.app._switch_to("home")  # type: ignore[attr-defined]
+            except Exception:
+                pass
+            return
+        if event.button.id == "kg-add-note-btn":
+            self.action_add_note()
+        elif event.button.id == "kg-add-file-btn":
+            self.action_add_file()
+        elif event.button.id == "kg-enrich-btn":
+            self.action_enrich()
+        elif event.button.id == "kg-enrich-selected-btn":
+            self._run_enrichment(selected_only=True)
+        elif event.button.id == "kg-enrich-all-btn":
+            self._run_enrichment(selected_only=False)
+
+    def action_add_note(self) -> None:
+        """Open NoteInputModal with name + large text area."""
+
+        def _on_note_submitted(result: tuple[str, str] | None) -> None:
+            if result is None:
+                return
+            name, content = result
+            kg = self._ensure_kg()
+            if kg is None:
+                return
+            from talk_box.knowledge_graph import Node, NodeType
+
+            title = (name or content.split("\n")[0])[:60]
+            node_id = f"note_{hash(content) & 0xFFFFFFFF:08x}"
+            kg.add_node(Node(id=node_id, node_type=NodeType.DOCUMENT, name=title, content=content))
+            self._refresh_table()
+            self.query_one("#kg-detail", Static).update(
+                f"[green]✓[/green] Added note: [b]{title}[/b]"
+            )
+
+        self.app.push_screen(NoteInputModal(), callback=_on_note_submitted)
+
+    def action_add_file(self) -> None:
+        """Open FileBrowserModal to select a file."""
+
+        def _on_file_selected(path: str | None) -> None:
+            if not path:
+                return
+            import os
+
+            kg = self._ensure_kg()
+            if kg is None:
+                return
+
+            if not os.path.isfile(path):
+                self.query_one("#kg-detail", Static).update(f"[red]File not found:[/red] {path}")
+                return
+
+            from talk_box.knowledge_graph import Node, NodeType
+
+            content = open(path, errors="replace").read()  # noqa: SIM115
+            if len(content) > 100_000:
+                content = content[:100_000] + "\n\n[... truncated at 100K chars ...]"
+            title = os.path.basename(path)
+            node_id = f"file_{title}_{hash(content) & 0xFFFFFFFF:08x}"
+            kg.add_node(
+                Node(
+                    id=node_id,
+                    node_type=NodeType.DOCUMENT,
+                    name=title,
+                    content=content,
+                    metadata={"source": path},
+                )
+            )
+            self._refresh_table()
+            self.query_one("#kg-detail", Static).update(
+                f"[green]✓[/green] Added file: [b]{title}[/b]  ({len(content):,} chars)"
+            )
+
+        self.app.push_screen(FileBrowserModal(), callback=_on_file_selected)
+
+    def on_data_table_cell_selected(self, event: DataTable.CellSelected) -> None:
+        """Handle clicks on the delete (🗑) column."""
+        table = self.query_one("#kg-table", DataTable)
+        # The delete column is the last one (index 3)
+        columns = list(table.columns.keys())
+        if len(columns) < 4 or event.coordinate.column != 3:
+            return
+        row_key = event.cell_key.row_key
+        if row_key is None:
+            return
+        node_id = str(row_key.value)
+        self._delete_node_by_id(node_id)
+
+    def action_enrich(self) -> None:
+        """Toggle the enrichment panel."""
+        panel = self.query_one("#kg-enrich-panel")
+        panel.display = not panel.display
+
+    def _get_selected_model(self) -> tuple[str, str] | None:
+        """Return (provider, model) from the model picker, or None."""
+        select = self.query_one("#kg-model-select", Select)
+        if select.value is None or select.value == Select.BLANK:
+            return None
+        key = str(select.value)
+        if ":" not in key:
+            return None
+        provider, model = key.split(":", 1)
+        return (provider, model)
+
+    def _run_enrichment(self, *, selected_only: bool) -> None:
+        """Run enrichment on selected or all documents."""
+        model_info = self._get_selected_model()
+        if model_info is None:
+            self.query_one("#kg-enrich-status", Static).update(
+                "[red]Please select a model first.[/red]"
+            )
+            return
+        kg = self._ensure_kg()
+        if kg is None:
+            self.query_one("#kg-enrich-status", Static).update(
+                "[red]Knowledge graph not available.[/red]"
+            )
+            return
+
+        provider, model = model_info
+
+        if selected_only:
+            table = self.query_one("#kg-table", DataTable)
+            if table.row_count == 0:
+                self.query_one("#kg-enrich-status", Static).update(
+                    "[dim]No documents to enrich.[/dim]"
+                )
+                return
+            try:
+                row_data = table.get_row_at(table.cursor_row)
+                node_id = str(row_data[0])
+            except Exception:
+                return
+            self.query_one("#kg-enrich-status", Static).update(
+                f"[dim]Enriching [b]{node_id}[/b] with {model}…[/dim]"
+            )
+            kg_path = kg.path
+            self.run_worker(
+                lambda: self._enrich_worker(kg_path, provider, model, node_ids=[node_id]),
+                name="enrich-selected",
+                thread=True,
+            )
+        else:
+            from talk_box.knowledge_graph import NodeType
+
+            doc_count = kg.node_count(node_type=NodeType.DOCUMENT)
+            if doc_count == 0:
+                self.query_one("#kg-enrich-status", Static).update(
+                    "[dim]No documents to enrich.[/dim]"
+                )
+                return
+            self.query_one("#kg-enrich-status", Static).update(
+                f"[dim]Enriching {doc_count} document(s) with {model}…[/dim]"
+            )
+            kg_path = kg.path
+            self.run_worker(
+                lambda: self._enrich_worker(kg_path, provider, model),
+                name="enrich-all",
+                thread=True,
+            )
+
+    def _enrich_worker(
+        self,
+        kg_path: str,
+        provider: str,
+        model: str,
+        *,
+        node_ids: list[str] | None = None,
+    ) -> None:
+        """Background worker: run enrichment pipeline."""
+        try:
+            from talk_box._utils_chatlas import ChatlasAdapter
+            from talk_box.enrichment import EnrichmentPipeline, EnrichmentResult
+            from talk_box.knowledge_graph import KnowledgeGraph
+
+            kg = KnowledgeGraph(kg_path)
+            adapter = ChatlasAdapter(provider=provider, model=model)
+            chat = adapter._create_chat_instance(model)
+
+            def _llm_enricher(title: str, content: str) -> EnrichmentResult:
+                prompt = (
+                    "Extract entities, topics, and relationships from this document.\n"
+                    "Return a structured analysis with:\n"
+                    "- entities: list of {name, type, mentions}\n"
+                    "- topics: list of topic strings\n"
+                    "- summary: one-paragraph summary\n"
+                    "- relationships: list of {source, target, relation}\n\n"
+                    f"Document: {title}\n\n{content[:8000]}"
+                )
+                response = chat.chat(prompt, echo="none")
+                text = str(response)
+
+                # Parse a best-effort extraction from the LLM response
+                import re
+
+                from talk_box.enrichment import ExtractedEntity
+
+                entities = []
+                topics = []
+                relationships = []
+                summary = text[:500]
+
+                # Simple entity extraction from response
+                for match in re.finditer(
+                    r'"name"\s*:\s*"([^"]+)".*?"type"\s*:\s*"([^"]+)"', text, re.DOTALL
+                ):
+                    entities.append(
+                        ExtractedEntity(name=match.group(1), entity_type=match.group(2))
+                    )
+
+                # Topic extraction: look for the "topics" array in the JSON
+                topics_match = re.search(r'"topics"\s*:\s*\[([^\]]*)\]', text, re.DOTALL)
+                if topics_match:
+                    for t in re.finditer(r'"([^"]{3,50})"', topics_match.group(1)):
+                        topics.append(t.group(1))
+                topics = list(dict.fromkeys(topics))[:10]
+
+                return EnrichmentResult(
+                    entities=entities,
+                    topics=topics,
+                    summary=summary,
+                    relationships=[],
+                )
+
+            pipeline = EnrichmentPipeline(enrich_fn=_llm_enricher)
+
+            if node_ids:
+                # Enrich specific nodes
+                from talk_box.knowledge_graph import NodeType
+
+                enriched = 0
+                for nid in node_ids:
+                    node = kg.get_node(nid)
+                    if node and node.node_type.value == "document" and node.content:
+                        result = _llm_enricher(node.name, node.content)
+                        # Store results back to the KG
+                        from talk_box.knowledge_graph import Edge, Node
+
+                        for ent in result.entities:
+                            ent_id = f"entity_{hash(ent.name) & 0xFFFFFFFF:08x}"
+                            kg.add_node(
+                                Node(
+                                    id=ent_id,
+                                    node_type=NodeType.ENTITY,
+                                    name=ent.name,
+                                    metadata={"entity_type": ent.entity_type},
+                                )
+                            )
+                            kg.add_edge(
+                                Edge(
+                                    source=nid,
+                                    target=ent_id,
+                                    relation="mentions",
+                                )
+                            )
+                        for topic in result.topics:
+                            topic_id = f"topic_{hash(topic) & 0xFFFFFFFF:08x}"
+                            kg.add_node(
+                                Node(
+                                    id=topic_id,
+                                    node_type=NodeType.TOPIC,
+                                    name=topic,
+                                )
+                            )
+                            kg.add_edge(
+                                Edge(
+                                    source=nid,
+                                    target=topic_id,
+                                    relation="about",
+                                )
+                            )
+                        if result.summary:
+                            import hashlib
+
+                            updated_node = kg.get_node(nid)
+                            if updated_node is not None:
+                                meta = dict(updated_node.metadata)
+                                meta["_summary"] = result.summary
+                                meta["_enriched"] = True
+                                meta["_enriched_at"] = __import__("time").time()
+                                content_hash = hashlib.sha256(
+                                    updated_node.content.encode()
+                                ).hexdigest()[:16]
+                                meta["_content_hash"] = content_hash
+                                meta["_enriched_hash"] = content_hash
+                                kg.add_node(
+                                    Node(
+                                        id=updated_node.id,
+                                        node_type=updated_node.node_type,
+                                        name=updated_node.name,
+                                        content=updated_node.content,
+                                        metadata=meta,
+                                    )
+                                )
+                        enriched += 1
+                self.app.call_from_thread(self._on_enrichment_done, enriched)
+            else:
+                result = pipeline.run(kg, limit=50)
+                self.app.call_from_thread(self._on_enrichment_done, result.enriched)
+        except Exception as e:
+            self.app.call_from_thread(self._on_enrichment_error, str(e))
+
+    def _on_enrichment_done(self, count: int) -> None:
+        self.query_one("#kg-enrich-status", Static).update(
+            f"[green]✓[/green] Enriched {count} document(s). Entities and topics added."
+        )
+        self._refresh_table()
+
+    def _on_enrichment_error(self, error: str) -> None:
+        self.query_one("#kg-enrich-status", Static).update(f"[red]Error:[/red] {error}")
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Handle chat input in the enrichment sidebar."""
+        if event.input.id != "kg-chat-input":
+            return
+        query = event.value.strip()
+        if not query:
+            return
+        event.input.value = ""
+
+        messages_widget = self.query_one("#kg-chat-messages", Static)
+        current = str(messages_widget.renderable) if messages_widget.renderable else ""
+        current += f"\n[b]You:[/b] {query}"
+        messages_widget.update(current)
+
+        model_info = self._get_selected_model()
+        if model_info is None:
+            messages_widget.update(current + "\n[red]Please select a model to chat.[/red]")
+            return
+
+        kg = self._ensure_kg()
+        if kg is None:
+            messages_widget.update(current + "\n[red]No knowledge graph loaded.[/red]")
+            return
+
+        kg_path = kg.path
+        self.run_worker(
+            lambda: self._chat_worker(query, model_info, kg_path, current),
+            name="kg-chat",
+            thread=True,
+        )
+
+    def _chat_worker(
+        self,
+        query: str,
+        model_info: tuple[str, str],
+        kg_path: str,
+        chat_history: str,
+    ) -> None:
+        """Background worker for KG chat."""
+        try:
+            provider, model = model_info
+            from talk_box._utils_chatlas import ChatlasAdapter
+
+            adapter = ChatlasAdapter(provider=provider, model=model)
+            chat = adapter._create_chat_instance(model)
+
+            # Gather context from KG (open fresh connection in this thread)
+            from talk_box.knowledge_graph import KnowledgeGraph
+
+            kg = KnowledgeGraph(kg_path)
+            nodes = kg.search(query, limit=5) if hasattr(kg, "search") else []
+            context_parts = []
+            source_lines = []
+            for node in nodes:
+                preview = (node.content or "")[:500]
+                context_parts.append(f"[{node.name}]: {preview}")
+                icon = {"document": "📄", "entity": "🏷️", "topic": "📌"}.get(
+                    node.node_type.value, "📎"
+                )
+                source = (
+                    node.metadata.get("source", "")
+                    or node.metadata.get("source_url", "")
+                    or node.metadata.get("source_path", "")
+                )
+                src_label = f" ({source})" if source else ""
+                source_lines.append(f"  {icon} {node.name}{src_label}")
+            context = (
+                "\n\n".join(context_parts) if context_parts else "No relevant documents found."
+            )
+
+            prompt = (
+                f"You are a knowledge assistant. Answer based on these documents:\n\n"
+                f"{context}\n\n"
+                f"Question: {query}"
+            )
+            response = chat.chat(prompt, echo="none")
+            answer = str(response)
+            sources_block = ""
+            if source_lines:
+                sources_block = (
+                    f"\n[dim]📚 Sources ({len(source_lines)}):\n"
+                    + "\n".join(source_lines)
+                    + "[/dim]"
+                )
+
+            def _update(answer: str = answer, sources_block: str = sources_block) -> None:
+                updated = chat_history + f"\n[dim]Assistant:[/dim] {answer[:1000]}" + sources_block
+                self.query_one("#kg-chat-messages", Static).update(updated)
+                self.query_one("#kg-chat-log").scroll_end(animate=False)
+
+            self.app.call_from_thread(_update)
+        except Exception as e:
+
+            def _err(e: Exception = e) -> None:
+                updated = chat_history + f"\n[red]Error: {e}[/red]"
+                self.query_one("#kg-chat-messages", Static).update(updated)
+
+            self.app.call_from_thread(_err)
 
 
 # ---------------------------------------------------------------------------

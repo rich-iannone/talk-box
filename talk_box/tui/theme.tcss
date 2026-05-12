@@ -491,6 +491,99 @@ ScreenInfoModal {
     padding: 0 1;
 }
 
+TextInputModal {
+    align: center middle;
+}
+
+#text-input-modal-panel {
+    width: 60;
+    max-height: 12;
+    padding: 2 3;
+    border: solid $accent;
+    background: $surface;
+}
+
+#text-input-modal-title {
+    padding: 0 0 1 0;
+}
+
+#text-input-modal-buttons {
+    height: auto;
+    padding: 1 0 0 0;
+}
+
+#text-input-modal-buttons Button {
+    margin: 0 1 0 0;
+}
+
+/* File Browser Modal */
+FileBrowserModal {
+    align: center middle;
+}
+
+#file-browser-panel {
+    width: 80;
+    height: 30;
+    padding: 1 2;
+    border: solid $accent;
+    background: $surface;
+}
+
+#file-browser-title {
+    padding: 0 0 1 0;
+}
+
+#file-browser-selected {
+    height: 1;
+    padding: 0 0 1 0;
+    color: $text-muted;
+}
+
+#file-browser-tree {
+    height: 1fr;
+    border: solid $primary-background;
+    padding: 0 1;
+}
+
+#file-browser-buttons {
+    height: auto;
+    padding: 1 0 0 0;
+}
+
+#file-browser-buttons Button {
+    margin: 0 1 0 0;
+}
+
+/* Note Input Modal */
+NoteInputModal {
+    align: center middle;
+}
+
+#note-input-panel {
+    width: 70;
+    height: 24;
+    padding: 1 2;
+    border: solid $accent;
+    background: $surface;
+}
+
+#note-input-title {
+    padding: 0 0 1 0;
+}
+
+#note-input-body {
+    height: 1fr;
+}
+
+#note-input-buttons {
+    height: auto;
+    padding: 1 0 0 0;
+}
+
+#note-input-buttons Button {
+    margin: 0 1 0 0;
+}
+
 #command-list-panel {
     width: 40;
     max-height: 24;
@@ -818,7 +911,12 @@ SessionHistoryModal {
 /* -- Knowledge Graph screen ----------------------------------------------- */
 
 #kg-layout {
+    width: 3fr;
     padding: 1 2;
+}
+
+#kg-outer {
+    height: 1fr;
 }
 
 #kg-title {
@@ -829,6 +927,30 @@ SessionHistoryModal {
 #kg-stats {
     height: auto;
     padding: 0 0 1 0;
+}
+
+#kg-actions {
+    height: auto;
+    padding: 0 0 1 0;
+}
+
+#kg-actions Button {
+    margin: 0 1 0 0;
+}
+
+#kg-back-btn {
+    width: auto;
+    min-width: 8;
+    height: 1;
+    margin: 0 0 0 0;
+    padding: 0 1;
+    border: none;
+    background: transparent;
+    color: $text-muted;
+}
+
+#kg-back-btn:hover {
+    color: $text;
 }
 
 #kg-table {
@@ -843,6 +965,49 @@ SessionHistoryModal {
 
 #kg-detail {
     padding: 0 1;
+}
+
+/* Enrichment panel (right sidebar) */
+#kg-enrich-panel {
+    width: 2fr;
+    padding: 1 2;
+    border-left: solid $primary-background;
+}
+
+#kg-enrich-title {
+    padding: 0 0 1 0;
+}
+
+#kg-model-select {
+    margin: 0 0 1 0;
+}
+
+#kg-enrich-target {
+    height: auto;
+    padding: 0 0 1 0;
+}
+
+#kg-enrich-target Button {
+    margin: 0 1 0 0;
+}
+
+#kg-enrich-status {
+    height: auto;
+    padding: 0 0 1 0;
+}
+
+#kg-chat-title {
+    padding: 0 0 1 0;
+}
+
+#kg-chat-log {
+    height: 1fr;
+    border: solid $primary-background;
+    padding: 0 1;
+}
+
+#kg-chat-input {
+    margin: 1 0 0 0;
 }
 
 /* -- Memory Inspector screen ---------------------------------------------- */

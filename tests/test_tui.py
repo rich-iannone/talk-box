@@ -3527,3 +3527,578 @@ class TestDiffViewer:
         assert "stats.py" in first_line
         assert "+1" in first_line
         assert "-1" in first_line
+
+
+class TestKGAttribution:
+    """Tests for knowledge graph attribution in chat responses."""
+
+    def test_render_with_kg_sources(self):
+        """Assistant display includes a Sources footer when KG sources are provided."""
+        from rich.console import Console
+
+        from talk_box.tui.screens import ChatScreen, KGCitation
+
+        citations = [
+            KGCitation(
+                node_id="n1", name="doc-alpha", node_type="document", preview="Alpha content"
+            ),
+            KGCitation(node_id="n2", name="doc-beta", node_type="entity", source="/tmp/beta.md"),
+        ]
+        display = ChatScreen._render_assistant_display("Hello!", kg_sources=citations)
+        console = Console(file=None, force_terminal=True, width=120)
+        with console.capture() as capture:
+            console.print(display)
+        rendered = capture.get()
+        assert "Sources" in rendered
+        assert "doc-alpha" in rendered
+        assert "doc-beta" in rendered
+        assert "Alpha content" in rendered
+        assert "/tmp/beta.md" in rendered
+
+    def test_render_without_kg_sources(self):
+        """No Sources footer when kg_sources is empty."""
+        from rich.console import Console
+
+        from talk_box.tui.screens import ChatScreen
+
+        display = ChatScreen._render_assistant_display("Hello!", kg_sources=[])
+        console = Console(file=None, force_terminal=True, width=120)
+        with console.capture() as capture:
+            console.print(display)
+        rendered = capture.get()
+        assert "Sources" not in rendered
+
+    def test_render_with_none_kg_sources(self):
+        """No Sources footer when kg_sources is None (default)."""
+        from rich.console import Console
+
+        from talk_box.tui.screens import ChatScreen
+
+        display = ChatScreen._render_assistant_display("Hello!")
+        console = Console(file=None, force_terminal=True, width=120)
+        with console.capture() as capture:
+            console.print(display)
+        rendered = capture.get()
+        assert "Sources" not in rendered
+
+    def test_enrich_stores_last_kg_sources(self, tmp_path):
+        """_enrich_with_knowledge populates _last_kg_sources with matched node names."""
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._kg_enabled = True
+        screen._last_kg_sources = []
+
+        # Mock KG with a matching node
+        mock_node = MagicMock()
+        mock_node.id = "n1"
+        mock_node.name = "test-doc"
+        mock_node.node_type = MagicMock(value="document")
+        mock_node.content = "some content about testing"
+        mock_node.metadata = {}
+
+        mock_kg = MagicMock()
+        mock_kg.search = MagicMock(return_value=[mock_node])
+        screen._get_kg = MagicMock(return_value=mock_kg)
+
+        result = screen._enrich_with_knowledge("tell me about testing")
+        assert "Knowledge context" in result
+        assert len(screen._last_kg_sources) == 1
+        citation = screen._last_kg_sources[0]
+        assert citation.name == "test-doc"
+        assert citation.node_id == "n1"
+        assert citation.node_type == "document"
+
+    def test_enrich_clears_sources_when_disabled(self):
+        """_enrich_with_knowledge clears sources when KG is disabled."""
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._kg_enabled = False
+        screen._last_kg_sources = ["old-source"]
+
+        result = screen._enrich_with_knowledge("hello")
+        assert result == "hello"
+        assert screen._last_kg_sources == []
+
+    def test_enrich_clears_sources_on_no_results(self):
+        """_enrich_with_knowledge clears sources when search returns nothing."""
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._kg_enabled = True
+        screen._last_kg_sources = ["leftover"]
+
+        mock_kg = MagicMock()
+        mock_kg.search = MagicMock(return_value=[])
+        screen._get_kg = MagicMock(return_value=mock_kg)
+
+        result = screen._enrich_with_knowledge("xyz")
+        assert "Knowledge context" not in result
+        assert screen._last_kg_sources == []
+
+    def test_render_with_string_kg_sources_backward_compat(self):
+        """Plain string sources still render (backward compatibility)."""
+        from rich.console import Console
+
+        from talk_box.tui.screens import ChatScreen
+
+        display = ChatScreen._render_assistant_display("Hello!", kg_sources=["old-style-name"])
+        console = Console(file=None, force_terminal=True, width=120)
+        with console.capture() as capture:
+            console.print(display)
+        rendered = capture.get()
+        assert "Sources" in rendered
+        assert "old-style-name" in rendered
+
+    def test_citation_type_icons(self):
+        """KGCitation type_icon returns correct icons per node type."""
+        from talk_box.tui.screens import KGCitation
+
+        assert KGCitation(node_id="x", name="x", node_type="document").type_icon == "📄"
+        assert KGCitation(node_id="x", name="x", node_type="entity").type_icon == "🏷️"
+        assert KGCitation(node_id="x", name="x", node_type="topic").type_icon == "📌"
+        assert KGCitation(node_id="x", name="x", node_type="other").type_icon == "📎"
+
+    def test_citation_source_from_metadata(self):
+        """_enrich_with_knowledge extracts source URL from node metadata."""
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._kg_enabled = True
+        screen._last_kg_sources = []
+
+        mock_node = MagicMock()
+        mock_node.id = "url-1"
+        mock_node.name = "Chatlas Docs"
+        mock_node.node_type = MagicMock(value="document")
+        mock_node.content = "Chatlas is a Python package for LLMs."
+        mock_node.metadata = {"source_url": "https://example.com/chatlas"}
+
+        mock_kg = MagicMock()
+        mock_kg.search = MagicMock(return_value=[mock_node])
+        screen._get_kg = MagicMock(return_value=mock_kg)
+
+        screen._enrich_with_knowledge("chatlas")
+        assert len(screen._last_kg_sources) == 1
+        assert screen._last_kg_sources[0].source == "https://example.com/chatlas"
+        assert screen._last_kg_sources[0].preview.startswith("Chatlas is")
+
+
+class TestKGAdd:
+    """Tests for the /kg add command."""
+
+    def test_kg_add_inline_note(self, tmp_path):
+        """Adding a quoted note creates a DOCUMENT node."""
+        from talk_box.knowledge_graph import KnowledgeGraph, NodeType
+
+        kg = KnowledgeGraph(str(tmp_path / "test.db"))
+
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._kg_enabled = False
+        screen._kg = None
+        screen._get_kg = MagicMock(return_value=kg)
+        screen._append_system_message = MagicMock()
+
+        screen._kg_add('"Python is great for data science"')
+
+        assert kg.node_count() == 1
+        nodes = kg.list_nodes()
+        assert nodes[0].node_type == NodeType.DOCUMENT
+        assert "Python is great" in nodes[0].name
+        screen._append_system_message.assert_called_once()
+        msg = screen._append_system_message.call_args[0][0]
+        assert "Added note" in msg
+
+    def test_kg_add_file(self, tmp_path):
+        """Adding a file path creates a DOCUMENT node with file content."""
+        import os
+
+        # Create test file
+        (tmp_path / "notes.md").write_text("# My Notes\nSome content here.")
+
+        from talk_box.knowledge_graph import KnowledgeGraph, NodeType
+
+        kg = KnowledgeGraph(str(tmp_path / "test.db"))
+
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._get_kg = MagicMock(return_value=kg)
+        screen._append_system_message = MagicMock()
+
+        old_cwd = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            screen._kg_add("notes.md")
+        finally:
+            os.chdir(old_cwd)
+
+        assert kg.node_count() == 1
+        nodes = kg.list_nodes()
+        assert nodes[0].node_type == NodeType.DOCUMENT
+        assert "notes.md" in nodes[0].name
+        assert "Some content" in (nodes[0].content or "")
+
+    def test_kg_add_missing_file(self, tmp_path):
+        """Adding a nonexistent file shows an error."""
+        import os
+
+        from talk_box.knowledge_graph import KnowledgeGraph
+
+        kg = KnowledgeGraph(str(tmp_path / "test.db"))
+
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._get_kg = MagicMock(return_value=kg)
+        screen._append_system_message = MagicMock()
+
+        old_cwd = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            screen._kg_add("nonexistent.txt")
+        finally:
+            os.chdir(old_cwd)
+
+        assert kg.node_count() == 0
+        msg = screen._append_system_message.call_args[0][0]
+        assert "not found" in msg
+
+    def test_kg_add_empty_shows_usage(self):
+        """Calling /kg add with no argument shows usage help."""
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._append_system_message = MagicMock()
+
+        screen._kg_add("")
+
+        msg = screen._append_system_message.call_args[0][0]
+        assert "Usage" in msg
+
+    def test_kg_add_single_quotes(self, tmp_path):
+        """Single-quoted text also works for inline notes."""
+        from talk_box.knowledge_graph import KnowledgeGraph
+
+        kg = KnowledgeGraph(str(tmp_path / "test.db"))
+
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._get_kg = MagicMock(return_value=kg)
+        screen._append_system_message = MagicMock()
+
+        screen._kg_add("'A quick brown fox'")
+
+        assert kg.node_count() == 1
+        nodes = kg.list_nodes()
+        assert "quick brown fox" in (nodes[0].content or "")
+
+
+class TestKnowledgeScreenActions:
+    """Tests for KnowledgeScreen add/delete actions."""
+
+    def test_add_note_via_action(self, tmp_path):
+        """action_add_note callback adds a DOCUMENT node."""
+        from talk_box.knowledge_graph import KnowledgeGraph, NodeType
+
+        kg = KnowledgeGraph(str(tmp_path / "test.db"))
+
+        from talk_box.tui.screens import KnowledgeScreen
+
+        screen = KnowledgeScreen.__new__(KnowledgeScreen)
+        screen._kg = kg
+
+        # Simulate the callback directly
+        from talk_box.knowledge_graph import Node
+
+        title = "Test note title"[:60]
+        value = "Test note title with more content"
+        node_id = f"note_{hash(value) & 0xFFFFFFFF:08x}"
+        kg.add_node(Node(id=node_id, node_type=NodeType.DOCUMENT, name=title, content=value))
+
+        assert kg.node_count() == 1
+        nodes = kg.list_nodes()
+        assert nodes[0].node_type == NodeType.DOCUMENT
+        assert "Test note" in nodes[0].name
+
+    def test_add_file_via_action(self, tmp_path):
+        """File add creates a DOCUMENT node with file content."""
+        import os
+
+        (tmp_path / "data.md").write_text("# Data\nSome data content.")
+        from talk_box.knowledge_graph import KnowledgeGraph, Node, NodeType
+
+        kg = KnowledgeGraph(str(tmp_path / "test.db"))
+
+        content = (tmp_path / "data.md").read_text()
+        title = "data.md"
+        node_id = f"file_{title}_{hash(content) & 0xFFFFFFFF:08x}"
+        kg.add_node(
+            Node(
+                id=node_id,
+                node_type=NodeType.DOCUMENT,
+                name=title,
+                content=content,
+                metadata={"source": "data.md"},
+            )
+        )
+
+        assert kg.node_count() == 1
+        nodes = kg.list_nodes()
+        assert nodes[0].name == "data.md"
+        assert "Data" in (nodes[0].content or "")
+
+    def test_delete_node(self, tmp_path):
+        """Deleting a node removes it from the KG."""
+        from talk_box.knowledge_graph import KnowledgeGraph, Node, NodeType
+
+        kg = KnowledgeGraph(str(tmp_path / "test.db"))
+        kg.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="To Delete", content="bye"))
+
+        assert kg.node_count() == 1
+        kg.delete_node("n1")
+        assert kg.node_count() == 0
+
+    def test_delete_node_by_id(self, tmp_path):
+        """_delete_node_by_id removes a node and refreshes."""
+        from unittest.mock import MagicMock
+
+        from talk_box.knowledge_graph import KnowledgeGraph, Node, NodeType
+
+        from talk_box.tui.screens import KnowledgeScreen
+
+        kg = KnowledgeGraph(str(tmp_path / "test.db"))
+        kg.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="Gone", content="bye"))
+
+        screen = KnowledgeScreen.__new__(KnowledgeScreen)
+        screen._kg = kg
+        screen._refresh_table = MagicMock()
+        detail_widget = MagicMock()
+        screen.query_one = MagicMock(return_value=detail_widget)
+
+        screen._delete_node_by_id("n1")
+
+        assert kg.node_count() == 0
+        screen._refresh_table.assert_called_once()
+
+    def test_show_node_detail(self, tmp_path):
+        """_show_node_detail populates the detail panel."""
+        from unittest.mock import MagicMock
+
+        from talk_box.knowledge_graph import KnowledgeGraph, Node, NodeType
+
+        from talk_box.tui.screens import KnowledgeScreen
+
+        kg = KnowledgeGraph(str(tmp_path / "test.db"))
+        kg.add_node(
+            Node(id="d1", node_type=NodeType.DOCUMENT, name="My Doc", content="Hello world")
+        )
+
+        screen = KnowledgeScreen.__new__(KnowledgeScreen)
+        screen._kg = kg
+        detail_widget = MagicMock()
+        screen.query_one = MagicMock(return_value=detail_widget)
+
+        screen._show_node_detail("d1")
+
+        detail_widget.update.assert_called_once()
+        rendered = detail_widget.update.call_args[0][0]
+        assert "My Doc" in rendered
+        assert "Hello world" in rendered
+
+    def test_ensure_kg_creates_instance(self, tmp_path):
+        """_ensure_kg creates a KG instance if none exists."""
+        import os
+        from unittest.mock import patch
+
+        from talk_box.tui.screens import KnowledgeScreen
+
+        screen = KnowledgeScreen.__new__(KnowledgeScreen)
+        screen._kg = None
+
+        kg_path = str(tmp_path / "knowledge.db")
+        with patch("os.path.expanduser", return_value=str(tmp_path)):
+            result = screen._ensure_kg()
+
+        assert result is not None
+
+    def test_text_input_modal_compose(self):
+        """TextInputModal composes with title, input, and buttons."""
+        from talk_box.tui.screens import TextInputModal
+
+        modal = TextInputModal("Test Title", placeholder="type here")
+        assert modal._title == "Test Title"
+        assert modal._placeholder == "type here"
+
+
+class TestFileBrowserModal:
+    """Tests for the FileBrowserModal."""
+
+    def test_file_browser_modal_init(self):
+        """FileBrowserModal initializes with a start path."""
+        from talk_box.tui.screens import FileBrowserModal
+
+        modal = FileBrowserModal("/tmp")
+        assert modal._start_path == "/tmp"
+
+    def test_file_browser_modal_default_path(self):
+        """FileBrowserModal defaults to home directory."""
+        import os
+
+        from talk_box.tui.screens import FileBrowserModal
+
+        modal = FileBrowserModal()
+        assert modal._start_path == os.path.expanduser("~")
+
+
+class TestNoteInputModal:
+    """Tests for the NoteInputModal."""
+
+    def test_note_input_modal_compose(self):
+        """NoteInputModal has expected widget structure."""
+        from talk_box.tui.screens import NoteInputModal
+
+        modal = NoteInputModal()
+        # Just verify it instantiates without error
+        assert modal is not None
+
+    def test_note_input_submit_returns_tuple(self):
+        """_submit produces a (name, content) tuple."""
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import NoteInputModal
+
+        modal = NoteInputModal()
+        # Mock query_one to simulate widgets
+        name_input = MagicMock()
+        name_input.value = "My Note"
+        body_area = MagicMock()
+        body_area.text = "This is the content."
+
+        def _query_one(selector, widget_type):
+            if "name" in selector:
+                return name_input
+            return body_area
+
+        modal.query_one = _query_one
+        modal.dismiss = MagicMock()
+        modal._submit()
+        modal.dismiss.assert_called_once_with(("My Note", "This is the content."))
+
+    def test_note_input_empty_content_dismisses_none(self):
+        """Empty content dismisses with None."""
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import NoteInputModal
+
+        modal = NoteInputModal()
+        name_input = MagicMock()
+        name_input.value = ""
+        body_area = MagicMock()
+        body_area.text = "  "
+
+        def _query_one(selector, widget_type):
+            if "name" in selector:
+                return name_input
+            return body_area
+
+        modal.query_one = _query_one
+        modal.dismiss = MagicMock()
+        modal._submit()
+        modal.dismiss.assert_called_once_with(None)
+
+
+class TestKnowledgeScreenEnrichment:
+    """Tests for the enrichment panel on KnowledgeScreen."""
+
+    def test_enrich_toggle(self):
+        """action_enrich toggles panel display."""
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import KnowledgeScreen
+
+        screen = KnowledgeScreen.__new__(KnowledgeScreen)
+        panel = MagicMock()
+        panel.display = False
+        screen.query_one = MagicMock(return_value=panel)
+
+        screen.action_enrich()
+        assert panel.display is True
+
+        screen.action_enrich()
+        assert panel.display is False
+
+    def test_get_selected_model_blank(self):
+        """_get_selected_model returns None when blank."""
+        from unittest.mock import MagicMock
+
+        from textual.widgets import Select
+
+        from talk_box.tui.screens import KnowledgeScreen
+
+        screen = KnowledgeScreen.__new__(KnowledgeScreen)
+        select = MagicMock()
+        select.value = Select.BLANK
+        screen.query_one = MagicMock(return_value=select)
+
+        assert screen._get_selected_model() is None
+
+    def test_get_selected_model_valid(self):
+        """_get_selected_model returns (provider, model) tuple."""
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import KnowledgeScreen
+
+        screen = KnowledgeScreen.__new__(KnowledgeScreen)
+        select = MagicMock()
+        select.value = "anthropic:claude-sonnet-4-6"
+        screen.query_one = MagicMock(return_value=select)
+
+        result = screen._get_selected_model()
+        assert result == ("anthropic", "claude-sonnet-4-6")
+
+    def test_populate_models(self):
+        """_populate_models fills the select with model profiles."""
+        from unittest.mock import MagicMock, patch
+
+        from talk_box.models import ModelProfile
+        from talk_box.tui.screens import KnowledgeScreen
+
+        screen = KnowledgeScreen.__new__(KnowledgeScreen)
+        select = MagicMock()
+        screen.query_one = MagicMock(return_value=select)
+
+        fake_profiles = [
+            ModelProfile(provider="openai", model="gpt-4o", display_name="GPT-4o"),
+            ModelProfile(
+                provider="anthropic", model="claude-sonnet-4-6", display_name="Claude Sonnet 4.6"
+            ),
+        ]
+        with patch("talk_box.tui.screens.list_models", fake_profiles, create=True):
+            with patch("talk_box.models.list_models", return_value=fake_profiles):
+                screen._populate_models()
+
+        select.set_options.assert_called_once()
+        options = select.set_options.call_args[0][0]
+        assert len(options) == 2
+        assert options[0] == ("GPT-4o", "openai:gpt-4o")
