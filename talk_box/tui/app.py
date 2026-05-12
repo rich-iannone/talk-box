@@ -82,6 +82,7 @@ class TalkBoxApp(App):
     CSS_PATH = "theme.tcss"
 
     COMMANDS: ClassVar[set] = set()
+    ENABLE_COMMAND_PALETTE = False
 
     BINDINGS: ClassVar[list[Binding]] = [
         Binding("colon", "open_command_list", "Commands (:)", show=True),
