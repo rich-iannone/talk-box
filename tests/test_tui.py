@@ -610,7 +610,7 @@ class TestChatScreen:
 
     @pytest.mark.asyncio()
     async def test_chat_slash_attach_no_arg(self, _fake_config):
-        """/attach with no path shows usage."""
+        """/attach with no path opens file browser modal."""
         async with TalkBoxApp().run_test() as pilot:
             app = pilot.app
             app._switch_to("chat")
@@ -619,8 +619,10 @@ class TestChatScreen:
             inp.load_text("/attach")
             await pilot.press("enter")
             await pilot.pause()
-            msgs = app.screen.query(".chat-system")
-            assert len(msgs) >= 1
+            # Should have pushed a FileBrowserModal
+            from talk_box.tui.screens import FileBrowserModal
+
+            assert any(isinstance(s, FileBrowserModal) for s in app.screen_stack)
 
     @pytest.mark.asyncio()
     async def test_chat_slash_attach_file(self, _fake_config, tmp_path, monkeypatch):
@@ -4267,3 +4269,185 @@ class TestCaptureReplayModal:
 
         screen._do_clear()
         assert screen._capture is None
+
+
+# ---------------------------------------------------------------------------
+# Image Attachments
+# ---------------------------------------------------------------------------
+
+
+class TestImageAttachments:
+    """Tests for image file attachment handling."""
+
+    def test_image_extensions_detected(self):
+        """Image extensions are correctly identified."""
+        from talk_box.tui.screens import ChatScreen
+
+        exts = ChatScreen._IMAGE_EXTENSIONS
+        assert ".png" in exts
+        assert ".jpg" in exts
+        assert ".jpeg" in exts
+        assert ".gif" in exts
+        assert ".webp" in exts
+        assert ".bmp" in exts
+        assert ".txt" not in exts
+        assert ".py" not in exts
+
+    def test_attach_image_stores_content_object(self, tmp_path):
+        """Attaching an image stores a chatlas content object, not text."""
+        from unittest.mock import MagicMock, patch
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._append_system_message = MagicMock()
+        screen._active_model = None
+        screen._pending_attachments = []
+
+        # Create a minimal PNG file (1x1 pixel)
+        import struct
+        import zlib
+
+        def _make_png():
+            sig = b"\x89PNG\r\n\x1a\n"
+
+            def chunk(ctype, data):
+                c = ctype + data
+                crc = struct.pack(">I", zlib.crc32(c) & 0xFFFFFFFF)
+                return struct.pack(">I", len(data)) + c + crc
+
+            ihdr = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)
+            raw = b"\x00\xff\x00\x00"  # filter byte + RGB
+            idat = zlib.compress(raw)
+            return sig + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
+
+        img_path = tmp_path / "test.png"
+        img_path.write_bytes(_make_png())
+
+        # Mock chatlas.content_image_file to return a sentinel
+        sentinel = object()
+        with patch("chatlas.content_image_file", return_value=sentinel) as mock_cif:
+            import os
+
+            with patch("os.getcwd", return_value=str(tmp_path)):
+                screen._attach_file(str(img_path))
+
+        assert len(screen._pending_attachments) == 1
+        assert screen._pending_attachments[0][1] is sentinel
+        # Should show the 📷 emoji in the message
+        msg = screen._append_system_message.call_args[0][0]
+        assert "📷" in msg
+
+    def test_attach_text_file_stores_string(self, tmp_path):
+        """Attaching a text file stores string content (unchanged behavior)."""
+        from unittest.mock import MagicMock
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._append_system_message = MagicMock()
+        screen._active_model = None
+        screen._pending_attachments = []
+
+        txt_path = tmp_path / "notes.txt"
+        txt_path.write_text("hello world")
+
+        import os
+
+        from unittest.mock import patch
+
+        with patch("os.getcwd", return_value=str(tmp_path)):
+            screen._attach_file(str(txt_path))
+
+        assert len(screen._pending_attachments) == 1
+        path, content = screen._pending_attachments[0]
+        assert isinstance(content, str)
+        assert "hello world" in content
+
+    def test_attach_image_vision_warning(self, tmp_path):
+        """Attaching an image shows vision warning for non-vision models."""
+        from unittest.mock import MagicMock, patch
+
+        from talk_box.models import ModelProfile
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._append_system_message = MagicMock()
+        screen._active_model = "openai:gpt-3.5-turbo"
+        screen._pending_attachments = []
+
+        img_path = tmp_path / "photo.jpg"
+        img_path.write_bytes(b"\xff\xd8\xff" + b"\x00" * 100)  # minimal JPEG header
+
+        sentinel = object()
+        no_vision_profile = ModelProfile(
+            provider="openai", model="gpt-3.5-turbo", supports_vision=False
+        )
+
+        with (
+            patch("chatlas.content_image_file", return_value=sentinel),
+            patch("os.getcwd", return_value=str(tmp_path)),
+            patch("talk_box.models.get_model_profile", return_value=no_vision_profile),
+        ):
+            screen._attach_file(str(img_path))
+
+        msg = screen._append_system_message.call_args[0][0]
+        assert "may not support vision" in msg
+
+    def test_send_message_separates_images_from_text(self):
+        """_send_message separates image content objects from text attachments."""
+        from unittest.mock import MagicMock, patch
+
+        from talk_box.tui.screens import ChatScreen
+
+        screen = ChatScreen.__new__(ChatScreen)
+        screen._message_count = 0
+        screen._append_message = MagicMock()
+        screen._pending_thinking_id = None
+        screen._pending_attachments = [
+            ("notes.txt", "file content here"),
+            ("photo.png", MagicMock()),  # image content object
+        ]
+        screen._kg_enabled = False
+        screen._output_format = None
+
+        # Mock the methods that _send_message calls
+        screen.query_one = MagicMock()
+        screen.run_worker = MagicMock()
+        screen._update_sidebar = MagicMock()
+        screen._enrich_with_files = lambda x: x
+        screen._enrich_with_knowledge = lambda x: x
+
+        screen._send_message("describe this")
+
+        # The run_worker should have been called
+        assert screen.run_worker.called
+
+    def test_stream_with_thinking_passes_image_contents(self):
+        """_stream_with_thinking passes image_contents to the adapter."""
+        from unittest.mock import MagicMock, patch
+
+        from talk_box.builder import ChatBot
+
+        bot = ChatBot.__new__(ChatBot)
+        bot._config = {
+            "provider": "openai",
+            "model": "gpt-4o",
+            "tool_box_enabled": False,
+            "tools": [],
+            "system_prompt": "You are helpful.",
+        }
+        bot._llm_enabled = True
+
+        mock_adapter = MagicMock()
+        mock_adapter.create_chat_session.return_value = MagicMock(_tools={})
+        mock_adapter.stream_with_thinking.return_value = iter([("text", "hello")])
+
+        images = [MagicMock()]  # fake image content
+
+        with patch("talk_box._utils_chatlas.ChatlasAdapter", return_value=mock_adapter):
+            chunks = list(bot._stream_with_thinking("hi", None, image_contents=images))
+
+        mock_adapter.stream_with_thinking.assert_called_once()
+        call_kwargs = mock_adapter.stream_with_thinking.call_args
+        assert call_kwargs.kwargs.get("image_contents") is images

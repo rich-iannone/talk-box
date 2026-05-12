@@ -3131,7 +3131,11 @@ class ChatBot:
         yield from adapter.stream_with_session(chat_session, message)
 
     def _stream_with_thinking(
-        self, message: str, conversation: Optional["Conversation"] = None
+        self,
+        message: str,
+        conversation: Optional["Conversation"] = None,
+        *,
+        image_contents: Optional[list] = None,
     ) -> "Generator[tuple[str, str], None, None]":
         """
         Stream a response with thinking support, yielding (phase, chunk) tuples.
@@ -3142,6 +3146,9 @@ class ChatBot:
             The message to send to the LLM.
         conversation
             The conversation context to maintain history.
+        image_contents
+            Optional list of chatlas content objects (e.g. from content_image_file)
+            to include alongside the text message.
 
         Yields
         ------
@@ -3174,7 +3181,10 @@ class ChatBot:
         system_prompt = self._config.get("system_prompt")
 
         yield from adapter.stream_with_thinking(
-            message, system_prompt=system_prompt, chat_session=chat_session
+            message,
+            system_prompt=system_prompt,
+            chat_session=chat_session,
+            image_contents=image_contents,
         )
 
     def _register_tools_with_session(self, chat_session) -> None:

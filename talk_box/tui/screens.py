@@ -2216,7 +2216,7 @@ class ChatScreen(Screen):
                 "  /save [name]       Save session to disk\n"
                 "  /load [name]       Load a saved session\n"
                 "  /export [format]   Export session (json, markdown)\n"
-                "  /attach <path>     Attach a file to the next message\n"
+                "  /attach [path]     Attach file/image (opens browser if no path)\n"
                 "  /format <type>     Set output format (json, markdown, table)\n"
                 "  /capture           View conversation capture timeline\n"
                 "  /undo [all|list]   Undo file changes (last, all, or list)\n"
@@ -2621,14 +2621,24 @@ class ChatScreen(Screen):
         except Exception as e:
             self._append_system_message(f"Error loading session: {e}")
 
+    _IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"})
+
     def _attach_file(self, path: str) -> None:
-        """Attach a file — its contents will be included in the next message."""
+        """Attach a file — its contents will be included in the next message.
+
+        Image files (.png, .jpg, .jpeg, .gif, .webp, .bmp) are encoded via
+        chatlas.content_image_file() for vision-capable models. Other files
+        are read as text.
+        """
         import os
 
         if not path:
-            self._append_system_message(
-                "Usage: [b]/attach <path>[/b]\n  Attaches a file to the next message sent."
-            )
+            # No path — open the file browser modal
+            def _on_picked(selected: str | None) -> None:
+                if selected:
+                    self._attach_file(selected)
+
+            self.app.push_screen(FileBrowserModal(), callback=_on_picked)
             return
 
         # Resolve relative to cwd
@@ -2638,23 +2648,61 @@ class ChatScreen(Screen):
             self._append_system_message(f"File not found: [b]{path}[/b]")
             return
 
-        try:
-            content = open(full_path, errors="replace").read()  # noqa: SIM115
-            if len(content) > 50_000:
-                content = content[:50_000] + "\n\n[... truncated ...]"
+        ext = os.path.splitext(full_path)[1].lower()
+        size_kb = os.path.getsize(full_path) / 1024
 
-            # Store attachment for next message
-            if not hasattr(self, "_pending_attachments"):
-                self._pending_attachments = []
-            self._pending_attachments.append((path, content))
+        if not hasattr(self, "_pending_attachments"):
+            self._pending_attachments: list[tuple[str, object]] = []
 
-            size_kb = os.path.getsize(full_path) / 1024
+        if ext in self._IMAGE_EXTENSIONS:
+            # Image attachment — encode via chatlas for vision models
+            try:
+                import chatlas
+
+                content_obj = chatlas.content_image_file(full_path, resize="high")
+            except ImportError:
+                self._append_system_message(
+                    "Image attachments require Pillow. Install with: [b]pip install Pillow[/b]"
+                )
+                return
+            except Exception as e:
+                self._append_system_message(f"Error processing image: {e}")
+                return
+
+            self._pending_attachments.append((path, content_obj))
+
+            # Warn if model likely doesn't support vision
+            vision_warning = ""
+            if self._active_model:
+                try:
+                    from talk_box.models import get_model_profile
+
+                    profile = get_model_profile(self._active_model)
+                    if profile and profile.supports_vision is False:
+                        vision_warning = (
+                            "\n  [yellow]⚠ Current model may not support vision.[/yellow]"
+                        )
+                except Exception:
+                    pass
+
             self._append_system_message(
-                f"Attached: [b]{path}[/b] ({size_kb:.1f} KB)\n"
-                "  Will be included with your next message."
+                f"📷 Attached image: [b]{os.path.basename(path)}[/b] ({size_kb:.1f} KB)\n"
+                f"  Will be sent with your next message.{vision_warning}"
             )
-        except Exception as e:
-            self._append_system_message(f"Error reading file: {e}")
+        else:
+            # Text file attachment
+            try:
+                content = open(full_path, errors="replace").read()  # noqa: SIM115
+                if len(content) > 50_000:
+                    content = content[:50_000] + "\n\n[... truncated ...]"
+
+                self._pending_attachments.append((path, content))
+                self._append_system_message(
+                    f"Attached: [b]{path}[/b] ({size_kb:.1f} KB)\n"
+                    "  Will be included with your next message."
+                )
+            except Exception as e:
+                self._append_system_message(f"Error reading file: {e}")
 
     def _handle_fav(self, arg: str) -> None:
         """Handle /fav slash command for toggling favorites."""
@@ -3865,11 +3913,17 @@ class ChatScreen(Screen):
 
         # Include pending attachments
         enriched = text
+        image_contents: list[object] = []
         if hasattr(self, "_pending_attachments") and self._pending_attachments:
             attachment_blocks = []
             for path, content in self._pending_attachments:
-                attachment_blocks.append(f'<file path="{path}">\n{content}\n</file>')
-            enriched = f"{text}\n\n--- Attached files ---\n" + "\n\n".join(attachment_blocks)
+                if isinstance(content, str):
+                    attachment_blocks.append(f'<file path="{path}">\n{content}\n</file>')
+                else:
+                    # Image content object — pass directly to chatlas
+                    image_contents.append(content)
+            if attachment_blocks:
+                enriched = f"{text}\n\n--- Attached files ---\n" + "\n\n".join(attachment_blocks)
             self._pending_attachments = []
 
         # Also enrich with auto-detected file references
@@ -3892,7 +3946,9 @@ class ChatScreen(Screen):
             import asyncio
 
             loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, self._stream_response, enriched, thinking_id)
+            await loop.run_in_executor(
+                None, self._stream_response, enriched, thinking_id, image_contents
+            )
 
         self.run_worker(
             _do_stream(),
@@ -3935,7 +3991,9 @@ class ChatScreen(Screen):
         files_block = "\n\n".join(attached)
         return f"{text}\n\n--- Referenced files ---\n{files_block}"
 
-    def _stream_response(self, text: str, widget_id: str) -> None:
+    def _stream_response(
+        self, text: str, widget_id: str, image_contents: list[object] | None = None
+    ) -> None:
         """Stream the LLM response, updating the widget chunk by chunk (runs in thread)."""
 
         # Reset the approve/reject-all latch for this new exchange
@@ -3951,7 +4009,9 @@ class ChatScreen(Screen):
                     self._conversation = Conversation()
 
                 try:
-                    for phase, chunk in self._bot._stream_with_thinking(text, self._conversation):
+                    for phase, chunk in self._bot._stream_with_thinking(
+                        text, self._conversation, image_contents=image_contents
+                    ):
                         if phase == "thinking":
                             thinking_text += chunk
                             display = self._format_stream_display(thinking_text, "")

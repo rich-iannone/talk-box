@@ -266,6 +266,7 @@ class ChatlasAdapter:
         system_prompt: Optional[str] = None,
         thinking_budget: int = 2048,
         chat_session: Optional[chatlas.Chat] = None,
+        image_contents: Optional[list] = None,
     ) -> Generator[tuple[str, str], None, None]:
         """
         Stream a response with thinking support (Anthropic only).
@@ -278,6 +279,7 @@ class ChatlasAdapter:
             system_prompt: Optional system prompt.
             thinking_budget: Token budget for thinking (min 1024).
             chat_session: Optional pre-configured chatlas.Chat session with tools registered.
+            image_contents: Optional list of chatlas content objects (images) to include.
 
         Yields:
             tuple[str, str]: (phase, chunk) pairs.
@@ -306,11 +308,30 @@ class ChatlasAdapter:
                     except Exception:
                         pass
 
+                # Build message content — text + optional images
+                user_content: list[dict[str, Any]] | str = message
+                if image_contents:
+                    content_blocks: list[dict[str, Any]] = [{"type": "text", "text": message}]
+                    for img in image_contents:
+                        # chatlas ContentImageInline has .data (base64) and .content_type
+                        if hasattr(img, "data") and hasattr(img, "content_type"):
+                            content_blocks.append(
+                                {
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": img.content_type,
+                                        "data": img.data,
+                                    },
+                                }
+                            )
+                    user_content = content_blocks
+
                 kwargs: dict[str, Any] = {
                     "model": self.default_model,
                     "max_tokens": max(4096, thinking_budget + 2048),
                     "thinking": {"type": "enabled", "budget_tokens": thinking_budget},
-                    "messages": [{"role": "user", "content": message}],
+                    "messages": [{"role": "user", "content": user_content}],
                 }
                 if system_prompt:
                     kwargs["system"] = system_prompt
@@ -429,6 +450,10 @@ class ChatlasAdapter:
 
         # Fallback: no thinking support, just stream text via session or new instance
         session = chat_session or self._create_chat_instance(model=self.default_model)
-        for chunk in session.stream(message, echo="none"):
+        # Build args: text message + optional image content objects
+        stream_args: list[Any] = [message]
+        if image_contents:
+            stream_args.extend(image_contents)
+        for chunk in session.stream(*stream_args, echo="none"):
             if isinstance(chunk, str):
                 yield ("text", chunk)
