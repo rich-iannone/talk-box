@@ -1697,7 +1697,9 @@ class ChatScreen(Screen):
         with Horizontal(id="chat-layout"):
             # Main chat area
             with Vertical(id="chat-main"):
-                yield Button("← Home", id="chat-back-btn", variant="default", classes="back-home-btn")
+                yield Button(
+                    "← Home", id="chat-back-btn", variant="default", classes="back-home-btn"
+                )
                 with VerticalScroll(id="chat-messages"):
                     yield Static(
                         "[dim]Type a message below to start chatting.[/dim]",
@@ -6657,9 +6659,9 @@ class SessionsScreen(Screen):
         yield Button("← Home", id="sessions-back-btn", variant="default", classes="back-home-btn")
         with Horizontal(id="sessions-layout"):
             with Vertical(id="sessions-left"):
-                yield Static("[b]Session Ledger[/b]", id="sessions-title")
+                yield Static("[b]All Sessions[/b]", id="sessions-title")
                 table = DataTable(id="sessions-table", cursor_type="row")
-                table.add_columns("Title", "Date", "Msgs", "Status", "File")
+                table.add_columns("Title", "Date", "Msgs", "")
                 yield table
             with Vertical(id="sessions-right"):
                 yield Static("[b]Session Detail[/b]", id="sessions-detail-title")
@@ -6668,11 +6670,28 @@ class SessionsScreen(Screen):
                         "[dim]Select a session to view details.[/dim]",
                         id="sessions-detail-content",
                     )
+                with Horizontal(id="sessions-action-bar"):
+                    yield Button("Archive", id="sessions-archive-btn", variant="default")
+                    yield Button("Unarchive", id="sessions-unarchive-btn", variant="default")
+                    yield Button("Delete", id="sessions-delete-btn", variant="warning")
+                    yield Button("Go to File", id="sessions-goto-file-btn", variant="default")
         yield Footer()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "sessions-back-btn":
             self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
+        if event.button.id == "sessions-archive-btn":
+            self.action_archive_selected()
+            return
+        if event.button.id == "sessions-unarchive-btn":
+            self.action_unarchive_selected()
+            return
+        if event.button.id == "sessions-delete-btn":
+            self.action_delete_selected()
+            return
+        if event.button.id == "sessions-goto-file-btn":
+            self._open_file_in_explorer()
             return
 
     def on_mount(self) -> None:
@@ -6698,13 +6717,12 @@ class SessionsScreen(Screen):
                     from datetime import datetime
 
                     dt = datetime.fromisoformat(saved_at)
-                    date_str = dt.strftime("%Y-%m-%dT%H:%M")
+                    date_str = dt.strftime("%Y-%m-%d %H:%M")
                 except Exception:
-                    date_str = saved_at[:16]
+                    date_str = saved_at[:16].replace("T", " ")
             msgs = str(s.get("messages", 0))
-            status = "[dim]archived[/dim]" if s.get("_archived") else "active"
-            filename = s.get("_filename", "")
-            table.add_row(title, date_str, msgs, status, filename)
+            status_icon = "📦" if s.get("_archived") else "💬"
+            table.add_row(title, date_str, msgs, status_icon)
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         """Show detail for the highlighted session."""
@@ -6723,16 +6741,40 @@ class SessionsScreen(Screen):
 
         saved_at = s.get("saved_at", "")
         if saved_at:
-            lines.append(f"  Date:     {saved_at}")
-        lines.append(f"  Messages: {s.get('messages', 0)}")
+            try:
+                from datetime import datetime
+
+                dt = datetime.fromisoformat(saved_at)
+                date_display = dt.strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                date_display = saved_at[:16].replace("T", " ")
+            lines.append(f"Date:     {date_display}")
+        lines.append(f"Messages: {s.get('messages', 0)}")
+
         model = s.get("model", "")
         if model:
-            lines.append(f"  Model:    {model}")
+            # Split "provider:model_name" into Provider and Model Name
+            if ":" in model:
+                provider, _model_id = model.split(":", 1)
+                provider_display = provider.capitalize()
+                # Use ModelProfile for the friendly name if available
+                try:
+                    from talk_box.models import get_model_profile
+
+                    profile = get_model_profile(model)
+                    model_display = profile.name if profile else _model_id
+                except Exception:
+                    model_display = _model_id
+                lines.append(f"Provider: {provider_display}")
+                lines.append(f"Model:    {model_display}")
+            else:
+                lines.append(f"Model:    {model}")
+
         persona = s.get("persona", "")
         if persona:
-            lines.append(f"  Persona:  {persona}")
+            lines.append(f"Persona:  {persona}")
         status = "Archived" if s.get("_archived") else "Active"
-        lines.append(f"  Status:   {status}")
+        lines.append(f"Status:   {status}")
 
         # Show file path
         filename = s.get("_filename", "")
@@ -6742,7 +6784,12 @@ class SessionsScreen(Screen):
                 filepath = os.path.join(sessions_dir, "archive", f"{filename}.json")
             else:
                 filepath = os.path.join(sessions_dir, f"{filename}.json")
-            lines.append(f"  File:     {filepath}")
+
+            # Split path into directory + filename for readability
+            dirpart = os.path.dirname(filepath)
+            base = os.path.basename(filepath)
+            lines.append(f"File:     {base}")
+            lines.append(f"          [dim]{dirpart}/[/dim]")
 
             # Show file size
             try:
@@ -6753,7 +6800,7 @@ class SessionsScreen(Screen):
                     size_str = f"{size / 1024:.1f} KB"
                 else:
                     size_str = f"{size / (1024 * 1024):.1f} MB"
-                lines.append(f"  Size:     {size_str}")
+                lines.append(f"Size:     {size_str}")
             except OSError:
                 pass
 
@@ -6762,6 +6809,56 @@ class SessionsScreen(Screen):
             detail.update("\n".join(lines))
         except Exception:
             pass
+
+        # Update button visibility based on status
+        self._update_action_buttons(s)
+
+    def _update_action_buttons(self, s: dict) -> None:
+        """Show/hide archive and unarchive buttons based on session status."""
+        try:
+            archive_btn = self.query_one("#sessions-archive-btn", Button)
+            unarchive_btn = self.query_one("#sessions-unarchive-btn", Button)
+            is_archived = s.get("_archived", False)
+            archive_btn.display = not is_archived
+            unarchive_btn.display = is_archived
+        except Exception:
+            pass
+
+    def _open_file_in_explorer(self) -> None:
+        """Open the session file's containing folder in the native file manager."""
+        import os
+        import platform
+        import subprocess
+
+        idx = self._get_selected_index()
+        if idx is None:
+            return
+        s = self._sessions[idx]
+        filename = s.get("_filename", "")
+        if not filename:
+            return
+
+        sessions_dir = os.path.join(_config_dir(), "sessions")
+        if s.get("_archived"):
+            filepath = os.path.join(sessions_dir, "archive", f"{filename}.json")
+        else:
+            filepath = os.path.join(sessions_dir, f"{filename}.json")
+
+        if not os.path.isfile(filepath):
+            self.app.notify("Session file not found.", title="Error")
+            return
+
+        system = platform.system()
+        try:
+            if system == "Darwin":
+                subprocess.Popen(["open", "-R", filepath])
+            elif system == "Windows":
+                subprocess.Popen(["explorer", "/select,", filepath])
+            else:  # Linux and others
+                folder = os.path.dirname(filepath)
+                subprocess.Popen(["xdg-open", folder])
+        except Exception:
+            self.app.notify("Could not open file manager.", title="Error")
 
     def _get_selected_index(self) -> int | None:
         """Return the currently highlighted row index, or None."""

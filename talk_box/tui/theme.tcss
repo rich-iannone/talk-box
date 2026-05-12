@@ -166,6 +166,17 @@ Screen {
     height: 1fr;
 }
 
+#sessions-action-bar {
+    height: auto;
+    padding: 1 0 0 0;
+    dock: bottom;
+}
+
+#sessions-action-bar Button {
+    margin: 0 1 0 0;
+    min-width: 12;
+}
+
 /* -- Chat screen ---------------------------------------------------------- */
 
 #chat-layout {
