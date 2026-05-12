@@ -172,7 +172,7 @@ Screen {
     height: 1fr;
 }
 
-#chat-back-btn {
+.back-home-btn {
     width: auto;
     min-width: 8;
     height: 1;
@@ -183,7 +183,7 @@ Screen {
     color: $text-muted;
 }
 
-#chat-back-btn:hover {
+.back-home-btn:hover {
     color: $text;
 }
 
@@ -1043,21 +1043,6 @@ SessionHistoryModal {
 
 #kg-actions Button {
     margin: 0 1 0 0;
-}
-
-#kg-back-btn {
-    width: auto;
-    min-width: 8;
-    height: 1;
-    margin: 0 0 0 0;
-    padding: 0 1;
-    border: none;
-    background: transparent;
-    color: $text-muted;
-}
-
-#kg-back-btn:hover {
-    color: $text;
 }
 
 #kg-table {

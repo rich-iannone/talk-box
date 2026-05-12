@@ -1697,7 +1697,7 @@ class ChatScreen(Screen):
         with Horizontal(id="chat-layout"):
             # Main chat area
             with Vertical(id="chat-main"):
-                yield Button("← Home", id="chat-back-btn", variant="default")
+                yield Button("← Home", id="chat-back-btn", variant="default", classes="back-home-btn")
                 with VerticalScroll(id="chat-messages"):
                     yield Static(
                         "[dim]Type a message below to start chatting.[/dim]",
@@ -4727,6 +4727,7 @@ class WorkspaceScreen(Screen):
         import os
 
         yield Header(show_clock=False)
+        yield Button("← Home", id="workspace-back-btn", variant="default", classes="back-home-btn")
         with Horizontal(id="workspace-layout"):
             # Left: File tree
             with Vertical(id="workspace-tree-panel"):
@@ -4764,6 +4765,11 @@ class WorkspaceScreen(Screen):
             id="workspace-input",
         )
         yield Footer()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "workspace-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
 
     def on_mount(self) -> None:
         """Set up the workspace with agent status."""
@@ -5139,6 +5145,7 @@ class ProfileScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
+        yield Button("← Home", id="profile-back-btn", variant="default", classes="back-home-btn")
         with Horizontal(id="profile-layout"):
             with Vertical(id="profile-list-panel"):
                 yield Static("[b]Profiles[/b]", id="profile-list-title")
@@ -5208,6 +5215,9 @@ class ProfileScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle Use Profile button — apply model/persona and go to Chat."""
+        if event.button.id == "profile-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
         if event.button.id == "profile-use-btn" and self._selected_profile:
             try:
                 from talk_box.config import load_profile, persist_defaults
@@ -5250,6 +5260,7 @@ class PersonaScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
+        yield Button("← Home", id="persona-back-btn", variant="default", classes="back-home-btn")
         with Horizontal(id="persona-layout"):
             with Vertical(id="persona-list-panel"):
                 yield Static("[b]Personas[/b]", id="persona-list-title")
@@ -5329,6 +5340,9 @@ class PersonaScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle Use in Chat button."""
+        if event.button.id == "persona-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
         if event.button.id == "persona-use-btn" and self._selected_persona:
             self.app._switch_to("chat")  # type: ignore[attr-defined]
             # Set persona on the chat screen
@@ -5358,6 +5372,7 @@ class TraitScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
+        yield Button("← Home", id="trait-back-btn", variant="default", classes="back-home-btn")
         with Horizontal(id="trait-layout"):
             with Vertical(id="trait-list-panel"):
                 yield Static("[b]Traits[/b]", id="trait-list-title")
@@ -5370,6 +5385,11 @@ class TraitScreen(Screen):
                         id="trait-detail-content",
                     )
         yield Footer()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "trait-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
 
     def on_mount(self) -> None:
         """Populate the trait option list."""
@@ -5437,6 +5457,7 @@ class ModelScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
+        yield Button("← Home", id="model-back-btn", variant="default", classes="back-home-btn")
         with Vertical(id="model-layout"):
             yield Static("[b]Model Profiles[/b]", id="model-title")
             yield DataTable(id="model-table")
@@ -5552,6 +5573,9 @@ class ModelScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle Use in Chat button."""
+        if event.button.id == "model-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
         if event.button.id == "model-use-btn" and self._selected_model:
             self.app._switch_to("chat")  # type: ignore[attr-defined]
             try:
@@ -5591,6 +5615,7 @@ class GuardrailScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
+        yield Button("← Home", id="guard-back-btn", variant="default", classes="back-home-btn")
         with Vertical(id="guard-layout"):
             yield Static("[b]Guardrails[/b]", id="guard-title")
             yield DataTable(id="guard-table")
@@ -5650,6 +5675,9 @@ class GuardrailScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle the toggle guard button."""
+        if event.button.id == "guard-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
         if event.button.id != "guard-toggle-btn":
             return
 
@@ -5693,6 +5721,7 @@ class PathwayScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
+        yield Button("← Home", id="pathway-back-btn", variant="default", classes="back-home-btn")
         with Vertical(id="pathway-layout"):
             yield Static(
                 "[b]Pathways[/b]\n\n"
@@ -5714,6 +5743,11 @@ class PathwayScreen(Screen):
             )
         yield Footer()
 
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "pathway-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
+
 
 # ---------------------------------------------------------------------------
 # Screen 11: Skill Browser
@@ -5727,6 +5761,7 @@ class SkillScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
+        yield Button("← Home", id="skill-back-btn", variant="default", classes="back-home-btn")
         with Horizontal(id="skill-layout"):
             with Vertical(id="skill-list-panel"):
                 yield Static("[b]Skills[/b]", id="skill-list-title")
@@ -5739,6 +5774,11 @@ class SkillScreen(Screen):
                         id="skill-detail-content",
                     )
         yield Footer()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "skill-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
 
     def on_mount(self) -> None:
         """Populate the skill option list."""
@@ -5810,7 +5850,7 @@ class KnowledgeScreen(Screen):
         yield Header(show_clock=False)
         with Horizontal(id="kg-outer"):
             with Vertical(id="kg-layout"):
-                yield Button("← Home", id="kg-back-btn", variant="default")
+                yield Button("← Home", id="kg-back-btn", variant="default", classes="back-home-btn")
                 with Horizontal(id="kg-stats"):
                     yield Static("", id="kg-stats-content")
                 with Horizontal(id="kg-actions"):
@@ -6409,11 +6449,17 @@ class MemoryScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
+        yield Button("← Home", id="memory-back-btn", variant="default", classes="back-home-btn")
         with Vertical(id="memory-layout"):
             yield Static("[b]Memory Inspector[/b]", id="memory-title")
             with VerticalScroll(id="memory-content"):
                 yield Static("", id="memory-tiers")
         yield Footer()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "memory-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
 
     def on_mount(self) -> None:
         """Show memory tier overview with live data."""
@@ -6494,6 +6540,7 @@ class EvalScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
+        yield Button("← Home", id="eval-back-btn", variant="default", classes="back-home-btn")
         with Vertical(id="eval-layout"):
             yield Static("[b]Eval Dashboard[/b]", id="eval-title")
             yield DataTable(id="eval-dim-table")
@@ -6502,6 +6549,11 @@ class EvalScreen(Screen):
             yield Static("[b]Scorecard History[/b]", id="eval-history-title")
             yield DataTable(id="eval-history-table")
         yield Footer()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "eval-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
 
     def on_mount(self) -> None:
         """Populate the eval dimensions table and scorecard history."""
@@ -6602,6 +6654,7 @@ class SessionsScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
+        yield Button("← Home", id="sessions-back-btn", variant="default", classes="back-home-btn")
         with Horizontal(id="sessions-layout"):
             with Vertical(id="sessions-left"):
                 yield Static("[b]Session Ledger[/b]", id="sessions-title")
@@ -6616,6 +6669,11 @@ class SessionsScreen(Screen):
                         id="sessions-detail-content",
                     )
         yield Footer()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "sessions-back-btn":
+            self.app._switch_to("home")  # type: ignore[attr-defined]
+            return
 
     def on_mount(self) -> None:
         self._load_sessions()
