@@ -597,6 +597,43 @@ def _get_workspace_root() -> "Path":
 
 
 # ---------------------------------------------------------------------------
+# Undo buffer for file changes
+# ---------------------------------------------------------------------------
+
+_undo_buffer: "UndoBuffer | None" = None
+
+
+def set_undo_buffer(buffer: "UndoBuffer | None") -> None:
+    """Set the session undo buffer (called by TUI on screen mount)."""
+    global _undo_buffer
+    _undo_buffer = buffer
+
+
+def get_undo_buffer() -> "UndoBuffer | None":
+    """Return the current undo buffer (or ``None``)."""
+    return _undo_buffer
+
+
+def _snapshot_for_undo(action: str, path: str) -> None:
+    """Capture the current file content into the undo buffer before a write/edit."""
+    if _undo_buffer is None:
+        return
+    resolved = (_get_workspace_root() / path).resolve()
+    previous: str | None = None
+    try:
+        with open(resolved) as f:
+            previous = f.read()
+    except (FileNotFoundError, OSError):
+        pass  # new file — previous_content stays None
+    _undo_buffer.record(
+        action=action,
+        path=path,
+        previous_content=previous,
+        resolved_path=str(resolved),
+    )
+
+
+# ---------------------------------------------------------------------------
 # File change approval callback
 # ---------------------------------------------------------------------------
 
@@ -742,6 +779,7 @@ def file_write(context: ToolContext, path: str, content: str) -> ToolResult:
                 error=f"File write to '{path}' was rejected by the user.",
             )
 
+    _snapshot_for_undo("write", path)
     agent = WorkspaceAgent(root=_get_workspace_root())
     result = agent.file_write(path, content)
     if result.success:
@@ -781,6 +819,7 @@ def file_edit(context: ToolContext, path: str, old_text: str, new_text: str) -> 
                 error=f"File edit to '{path}' was rejected by the user.",
             )
 
+    _snapshot_for_undo("edit", path)
     agent = WorkspaceAgent(root=_get_workspace_root())
     result = agent.file_edit(path, old_text, new_text)
     if result.success:

@@ -4257,6 +4257,7 @@ class TestCaptureReplayModal:
         screen._enter_sends = True
         screen._output_format = None
         screen._require_approvals = True
+        screen._undo_buffer = None
 
         # Mock what _do_clear needs
         from unittest.mock import MagicMock

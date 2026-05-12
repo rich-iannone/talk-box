@@ -1644,6 +1644,7 @@ class ChatScreen(Screen):
         self._kg_hint_shown: bool = False  # one-time onboarding hint
         self._session_file_id: str | None = None  # unique file stem for autosave
         self._capture: object | None = None  # ConversationCapture instance
+        self._undo_buffer: object | None = None  # UndoBuffer instance
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -1896,6 +1897,7 @@ class ChatScreen(Screen):
         """Create a ChatBot from the resolved config."""
         if self._require_approvals:
             self._install_file_approval_callback()
+        self._install_undo_buffer()
         try:
             from talk_box.builder import ChatBot
             from talk_box.config import load_config
@@ -2039,9 +2041,25 @@ class ChatScreen(Screen):
         set_file_approval_callback(None)
         set_batch_approval_callback(None)
 
+    def _install_undo_buffer(self) -> None:
+        """Create and register a session undo buffer for file changes."""
+        from talk_box.builtin_tools import set_undo_buffer
+        from talk_box.undo import UndoBuffer
+
+        if self._undo_buffer is None:
+            self._undo_buffer = UndoBuffer()
+        set_undo_buffer(self._undo_buffer)
+
+    def _uninstall_undo_buffer(self) -> None:
+        """Detach the undo buffer from the tool layer."""
+        from talk_box.builtin_tools import set_undo_buffer
+
+        set_undo_buffer(None)
+
     def on_unmount(self) -> None:
         """Clean up when the screen is removed."""
         self._uninstall_file_approval_callback()
+        self._uninstall_undo_buffer()
 
     def _persist_defaults(self) -> None:
         """Save the current model/persona as defaults in global config."""
@@ -2201,6 +2219,7 @@ class ChatScreen(Screen):
                 "  /attach <path>     Attach a file to the next message\n"
                 "  /format <type>     Set output format (json, markdown, table)\n"
                 "  /capture           View conversation capture timeline\n"
+                "  /undo [all|list]   Undo file changes (last, all, or list)\n"
                 "  /fav model <name>  Toggle model as favorite\n"
                 "  /fav persona <n>   Toggle persona as favorite\n"
                 "  /fav               List current favorites\n"
@@ -2443,6 +2462,9 @@ class ChatScreen(Screen):
         elif cmd == "/capture":
             self._show_capture()
 
+        elif cmd == "/undo":
+            self._handle_undo(arg)
+
         else:
             self._append_system_message(
                 f"Unknown command: [b]{cmd}[/b]. Type [b]/help[/b] for available commands."
@@ -2455,6 +2477,8 @@ class ChatScreen(Screen):
         self._prompt_history = []
         self._history_index = -1
         self._capture = None
+        if self._undo_buffer is not None:
+            self._undo_buffer.clear()
         self._rebuild_bot()
 
         async def _clear():
@@ -3253,6 +3277,55 @@ class ChatScreen(Screen):
             self._append_system_message("[dim]No capture data yet. Send some messages first.[/dim]")
             return
         self.app.push_screen(CaptureReplayModal(self._capture, title="Session Capture"))
+
+    def _handle_undo(self, arg: str) -> None:
+        """Handle the /undo slash command."""
+        from talk_box.undo import UndoBuffer
+
+        buf: UndoBuffer | None = self._undo_buffer  # type: ignore[assignment]
+        if buf is None or len(buf) == 0:
+            if arg == "list":
+                self._append_system_message("[dim]No file changes to undo.[/dim]")
+            else:
+                self._append_system_message("[dim]Nothing to undo.[/dim]")
+            return
+
+        sub = arg.lower().strip()
+        if sub == "list":
+            lines = [
+                "[b]Undo Buffer[/b]  ({} change{})".format(len(buf), "s" if len(buf) != 1 else "")
+            ]
+            for i, entry in enumerate(reversed(buf.entries), 1):
+                kind = "📝" if entry.action == "edit" else "📄"
+                ts = entry.timestamp.strftime("%H:%M:%S")
+                state = "new file" if entry.previous_content is None else "modified"
+                lines.append(f"  {i}. {kind} [cyan]{entry.path}[/cyan]  ({state})  [dim]{ts}[/dim]")
+            self._append_system_message("\n".join(lines))
+        elif sub == "all":
+            reverted = buf.undo_all()
+            lines = [f"[b]Reverted {len(reverted)} change(s):[/b]"]
+            for entry in reverted:
+                action = "deleted" if entry.previous_content is None else "restored"
+                lines.append(f"  ↩ [cyan]{entry.path}[/cyan]  ({action})")
+            self._append_system_message("\n".join(lines))
+        elif sub == "":
+            entry = buf.undo_last()
+            if entry is None:
+                self._append_system_message("[dim]Nothing to undo.[/dim]")
+            else:
+                action = "deleted" if entry.previous_content is None else "restored"
+                remaining = len(buf)
+                msg = f"↩ Undid [cyan]{entry.path}[/cyan]  ({action})"
+                if remaining > 0:
+                    msg += f"  [dim]({remaining} more in buffer)[/dim]"
+                self._append_system_message(msg)
+        else:
+            self._append_system_message(
+                "[b]Usage:[/b]\n"
+                "  /undo              Undo last file change\n"
+                "  /undo all          Undo all file changes\n"
+                "  /undo list         List undoable changes"
+            )
 
     def _show_cost_estimate(self) -> None:
         """Show session cost — uses real SessionUsage data when available."""
