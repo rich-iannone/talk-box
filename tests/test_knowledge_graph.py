@@ -4,6 +4,7 @@ import pytest
 
 from talk_box.knowledge_graph import (
     Edge,
+    GraphLayer,
     KnowledgeGraph,
     Node,
     NodeType,
@@ -387,7 +388,14 @@ class TestKGStats:
 
     def test_stats_empty(self):
         s = self.kg.stats()
-        assert s == {"nodes": 0, "edges": 0, "documents": 0, "entities": 0, "topics": 0}
+        assert s == {
+            "nodes": 0,
+            "edges": 0,
+            "documents": 0,
+            "entities": 0,
+            "topics": 0,
+            "layers": {"base": 0, "enrichment": 0, "extended": 0},
+        }
 
     def test_stats_populated(self):
         self.kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="D"))
@@ -726,3 +734,168 @@ class TestKnowledgeGraphRegistry:
         assert g["description"] == "My project"
         assert g["is_default"] is True
         assert g["created_at"] > 0
+
+
+# ---------------------------------------------------------------------------
+# GraphLayer
+# ---------------------------------------------------------------------------
+
+
+class TestGraphLayer:
+    def test_values(self):
+        assert GraphLayer.BASE.value == "base"
+        assert GraphLayer.ENRICHMENT.value == "enrichment"
+        assert GraphLayer.EXTENDED.value == "extended"
+
+    def test_from_string(self):
+        assert GraphLayer("base") is GraphLayer.BASE
+        assert GraphLayer("enrichment") is GraphLayer.ENRICHMENT
+        assert GraphLayer("extended") is GraphLayer.EXTENDED
+
+
+class TestGraphLayerCRUD:
+    def test_node_default_layer(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        node = Node(id="n1", node_type=NodeType.DOCUMENT, name="doc")
+        kg.add_node(node)
+        got = kg.get_node("n1")
+        assert got is not None
+        assert got.layer == GraphLayer.BASE
+
+    def test_node_explicit_layer(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        node = Node(
+            id="n1",
+            node_type=NodeType.ENTITY,
+            name="ent",
+            layer=GraphLayer.ENRICHMENT,
+        )
+        kg.add_node(node)
+        got = kg.get_node("n1")
+        assert got is not None
+        assert got.layer == GraphLayer.ENRICHMENT
+
+    def test_edge_default_layer(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="a", node_type=NodeType.DOCUMENT, name="a"))
+        kg.add_node(Node(id="b", node_type=NodeType.DOCUMENT, name="b"))
+        kg.add_edge(Edge(source="a", target="b", relation="related"))
+        edges = kg.get_edges("a", direction="outgoing")
+        assert len(edges) == 1
+        assert edges[0].layer == GraphLayer.BASE
+
+    def test_edge_explicit_layer(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="a", node_type=NodeType.DOCUMENT, name="a"))
+        kg.add_node(Node(id="b", node_type=NodeType.DOCUMENT, name="b"))
+        kg.add_edge(
+            Edge(
+                source="a",
+                target="b",
+                relation="mentions",
+                layer=GraphLayer.ENRICHMENT,
+            )
+        )
+        edges = kg.get_edges("a", direction="outgoing")
+        assert edges[0].layer == GraphLayer.ENRICHMENT
+
+    def test_list_nodes_filter_by_layer(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="a"))
+        kg.add_node(Node(id="n2", node_type=NodeType.ENTITY, name="b", layer=GraphLayer.ENRICHMENT))
+        kg.add_node(Node(id="n3", node_type=NodeType.TOPIC, name="c", layer=GraphLayer.ENRICHMENT))
+        assert len(kg.list_nodes(layer=GraphLayer.BASE)) == 1
+        assert len(kg.list_nodes(layer=GraphLayer.ENRICHMENT)) == 2
+        assert len(kg.list_nodes(layer=GraphLayer.EXTENDED)) == 0
+
+    def test_node_count_filter_by_layer(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="a"))
+        kg.add_node(Node(id="n2", node_type=NodeType.ENTITY, name="b", layer=GraphLayer.ENRICHMENT))
+        assert kg.node_count(layer=GraphLayer.BASE) == 1
+        assert kg.node_count(layer=GraphLayer.ENRICHMENT) == 1
+        assert kg.node_count(layer=GraphLayer.EXTENDED) == 0
+
+    def test_node_count_combined_filters(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="a"))
+        kg.add_node(Node(id="n2", node_type=NodeType.ENTITY, name="b", layer=GraphLayer.ENRICHMENT))
+        kg.add_node(Node(id="n3", node_type=NodeType.ENTITY, name="c", layer=GraphLayer.BASE))
+        assert kg.node_count(node_type=NodeType.ENTITY, layer=GraphLayer.ENRICHMENT) == 1
+        assert kg.node_count(node_type=NodeType.ENTITY, layer=GraphLayer.BASE) == 1
+
+    def test_search_filter_by_layer(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="python guide"))
+        kg.add_node(
+            Node(
+                id="n2",
+                node_type=NodeType.ENTITY,
+                name="python",
+                layer=GraphLayer.ENRICHMENT,
+            )
+        )
+        base_results = kg.search("python", layer=GraphLayer.BASE)
+        enrichment_results = kg.search("python", layer=GraphLayer.ENRICHMENT)
+        assert len(base_results) == 1
+        assert base_results[0].id == "n1"
+        assert len(enrichment_results) == 1
+        assert enrichment_results[0].id == "n2"
+
+    def test_clear_layer(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="doc"))
+        kg.add_node(
+            Node(id="n2", node_type=NodeType.ENTITY, name="ent", layer=GraphLayer.ENRICHMENT)
+        )
+        kg.add_node(
+            Node(id="n3", node_type=NodeType.TOPIC, name="top", layer=GraphLayer.ENRICHMENT)
+        )
+        kg.add_edge(
+            Edge(source="n1", target="n2", relation="mentions", layer=GraphLayer.ENRICHMENT)
+        )
+        removed = kg.clear_layer(GraphLayer.ENRICHMENT)
+        assert removed == 2
+        assert kg.node_count() == 1
+        assert kg.get_node("n1") is not None
+        assert kg.get_node("n2") is None
+        assert kg.get_node("n3") is None
+
+    def test_stats_includes_layers(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="doc"))
+        kg.add_node(
+            Node(id="n2", node_type=NodeType.ENTITY, name="ent", layer=GraphLayer.ENRICHMENT)
+        )
+        s = kg.stats()
+        assert "layers" in s
+        assert s["layers"]["base"] == 1
+        assert s["layers"]["enrichment"] == 1
+        assert s["layers"]["extended"] == 0
+
+    def test_migration_adds_layer_to_existing_db(self, tmp_path):
+        """Opening a DB created without the layer column should auto-migrate."""
+        import sqlite3
+
+        db_path = tmp_path / "old.db"
+        conn = sqlite3.connect(str(db_path))
+        conn.execute(
+            "CREATE TABLE nodes (id TEXT PRIMARY KEY, node_type TEXT, name TEXT, "
+            "content TEXT DEFAULT '', metadata TEXT DEFAULT '{}', embedding BLOB, "
+            "created_at REAL, updated_at REAL)"
+        )
+        conn.execute(
+            "CREATE TABLE edges (source TEXT, target TEXT, relation TEXT, "
+            "weight REAL DEFAULT 1.0, metadata TEXT DEFAULT '{}', "
+            "PRIMARY KEY (source, target, relation))"
+        )
+        conn.execute("INSERT INTO nodes VALUES ('x', 'document', 'old doc', '', '{}', NULL, 0, 0)")
+        conn.commit()
+        conn.close()
+
+        # Now open with KnowledgeGraph — should migrate
+        kg = KnowledgeGraph(db_path)
+        node = kg.get_node("x")
+        assert node is not None
+        assert node.layer == GraphLayer.BASE
+        kg.close()

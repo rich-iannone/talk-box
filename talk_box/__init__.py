@@ -136,6 +136,7 @@ from talk_box.kg_visualization import (
 )
 from talk_box.knowledge_graph import (
     Edge,
+    GraphLayer,
     KnowledgeGraph,
     KnowledgeGraphRegistry,
     Node,
@@ -395,6 +396,7 @@ __all__ = [
     # Knowledge graph
     "KnowledgeGraph",
     "KnowledgeGraphRegistry",
+    "GraphLayer",
     "Node",
     "Edge",
     "NodeType",

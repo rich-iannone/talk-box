@@ -43,6 +43,34 @@ class NodeType(Enum):
     TOPIC = "topic"
 
 
+class GraphLayer(Enum):
+    """Layer that owns a node or edge.
+
+    Values
+    ------
+    BASE
+        User-curated source material (documents, manual entities/edges).
+    ENRICHMENT
+        Model-generated content (extracted entities, topics, summaries).
+    EXTENDED
+        Conversational learnings (decisions, corrections, chat insights).
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    tb.GraphLayer.BASE
+    tb.GraphLayer.ENRICHMENT
+    tb.GraphLayer.EXTENDED
+    ```
+    """
+
+    BASE = "base"
+    ENRICHMENT = "enrichment"
+    EXTENDED = "extended"
+
+
 # ---------------------------------------------------------------------------
 # Data types
 # ---------------------------------------------------------------------------
@@ -94,6 +122,7 @@ class Node:
     embedding: list[float] | None = None
     created_at: float = 0.0
     updated_at: float = 0.0
+    layer: GraphLayer = GraphLayer.BASE
 
     def __post_init__(self) -> None:
         now = time.time()
@@ -141,6 +170,7 @@ class Edge:
     relation: str
     weight: float = 1.0
     metadata: dict[str, Any] = field(default_factory=dict)
+    layer: GraphLayer = GraphLayer.BASE
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +186,8 @@ CREATE TABLE IF NOT EXISTS nodes (
     metadata TEXT NOT NULL DEFAULT '{}',
     embedding BLOB,
     created_at REAL NOT NULL,
-    updated_at REAL NOT NULL
+    updated_at REAL NOT NULL,
+    layer TEXT NOT NULL DEFAULT 'base'
 )
 """
 
@@ -167,6 +198,7 @@ CREATE TABLE IF NOT EXISTS edges (
     relation TEXT NOT NULL,
     weight REAL NOT NULL DEFAULT 1.0,
     metadata TEXT NOT NULL DEFAULT '{}',
+    layer TEXT NOT NULL DEFAULT 'base',
     PRIMARY KEY (source, target, relation),
     FOREIGN KEY (source) REFERENCES nodes(id) ON DELETE CASCADE,
     FOREIGN KEY (target) REFERENCES nodes(id) ON DELETE CASCADE
@@ -191,6 +223,14 @@ CREATE INDEX IF NOT EXISTS idx_edges_target ON edges (target)
 
 _CREATE_EDGES_RELATION_IDX = """
 CREATE INDEX IF NOT EXISTS idx_edges_relation ON edges (relation)
+"""
+
+_CREATE_NODES_LAYER_IDX = """
+CREATE INDEX IF NOT EXISTS idx_nodes_layer ON nodes (layer)
+"""
+
+_CREATE_EDGES_LAYER_IDX = """
+CREATE INDEX IF NOT EXISTS idx_edges_layer ON edges (layer)
 """
 
 
@@ -269,12 +309,26 @@ class KnowledgeGraph:
         """Create tables and indexes if they don't exist."""
         self._conn.execute(_CREATE_NODES_SQL)
         self._conn.execute(_CREATE_EDGES_SQL)
+        self._migrate_add_layer()
         self._conn.execute(_CREATE_NODES_TYPE_IDX)
         self._conn.execute(_CREATE_NODES_NAME_IDX)
         self._conn.execute(_CREATE_EDGES_SOURCE_IDX)
         self._conn.execute(_CREATE_EDGES_TARGET_IDX)
         self._conn.execute(_CREATE_EDGES_RELATION_IDX)
+        self._conn.execute(_CREATE_NODES_LAYER_IDX)
+        self._conn.execute(_CREATE_EDGES_LAYER_IDX)
         self._conn.commit()
+
+    def _migrate_add_layer(self) -> None:
+        """Add layer column to existing databases that lack it."""
+        cur = self._conn.execute("PRAGMA table_info(nodes)")
+        node_cols = {row[1] for row in cur.fetchall()}
+        if "layer" not in node_cols:
+            self._conn.execute("ALTER TABLE nodes ADD COLUMN layer TEXT NOT NULL DEFAULT 'base'")
+        cur = self._conn.execute("PRAGMA table_info(edges)")
+        edge_cols = {row[1] for row in cur.fetchall()}
+        if "layer" not in edge_cols:
+            self._conn.execute("ALTER TABLE edges ADD COLUMN layer TEXT NOT NULL DEFAULT 'base'")
 
     @property
     def path(self) -> str:
@@ -306,15 +360,16 @@ class KnowledgeGraph:
         embedding_blob = _floats_to_blob(node.embedding) if node.embedding is not None else None
         self._conn.execute(
             """
-            INSERT INTO nodes (id, node_type, name, content, metadata, embedding, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO nodes (id, node_type, name, content, metadata, embedding, created_at, updated_at, layer)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 node_type=excluded.node_type,
                 name=excluded.name,
                 content=excluded.content,
                 metadata=excluded.metadata,
                 embedding=excluded.embedding,
-                updated_at=excluded.updated_at
+                updated_at=excluded.updated_at,
+                layer=excluded.layer
             """,
             (
                 node.id,
@@ -325,6 +380,7 @@ class KnowledgeGraph:
                 embedding_blob,
                 node.created_at,
                 node.updated_at,
+                node.layer.value,
             ),
         )
         self._conn.commit()
@@ -343,7 +399,7 @@ class KnowledgeGraph:
             The node, or ``None`` if not found.
         """
         row = self._conn.execute(
-            "SELECT id, node_type, name, content, metadata, embedding, created_at, updated_at "
+            "SELECT id, node_type, name, content, metadata, embedding, created_at, updated_at, layer "
             "FROM nodes WHERE id = ?",
             (node_id,),
         ).fetchone()
@@ -372,14 +428,17 @@ class KnowledgeGraph:
         self,
         *,
         node_type: NodeType | None = None,
+        layer: GraphLayer | None = None,
         limit: int = 100,
     ) -> list[Node]:
-        """List nodes, optionally filtered by type.
+        """List nodes, optionally filtered by type and/or layer.
 
         Parameters
         ----------
         node_type
             Filter to a specific node type.
+        layer
+            Filter to a specific graph layer.
         limit
             Maximum number of nodes to return.
 
@@ -388,40 +447,50 @@ class KnowledgeGraph:
         list[Node]
             Matching nodes ordered by name.
         """
+        clauses: list[str] = []
+        params: list[Any] = []
         if node_type is not None:
-            rows = self._conn.execute(
-                "SELECT id, node_type, name, content, metadata, embedding, created_at, updated_at "
-                "FROM nodes WHERE node_type = ? ORDER BY name LIMIT ?",
-                (node_type.value, limit),
-            ).fetchall()
-        else:
-            rows = self._conn.execute(
-                "SELECT id, node_type, name, content, metadata, embedding, created_at, updated_at "
-                "FROM nodes ORDER BY name LIMIT ?",
-                (limit,),
-            ).fetchall()
+            clauses.append("node_type = ?")
+            params.append(node_type.value)
+        if layer is not None:
+            clauses.append("layer = ?")
+            params.append(layer.value)
+        where = f"WHERE {' AND '.join(clauses)} " if clauses else ""
+        params.append(limit)
+        rows = self._conn.execute(
+            "SELECT id, node_type, name, content, metadata, embedding, created_at, updated_at, layer "
+            f"FROM nodes {where}ORDER BY name LIMIT ?",
+            params,
+        ).fetchall()
         return [_row_to_node(r) for r in rows]
 
-    def node_count(self, *, node_type: NodeType | None = None) -> int:
+    def node_count(
+        self, *, node_type: NodeType | None = None, layer: GraphLayer | None = None
+    ) -> int:
         """Count nodes in the graph.
 
         Parameters
         ----------
         node_type
             If provided, count only nodes of this type.
+        layer
+            If provided, count only nodes in this layer.
 
         Returns
         -------
         int
             Number of matching nodes.
         """
+        clauses: list[str] = []
+        params: list[Any] = []
         if node_type is not None:
-            row = self._conn.execute(
-                "SELECT COUNT(*) FROM nodes WHERE node_type = ?",
-                (node_type.value,),
-            ).fetchone()
-        else:
-            row = self._conn.execute("SELECT COUNT(*) FROM nodes").fetchone()
+            clauses.append("node_type = ?")
+            params.append(node_type.value)
+        if layer is not None:
+            clauses.append("layer = ?")
+            params.append(layer.value)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        row = self._conn.execute(f"SELECT COUNT(*) FROM nodes {where}", params).fetchone()
         return row[0] if row else 0
 
     # ------------------------------------------------------------------
@@ -449,11 +518,12 @@ class KnowledgeGraph:
 
         self._conn.execute(
             """
-            INSERT INTO edges (source, target, relation, weight, metadata)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO edges (source, target, relation, weight, metadata, layer)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(source, target, relation) DO UPDATE SET
                 weight=excluded.weight,
-                metadata=excluded.metadata
+                metadata=excluded.metadata,
+                layer=excluded.layer
             """,
             (
                 edge.source,
@@ -461,6 +531,7 @@ class KnowledgeGraph:
                 edge.relation,
                 edge.weight,
                 json.dumps(edge.metadata),
+                edge.layer.value,
             ),
         )
         self._conn.commit()
@@ -492,7 +563,7 @@ class KnowledgeGraph:
         params: list[Any] = []
 
         if direction in ("outgoing", "both"):
-            sql = "SELECT source, target, relation, weight, metadata FROM edges WHERE source = ?"
+            sql = "SELECT source, target, relation, weight, metadata, layer FROM edges WHERE source = ?"
             p: list[Any] = [node_id]
             if relation is not None:
                 sql += " AND relation = ?"
@@ -501,7 +572,7 @@ class KnowledgeGraph:
             edges.extend(_row_to_edge(r) for r in rows)
 
         if direction in ("incoming", "both"):
-            sql = "SELECT source, target, relation, weight, metadata FROM edges WHERE target = ?"
+            sql = "SELECT source, target, relation, weight, metadata, layer FROM edges WHERE target = ?"
             p = [node_id]
             if relation is not None:
                 sql += " AND relation = ?"
@@ -599,6 +670,7 @@ class KnowledgeGraph:
         query: str,
         *,
         node_type: NodeType | None = None,
+        layer: GraphLayer | None = None,
         limit: int = 20,
     ) -> list[Node]:
         """Search nodes by name or content (case-insensitive substring match).
@@ -609,6 +681,8 @@ class KnowledgeGraph:
             Text to search for in node names and content.
         node_type
             Optional filter by node type.
+        layer
+            Optional filter by graph layer.
         limit
             Maximum results to return.
 
@@ -625,16 +699,19 @@ class KnowledgeGraph:
         """
         pattern = f"%{query}%"
         params: list[Any] = [pattern, pattern]
-        type_clause = ""
+        extra_clauses = ""
         if node_type is not None:
-            type_clause = "AND node_type = ?"
+            extra_clauses += "AND node_type = ? "
             params.append(node_type.value)
+        if layer is not None:
+            extra_clauses += "AND layer = ? "
+            params.append(layer.value)
         params.append(limit)
 
         sql = f"""
-            SELECT id, node_type, name, content, metadata, embedding, created_at, updated_at
+            SELECT id, node_type, name, content, metadata, embedding, created_at, updated_at, layer
             FROM nodes
-            WHERE (name LIKE ? OR content LIKE ?) {type_clause}
+            WHERE (name LIKE ? OR content LIKE ?) {extra_clauses}
             ORDER BY
                 CASE WHEN name LIKE ? THEN 0 ELSE 1 END,
                 name
@@ -656,13 +733,14 @@ class KnowledgeGraph:
         Returns
         -------
         dict[str, Any]
-            Counts of nodes (total and per type) and edges.
+            Counts of nodes (total and per type), edges, and per-layer breakdowns.
 
         Examples
         --------
         ```python
         kg.stats()
-        # {"nodes": 42, "edges": 87, "documents": 10, "entities": 25, "topics": 7}
+        # {"nodes": 42, "edges": 87, "documents": 10, "entities": 25, "topics": 7,
+        #  "layers": {"base": 30, "enrichment": 10, "extended": 2}}
         ```
         """
         total_nodes = self.node_count()
@@ -670,12 +748,14 @@ class KnowledgeGraph:
         docs = self.node_count(node_type=NodeType.DOCUMENT)
         entities = self.node_count(node_type=NodeType.ENTITY)
         topics = self.node_count(node_type=NodeType.TOPIC)
+        layers = {layer.value: self.node_count(layer=layer) for layer in GraphLayer}
         return {
             "nodes": total_nodes,
             "edges": total_edges,
             "documents": docs,
             "entities": entities,
             "topics": topics,
+            "layers": layers,
         }
 
     def health(self) -> dict[str, Any]:
@@ -896,6 +976,27 @@ class KnowledgeGraph:
         self._conn.execute("DELETE FROM edges")
         self._conn.execute("DELETE FROM nodes")
         self._conn.commit()
+
+    def clear_layer(self, layer: GraphLayer) -> int:
+        """Delete all nodes and edges belonging to a specific layer.
+
+        Edges are deleted first (those whose *source* or *target* is in the
+        layer), then the nodes themselves.
+
+        Parameters
+        ----------
+        layer
+            The graph layer to clear.
+
+        Returns
+        -------
+        int
+            Number of nodes removed.
+        """
+        self._conn.execute("DELETE FROM edges WHERE layer = ?", (layer.value,))
+        cursor = self._conn.execute("DELETE FROM nodes WHERE layer = ?", (layer.value,))
+        self._conn.commit()
+        return cursor.rowcount
 
     def close(self) -> None:
         """Close the database connection."""
@@ -1325,6 +1426,7 @@ def _row_to_node(row: tuple[Any, ...]) -> Node:
         embedding=embedding,
         created_at=row[6],
         updated_at=row[7],
+        layer=GraphLayer(row[8]) if len(row) > 8 and row[8] is not None else GraphLayer.BASE,
     )
 
 
@@ -1336,4 +1438,5 @@ def _row_to_edge(row: tuple[Any, ...]) -> Edge:
         relation=row[2],
         weight=row[3],
         metadata=json.loads(row[4]),
+        layer=GraphLayer(row[5]) if len(row) > 5 and row[5] is not None else GraphLayer.BASE,
     )

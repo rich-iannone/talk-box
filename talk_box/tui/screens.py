@@ -6009,7 +6009,7 @@ class KnowledgeScreen(Screen):
                 yield Button("← Home", id="kg-back-btn", variant="default", classes="back-home-btn")
                 with Horizontal(id="kg-graph-picker"):
                     yield Select(
-                        [],
+                        [("(no graphs)", "")],
                         prompt="Select graph…",
                         id="kg-graph-select",
                         allow_blank=False,
@@ -6253,9 +6253,14 @@ class KnowledgeScreen(Screen):
         try:
             from talk_box.knowledge_graph import KnowledgeGraphRegistry
 
-            if self._registry is None:
-                self._registry = KnowledgeGraphRegistry()
-            kg = self._registry.open_default()
+            registry = getattr(self, "_registry", None)
+            if registry is None:
+                registry = KnowledgeGraphRegistry()
+                self._registry = registry
+            kg = registry.open_default()
+            if kg is None and registry.graph_count() == 0:
+                # Auto-create a default graph when registry is empty
+                kg = registry.create("default", set_default=True)
             if kg is not None:
                 self._kg = kg
                 return self._kg

@@ -230,7 +230,7 @@ class EnrichmentPipeline:
         PipelineResult
             Summary of enrichment activity.
         """
-        from talk_box.knowledge_graph import Edge, Node, NodeType
+        from talk_box.knowledge_graph import Edge, GraphLayer, Node, NodeType
 
         docs = kg.list_nodes(node_type=NodeType.DOCUMENT, limit=limit)
         enriched = 0
@@ -291,6 +291,7 @@ class EnrichmentPipeline:
                             "entity_type": entity.entity_type,
                             **entity.metadata,
                         },
+                        layer=GraphLayer.ENRICHMENT,
                     )
                     kg.add_node(entity_node)
                     entities_created += 1
@@ -302,6 +303,7 @@ class EnrichmentPipeline:
                     relation="mentions",
                     weight=min(entity.mentions / 10.0, 1.0),
                     metadata={"entity_type": entity.entity_type},
+                    layer=GraphLayer.ENRICHMENT,
                 )
                 kg.add_edge(edge)
                 edges_created += 1
@@ -316,6 +318,7 @@ class EnrichmentPipeline:
                         id=topic_id,
                         node_type=NodeType.TOPIC,
                         name=topic_name,
+                        layer=GraphLayer.ENRICHMENT,
                     )
                     kg.add_node(topic_node)
                     topics_created += 1
@@ -325,6 +328,7 @@ class EnrichmentPipeline:
                     source=doc_node.id,
                     target=topic_id,
                     relation="belongs_to",
+                    layer=GraphLayer.ENRICHMENT,
                 )
                 kg.add_edge(edge)
                 edges_created += 1
@@ -342,6 +346,7 @@ class EnrichmentPipeline:
                         relation=rel.relation,
                         weight=rel.weight,
                         metadata=rel.metadata,
+                        layer=GraphLayer.ENRICHMENT,
                     )
                     kg.add_edge(edge)
                     edges_created += 1
