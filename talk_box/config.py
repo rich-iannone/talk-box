@@ -187,6 +187,7 @@ class TalkBoxConfig:
     # Core settings
     default_model: str | None = None
     default_persona: str | None = None
+    default_traits: list[str] = field(default_factory=list)
     guardrails: list[str] = field(default_factory=list)
     temperature: float | None = None
 
@@ -373,6 +374,7 @@ class TalkBoxConfig:
             temperature=resolved_temp,
             guardrails=resolved_guards,
             tools=list(self.tools),
+            traits=list(self.default_traits),
         )
 
 
@@ -385,6 +387,7 @@ class ResolvedConfig:
     temperature: float | None = None
     guardrails: list[str] = field(default_factory=list)
     tools: list[str] = field(default_factory=list)
+    traits: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -474,6 +477,7 @@ _VALID_TOP_KEYS = frozenset(
     {
         "default_model",
         "default_persona",
+        "default_traits",
         "guardrails",
         "temperature",
         "favorite_models",
@@ -633,6 +637,7 @@ def _parse_config_dict(data: dict[str, Any]) -> TalkBoxConfig:
     return TalkBoxConfig(
         default_model=data.get("default_model"),
         default_persona=data.get("default_persona"),
+        default_traits=data.get("default_traits", []),
         guardrails=data.get("guardrails", []),
         temperature=data.get("temperature"),
         favorite_models=data.get("favorite_models", []),
@@ -857,6 +862,7 @@ def persist_defaults(
     *,
     model: str | None = None,
     persona: str | None = None,
+    traits: list[str] | None = None,
 ) -> None:
     """Persist default model and/or persona to the global config.
 
@@ -868,6 +874,8 @@ def persist_defaults(
         config["default_model"] = model
     if persona is not None:
         config["default_persona"] = persona
+    if traits is not None:
+        config["default_traits"] = traits
     _GLOBAL_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     write_yaml(config, _GLOBAL_CONFIG_PATH)
 

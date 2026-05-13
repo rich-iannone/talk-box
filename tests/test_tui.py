@@ -1947,7 +1947,7 @@ class TestNewSlashCommands:
 
     @pytest.mark.asyncio()
     async def test_sidebar_shows_traits(self, _fake_config):
-        """Sidebar includes active traits."""
+        """Sidebar includes active traits count."""
         async with TalkBoxApp().run_test() as pilot:
             app = pilot.app
             app._switch_to("chat")
@@ -1955,7 +1955,7 @@ class TestNewSlashCommands:
             app.screen._active_traits = ["concise"]
             sidebar_text = app.screen._build_sidebar()
             assert "Traits:" in sidebar_text
-            assert "concise" in sidebar_text
+            assert "1" in sidebar_text
 
     # -- Sidebar action link tests -----------------------------------------
 

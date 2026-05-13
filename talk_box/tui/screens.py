@@ -1738,6 +1738,11 @@ class ChatScreen(Screen):
                     id="chat-approval-toggle",
                     variant="success",
                 )
+                yield Button(
+                    "📋 Copy Chat State",
+                    id="chat-copy-config-btn",
+                    variant="default",
+                )
         yield Footer()
 
     def _get_model_options(self) -> list[tuple[str, str]]:
@@ -1983,6 +1988,12 @@ class ChatScreen(Screen):
                 self._active_guards = list(resolved.guardrails)
                 bot = self._apply_guards_to_bot(bot, self._active_guards)
 
+            # Restore traits from config
+            if resolved.traits:
+                self._active_traits = list(resolved.traits)
+                if self._active_persona:
+                    bot = self._apply_traits_to_bot(bot, self._active_traits)
+
             self._bot = bot
         except Exception:
             # Fall through to echo mode
@@ -2112,13 +2123,43 @@ class ChatScreen(Screen):
         self._uninstall_undo_buffer()
 
     def _persist_defaults(self) -> None:
-        """Save the current model/persona as defaults in global config."""
+        """Save the current model/persona/traits as defaults in global config."""
         try:
             from talk_box.config import persist_defaults
 
-            persist_defaults(model=self._active_model, persona=self._active_persona)
+            persist_defaults(
+                model=self._active_model,
+                persona=self._active_persona,
+                traits=list(getattr(self, "_active_traits", None) or []),
+            )
         except Exception:
             pass
+
+    def _copy_global_config(self) -> None:
+        """Copy live chat state + global config to the clipboard."""
+        import os
+
+        lines = ["--- Chat State (live) ---"]
+        lines.append(f"model: {self._active_model}")
+        lines.append(f"persona: {self._active_persona}")
+        lines.append(f"traits: {list(getattr(self, '_active_traits', None) or [])}")
+        lines.append(f"guards: {list(getattr(self, '_active_guards', None) or [])}")
+        lines.append(f"tools: {len(getattr(self, '_active_tools', None) or [])} loaded")
+        lines.append(f"session_id: {getattr(self, '_session_file_id', None)}")
+        lines.append(f"messages: {len(self._conversation.messages) if self._conversation else 0}")
+        lines.append("")
+
+        cfg_path = os.path.expanduser("~/.config/talk-box/config.yml")
+        try:
+            with open(cfg_path) as f:
+                lines.append("--- Global Config (on disk) ---")
+                lines.append(f.read().rstrip())
+        except FileNotFoundError:
+            lines.append("--- Global Config: not found ---")
+
+        contents = "\n".join(lines)
+        self.app.copy_to_clipboard(contents)
+        self.app.notify("Chat state + global config copied.", title="Copied")
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle New Chat and copy buttons."""
@@ -2151,6 +2192,9 @@ class ChatScreen(Screen):
                 toggle.variant = "default"
                 self._uninstall_file_approval_callback()
             self.query_one("#chat-input", ChatInput).focus()
+        elif btn_id == "chat-copy-config-btn":
+            self._copy_global_config()
+            return
         elif btn_id.startswith("copy-chat-msg-"):
             msg_id = btn_id.removeprefix("copy-")
             try:
@@ -2596,6 +2640,7 @@ class ChatScreen(Screen):
             "saved_at": datetime.now().isoformat(),
             "model": self._active_model,
             "persona": self._active_persona,
+            "traits": list(getattr(self, "_active_traits", None) or []),
             "conversation": self._conversation.to_dict(),
         }
         if self._capture is not None and len(self._capture) > 0:
@@ -2653,6 +2698,7 @@ class ChatScreen(Screen):
                 self._active_model = data["model"]
             if data.get("persona"):
                 self._active_persona = data["persona"]
+            self._active_traits = list(data.get("traits") or [])
 
             # Restore capture if present
             if "capture" in data:
@@ -2692,7 +2738,8 @@ class ChatScreen(Screen):
                 if loaded_tree is not None:
                     for node in loaded_tree.active_path:
                         self._append_message(
-                            node.message.role, node.message.content, node_id=node.node_id
+                            node.message.role, node.message.content,
+                            node_id=node.node_id, timestamp=node.message.timestamp,
                         )
                 else:
                     for msg in loaded_conversation.messages:
@@ -2711,7 +2758,7 @@ class ChatScreen(Screen):
                             "function",
                         ):
                             role, content = content, role
-                        self._append_message(role, content)
+                        self._append_message(role, content, timestamp=msg.timestamp)
                 # Re-assign in case on_select_changed cleared it while we ran
                 self._conversation = loaded_conversation
                 self._update_sidebar()
@@ -3068,8 +3115,8 @@ class ChatScreen(Screen):
             active.append(name)
             self._active_traits = active
             self._rebuild_bot()
-            self._conversation = None
             self._update_sidebar()
+            self._persist_defaults()
             self._append_system_message(f"Trait [b]{name}[/b] applied.")
         else:
             if name not in active:
@@ -3078,8 +3125,8 @@ class ChatScreen(Screen):
             active.remove(name)
             self._active_traits = active
             self._rebuild_bot()
-            self._conversation = None
             self._update_sidebar()
+            self._persist_defaults()
             self._append_system_message(f"Trait [b]{name}[/b] removed.")
 
     @staticmethod
@@ -3858,8 +3905,8 @@ class ChatScreen(Screen):
                 return
             self._active_traits = result
             self._rebuild_bot()
-            self._conversation = None
             self._update_sidebar()
+            self._persist_defaults()
             self._append_system_message(f"Traits updated: {len(result)} active.")
 
         self.app.push_screen(ChecklistPickerModal("Traits", items, active), _on_dismiss)
@@ -4056,6 +4103,7 @@ class ChatScreen(Screen):
             "saved_at": datetime.now().isoformat(),
             "model": self._active_model,
             "persona": self._active_persona,
+            "traits": list(getattr(self, "_active_traits", None) or []),
             "conversation": self._conversation.to_dict(),
         }
         if self._capture is not None and len(self._capture) > 0:
@@ -4105,8 +4153,15 @@ class ChatScreen(Screen):
         container.mount(widget)
         container.scroll_end(animate=False)
 
-    def _append_message(self, role: str, content: str, *, node_id: str | None = None) -> None:
+    def _append_message(
+        self, role: str, content: str, *, node_id: str | None = None, timestamp: "datetime | None" = None
+    ) -> None:
         """Add a message bubble to the chat area."""
+        from datetime import datetime
+
+        ts = timestamp or datetime.now()
+        time_str = ts.strftime("%Y-%m-%d %H:%M")
+
         container = self.query_one("#chat-messages", VerticalScroll)
 
         # Remove the welcome hint on first message
@@ -4122,16 +4177,17 @@ class ChatScreen(Screen):
             self._node_id_for_msg[msg_id] = node_id
 
         if role == "user":
-            label = "[b]You[/b]"
+            label = f"[b]You[/b]  [dim]{time_str}[/dim]"
             classes = "chat-message chat-user"
             display_content = f"{label}\n{content}"
         else:
             label = "[b]Assistant[/b]"
             classes = "chat-message chat-assistant"
-            display_content = self._render_assistant_display(content)
+            display_content = self._render_assistant_display(content, timestamp_str=time_str)
 
         widget = Static(display_content, id=msg_id, classes=classes)
         widget._raw_content = content
+        widget._timestamp = ts
 
         buttons: list[Button] = []
 
@@ -4212,7 +4268,10 @@ class ChatScreen(Screen):
             self._message_count = 0
             self._node_id_for_msg = {}
             for node in tree_typed.active_path:
-                self._append_message(node.message.role, node.message.content, node_id=node.node_id)
+                self._append_message(
+                    node.message.role, node.message.content,
+                    node_id=node.node_id, timestamp=node.message.timestamp,
+                )
             # Now send the new message to the LLM
             self._send_message(new_text)
 
@@ -4246,7 +4305,10 @@ class ChatScreen(Screen):
             self._message_count = 0
             self._node_id_for_msg = {}
             for node in tree_typed.active_path:
-                self._append_message(node.message.role, node.message.content, node_id=node.node_id)
+                self._append_message(
+                    node.message.role, node.message.content,
+                    node_id=node.node_id, timestamp=node.message.timestamp,
+                )
 
         self.run_worker(_rebuild(), name="branch_switch")
 
@@ -4497,6 +4559,7 @@ class ChatScreen(Screen):
         *,
         thinking: str = "",
         kg_sources: list[KGCitation] | list[str] | None = None,
+        timestamp_str: str = "",
     ) -> "RenderableType":
         """Render assistant content as Rich Markdown with optional thinking."""
         from rich.console import Group
@@ -4504,7 +4567,10 @@ class ChatScreen(Screen):
         from rich.text import Text
 
         parts = []
-        parts.append(Text.from_markup("[b]Assistant[/b]"))
+        header = "[b]Assistant[/b]"
+        if timestamp_str:
+            header += f"  [dim]{timestamp_str}[/dim]"
+        parts.append(Text.from_markup(header))
         if thinking:
             parts.append(Text.from_markup(f"[dim]💭 {thinking}[/dim]"))
         if content:
@@ -4541,8 +4607,11 @@ class ChatScreen(Screen):
         """Finalize the streamed widget with rich markdown rendering (called on main thread)."""
         try:
             widget = self.query_one(f"#{widget_id}", Static)
+            ts = getattr(widget, "_timestamp", None)
+            time_str = ts.strftime("%Y-%m-%d %H:%M") if ts else ""
             display = self._render_assistant_display(
-                content, thinking=thinking, kg_sources=self._last_kg_sources
+                content, thinking=thinking, kg_sources=self._last_kg_sources,
+                timestamp_str=time_str,
             )
             widget.update(display)
             widget._raw_content = content
@@ -4671,7 +4740,7 @@ class ChatScreen(Screen):
         # Traits
         traits = getattr(self, "_active_traits", None) or []
         if traits:
-            trait_val = ", ".join(traits)
+            trait_val = str(len(traits))
         else:
             trait_val = "[dim]0[/dim]"
         lines.append(_config_line("  Traits: ", trait_val, "open_traits_picker"))
@@ -5372,6 +5441,10 @@ class TraitScreen(Screen):
 
     BINDINGS = []
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selected_trait: str | None = None
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
         yield Button("← Home", id="trait-back-btn", variant="default", classes="back-home-btn")
@@ -5386,12 +5459,78 @@ class TraitScreen(Screen):
                         "[dim]Highlight a trait to see its details.[/dim]",
                         id="trait-detail-content",
                     )
+                yield Button(
+                    "Apply to Chat",
+                    id="trait-apply-btn",
+                    variant="primary",
+                    disabled=True,
+                )
         yield Footer()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "trait-back-btn":
             self.app._switch_to("home")  # type: ignore[attr-defined]
             return
+        if event.button.id == "trait-apply-btn" and self._selected_trait:
+            self._apply_trait_to_chat()
+            return
+
+    def _apply_trait_to_chat(self) -> None:
+        """Apply the selected trait to the active chat session."""
+        trait_name = self._selected_trait
+        if not trait_name:
+            return
+
+        # Navigate to chat first
+        self.app._switch_to("chat")  # type: ignore[attr-defined]
+        try:
+            chat = self.app.screen
+            # Require an active persona
+            if not getattr(chat, "_active_persona", None):
+                self.app.notify(
+                    "Set a persona first — traits modify personas.",
+                    title="No Persona",
+                )
+                return
+            # Add trait if not already active
+            active = list(getattr(chat, "_active_traits", None) or [])
+            if trait_name not in active:
+                active.append(trait_name)
+                chat._active_traits = active
+                chat._rebuild_bot()
+                chat._update_sidebar()
+                chat._persist_defaults()
+                self.app.notify(
+                    f"Applied trait: {trait_name}",
+                    title="Trait Applied",
+                )
+            else:
+                self.app.notify(
+                    f"Trait already active: {trait_name}",
+                    title="Already Applied",
+                )
+        except Exception:
+            pass
+
+    def _update_apply_button(self) -> None:
+        """Enable/disable the Apply button based on chat state."""
+        try:
+            btn = self.query_one("#trait-apply-btn", Button)
+            if not self._selected_trait:
+                btn.disabled = True
+                btn.label = "Apply to Chat"
+                return
+            # Check if there's an active chat with a persona
+            screens = getattr(self.app, "_installed_screens", {})
+            chat = screens.get("chat")
+            has_persona = bool(getattr(chat, "_active_persona", None)) if chat else False
+            btn.disabled = not has_persona
+            if has_persona:
+                btn.label = "Apply to Chat"
+            else:
+                btn.label = "Apply to Chat [dim](no persona)[/dim]"
+        except Exception:
+            pass
 
     def on_mount(self) -> None:
         """Populate the trait option list."""
@@ -5412,6 +5551,7 @@ class TraitScreen(Screen):
         if event.option.id is None or str(event.option.id).startswith("__cat_"):
             return
         name = str(event.option.id)
+        self._selected_trait = name
         try:
             from talk_box.traits import get_trait
 
@@ -5441,6 +5581,7 @@ class TraitScreen(Screen):
             detail = f"[dim]{name}[/dim]"
         self.query_one("#trait-detail-title", Static).update(f"[b]{name}[/b]")
         self.query_one("#trait-detail-content", Static).update(detail)
+        self._update_apply_button()
 
 
 # ---------------------------------------------------------------------------
