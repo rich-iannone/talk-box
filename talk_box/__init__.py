@@ -137,6 +137,7 @@ from talk_box.kg_visualization import (
 from talk_box.knowledge_graph import (
     Edge,
     KnowledgeGraph,
+    KnowledgeGraphRegistry,
     Node,
     NodeType,
     cosine_similarity,
@@ -393,6 +394,7 @@ __all__ = [
     "discover_mcp_tools",
     # Knowledge graph
     "KnowledgeGraph",
+    "KnowledgeGraphRegistry",
     "Node",
     "Edge",
     "NodeType",

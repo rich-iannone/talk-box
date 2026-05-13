@@ -538,9 +538,191 @@ class TestTopLevelImport:
 
         for name in [
             "KnowledgeGraph",
+            "KnowledgeGraphRegistry",
             "Node",
             "Edge",
             "NodeType",
             "cosine_similarity",
         ]:
             assert name in talk_box.__all__, f"{name} not in __all__"
+
+
+# ---------------------------------------------------------------------------
+# KnowledgeGraph.name
+# ---------------------------------------------------------------------------
+
+
+class TestKnowledgeGraphName:
+    def test_default_name_is_empty(self):
+        kg = KnowledgeGraph(":memory:")
+        assert kg.name == ""
+
+    def test_custom_name(self):
+        kg = KnowledgeGraph(":memory:", name="research")
+        assert kg.name == "research"
+
+
+# ---------------------------------------------------------------------------
+# KnowledgeGraphRegistry
+# ---------------------------------------------------------------------------
+
+
+from talk_box.knowledge_graph import KnowledgeGraphRegistry
+
+
+class TestKnowledgeGraphRegistry:
+    @pytest.fixture()
+    def reg_dir(self, tmp_path):
+        return str(tmp_path / "graphs")
+
+    @pytest.fixture()
+    def registry(self, reg_dir):
+        return KnowledgeGraphRegistry(reg_dir)
+
+    def test_create_and_list(self, registry):
+        registry.create("research", description="Papers")
+        registry.create("work")
+        graphs = registry.list_graphs()
+        assert len(graphs) == 2
+        names = {g["name"] for g in graphs}
+        assert names == {"research", "work"}
+
+    def test_first_graph_becomes_default(self, registry):
+        registry.create("first")
+        assert registry.default_name == "first"
+
+    def test_set_default(self, registry):
+        registry.create("a")
+        registry.create("b")
+        registry.set_default("b")
+        assert registry.default_name == "b"
+
+    def test_set_default_nonexistent_raises(self, registry):
+        with pytest.raises(KeyError):
+            registry.set_default("ghost")
+
+    def test_open_graph(self, registry):
+        registry.create("test")
+        kg = registry.open("test")
+        assert isinstance(kg, KnowledgeGraph)
+        assert kg.name == "test"
+        # Can add nodes
+        kg.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="Doc"))
+        assert kg.node_count() == 1
+
+    def test_open_nonexistent_raises(self, registry):
+        with pytest.raises(KeyError):
+            registry.open("nope")
+
+    def test_open_default(self, registry):
+        registry.create("main", set_default=True)
+        kg = registry.open_default()
+        assert kg is not None
+        assert kg.name == "main"
+
+    def test_open_default_when_empty(self, registry):
+        assert registry.open_default() is None
+
+    def test_delete_graph(self, registry):
+        registry.create("temp")
+        assert registry.delete("temp")
+        assert "temp" not in registry
+        assert registry.graph_count() == 0
+
+    def test_delete_nonexistent(self, registry):
+        assert not registry.delete("ghost")
+
+    def test_delete_default_promotes_next(self, registry):
+        registry.create("a")
+        registry.create("b")
+        registry.set_default("a")
+        registry.delete("a")
+        assert registry.default_name == "b"
+
+    def test_rename_graph(self, registry):
+        registry.create("old")
+        kg = registry.open("old")
+        kg.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="Doc"))
+        kg.close()
+
+        registry.rename("old", "new")
+        assert "old" not in registry
+        assert "new" in registry
+
+        kg2 = registry.open("new")
+        assert kg2.node_count() == 1
+
+    def test_rename_updates_default(self, registry):
+        registry.create("original", set_default=True)
+        registry.rename("original", "renamed")
+        assert registry.default_name == "renamed"
+
+    def test_rename_nonexistent_raises(self, registry):
+        with pytest.raises(KeyError):
+            registry.rename("nope", "new")
+
+    def test_rename_to_existing_raises(self, registry):
+        registry.create("a")
+        registry.create("b")
+        with pytest.raises(ValueError):
+            registry.rename("a", "b")
+
+    def test_duplicate_name_raises(self, registry):
+        registry.create("dup")
+        with pytest.raises(ValueError):
+            registry.create("dup")
+
+    def test_invalid_name_raises(self, registry):
+        with pytest.raises(ValueError):
+            registry.create("")
+        with pytest.raises(ValueError):
+            registry.create("../sneaky")
+
+    def test_contains(self, registry):
+        registry.create("yes")
+        assert "yes" in registry
+        assert "no" not in registry
+
+    def test_graph_count(self, registry):
+        assert registry.graph_count() == 0
+        registry.create("a")
+        registry.create("b")
+        assert registry.graph_count() == 2
+
+    def test_graphs_are_isolated(self, registry):
+        kg1 = registry.create("g1")
+        kg2 = registry.create("g2")
+        kg1.add_node(Node(id="n1", node_type=NodeType.DOCUMENT, name="D1"))
+        kg2.add_node(Node(id="n2", node_type=NodeType.ENTITY, name="E1"))
+        assert kg1.node_count() == 1
+        assert kg2.node_count() == 1
+        assert kg1.get_node("n2") is None
+        assert kg2.get_node("n1") is None
+
+    def test_persistence(self, reg_dir):
+        r1 = KnowledgeGraphRegistry(reg_dir)
+        r1.create("persist", description="test")
+        kg = r1.open("persist")
+        kg.add_node(Node(id="x", node_type=NodeType.TOPIC, name="T"))
+        kg.close()
+
+        r2 = KnowledgeGraphRegistry(reg_dir)
+        assert "persist" in r2
+        kg2 = r2.open("persist")
+        assert kg2.node_count() == 1
+
+    def test_repr(self, registry):
+        registry.create("a")
+        r = repr(registry)
+        assert "KnowledgeGraphRegistry" in r
+        assert "graphs=1" in r
+
+    def test_list_graphs_metadata(self, registry):
+        registry.create("proj", description="My project", set_default=True)
+        graphs = registry.list_graphs()
+        assert len(graphs) == 1
+        g = graphs[0]
+        assert g["name"] == "proj"
+        assert g["description"] == "My project"
+        assert g["is_default"] is True
+        assert g["created_at"] > 0

@@ -2738,8 +2738,10 @@ class ChatScreen(Screen):
                 if loaded_tree is not None:
                     for node in loaded_tree.active_path:
                         self._append_message(
-                            node.message.role, node.message.content,
-                            node_id=node.node_id, timestamp=node.message.timestamp,
+                            node.message.role,
+                            node.message.content,
+                            node_id=node.node_id,
+                            timestamp=node.message.timestamp,
                         )
                 else:
                     for msg in loaded_conversation.messages:
@@ -4154,7 +4156,12 @@ class ChatScreen(Screen):
         container.scroll_end(animate=False)
 
     def _append_message(
-        self, role: str, content: str, *, node_id: str | None = None, timestamp: "datetime | None" = None
+        self,
+        role: str,
+        content: str,
+        *,
+        node_id: str | None = None,
+        timestamp: "datetime | None" = None,
     ) -> None:
         """Add a message bubble to the chat area."""
         from datetime import datetime
@@ -4269,8 +4276,10 @@ class ChatScreen(Screen):
             self._node_id_for_msg = {}
             for node in tree_typed.active_path:
                 self._append_message(
-                    node.message.role, node.message.content,
-                    node_id=node.node_id, timestamp=node.message.timestamp,
+                    node.message.role,
+                    node.message.content,
+                    node_id=node.node_id,
+                    timestamp=node.message.timestamp,
                 )
             # Now send the new message to the LLM
             self._send_message(new_text)
@@ -4306,8 +4315,10 @@ class ChatScreen(Screen):
             self._node_id_for_msg = {}
             for node in tree_typed.active_path:
                 self._append_message(
-                    node.message.role, node.message.content,
-                    node_id=node.node_id, timestamp=node.message.timestamp,
+                    node.message.role,
+                    node.message.content,
+                    node_id=node.node_id,
+                    timestamp=node.message.timestamp,
                 )
 
         self.run_worker(_rebuild(), name="branch_switch")
@@ -4610,7 +4621,9 @@ class ChatScreen(Screen):
             ts = getattr(widget, "_timestamp", None)
             time_str = ts.strftime("%Y-%m-%d %H:%M") if ts else ""
             display = self._render_assistant_display(
-                content, thinking=thinking, kg_sources=self._last_kg_sources,
+                content,
+                thinking=thinking,
+                kg_sources=self._last_kg_sources,
                 timestamp_str=time_str,
             )
             widget.update(display)
@@ -5994,6 +6007,16 @@ class KnowledgeScreen(Screen):
         with Horizontal(id="kg-outer"):
             with Vertical(id="kg-layout"):
                 yield Button("← Home", id="kg-back-btn", variant="default", classes="back-home-btn")
+                with Horizontal(id="kg-graph-picker"):
+                    yield Select(
+                        [],
+                        prompt="Select graph…",
+                        id="kg-graph-select",
+                        allow_blank=False,
+                    )
+                    yield Button("+ New Graph", id="kg-new-graph-btn", variant="success")
+                    yield Button("🗑 Delete", id="kg-delete-graph-btn", variant="error")
+                    yield Button("★ Default", id="kg-set-default-btn", variant="default")
                 with Horizontal(id="kg-stats"):
                     yield Static("", id="kg-stats-content")
                 with Horizontal(id="kg-actions"):
@@ -6033,20 +6056,103 @@ class KnowledgeScreen(Screen):
         # Populate model picker
         self._populate_models()
 
+        # Initialize registry and graph picker
         try:
-            import os
+            from talk_box.knowledge_graph import KnowledgeGraphRegistry
 
-            from talk_box.knowledge_graph import KnowledgeGraph, NodeType
+            self._registry = KnowledgeGraphRegistry()
+        except Exception:
+            self._registry = None
 
-            kg_path = os.path.join(os.path.expanduser("~/.config/talk-box"), "knowledge.db")
-            self._kg = KnowledgeGraph(kg_path)
+        self._kg = None
+        self._populate_graph_picker()
+
+        # If there's a default graph, open it; otherwise migrate legacy DB
+        if self._registry is not None:
+            if self._registry.graph_count() == 0:
+                self._migrate_legacy_kg()
+            self._open_selected_graph()
+
+    def _populate_graph_picker(self) -> None:
+        """Fill the graph picker with registered graphs."""
+        select = self.query_one("#kg-graph-select", Select)
+        if self._registry is None or self._registry.graph_count() == 0:
+            select.set_options([("(no graphs)", "")])
+            return
+        graphs = self._registry.list_graphs()
+        options = []
+        default_name = self._registry.default_name
+        for g in graphs:
+            label = g["name"]
+            if g["is_default"]:
+                label = f"★ {label}"
+            if g["description"]:
+                label = f"{label}  [dim]({g['description']})[/dim]"
+            options.append((label, g["name"]))
+        select.set_options(options)
+        # Select the default graph
+        if default_name:
+            select.value = default_name
+
+    def _migrate_legacy_kg(self) -> None:
+        """Migrate a legacy single knowledge.db into the registry."""
+        import os
+
+        legacy_path = os.path.join(os.path.expanduser("~/.config/talk-box"), "knowledge.db")
+        if not os.path.isfile(legacy_path):
+            return
+        try:
+            from talk_box.knowledge_graph import KnowledgeGraph
+
+            legacy_kg = KnowledgeGraph(legacy_path)
+            if legacy_kg.node_count() > 0:
+                # Create a "default" graph and copy the data
+                kg = self._registry.create(
+                    "default", description="Migrated from legacy KB", set_default=True
+                )
+                import shutil
+
+                kg.close()
+                shutil.copy2(legacy_path, kg.path)
+                self._populate_graph_picker()
+        except Exception:
+            pass
+
+    def _open_selected_graph(self) -> None:
+        """Open whichever graph is selected in the picker."""
+        select = self.query_one("#kg-graph-select", Select)
+        name = select.value
+        if not name or name == Select.BLANK or self._registry is None:
+            self._kg = None
+            self._update_stats_and_table()
+            return
+        try:
+            self._kg = self._registry.open(str(name))
+            self._update_stats_and_table()
+        except Exception:
+            self._kg = None
+            self._update_stats_and_table()
+
+    def _update_stats_and_table(self) -> None:
+        """Refresh stats and table for the current graph."""
+        table = self.query_one("#kg-table", DataTable)
+        table.clear()
+        if self._kg is None:
+            self.query_one("#kg-stats-content", Static).update(
+                "  [dim]No knowledge graph loaded[/dim]"
+            )
+            return
+        try:
+            from talk_box.knowledge_graph import NodeType
+
             docs = self._kg.node_count(node_type=NodeType.DOCUMENT)
             entities = self._kg.node_count(node_type=NodeType.ENTITY)
             topics = self._kg.node_count(node_type=NodeType.TOPIC)
             edges = self._kg.edge_count()
 
+            graph_label = self._kg.name or "unnamed"
             stats = (
-                f"  Documents: {docs}  |  Entities: {entities}  |  "
+                f"  [b]{graph_label}[/b]  |  Documents: {docs}  |  Entities: {entities}  |  "
                 f"Topics: {topics}  |  Edges: {edges}"
             )
             self.query_one("#kg-stats-content", Static).update(stats)
@@ -6054,10 +6160,12 @@ class KnowledgeScreen(Screen):
             for node in self._kg.list_nodes(limit=50):
                 table.add_row(node.id, node.node_type.value, node.name, "🗑", key=node.id)
         except Exception:
-            self._kg = None
-            self.query_one("#kg-stats-content", Static).update(
-                "  [dim]No knowledge graph loaded[/dim]"
-            )
+            self.query_one("#kg-stats-content", Static).update("  [dim]Error loading graph[/dim]")
+
+    def on_select_changed(self, event: Select.Changed) -> None:
+        """Handle graph picker selection changes."""
+        if event.select.id == "kg-graph-select":
+            self._open_selected_graph()
 
     def _populate_models(self) -> None:
         """Fill the model picker with registered models."""
@@ -6131,39 +6239,29 @@ class KnowledgeScreen(Screen):
         """Reload the data table and stats."""
         if not hasattr(self, "_kg") or self._kg is None:
             return
-        from talk_box.knowledge_graph import KnowledgeGraph, NodeType
+        from talk_box.knowledge_graph import KnowledgeGraph
 
         # Reconnect to pick up writes from worker threads
-        self._kg = KnowledgeGraph(self._kg.path)
-
-        table = self.query_one("#kg-table", DataTable)
-        table.clear()
-        for node in self._kg.list_nodes(limit=50):
-            table.add_row(node.id, node.node_type.value, node.name, "🗑", key=node.id)
-
-        docs = self._kg.node_count(node_type=NodeType.DOCUMENT)
-        entities = self._kg.node_count(node_type=NodeType.ENTITY)
-        topics = self._kg.node_count(node_type=NodeType.TOPIC)
-        edges = self._kg.edge_count()
-        stats = (
-            f"  Documents: {docs}  |  Entities: {entities}  |  Topics: {topics}  |  Edges: {edges}"
-        )
-        self.query_one("#kg-stats-content", Static).update(stats)
+        self._kg = KnowledgeGraph(self._kg.path, name=self._kg.name)
+        self._update_stats_and_table()
 
     def _ensure_kg(self):
         """Ensure KG is loaded, return it or None."""
         if hasattr(self, "_kg") and self._kg is not None:
             return self._kg
+        # Try to open the default graph from the registry
         try:
-            import os
+            from talk_box.knowledge_graph import KnowledgeGraphRegistry
 
-            from talk_box.knowledge_graph import KnowledgeGraph
-
-            kg_path = os.path.join(os.path.expanduser("~/.config/talk-box"), "knowledge.db")
-            self._kg = KnowledgeGraph(kg_path)
-            return self._kg
+            if self._registry is None:
+                self._registry = KnowledgeGraphRegistry()
+            kg = self._registry.open_default()
+            if kg is not None:
+                self._kg = kg
+                return self._kg
         except Exception:
-            return None
+            pass
+        return None
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "kg-back-btn":
@@ -6182,6 +6280,77 @@ class KnowledgeScreen(Screen):
             self._run_enrichment(selected_only=True)
         elif event.button.id == "kg-enrich-all-btn":
             self._run_enrichment(selected_only=False)
+        elif event.button.id == "kg-new-graph-btn":
+            self._action_new_graph()
+        elif event.button.id == "kg-delete-graph-btn":
+            self._action_delete_graph()
+        elif event.button.id == "kg-set-default-btn":
+            self._action_set_default_graph()
+
+    def _action_new_graph(self) -> None:
+        """Prompt for a name and create a new knowledge graph."""
+
+        def _on_submitted(result: tuple[str, str] | None) -> None:
+            if result is None:
+                return
+            name, description = result
+            name = name.strip()
+            if not name:
+                return
+            if self._registry is None:
+                return
+            try:
+                self._registry.create(name, description=description.strip())
+                self._populate_graph_picker()
+                # Select the newly created graph
+                self.query_one("#kg-graph-select", Select).value = name
+                self._open_selected_graph()
+                self.query_one("#kg-detail", Static).update(
+                    f"[green]✓[/green] Created graph: [b]{name}[/b]"
+                )
+            except (ValueError, Exception) as e:
+                self.query_one("#kg-detail", Static).update(f"[red]Error:[/red] {e}")
+
+        self.app.push_screen(NoteInputModal(), callback=_on_submitted)
+
+    def _action_delete_graph(self) -> None:
+        """Delete the currently selected graph."""
+        if self._registry is None:
+            return
+        select = self.query_one("#kg-graph-select", Select)
+        name = select.value
+        if not name or name == Select.BLANK:
+            return
+        name = str(name)
+        try:
+            self._registry.delete(name)
+            self._kg = None
+            self._populate_graph_picker()
+            self._open_selected_graph()
+            self.query_one("#kg-detail", Static).update(
+                f"[red]✗[/red] Deleted graph: [b]{name}[/b]"
+            )
+        except Exception as e:
+            self.query_one("#kg-detail", Static).update(f"[red]Error:[/red] {e}")
+
+    def _action_set_default_graph(self) -> None:
+        """Set the currently selected graph as the default."""
+        if self._registry is None:
+            return
+        select = self.query_one("#kg-graph-select", Select)
+        name = select.value
+        if not name or name == Select.BLANK:
+            return
+        name = str(name)
+        try:
+            self._registry.set_default(name)
+            self._populate_graph_picker()
+            select.value = name
+            self.query_one("#kg-detail", Static).update(
+                f"[green]★[/green] Default graph set to: [b]{name}[/b]"
+            )
+        except Exception as e:
+            self.query_one("#kg-detail", Static).update(f"[red]Error:[/red] {e}")
 
     def action_add_note(self) -> None:
         """Open NoteInputModal with name + large text area."""

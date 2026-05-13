@@ -252,12 +252,18 @@ class KnowledgeGraph:
     ```
     """
 
-    def __init__(self, path: str | Path = ":memory:") -> None:
+    def __init__(self, path: str | Path = ":memory:", *, name: str = "") -> None:
         self._path = str(path)
+        self._name = name
         self._conn = sqlite3.connect(self._path)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")
         self._init_schema()
+
+    @property
+    def name(self) -> str:
+        """Human-readable name for this graph (empty string if unnamed)."""
+        return self._name
 
     def _init_schema(self) -> None:
         """Create tables and indexes if they don't exist."""
@@ -898,6 +904,353 @@ class KnowledgeGraph:
     def __repr__(self) -> str:
         s = self.stats()
         return f"KnowledgeGraph(path={self._path!r}, nodes={s['nodes']}, edges={s['edges']})"
+
+
+# ---------------------------------------------------------------------------
+# KnowledgeGraphRegistry
+# ---------------------------------------------------------------------------
+
+import os  # noqa: E402
+import re as _re  # noqa: E402
+
+_DEFAULT_DIR = os.path.join(os.path.expanduser("~/.config/talk-box"), "graphs")
+
+# Restrict graph names to safe filesystem characters
+_VALID_NAME_RE = _re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,98}[A-Za-z0-9]$|^[A-Za-z0-9]$")
+
+
+class KnowledgeGraphRegistry:
+    """Manage multiple named knowledge graphs stored in a directory.
+
+    Each graph lives in its own SQLite file.  A JSON manifest tracks
+    names, descriptions, and which graph is the active default.
+
+    Parameters
+    ----------
+    directory
+        Folder where graph databases are stored. Defaults to
+        ``~/.config/talk-box/graphs/``.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    registry = tb.KnowledgeGraphRegistry()
+    registry.create("research", description="Papers and notes")
+    registry.create("work", description="Project knowledge")
+
+    kg = registry.open("research")
+    kg.add_node(tb.Node(
+        id="doc-1",
+        node_type=tb.NodeType.DOCUMENT,
+        name="Paper.pdf",
+    ))
+
+    registry.list_graphs()
+    # [{"name": "research", ...}, {"name": "work", ...}]
+
+    registry.set_default("research")
+    kg = registry.open_default()
+    ```
+    """
+
+    def __init__(self, directory: str | Path | None = None) -> None:
+        self._dir = str(directory or _DEFAULT_DIR)
+        os.makedirs(self._dir, exist_ok=True)
+        self._manifest_path = os.path.join(self._dir, "manifest.json")
+        self._manifest = self._load_manifest()
+
+    # ------------------------------------------------------------------
+    # Manifest I/O
+    # ------------------------------------------------------------------
+
+    def _load_manifest(self) -> dict[str, Any]:
+        """Load the JSON manifest (or return defaults)."""
+        if os.path.isfile(self._manifest_path):
+            with open(self._manifest_path) as f:
+                return json.load(f)
+        return {"graphs": {}, "default": None}
+
+    def _save_manifest(self) -> None:
+        """Persist the manifest to disk."""
+        with open(self._manifest_path, "w") as f:
+            json.dump(self._manifest, f, indent=2)
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _validate_name(name: str) -> None:
+        """Raise ValueError for illegal graph names."""
+        if not name or not _VALID_NAME_RE.match(name):
+            raise ValueError(
+                f"Invalid graph name {name!r}. Must be 1-100 chars, "
+                "alphanumeric/space/underscore/dot/hyphen, no leading/trailing specials."
+            )
+
+    def _db_path(self, name: str) -> str:
+        """Return the SQLite path for a graph name."""
+        safe = name.replace(" ", "_").lower()
+        return os.path.join(self._dir, f"{safe}.db")
+
+    # ------------------------------------------------------------------
+    # CRUD
+    # ------------------------------------------------------------------
+
+    def create(
+        self,
+        name: str,
+        *,
+        description: str = "",
+        set_default: bool = False,
+    ) -> KnowledgeGraph:
+        """Create a new named knowledge graph.
+
+        Parameters
+        ----------
+        name
+            Unique human-readable name.
+        description
+            Optional description of this graph's purpose.
+        set_default
+            If ``True``, make this the default graph.
+
+        Returns
+        -------
+        KnowledgeGraph
+            The newly-created graph (open and ready to use).
+
+        Raises
+        ------
+        ValueError
+            If the name is invalid or already taken.
+
+        Examples
+        --------
+        ```python
+        kg = registry.create("research", description="Papers and notes")
+        ```
+        """
+        self._validate_name(name)
+        if name in self._manifest["graphs"]:
+            raise ValueError(f"Graph {name!r} already exists")
+
+        db_path = self._db_path(name)
+        self._manifest["graphs"][name] = {
+            "description": description,
+            "db_file": os.path.basename(db_path),
+            "created_at": time.time(),
+        }
+        if set_default or self._manifest["default"] is None:
+            self._manifest["default"] = name
+        self._save_manifest()
+
+        return KnowledgeGraph(db_path, name=name)
+
+    def open(self, name: str) -> KnowledgeGraph:
+        """Open an existing named knowledge graph.
+
+        Parameters
+        ----------
+        name
+            Name of the graph to open.
+
+        Returns
+        -------
+        KnowledgeGraph
+            The open graph.
+
+        Raises
+        ------
+        KeyError
+            If no graph with that name exists.
+
+        Examples
+        --------
+        ```python
+        kg = registry.open("research")
+        ```
+        """
+        if name not in self._manifest["graphs"]:
+            raise KeyError(f"No graph named {name!r}")
+        db_path = self._db_path(name)
+        return KnowledgeGraph(db_path, name=name)
+
+    def open_default(self) -> KnowledgeGraph | None:
+        """Open the default knowledge graph.
+
+        Returns
+        -------
+        KnowledgeGraph | None
+            The default graph, or ``None`` if no default is set.
+
+        Examples
+        --------
+        ```python
+        kg = registry.open_default()
+        ```
+        """
+        default = self._manifest.get("default")
+        if default is None or default not in self._manifest["graphs"]:
+            return None
+        return self.open(default)
+
+    def delete(self, name: str) -> bool:
+        """Delete a named knowledge graph and its database file.
+
+        Parameters
+        ----------
+        name
+            Name of the graph to delete.
+
+        Returns
+        -------
+        bool
+            ``True`` if the graph existed and was deleted.
+
+        Examples
+        --------
+        ```python
+        registry.delete("old-project")
+        ```
+        """
+        if name not in self._manifest["graphs"]:
+            return False
+        db_path = self._db_path(name)
+        if os.path.isfile(db_path):
+            os.remove(db_path)
+        # Also clean up WAL/SHM files
+        for suffix in ("-wal", "-shm"):
+            wal = db_path + suffix
+            if os.path.isfile(wal):
+                os.remove(wal)
+        del self._manifest["graphs"][name]
+        if self._manifest["default"] == name:
+            remaining = list(self._manifest["graphs"])
+            self._manifest["default"] = remaining[0] if remaining else None
+        self._save_manifest()
+        return True
+
+    def rename(self, old_name: str, new_name: str) -> None:
+        """Rename an existing knowledge graph.
+
+        Parameters
+        ----------
+        old_name
+            Current name of the graph.
+        new_name
+            New name for the graph.
+
+        Raises
+        ------
+        KeyError
+            If ``old_name`` does not exist.
+        ValueError
+            If ``new_name`` is invalid or already taken.
+
+        Examples
+        --------
+        ```python
+        registry.rename("old-project", "legacy-project")
+        ```
+        """
+        if old_name not in self._manifest["graphs"]:
+            raise KeyError(f"No graph named {old_name!r}")
+        self._validate_name(new_name)
+        if new_name in self._manifest["graphs"]:
+            raise ValueError(f"Graph {new_name!r} already exists")
+
+        old_path = self._db_path(old_name)
+        new_path = self._db_path(new_name)
+
+        if os.path.isfile(old_path):
+            os.rename(old_path, new_path)
+            for suffix in ("-wal", "-shm"):
+                old_wal = old_path + suffix
+                new_wal = new_path + suffix
+                if os.path.isfile(old_wal):
+                    os.rename(old_wal, new_wal)
+
+        entry = self._manifest["graphs"].pop(old_name)
+        entry["db_file"] = os.path.basename(new_path)
+        self._manifest["graphs"][new_name] = entry
+        if self._manifest["default"] == old_name:
+            self._manifest["default"] = new_name
+        self._save_manifest()
+
+    def set_default(self, name: str) -> None:
+        """Set a graph as the default.
+
+        Parameters
+        ----------
+        name
+            Name of the graph to make the default.
+
+        Raises
+        ------
+        KeyError
+            If no graph with that name exists.
+
+        Examples
+        --------
+        ```python
+        registry.set_default("work")
+        ```
+        """
+        if name not in self._manifest["graphs"]:
+            raise KeyError(f"No graph named {name!r}")
+        self._manifest["default"] = name
+        self._save_manifest()
+
+    @property
+    def default_name(self) -> str | None:
+        """Name of the current default graph, or ``None``."""
+        return self._manifest.get("default")
+
+    def list_graphs(self) -> list[dict[str, Any]]:
+        """List all registered graphs.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            Each dict has ``name``, ``description``, ``db_file``,
+            ``created_at``, and ``is_default`` keys.
+
+        Examples
+        --------
+        ```python
+        for g in registry.list_graphs():
+            print(g["name"], g["description"])
+        ```
+        """
+        default = self._manifest.get("default")
+        result = []
+        for name, info in self._manifest["graphs"].items():
+            result.append(
+                {
+                    "name": name,
+                    "description": info.get("description", ""),
+                    "db_file": info.get("db_file", ""),
+                    "created_at": info.get("created_at", 0),
+                    "is_default": name == default,
+                }
+            )
+        return result
+
+    def graph_count(self) -> int:
+        """Return the number of registered graphs."""
+        return len(self._manifest["graphs"])
+
+    def __contains__(self, name: str) -> bool:
+        return name in self._manifest["graphs"]
+
+    def __repr__(self) -> str:
+        return (
+            f"KnowledgeGraphRegistry(directory={self._dir!r}, "
+            f"graphs={self.graph_count()}, default={self.default_name!r})"
+        )
 
 
 # ---------------------------------------------------------------------------
