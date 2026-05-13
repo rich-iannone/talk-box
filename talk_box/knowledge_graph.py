@@ -26,6 +26,10 @@ class NodeType(Enum):
         A named entity extracted from documents (person, org, concept).
     TOPIC
         A topic or category used for classification.
+    DECISION
+        An AI reasoning event: enrichment result, Q&A answer, user correction,
+        or chat-derived insight.  Decision nodes form an auditable trail and
+        can be reverted.
 
     Examples
     --------
@@ -35,12 +39,14 @@ class NodeType(Enum):
     tb.NodeType.DOCUMENT
     tb.NodeType.ENTITY
     tb.NodeType.TOPIC
+    tb.NodeType.DECISION
     ```
     """
 
     DOCUMENT = "document"
     ENTITY = "entity"
     TOPIC = "topic"
+    DECISION = "decision"
 
 
 class GraphLayer(Enum):
@@ -740,7 +746,7 @@ class KnowledgeGraph:
         ```python
         kg.stats()
         # {"nodes": 42, "edges": 87, "documents": 10, "entities": 25, "topics": 7,
-        #  "layers": {"base": 30, "enrichment": 10, "extended": 2}}
+        #  "decisions": 3, "layers": {"base": 30, "enrichment": 10, "extended": 2}}
         ```
         """
         total_nodes = self.node_count()
@@ -748,6 +754,7 @@ class KnowledgeGraph:
         docs = self.node_count(node_type=NodeType.DOCUMENT)
         entities = self.node_count(node_type=NodeType.ENTITY)
         topics = self.node_count(node_type=NodeType.TOPIC)
+        decisions = self.node_count(node_type=NodeType.DECISION)
         layers = {layer.value: self.node_count(layer=layer) for layer in GraphLayer}
         return {
             "nodes": total_nodes,
@@ -755,6 +762,7 @@ class KnowledgeGraph:
             "documents": docs,
             "entities": entities,
             "topics": topics,
+            "decisions": decisions,
             "layers": layers,
         }
 
@@ -918,7 +926,58 @@ class KnowledgeGraph:
         kg.answer_question(questions[1].id, freeform="It's the API migration")
         ```
         """
-        return self._get_question_queue().answer(question_id, choice=choice, freeform=freeform)
+        result = self._get_question_queue().answer(question_id, choice=choice, freeform=freeform)
+        if result is not None:
+            self._record_qa_decision(result, choice=choice, freeform=freeform)
+        return result
+
+    def _record_qa_decision(
+        self,
+        question: Any,
+        *,
+        choice: int | None,
+        freeform: str | None,
+    ) -> None:
+        """Create a DECISION node for an answered enrichment question."""
+        import uuid as _uuid
+
+        answer_text = freeform or ""
+        if choice is not None and hasattr(question, "options") and question.options:
+            answer_text = question.options[choice].label
+        if freeform and choice is not None:
+            answer_text = f"{question.options[choice].label} — {freeform}"
+
+        decision_id = f"decision_{_uuid.uuid4().hex[:12]}"
+        decision_node = Node(
+            id=decision_id,
+            node_type=NodeType.DECISION,
+            name=f"Q&A: {question.text[:80]}",
+            content=f"Answer: {answer_text}",
+            metadata={
+                "decision_type": question.question_type.value
+                if hasattr(question.question_type, "value")
+                else str(question.question_type),
+                "source": "enrichment_qa",
+                "question_id": question.id,
+                "answer_choice": choice,
+                "answer_freeform": freeform,
+            },
+            layer=GraphLayer.EXTENDED,
+        )
+        self.add_node(decision_node)
+
+        # Link decision to referenced nodes
+        node_ids = getattr(question, "node_ids", []) or []
+        for nid in node_ids:
+            if self.get_node(nid) is not None:
+                self.add_edge(
+                    Edge(
+                        source=decision_id,
+                        target=nid,
+                        relation="resolves",
+                        layer=GraphLayer.EXTENDED,
+                    )
+                )
 
     def dismiss_question(self, question_id: str) -> Any | None:
         """Dismiss a pending enrichment question without answering.
@@ -966,6 +1025,102 @@ class KnowledgeGraph:
 
             self._question_queue = QuestionQueue()
         return self._question_queue
+
+    # ------------------------------------------------------------------
+    # Decision trail
+    # ------------------------------------------------------------------
+
+    def decision_trail(self, node_id: str) -> list[Node]:
+        """Return DECISION nodes linked to *node_id*, newest first.
+
+        Follows edges in both directions where either endpoint is
+        *node_id* and the other endpoint is a DECISION node.
+
+        Parameters
+        ----------
+        node_id
+            The node whose decision history is requested.
+
+        Returns
+        -------
+        list[Node]
+            Decision nodes ordered by ``created_at`` descending.
+
+        Examples
+        --------
+        ```python
+        trail = kg.decision_trail("entity-alex-torres")
+        trail[0].name  # most recent decision
+        ```
+        """
+        edges = self.get_edges(node_id, direction="both")
+        decision_ids: list[str] = []
+        seen: set[str] = set()
+        for edge in edges:
+            other = edge.target if edge.source == node_id else edge.source
+            if other not in seen:
+                seen.add(other)
+                decision_ids.append(other)
+
+        decisions: list[Node] = []
+        for did in decision_ids:
+            node = self.get_node(did)
+            if node is not None and node.node_type == NodeType.DECISION:
+                decisions.append(node)
+
+        decisions.sort(key=lambda n: n.created_at, reverse=True)
+        return decisions
+
+    def revert_decision(self, decision_id: str) -> bool:
+        """Revert a decision: delete the DECISION node and its edges.
+
+        Any entity/topic nodes that were *only* reachable through this
+        decision (i.e., have no remaining edges after the decision's
+        edges are removed) are also deleted.
+
+        Parameters
+        ----------
+        decision_id
+            ID of the DECISION node to revert.
+
+        Returns
+        -------
+        bool
+            ``True`` if the decision existed and was reverted.
+
+        Examples
+        --------
+        ```python
+        kg.revert_decision("decision_a1b2c3d4")
+        ```
+        """
+        node = self.get_node(decision_id)
+        if node is None or node.node_type != NodeType.DECISION:
+            return False
+
+        # Collect neighbor IDs before removing edges
+        edges = self.get_edges(decision_id, direction="both")
+        neighbor_ids = set()
+        for edge in edges:
+            other = edge.target if edge.source == decision_id else edge.source
+            neighbor_ids.add(other)
+
+        # Delete the decision node (cascade deletes its edges)
+        self.delete_node(decision_id)
+
+        # Clean up orphaned enrichment/extended nodes
+        for nid in neighbor_ids:
+            n = self.get_node(nid)
+            if n is None:
+                continue
+            # Only auto-remove non-DOCUMENT nodes that lost all edges
+            if n.node_type == NodeType.DOCUMENT:
+                continue
+            remaining = self.get_edges(nid, direction="both")
+            if len(remaining) == 0:
+                self.delete_node(nid)
+
+        return True
 
     # ------------------------------------------------------------------
     # Lifecycle

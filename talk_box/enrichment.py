@@ -351,6 +351,58 @@ class EnrichmentPipeline:
                     kg.add_edge(edge)
                     edges_created += 1
 
+            # Record a DECISION node for this enrichment run
+            import uuid as _uuid
+
+            decision_id = f"decision_{_uuid.uuid4().hex[:12]}"
+            entity_names = [e.name for e in result.entities]
+            topic_names = list(result.topics)
+            decision_node = Node(
+                id=decision_id,
+                node_type=NodeType.DECISION,
+                name=f"Enrichment: {doc_node.name}",
+                content=(
+                    f"Extracted {len(entity_names)} entities "
+                    f"({', '.join(entity_names[:5])}) and "
+                    f"{len(topic_names)} topics "
+                    f"({', '.join(topic_names[:5])}) from '{doc_node.name}'."
+                ),
+                metadata={
+                    "decision_type": "enrichment",
+                    "source": "enrichment_pipeline",
+                    "entities": entity_names,
+                    "topics": topic_names,
+                    "summary": result.summary or "",
+                },
+                layer=GraphLayer.ENRICHMENT,
+            )
+            kg.add_node(decision_node)
+
+            # Link decision to the source document
+            kg.add_edge(
+                Edge(
+                    source=decision_id,
+                    target=doc_node.id,
+                    relation="derived_from",
+                    layer=GraphLayer.ENRICHMENT,
+                )
+            )
+            edges_created += 1
+
+            # Link decision to each extracted entity
+            for entity in result.entities:
+                eid = _entity_node_id(self.entity_prefix, entity.name)
+                if kg.get_node(eid) is not None:
+                    kg.add_edge(
+                        Edge(
+                            source=decision_id,
+                            target=eid,
+                            relation="produced",
+                            layer=GraphLayer.ENRICHMENT,
+                        )
+                    )
+                    edges_created += 1
+
             enriched += 1
 
         return PipelineResult(

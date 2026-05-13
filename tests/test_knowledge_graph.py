@@ -394,6 +394,7 @@ class TestKGStats:
             "documents": 0,
             "entities": 0,
             "topics": 0,
+            "decisions": 0,
             "layers": {"base": 0, "enrichment": 0, "extended": 0},
         }
 
@@ -899,3 +900,206 @@ class TestGraphLayerCRUD:
         assert node is not None
         assert node.layer == GraphLayer.BASE
         kg.close()
+
+
+# ---------------------------------------------------------------------------
+# DECISION node type
+# ---------------------------------------------------------------------------
+
+
+class TestNodeTypeDecision:
+    def test_decision_value(self):
+        assert NodeType.DECISION.value == "decision"
+
+    def test_from_string(self):
+        assert NodeType("decision") is NodeType.DECISION
+
+
+class TestDecisionNodes:
+    def test_add_decision_node(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        node = Node(
+            id="dec1",
+            node_type=NodeType.DECISION,
+            name="Enrichment: meeting notes",
+            content="Extracted 3 entities from meeting notes.",
+            metadata={"decision_type": "enrichment", "source": "enrichment_pipeline"},
+            layer=GraphLayer.ENRICHMENT,
+        )
+        kg.add_node(node)
+        got = kg.get_node("dec1")
+        assert got is not None
+        assert got.node_type == NodeType.DECISION
+        assert got.layer == GraphLayer.ENRICHMENT
+        assert got.metadata["decision_type"] == "enrichment"
+
+    def test_stats_includes_decisions(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="doc"))
+        kg.add_node(
+            Node(id="dec1", node_type=NodeType.DECISION, name="dec", layer=GraphLayer.ENRICHMENT)
+        )
+        s = kg.stats()
+        assert s["decisions"] == 1
+        assert s["documents"] == 1
+        assert s["nodes"] == 2
+
+    def test_list_nodes_filter_decision(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="doc"))
+        kg.add_node(Node(id="dec1", node_type=NodeType.DECISION, name="dec"))
+        decisions = kg.list_nodes(node_type=NodeType.DECISION)
+        assert len(decisions) == 1
+        assert decisions[0].id == "dec1"
+
+    def test_search_finds_decision(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(
+            Node(
+                id="dec1",
+                node_type=NodeType.DECISION,
+                name="Entity resolution: Alex",
+                content="User confirmed Alex = Alex Torres.",
+            )
+        )
+        results = kg.search("Alex")
+        assert len(results) == 1
+        assert results[0].node_type == NodeType.DECISION
+
+
+class TestDecisionTrail:
+    def test_decision_trail_returns_linked_decisions(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="e1", node_type=NodeType.ENTITY, name="Alex Torres"))
+        kg.add_node(
+            Node(
+                id="dec1",
+                node_type=NodeType.DECISION,
+                name="Enrichment: meeting notes",
+                layer=GraphLayer.ENRICHMENT,
+            )
+        )
+        kg.add_node(
+            Node(
+                id="dec2",
+                node_type=NodeType.DECISION,
+                name="Q&A: Who is Alex?",
+                layer=GraphLayer.EXTENDED,
+            )
+        )
+        kg.add_edge(Edge(source="dec1", target="e1", relation="produced"))
+        kg.add_edge(Edge(source="dec2", target="e1", relation="resolves"))
+
+        trail = kg.decision_trail("e1")
+        assert len(trail) == 2
+        # newest first
+        assert trail[0].id == "dec2"
+        assert trail[1].id == "dec1"
+
+    def test_decision_trail_empty(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="e1", node_type=NodeType.ENTITY, name="Alex"))
+        trail = kg.decision_trail("e1")
+        assert trail == []
+
+    def test_decision_trail_ignores_non_decision_neighbors(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="doc"))
+        kg.add_node(Node(id="e1", node_type=NodeType.ENTITY, name="ent"))
+        kg.add_node(Node(id="dec1", node_type=NodeType.DECISION, name="dec"))
+        kg.add_edge(Edge(source="d1", target="e1", relation="mentions"))
+        kg.add_edge(Edge(source="dec1", target="e1", relation="produced"))
+
+        trail = kg.decision_trail("e1")
+        assert len(trail) == 1
+        assert trail[0].id == "dec1"
+
+
+class TestRevertDecision:
+    def test_revert_deletes_decision_and_edges(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="doc"))
+        kg.add_node(Node(id="e1", node_type=NodeType.ENTITY, name="ent"))
+        kg.add_node(Node(id="dec1", node_type=NodeType.DECISION, name="dec"))
+        kg.add_edge(Edge(source="dec1", target="d1", relation="derived_from"))
+        kg.add_edge(Edge(source="dec1", target="e1", relation="produced"))
+        # Also an independent edge keeping e1 alive
+        kg.add_edge(Edge(source="d1", target="e1", relation="mentions"))
+
+        result = kg.revert_decision("dec1")
+        assert result is True
+        assert kg.get_node("dec1") is None
+        # e1 still has an edge from d1, so it survives
+        assert kg.get_node("e1") is not None
+        assert kg.get_node("d1") is not None
+
+    def test_revert_cleans_up_orphaned_entities(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="doc"))
+        kg.add_node(
+            Node(id="e1", node_type=NodeType.ENTITY, name="orphan ent", layer=GraphLayer.ENRICHMENT)
+        )
+        kg.add_node(Node(id="dec1", node_type=NodeType.DECISION, name="dec"))
+        kg.add_edge(Edge(source="dec1", target="d1", relation="derived_from"))
+        kg.add_edge(Edge(source="dec1", target="e1", relation="produced"))
+
+        kg.revert_decision("dec1")
+        assert kg.get_node("dec1") is None
+        # e1 had no other edges, so it's cleaned up
+        assert kg.get_node("e1") is None
+        # d1 is a DOCUMENT — never auto-removed
+        assert kg.get_node("d1") is not None
+
+    def test_revert_nonexistent_returns_false(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        assert kg.revert_decision("nope") is False
+
+    def test_revert_non_decision_returns_false(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        kg.add_node(Node(id="e1", node_type=NodeType.ENTITY, name="ent"))
+        assert kg.revert_decision("e1") is False
+
+
+class TestAnswerQuestionDecision:
+    def test_answer_question_creates_decision_node(self, tmp_path):
+        """Answering an enrichment question records a DECISION node."""
+        from talk_box.enrichment_qa import (
+            EnrichmentQuestion,
+            QuestionOption,
+            QuestionType,
+        )
+
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        # Create an entity referenced by the question
+        kg.add_node(Node(id="entity-alex", node_type=NodeType.ENTITY, name="Alex"))
+
+        # Seed a question into the queue
+        q = EnrichmentQuestion(
+            id="eq-001",
+            question_type=QuestionType.ENTITY_AMBIGUITY,
+            text='Who is "Alex"?',
+            options=[
+                QuestionOption(label="Alex Torres", node_ids=["entity-alex"]),
+                QuestionOption(label="Alex Kim"),
+            ],
+            node_ids=["entity-alex"],
+            confusion_impact=0.8,
+        )
+        kg._get_question_queue().add(q)
+
+        # Answer the question
+        result = kg.answer_question("eq-001", choice=0)
+        assert result is not None
+
+        # A DECISION node should now exist
+        decisions = kg.list_nodes(node_type=NodeType.DECISION)
+        assert len(decisions) == 1
+        dec = decisions[0]
+        assert dec.metadata["decision_type"] == "entity_ambiguity"
+        assert dec.metadata["source"] == "enrichment_qa"
+        assert dec.layer == GraphLayer.EXTENDED
+
+        # Decision should be linked to entity-alex
+        trail = kg.decision_trail("entity-alex")
+        assert len(trail) == 1
+        assert trail[0].id == dec.id
