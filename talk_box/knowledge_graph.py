@@ -1333,7 +1333,12 @@ class KnowledgeGraph:
         layer: GraphLayer | None = None,
         limit: int = 20,
     ) -> list[Node]:
-        """Search nodes by name or content (case-insensitive substring match).
+        """Search nodes by name or content (case-insensitive word matching).
+
+        Tokenises the query into words and matches nodes where *any*
+        word appears in the name or content.  Results are ranked by the
+        number of matching words, with name matches weighted higher
+        than content matches.
 
         Parameters
         ----------
@@ -1349,7 +1354,7 @@ class KnowledgeGraph:
         Returns
         -------
         list[Node]
-            Matching nodes, name matches ranked first.
+            Matching nodes, ranked by relevance (word-match count).
 
         Examples
         --------
@@ -1357,30 +1362,54 @@ class KnowledgeGraph:
         results = kg.search("python", node_type=tb.NodeType.ENTITY)
         ```
         """
-        pattern = f"%{query}%"
-        params: list[Any] = [pattern, pattern]
+        # Tokenise into significant words; fall back to full query
+        words = [w for w in query.split() if len(w) > 2]
+        if not words:
+            words = [query] if query.strip() else []
+        if not words:
+            return []
+
+        # Build per-word LIKE clauses
+        where_parts: list[str] = []
+        score_parts: list[str] = []
+        params: list[Any] = []
+        score_params: list[Any] = []
+
+        for w in words:
+            pat = f"%{w}%"
+            where_parts.append("(name LIKE ? COLLATE NOCASE OR content LIKE ? COLLATE NOCASE)")
+            params.extend([pat, pat])
+            # Name matches worth 2, content matches worth 1
+            score_parts.append(
+                "(CASE WHEN name LIKE ? COLLATE NOCASE THEN 2 ELSE 0 END"
+                " + CASE WHEN content LIKE ? COLLATE NOCASE THEN 1 ELSE 0 END)"
+            )
+            score_params.extend([pat, pat])
+
+        where_clause = " OR ".join(where_parts)
+        score_expr = " + ".join(score_parts)
+
         extra_clauses = ""
+        extra_params: list[Any] = []
         if node_type is not None:
             extra_clauses += "AND node_type = ? "
-            params.append(node_type.value)
+            extra_params.append(node_type.value)
         if layer is not None:
             extra_clauses += "AND layer = ? "
-            params.append(layer.value)
-        params.append(limit)
+            extra_params.append(layer.value)
 
         sql = f"""
-            SELECT id, node_type, name, content, metadata, embedding, created_at, updated_at, layer
+            SELECT id, node_type, name, content, metadata, embedding,
+                   created_at, updated_at, layer,
+                   ({score_expr}) AS match_score
             FROM nodes
-            WHERE (name LIKE ? OR content LIKE ?) {extra_clauses}
-            ORDER BY
-                CASE WHEN name LIKE ? THEN 0 ELSE 1 END,
-                name
+            WHERE ({where_clause}) {extra_clauses}
+            ORDER BY match_score DESC, name
             LIMIT ?
         """
-        # Need an extra pattern param for the ORDER BY CASE
-        params.insert(-1, pattern)
+        all_params = score_params + params + extra_params + [limit]
 
-        rows = self._conn.execute(sql, params).fetchall()
+        rows = self._conn.execute(sql, all_params).fetchall()
         return [_row_to_node(r) for r in rows]
 
     # ------------------------------------------------------------------
@@ -1454,18 +1483,23 @@ class KnowledgeGraph:
 
         # 3. Rank — score each node
         query_lower = query.lower()
+        query_words = [w.lower() for w in query.split() if len(w) > 2]
         scored: list[tuple[float, str]] = []
         for nid, node in collected.items():
             score = 0.0
             # (a) Direct seed bonus
             if nid in seed_ids:
                 score += 10.0
-            # (b) Name relevance
-            if query_lower in node.name.lower():
-                score += 5.0
-            # (c) Content relevance
-            if query_lower in node.content.lower():
-                score += 2.0
+            name_lower = node.name.lower()
+            content_lower = node.content.lower()
+            # (b) Name relevance — per-word matching
+            for w in query_words:
+                if w in name_lower:
+                    score += 5.0
+            # (c) Content relevance — per-word matching
+            for w in query_words:
+                if w in content_lower:
+                    score += 2.0
             # (d) Freshness bonus (newer is better)
             score += min(node.updated_at / 1e10, 1.0)
             scored.append((score, nid))

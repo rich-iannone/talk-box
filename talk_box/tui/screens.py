@@ -3393,25 +3393,12 @@ class ChatScreen(Screen):
             return text
         try:
             kg = self._get_kg()
-
-            # Try full query first, then fall back to significant individual words
             subgraph = kg.extract_subgraph(
                 text,
                 max_hops=2,
                 max_nodes=20,
                 include_ontology=True,
             )
-            if not subgraph.nodes:
-                words = [w for w in text.split() if len(w) > 3]
-                for word in words[:5]:
-                    sg = kg.extract_subgraph(
-                        word,
-                        max_hops=1,
-                        max_nodes=10,
-                    )
-                    if sg.nodes:
-                        subgraph = sg
-                        break
 
             if not subgraph.nodes:
                 return text

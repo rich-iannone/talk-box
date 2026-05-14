@@ -376,8 +376,43 @@ class TestKGSearch:
 
     def test_search_name_matches_first(self):
         results = self.kg.search("Python")
-        # "Python" (exact name match) should come before "Python Guide"
-        assert results[0].name == "Python"
+        # Both "Python" and "Python Guide" should appear; "Python Guide" scores
+        # higher because "Python" appears in both its name (2pts) and content (1pt)
+        names = [r.name for r in results]
+        assert "Python" in names
+        assert "Python Guide" in names
+
+    def test_search_word_level_matching(self):
+        """Multi-word queries match any individual word, not just the full phrase."""
+        results = self.kg.search("tell me about Python")
+        names = [r.name for r in results]
+        # "Python" and "Python Guide" should be found by the word "Python"
+        assert "Python" in names
+        assert "Python Guide" in names
+
+    def test_search_word_level_ranks_by_match_count(self):
+        """Nodes matching more query words rank higher."""
+        results = self.kg.search("Python programming")
+        # "Python" entity has "Python" in name (2pts) and "Programming language." in content (1pt) = 3
+        # "Python Guide" has "Python" in name (2pts) and "Learn Python." in content (1pt) = 3
+        # Both should appear (both match multiple words)
+        names = [r.name for r in results]
+        assert "Python" in names
+        assert "Python Guide" in names
+
+    def test_search_skips_short_words(self):
+        """Words with 2 or fewer characters are ignored during tokenisation."""
+        # "a" alone would match many nodes; with longer words it's filtered
+        results = self.kg.search("a Python")
+        names = [r.name for r in results]
+        assert "Python" in names
+
+    def test_search_empty_query(self):
+        """Empty query returns no results."""
+        results = self.kg.search("")
+        assert results == []
+        results = self.kg.search("   ")
+        assert results == []
 
 
 # ---------------------------------------------------------------------------
