@@ -1914,6 +1914,23 @@ class KnowledgeGraph:
         """
         self._conn.execute("DELETE FROM edges WHERE layer = ?", (layer.value,))
         cursor = self._conn.execute("DELETE FROM nodes WHERE layer = ?", (layer.value,))
+        # When clearing the enrichment layer, reset enrichment flags on
+        # base-layer documents so they can be re-enriched.
+        if layer == GraphLayer.ENRICHMENT:
+            for row in self._conn.execute(
+                "SELECT id, metadata FROM nodes WHERE node_type = 'document' AND layer = 'base'"
+            ).fetchall():
+                meta = json.loads(row[1]) if row[1] else {}
+                changed = False
+                for key in ("_enriched", "_enriched_at", "_enriched_hash", "_summary", "_topics"):
+                    if key in meta:
+                        del meta[key]
+                        changed = True
+                if changed:
+                    self._conn.execute(
+                        "UPDATE nodes SET metadata = ? WHERE id = ?",
+                        (json.dumps(meta), row[0]),
+                    )
         self._conn.commit()
         return cursor.rowcount
 

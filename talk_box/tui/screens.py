@@ -6009,35 +6009,31 @@ class KnowledgeScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
         with Horizontal(id="kg-outer"):
-            # ---------- Left pane: Sources ----------
+            # ---------- Left pane: KG selector + Sources ----------
             with Vertical(id="kg-sources-pane"):
-                yield Button("← Home", id="kg-back-btn", variant="default", classes="back-home-btn")
-                with Horizontal(id="kg-graph-picker"):
-                    yield Select(
-                        [("(no graphs)", "")],
-                        prompt="Select graph…",
-                        id="kg-graph-select",
-                        allow_blank=False,
+                # --- Top section: Knowledge Graphs ---
+                with Vertical(id="kg-selector-section"):
+                    yield Button(
+                        "← Home", id="kg-back-btn", variant="default", classes="back-home-btn"
                     )
-                    yield Button("+ New", id="kg-new-graph-btn", variant="success")
-                    yield Button("🗑 Delete", id="kg-delete-graph-btn", variant="error")
-                    yield Button("★ Default", id="kg-set-default-btn", variant="default")
-                with Horizontal(id="kg-model-row"):
-                    yield Select(
-                        [],
-                        prompt="Select model…",
-                        id="kg-model-select",
-                        allow_blank=True,
-                    )
-                yield Static("[b]SOURCES[/b]  [dim](you)[/dim]", id="kg-sources-title")
-                with Horizontal(id="kg-actions"):
-                    yield Button("+ Note (a)", id="kg-add-note-btn", variant="primary")
-                    yield Button("+ File (f)", id="kg-add-file-btn", variant="default")
-                    yield Button("Enrich (e)", id="kg-enrich-btn", variant="warning")
-                yield DataTable(id="kg-table")
-                with VerticalScroll(id="kg-detail-scroll"):
-                    yield Static("", id="kg-detail")
-                yield Static("", id="kg-enrich-status")
+                    yield Static("[b]KNOWLEDGE GRAPHS[/b]", id="kg-selector-title")
+                    with Horizontal(id="kg-graph-actions"):
+                        yield Button("+ New", id="kg-new-graph-btn", variant="success")
+                        yield Button("🗑 Delete", id="kg-delete-graph-btn", variant="error")
+                    yield DataTable(id="kg-graph-table")
+
+                # --- Bottom section: Sources ---
+                with Vertical(id="kg-sources-section"):
+                    yield Static("[b]SOURCES[/b]  [dim](you)[/dim]", id="kg-sources-title")
+                    with Horizontal(id="kg-actions"):
+                        yield Button("+ Note (a)", id="kg-add-note-btn", variant="primary")
+                        yield Button("+ File (f)", id="kg-add-file-btn", variant="default")
+                        yield Button("Enrich (e)", id="kg-enrich-btn", variant="warning")
+                    yield DataTable(id="kg-table")
+                    with VerticalScroll(id="kg-detail-scroll"):
+                        yield Static("", id="kg-detail")
+                    yield Button("🗑 Delete Source", id="kg-delete-source-btn", variant="error")
+                    yield Static("", id="kg-enrich-status")
 
             # ---------- Right pane: Graph Status ----------
             with Vertical(id="kg-status-pane"):
@@ -6057,15 +6053,25 @@ class KnowledgeScreen(Screen):
                     yield Button("Export All", id="kg-export-all-btn", variant="default")
                     yield Button("Import .kg", id="kg-import-btn", variant="default")
                 with Horizontal(id="kg-clear-actions"):
-                    yield Button("Clear Enrichment", id="kg-clear-enrichment-btn", variant="warning")
+                    yield Button(
+                        "Clear Enrichment", id="kg-clear-enrichment-btn", variant="warning"
+                    )
                     yield Button("Clear Decisions", id="kg-clear-decisions-btn", variant="warning")
 
             # ---------- Hidden: Enrichment / Chat sidebar ----------
             with Vertical(id="kg-enrich-panel"):
                 yield Static("[b]Enrichment[/b]", id="kg-enrich-title")
+                with Horizontal(id="kg-model-row"):
+                    yield Select(
+                        [],
+                        prompt="Select model…",
+                        id="kg-model-select",
+                        allow_blank=True,
+                    )
                 with Horizontal(id="kg-enrich-target"):
                     yield Button("Enrich Selected", id="kg-enrich-selected-btn", variant="primary")
                     yield Button("Enrich All", id="kg-enrich-all-btn", variant="default")
+                    yield Button("Show Prompt", id="kg-show-prompt-btn", variant="default")
                 yield Static("[b]Chat[/b]  [dim]Ask about documents[/dim]", id="kg-chat-title")
                 with VerticalScroll(id="kg-chat-log"):
                     yield Static("", id="kg-chat-messages")
@@ -6074,12 +6080,19 @@ class KnowledgeScreen(Screen):
 
     def on_mount(self) -> None:
         """Populate the knowledge graph summary."""
+        # Graph picker table
+        graph_table = self.query_one("#kg-graph-table", DataTable)
+        graph_table.cursor_type = "row"
+        graph_table.add_columns("Graph", "Docs")
+
+        # Sources table
         table = self.query_one("#kg-table", DataTable)
         table.cursor_type = "row"
-        table.add_columns("ID", "Name", "Status", "")
+        table.add_columns("ID", "Name", "Status")
 
         # Hide enrichment panel by default
         self.query_one("#kg-enrich-panel").display = False
+        self._chat_log_lines: list[str] = []
 
         # Populate model picker
         self._populate_models()
@@ -6102,25 +6115,21 @@ class KnowledgeScreen(Screen):
             self._open_selected_graph()
 
     def _populate_graph_picker(self) -> None:
-        """Fill the graph picker with registered graphs."""
-        select = self.query_one("#kg-graph-select", Select)
+        """Fill the graph table with registered graphs."""
+        from talk_box.knowledge_graph import NodeType
+
+        graph_table = self.query_one("#kg-graph-table", DataTable)
+        graph_table.clear()
         if self._registry is None or self._registry.graph_count() == 0:
-            select.set_options([("(no graphs)", "")])
             return
         graphs = self._registry.list_graphs()
-        options = []
-        default_name = self._registry.default_name
         for g in graphs:
-            label = g["name"]
-            if g["is_default"]:
-                label = f"★ {label}"
-            if g["description"]:
-                label = f"{label}  [dim]({g['description']})[/dim]"
-            options.append((label, g["name"]))
-        select.set_options(options)
-        # Select the default graph
-        if default_name:
-            select.value = default_name
+            try:
+                kg = self._registry.open(g["name"])
+                doc_count = kg.node_count(node_type=NodeType.DOCUMENT)
+            except Exception:
+                doc_count = 0
+            graph_table.add_row(g["name"], str(doc_count), key=g["name"])
 
     def _migrate_legacy_kg(self) -> None:
         """Migrate a legacy single knowledge.db into the registry."""
@@ -6147,19 +6156,29 @@ class KnowledgeScreen(Screen):
             pass
 
     def _open_selected_graph(self) -> None:
-        """Open whichever graph is selected in the picker."""
-        select = self.query_one("#kg-graph-select", Select)
-        name = select.value
-        if not name or name == Select.BLANK or self._registry is None:
+        """Open whichever graph is selected in the graph table."""
+        name = self._get_selected_graph_name()
+        if not name or self._registry is None:
             self._kg = None
             self._update_stats_and_table()
             return
         try:
-            self._kg = self._registry.open(str(name))
+            self._kg = self._registry.open(name)
             self._update_stats_and_table()
         except Exception:
             self._kg = None
             self._update_stats_and_table()
+
+    def _get_selected_graph_name(self) -> str | None:
+        """Return the name of the currently highlighted graph, or None."""
+        graph_table = self.query_one("#kg-graph-table", DataTable)
+        if graph_table.row_count == 0:
+            return None
+        try:
+            row_key, _ = graph_table.coordinate_to_cell_key(graph_table.cursor_coordinate)
+            return str(row_key.value)
+        except Exception:
+            return None
 
     def _update_stats_and_table(self) -> None:
         """Refresh stats, table, and graph-status pane for the current graph."""
@@ -6202,8 +6221,7 @@ class KnowledgeScreen(Screen):
                 et_count = len(self._kg.ontology.entity_types)
                 ontology_info = f"  Ontology: {et_count} entity type(s)\n"
             layer_text = (
-                f"{ontology_info}"
-                f"  Layer: base {base_n} │ enriched {enrich_n} │ extended {ext_n}"
+                f"{ontology_info}  Layer: base {base_n} │ enriched {enrich_n} │ extended {ext_n}"
             )
             self.query_one("#kg-layer-counts", Static).update(layer_text)
 
@@ -6222,9 +6240,11 @@ class KnowledgeScreen(Screen):
                 self.query_one("#kg-health-info", Static).update("")
 
             # --- Sources table (base-layer docs) ---
-            for node in self._kg.list_nodes(node_type=NodeType.DOCUMENT, layer=GraphLayer.BASE, limit=50):
+            for node in self._kg.list_nodes(
+                node_type=NodeType.DOCUMENT, layer=GraphLayer.BASE, limit=50
+            ):
                 enriched = "✓" if node.metadata.get("_enriched") else "…"
-                table.add_row(node.id, node.name, enriched, "🗑", key=node.id)
+                table.add_row(node.id, node.name, enriched, key=node.id)
 
             # --- Extracted entities & topics (right pane) ---
             ent_lines: list[str] = []
@@ -6243,7 +6263,9 @@ class KnowledgeScreen(Screen):
             if topic_lines:
                 extracted_parts.append(f"[b]Topics ({topics})[/b]\n" + "\n".join(topic_lines))
             self.query_one("#kg-extracted-content", Static).update(
-                "\n\n".join(extracted_parts) if extracted_parts else "  [dim]No extractions yet[/dim]"
+                "\n\n".join(extracted_parts)
+                if extracted_parts
+                else "  [dim]No extractions yet[/dim]"
             )
 
             # --- Decisions ---
@@ -6261,9 +6283,8 @@ class KnowledgeScreen(Screen):
             self.query_one("#kg-stats-content", Static).update("  [dim]Error loading graph[/dim]")
 
     def on_select_changed(self, event: Select.Changed) -> None:
-        """Handle graph picker selection changes."""
-        if event.select.id == "kg-graph-select":
-            self._open_selected_graph()
+        """Handle model picker changes (graph table uses row selection)."""
+        pass
 
     def _populate_models(self) -> None:
         """Fill the model picker with registered models."""
@@ -6277,8 +6298,15 @@ class KnowledgeScreen(Screen):
         except Exception:
             pass
 
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        """Single-click / arrow-key on the graph table opens that graph."""
+        if event.data_table.id == "kg-graph-table":
+            self._open_selected_graph()
+
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        """Show full detail for the selected (clicked) node."""
+        """Double-click / Enter on the sources table shows node detail."""
+        if event.data_table.id != "kg-table":
+            return
         if event.row_key is None or not hasattr(self, "_kg") or self._kg is None:
             return
         node_id = str(event.row_key.value)
@@ -6383,12 +6411,14 @@ class KnowledgeScreen(Screen):
             self._run_enrichment(selected_only=True)
         elif event.button.id == "kg-enrich-all-btn":
             self._run_enrichment(selected_only=False)
+        elif event.button.id == "kg-show-prompt-btn":
+            self._show_enrichment_prompt()
         elif event.button.id == "kg-new-graph-btn":
             self._action_new_graph()
         elif event.button.id == "kg-delete-graph-btn":
             self._action_delete_graph()
-        elif event.button.id == "kg-set-default-btn":
-            self._action_set_default_graph()
+        elif event.button.id == "kg-delete-source-btn":
+            self._action_delete_selected_source()
         elif event.button.id == "kg-export-base-btn":
             self._action_export(base_only=True)
         elif event.button.id == "kg-export-all-btn":
@@ -6403,20 +6433,23 @@ class KnowledgeScreen(Screen):
     def _action_new_graph(self) -> None:
         """Prompt for a name and create a new knowledge graph."""
 
-        def _on_submitted(result: tuple[str, str] | None) -> None:
-            if result is None:
+        def _on_submitted(name: str | None) -> None:
+            if not name:
                 return
-            name, description = result
             name = name.strip()
             if not name:
                 return
             if self._registry is None:
                 return
             try:
-                self._registry.create(name, description=description.strip())
+                self._registry.create(name)
                 self._populate_graph_picker()
-                # Select the newly created graph
-                self.query_one("#kg-graph-select", Select).value = name
+                # Select the newly created graph row
+                graph_table = self.query_one("#kg-graph-table", DataTable)
+                for idx, row_key in enumerate(graph_table.rows):
+                    if str(row_key.value) == name:
+                        graph_table.move_cursor(row=idx)
+                        break
                 self._open_selected_graph()
                 self.query_one("#kg-detail", Static).update(
                     f"[green]✓[/green] Created graph: [b]{name}[/b]"
@@ -6424,17 +6457,18 @@ class KnowledgeScreen(Screen):
             except (ValueError, Exception) as e:
                 self.query_one("#kg-detail", Static).update(f"[red]Error:[/red] {e}")
 
-        self.app.push_screen(NoteInputModal(), callback=_on_submitted)
+        self.app.push_screen(
+            TextInputModal("New Graph", placeholder="Graph name"),
+            callback=_on_submitted,
+        )
 
     def _action_delete_graph(self) -> None:
         """Delete the currently selected graph."""
         if self._registry is None:
             return
-        select = self.query_one("#kg-graph-select", Select)
-        name = select.value
-        if not name or name == Select.BLANK:
+        name = self._get_selected_graph_name()
+        if not name:
             return
-        name = str(name)
         try:
             self._registry.delete(name)
             self._kg = None
@@ -6442,25 +6476,6 @@ class KnowledgeScreen(Screen):
             self._open_selected_graph()
             self.query_one("#kg-detail", Static).update(
                 f"[red]✗[/red] Deleted graph: [b]{name}[/b]"
-            )
-        except Exception as e:
-            self.query_one("#kg-detail", Static).update(f"[red]Error:[/red] {e}")
-
-    def _action_set_default_graph(self) -> None:
-        """Set the currently selected graph as the default."""
-        if self._registry is None:
-            return
-        select = self.query_one("#kg-graph-select", Select)
-        name = select.value
-        if not name or name == Select.BLANK:
-            return
-        name = str(name)
-        try:
-            self._registry.set_default(name)
-            self._populate_graph_picker()
-            select.value = name
-            self.query_one("#kg-detail", Static).update(
-                f"[green]★[/green] Default graph set to: [b]{name}[/b]"
             )
         except Exception as e:
             self.query_one("#kg-detail", Static).update(f"[red]Error:[/red] {e}")
@@ -6596,18 +6611,17 @@ class KnowledgeScreen(Screen):
 
         self.app.push_screen(FileBrowserModal(), callback=_on_file_selected)
 
-    def on_data_table_cell_selected(self, event: DataTable.CellSelected) -> None:
-        """Handle clicks on the delete (🗑) column."""
+    def _action_delete_selected_source(self) -> None:
+        """Delete the source node currently highlighted in the sources table."""
         table = self.query_one("#kg-table", DataTable)
-        # The delete column is the last one (index 3)
-        columns = list(table.columns.keys())
-        if len(columns) < 4 or event.coordinate.column != 3:
+        if table.row_count == 0:
             return
-        row_key = event.cell_key.row_key
-        if row_key is None:
-            return
-        node_id = str(row_key.value)
-        self._delete_node_by_id(node_id)
+        try:
+            row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
+            node_id = str(row_key.value)
+            self._delete_node_by_id(node_id)
+        except Exception:
+            pass
 
     def action_enrich(self) -> None:
         """Toggle the enrichment panel."""
@@ -6625,7 +6639,7 @@ class KnowledgeScreen(Screen):
         provider, model = key.split(":", 1)
         return (provider, model)
 
-    def _run_enrichment(self, *, selected_only: bool) -> None:
+    def _run_enrichment(self, *, selected_only: bool, force: bool = False) -> None:
         """Run enrichment on selected or all documents."""
         model_info = self._get_selected_model()
         if model_info is None:
@@ -6658,8 +6672,11 @@ class KnowledgeScreen(Screen):
                 f"[dim]Enriching [b]{node_id}[/b] with {model}…[/dim]"
             )
             kg_path = kg.path
+            _force = force
             self.run_worker(
-                lambda: self._enrich_worker(kg_path, provider, model, node_ids=[node_id]),
+                lambda: self._enrich_worker(
+                    kg_path, provider, model, node_ids=[node_id], force=_force
+                ),
                 name="enrich-selected",
                 thread=True,
             )
@@ -6677,10 +6694,69 @@ class KnowledgeScreen(Screen):
             )
             kg_path = kg.path
             self.run_worker(
-                lambda: self._enrich_worker(kg_path, provider, model),
+                lambda: self._enrich_worker(kg_path, provider, model, force=True),
                 name="enrich-all",
                 thread=True,
             )
+
+    def _log_enrich(self, message: str) -> None:
+        """Append a message to the enrichment chat log (must be called from main thread)."""
+        try:
+            self._chat_log_lines.append(message)
+            w = self.query_one("#kg-chat-messages", Static)
+            w.update("\n".join(self._chat_log_lines))
+            # Auto-scroll
+            scroll = self.query_one("#kg-chat-log")
+            scroll.scroll_end(animate=False)
+        except Exception:
+            pass
+
+    def _show_enrichment_prompt(self) -> None:
+        """Display the enrichment system prompt in the chat log."""
+        from talk_box.prompt_builder import PromptBuilder
+
+        prompt = str(
+            PromptBuilder()
+            .persona("knowledge-graph engineer", "entity extraction and NLP")
+            .critical_constraint("Return ONLY valid JSON — no markdown, no commentary")
+            .task_context(
+                "Extract entities, topics, and relationships from the document "
+                "titled '<DOCUMENT_TITLE>'."
+            )
+            .core_analysis(
+                [
+                    "Identify all named entities (people, organizations, places, "
+                    "technologies, dates, events, works, concepts)",
+                    "Identify the main topics and themes",
+                    "Identify relationships between entities",
+                    "Write a one-paragraph summary of the document",
+                ]
+            )
+            .output_format(
+                [
+                    "Respond with a single JSON object using this exact schema:",
+                    '{"entities": [{"name": "...", "type": "person|org|place|tech|date|event|work|concept", "mentions": N}],',
+                    ' "topics": ["topic1", "topic2", ...],',
+                    ' "summary": "one-paragraph summary",',
+                    ' "relationships": [{"source": "entity1", "target": "entity2", "relation": "verb_phrase"}]}',
+                ]
+            )
+            .example(
+                "Document about David Lynch's filmography",
+                '{"entities": [{"name": "David Lynch", "type": "person", "mentions": 12}, '
+                '{"name": "Twin Peaks", "type": "work", "mentions": 5}], '
+                '"topics": ["surrealist cinema", "television auteurs"], '
+                '"summary": "An overview of David Lynch\'s career...", '
+                '"relationships": [{"source": "David Lynch", "target": "Twin Peaks", '
+                '"relation": "created"}]}',
+            )
+            .final_emphasis(
+                "Extract as many entities as the document supports. "
+                "Do not fabricate entities not present in the text."
+            )
+        )
+        escaped = prompt.replace("[", "\\[").replace("]", "\\]")
+        self._log_enrich(f"[dim]─── System Prompt ───[/dim]\n{escaped}\n[dim]─── End ───[/dim]")
 
     def _enrich_worker(
         self,
@@ -6689,54 +6765,83 @@ class KnowledgeScreen(Screen):
         model: str,
         *,
         node_ids: list[str] | None = None,
+        force: bool = False,
     ) -> None:
         """Background worker: run enrichment pipeline."""
         try:
+            import json
+            import re
+
             from talk_box._utils_chatlas import ChatlasAdapter
-            from talk_box.enrichment import EnrichmentPipeline, EnrichmentResult
+            from talk_box.enrichment import (
+                EnrichmentPipeline,
+                EnrichmentResult,
+                ExtractedEntity,
+            )
             from talk_box.knowledge_graph import KnowledgeGraph
 
             kg = KnowledgeGraph(kg_path)
             adapter = ChatlasAdapter(provider=provider, model=model)
             chat = adapter._create_chat_instance(model)
 
-            def _llm_enricher(title: str, content: str) -> EnrichmentResult:
-                prompt = (
-                    "Extract entities, topics, and relationships from this document.\n"
-                    "Return a structured analysis with:\n"
-                    "- entities: list of {name, type, mentions}\n"
-                    "- topics: list of topic strings\n"
-                    "- summary: one-paragraph summary\n"
-                    "- relationships: list of {source, target, relation}\n\n"
-                    f"Document: {title}\n\n{content[:8000]}"
-                )
-                response = chat.chat(prompt, echo="none")
-                text = str(response)
+            self.app.call_from_thread(
+                self._log_enrich,
+                f"[dim]─── Enrichment started ({model}){' [force]' if force else ''} ───[/dim]",
+            )
 
-                # Parse a best-effort extraction from the LLM response
-                import re
+            def _parse_llm_response(text: str) -> EnrichmentResult:
+                """Parse entities, topics, and summary from LLM JSON response."""
+                entities: list[ExtractedEntity] = []
+                topics: list[str] = []
+                summary = ""
 
-                from talk_box.enrichment import ExtractedEntity
+                # Try to extract a JSON block from the response
+                json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+                raw = json_match.group(1) if json_match else text
 
-                entities = []
-                topics = []
-                relationships = []
-                summary = text[:500]
+                parsed: dict | None = None
+                try:
+                    parsed = json.loads(raw)
+                except json.JSONDecodeError:
+                    # Try to find a top-level JSON object
+                    brace = re.search(r"\{.*\}", raw, re.DOTALL)
+                    if brace:
+                        try:
+                            parsed = json.loads(brace.group(0))
+                        except json.JSONDecodeError:
+                            pass
 
-                # Simple entity extraction from response
-                for match in re.finditer(
-                    r'"name"\s*:\s*"([^"]+)".*?"type"\s*:\s*"([^"]+)"', text, re.DOTALL
-                ):
-                    entities.append(
-                        ExtractedEntity(name=match.group(1), entity_type=match.group(2))
-                    )
-
-                # Topic extraction: look for the "topics" array in the JSON
-                topics_match = re.search(r'"topics"\s*:\s*\[([^\]]*)\]', text, re.DOTALL)
-                if topics_match:
-                    for t in re.finditer(r'"([^"]{3,50})"', topics_match.group(1)):
-                        topics.append(t.group(1))
-                topics = list(dict.fromkeys(topics))[:10]
+                if isinstance(parsed, dict):
+                    # Entities
+                    for ent in parsed.get("entities", []):
+                        if isinstance(ent, dict) and "name" in ent:
+                            entities.append(
+                                ExtractedEntity(
+                                    name=ent["name"],
+                                    entity_type=ent.get("type", ent.get("entity_type", "unknown")),
+                                    mentions=ent.get("mentions", 1),
+                                )
+                            )
+                    # Topics
+                    raw_topics = parsed.get("topics", [])
+                    for t in raw_topics:
+                        if isinstance(t, str) and 2 < len(t) < 100:
+                            topics.append(t)
+                    topics = list(dict.fromkeys(topics))[:10]
+                    # Summary
+                    summary = parsed.get("summary", "")
+                else:
+                    # Fallback regex for unstructured responses
+                    for m in re.finditer(
+                        r'"name"\s*:\s*"([^"]+)"\s*,\s*"type"\s*:\s*"([^"]+)"', text
+                    ):
+                        entities.append(ExtractedEntity(name=m.group(1), entity_type=m.group(2)))
+                    topics_m = re.search(r'"topics"\s*:\s*\[([^\]]*)\]', text, re.DOTALL)
+                    if topics_m:
+                        for t in re.finditer(r'"([^"]{3,50})"', topics_m.group(1)):
+                            topics.append(t.group(1))
+                    topics = list(dict.fromkeys(topics))[:10]
+                    summary = text[:500]
 
                 return EnrichmentResult(
                     entities=entities,
@@ -6745,19 +6850,95 @@ class KnowledgeScreen(Screen):
                     relationships=[],
                 )
 
+            def _llm_enricher(title: str, content: str) -> EnrichmentResult:
+                from talk_box.prompt_builder import PromptBuilder
+
+                prompt = str(
+                    PromptBuilder()
+                    .persona("knowledge-graph engineer", "entity extraction and NLP")
+                    .critical_constraint("Return ONLY valid JSON — no markdown, no commentary")
+                    .task_context(
+                        f"Extract entities, topics, and relationships from the document "
+                        f"titled '{title}'."
+                    )
+                    .core_analysis(
+                        [
+                            "Identify all named entities (people, organizations, places, "
+                            "technologies, dates, events, works, concepts)",
+                            "Identify the main topics and themes",
+                            "Identify relationships between entities",
+                            "Write a one-paragraph summary of the document",
+                        ]
+                    )
+                    .output_format(
+                        [
+                            "Respond with a single JSON object using this exact schema:",
+                            '{"entities": [{"name": "...", "type": "person|org|place|tech|date|event|work|concept", "mentions": N}],',
+                            ' "topics": ["topic1", "topic2", ...],',
+                            ' "summary": "one-paragraph summary",',
+                            ' "relationships": [{"source": "entity1", "target": "entity2", "relation": "verb_phrase"}]}',
+                        ]
+                    )
+                    .example(
+                        "Document about David Lynch's filmography",
+                        '{"entities": [{"name": "David Lynch", "type": "person", "mentions": 12}, '
+                        '{"name": "Twin Peaks", "type": "work", "mentions": 5}], '
+                        '"topics": ["surrealist cinema", "television auteurs"], '
+                        '"summary": "An overview of David Lynch\'s career...", '
+                        '"relationships": [{"source": "David Lynch", "target": "Twin Peaks", '
+                        '"relation": "created"}]}',
+                    )
+                    .final_emphasis(
+                        "Extract as many entities as the document supports. "
+                        "Do not fabricate entities not present in the text."
+                    )
+                )
+                prompt += f"\n\nDocument: {title}\n\n{content[:8000]}"
+                self.app.call_from_thread(
+                    self._log_enrich,
+                    f"[dim]Querying model for[/dim] [b]{title}[/b][dim]…[/dim]",
+                )
+                response = chat.chat(prompt, echo="none")
+                text = str(response)
+                result = _parse_llm_response(text)
+
+                # Log the LLM response (truncated) and parsed results
+                preview = text[:600].replace("[", "\\[").replace("]", "\\]")
+                if len(text) > 600:
+                    preview += "…"
+                self.app.call_from_thread(
+                    self._log_enrich,
+                    f"[dim]── LLM response ({len(text)} chars) ──[/dim]\n{preview}",
+                )
+                if result.summary:
+                    short_summary = result.summary[:200]
+                    if len(result.summary) > 200:
+                        short_summary += "…"
+                    self.app.call_from_thread(
+                        self._log_enrich,
+                        f"[dim]Summary:[/dim] {short_summary}",
+                    )
+                self.app.call_from_thread(
+                    self._log_enrich,
+                    f"  → {len(result.entities)} entities, {len(result.topics)} topics",
+                )
+                return result
+
             pipeline = EnrichmentPipeline(enrich_fn=_llm_enricher)
 
             if node_ids:
-                # Enrich specific nodes
                 from talk_box.knowledge_graph import NodeType
 
                 enriched = 0
                 for nid in node_ids:
                     node = kg.get_node(nid)
                     if node and node.node_type.value == "document" and node.content:
+                        self.app.call_from_thread(
+                            self._log_enrich,
+                            f"[dim]Enriching[/dim] [b]{node.name}[/b]",
+                        )
                         result = _llm_enricher(node.name, node.content)
-                        # Store results back to the KG
-                        from talk_box.knowledge_graph import Edge, Node
+                        from talk_box.knowledge_graph import Edge, GraphLayer, Node
 
                         for ent in result.entities:
                             ent_id = f"entity_{hash(ent.name) & 0xFFFFFFFF:08x}"
@@ -6767,6 +6948,7 @@ class KnowledgeScreen(Screen):
                                     node_type=NodeType.ENTITY,
                                     name=ent.name,
                                     metadata={"entity_type": ent.entity_type},
+                                    layer=GraphLayer.ENRICHMENT,
                                 )
                             )
                             kg.add_edge(
@@ -6774,6 +6956,7 @@ class KnowledgeScreen(Screen):
                                     source=nid,
                                     target=ent_id,
                                     relation="mentions",
+                                    layer=GraphLayer.ENRICHMENT,
                                 )
                             )
                         for topic in result.topics:
@@ -6783,6 +6966,7 @@ class KnowledgeScreen(Screen):
                                     id=topic_id,
                                     node_type=NodeType.TOPIC,
                                     name=topic,
+                                    layer=GraphLayer.ENRICHMENT,
                                 )
                             )
                             kg.add_edge(
@@ -6790,6 +6974,7 @@ class KnowledgeScreen(Screen):
                                     source=nid,
                                     target=topic_id,
                                     relation="about",
+                                    layer=GraphLayer.ENRICHMENT,
                                 )
                             )
                         if result.summary:
@@ -6818,16 +7003,45 @@ class KnowledgeScreen(Screen):
                         enriched += 1
                 self.app.call_from_thread(self._on_enrichment_done, enriched)
             else:
-                result = pipeline.run(kg, limit=50)
-                self.app.call_from_thread(self._on_enrichment_done, result.enriched)
+                from talk_box.knowledge_graph import NodeType
+
+                docs = kg.list_nodes(node_type=NodeType.DOCUMENT, limit=50)
+                self.app.call_from_thread(
+                    self._log_enrich,
+                    f"[dim]Found {len(docs)} document(s) to process…[/dim]",
+                )
+                for d in docs:
+                    enriched_flag = d.metadata.get("_enriched", False)
+                    self.app.call_from_thread(
+                        self._log_enrich,
+                        f"  [dim]{d.name}: enriched={enriched_flag}, "
+                        f"content={len(d.content)} chars[/dim]",
+                    )
+                result = pipeline.run(kg, limit=50, force=force)
+                self.app.call_from_thread(
+                    self._log_enrich,
+                    f"[dim]Pipeline result: enriched={result.enriched}, "
+                    f"skipped={result.skipped}, "
+                    f"entities={result.entities_created}, "
+                    f"topics={result.topics_created}[/dim]",
+                )
+                self.app.call_from_thread(
+                    self._on_enrichment_done,
+                    result.enriched,
+                    result.entities_created,
+                    result.topics_created,
+                )
         except Exception as e:
             self.app.call_from_thread(self._on_enrichment_error, str(e))
 
-    def _on_enrichment_done(self, count: int) -> None:
-        self.query_one("#kg-enrich-status", Static).update(
-            f"[green]✓[/green] Enriched {count} document(s). Entities and topics added."
-        )
+    def _on_enrichment_done(self, count: int, entities: int = 0, topics: int = 0) -> None:
+        summary = f"[green]✓[/green] Enriched {count} document(s)."
+        if entities or topics:
+            summary += f" Entities: {entities}, Topics: {topics}."
+        self.query_one("#kg-enrich-status", Static).update(summary)
+        self._log_enrich(f"\n[green]✓ Done.[/green] {summary}")
         self._refresh_table()
+        self._populate_graph_picker()
 
     def _on_enrichment_error(self, error: str) -> None:
         self.query_one("#kg-enrich-status", Static).update(f"[red]Error:[/red] {error}")
@@ -6842,21 +7056,20 @@ class KnowledgeScreen(Screen):
         event.input.value = ""
 
         messages_widget = self.query_one("#kg-chat-messages", Static)
-        current = str(messages_widget.renderable) if messages_widget.renderable else ""
-        current += f"\n[b]You:[/b] {query}"
-        messages_widget.update(current)
+        self._log_enrich(f"[b]You:[/b] {query}")
 
         model_info = self._get_selected_model()
         if model_info is None:
-            messages_widget.update(current + "\n[red]Please select a model to chat.[/red]")
+            self._log_enrich("[red]Please select a model to chat.[/red]")
             return
 
         kg = self._ensure_kg()
         if kg is None:
-            messages_widget.update(current + "\n[red]No knowledge graph loaded.[/red]")
+            self._log_enrich("[red]No knowledge graph loaded.[/red]")
             return
 
         kg_path = kg.path
+        current = "\n".join(self._chat_log_lines)
         self.run_worker(
             lambda: self._chat_worker(query, model_info, kg_path, current),
             name="kg-chat",
@@ -6918,16 +7131,13 @@ class KnowledgeScreen(Screen):
                 )
 
             def _update(answer: str = answer, sources_block: str = sources_block) -> None:
-                updated = chat_history + f"\n[dim]Assistant:[/dim] {answer[:1000]}" + sources_block
-                self.query_one("#kg-chat-messages", Static).update(updated)
-                self.query_one("#kg-chat-log").scroll_end(animate=False)
+                self._log_enrich(f"[dim]Assistant:[/dim] {answer[:1000]}{sources_block}")
 
             self.app.call_from_thread(_update)
         except Exception as e:
 
             def _err(e: Exception = e) -> None:
-                updated = chat_history + f"\n[red]Error: {e}[/red]"
-                self.query_one("#kg-chat-messages", Static).update(updated)
+                self._log_enrich(f"[red]Error: {e}[/red]")
 
             self.app.call_from_thread(_err)
 

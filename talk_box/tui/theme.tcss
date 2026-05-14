@@ -1029,18 +1029,48 @@ SessionHistoryModal {
 /* -- Knowledge Graph screen ----------------------------------------------- */
 
 #kg-sources-pane {
-    width: 2fr;
+    width: 1fr;
+    padding: 0;
+}
+
+#kg-selector-section {
+    height: 1fr;
+    padding: 1 2;
+    border-bottom: solid $primary-background;
+}
+
+#kg-selector-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#kg-sources-section {
+    height: 1fr;
     padding: 1 2;
 }
 
 #kg-status-pane {
-    width: 3fr;
+    width: 1fr;
     padding: 1 2;
     border-left: solid $primary-background;
 }
 
 #kg-outer {
     height: 1fr;
+}
+
+#kg-graph-actions {
+    height: auto;
+    padding: 0 0 1 0;
+}
+
+#kg-graph-actions Button {
+    margin: 0 1 0 0;
+}
+
+#kg-graph-table {
+    height: 1fr;
+    margin: 0 0 1 0;
 }
 
 #kg-sources-title {
@@ -1088,7 +1118,7 @@ SessionHistoryModal {
 
 #kg-detail-scroll {
     height: auto;
-    max-height: 12;
+    max-height: 8;
     padding: 1 0 0 0;
 }
 
@@ -1136,7 +1166,7 @@ SessionHistoryModal {
 
 /* Enrichment panel (hidden sidebar) */
 #kg-enrich-panel {
-    width: 2fr;
+    width: 1fr;
     padding: 1 2;
     border-left: solid $primary-background;
 }
