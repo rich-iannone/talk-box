@@ -3387,31 +3387,35 @@ class ChatScreen(Screen):
             self._append_system_message(f"[red]Error adding to KG:[/red] {e}")
 
     def _enrich_with_knowledge(self, text: str) -> str:
-        """Search the knowledge graph and inject relevant context."""
+        """Extract a relevant subgraph and inject structured context."""
         self._last_kg_sources = []
         if not self._kg_enabled:
             return text
         try:
             kg = self._get_kg()
-            # Search with individual significant words (>3 chars) for broader matching
-            words = [w for w in text.split() if len(w) > 3]
-            seen_ids: set[str] = set()
-            all_nodes = []
-            for word in words[:5]:  # Cap at 5 search terms
-                for node in kg.search(word, limit=3):
-                    if node.id not in seen_ids:
-                        seen_ids.add(node.id)
-                        all_nodes.append(node)
-            # Also try full query as a phrase
-            for node in kg.search(text, limit=3):
-                if node.id not in seen_ids:
-                    seen_ids.add(node.id)
-                    all_nodes.append(node)
 
-            if not all_nodes:
+            # Try full query first, then fall back to significant individual words
+            subgraph = kg.extract_subgraph(
+                text,
+                max_hops=2,
+                max_nodes=20,
+                include_ontology=True,
+            )
+            if not subgraph.nodes:
+                words = [w for w in text.split() if len(w) > 3]
+                for word in words[:5]:
+                    sg = kg.extract_subgraph(
+                        word,
+                        max_hops=1,
+                        max_nodes=10,
+                    )
+                    if sg.nodes:
+                        subgraph = sg
+                        break
+
+            if not subgraph.nodes:
                 return text
 
-            matched = all_nodes[:5]
             self._last_kg_sources = [
                 KGCitation(
                     node_id=n.id,
@@ -3422,22 +3426,14 @@ class ChatScreen(Screen):
                     or n.metadata.get("source_url", "")
                     or n.metadata.get("source_path", ""),
                 )
-                for n in matched
+                for n in subgraph.nodes[:10]
             ]
 
-            context_parts = []
-            for node in matched:
-                # Cap each node's content at 2000 chars
-                content = node.content or ""
-                if len(content) > 2000:
-                    content = content[:2000] + "\n[... truncated ...]"
-                context_parts.append(
-                    f'<knowledge name="{node.name}" type="{node.node_type.value}">\n'
-                    f"{content}\n"
-                    f"</knowledge>"
-                )
-            knowledge_block = "\n\n".join(context_parts)
-            return f"{text}\n\n--- Knowledge context ---\n{knowledge_block}"
+            context = subgraph.to_context(
+                max_tokens=2000,
+                ontology=kg.ontology,
+            )
+            return f"{text}\n\n--- Knowledge context ---\n{context}"
         except Exception:
             return text
 
@@ -7095,12 +7091,22 @@ class KnowledgeScreen(Screen):
             from talk_box.knowledge_graph import KnowledgeGraph
 
             kg = KnowledgeGraph(kg_path)
-            nodes = kg.search(query, limit=5) if hasattr(kg, "search") else []
-            context_parts = []
+            subgraph = kg.extract_subgraph(
+                query,
+                max_hops=2,
+                max_nodes=20,
+                include_ontology=True,
+            )
+
+            context = (
+                subgraph.to_context(max_tokens=2000, ontology=kg.ontology)
+                if subgraph.nodes
+                else "No relevant documents found."
+            )
+
+            # Build source attribution
             source_lines = []
-            for node in nodes:
-                preview = (node.content or "")[:500]
-                context_parts.append(f"[{node.name}]: {preview}")
+            for node in subgraph.nodes:
                 icon = {"document": "📄", "entity": "🏷️", "topic": "📌"}.get(
                     node.node_type.value, "📎"
                 )
@@ -7111,12 +7117,9 @@ class KnowledgeScreen(Screen):
                 )
                 src_label = f" ({source})" if source else ""
                 source_lines.append(f"  {icon} {node.name}{src_label}")
-            context = (
-                "\n\n".join(context_parts) if context_parts else "No relevant documents found."
-            )
 
             prompt = (
-                f"You are a knowledge assistant. Answer based on these documents:\n\n"
+                f"You are a knowledge assistant. Answer based on this knowledge context:\n\n"
                 f"{context}\n\n"
                 f"Question: {query}"
             )

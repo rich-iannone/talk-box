@@ -3587,6 +3587,7 @@ class TestKGAttribution:
         """_enrich_with_knowledge populates _last_kg_sources with matched node names."""
         from unittest.mock import MagicMock
 
+        from talk_box.knowledge_graph import Subgraph
         from talk_box.tui.screens import ChatScreen
 
         screen = ChatScreen.__new__(ChatScreen)
@@ -3601,8 +3602,10 @@ class TestKGAttribution:
         mock_node.content = "some content about testing"
         mock_node.metadata = {}
 
+        mock_subgraph = Subgraph(nodes=[mock_node], edges=[], seed_ids=["n1"], query="testing")
         mock_kg = MagicMock()
-        mock_kg.search = MagicMock(return_value=[mock_node])
+        mock_kg.extract_subgraph = MagicMock(return_value=mock_subgraph)
+        mock_kg.ontology = None
         screen._get_kg = MagicMock(return_value=mock_kg)
 
         result = screen._enrich_with_knowledge("tell me about testing")
@@ -3629,14 +3632,16 @@ class TestKGAttribution:
         """_enrich_with_knowledge clears sources when search returns nothing."""
         from unittest.mock import MagicMock
 
+        from talk_box.knowledge_graph import Subgraph
         from talk_box.tui.screens import ChatScreen
 
         screen = ChatScreen.__new__(ChatScreen)
         screen._kg_enabled = True
         screen._last_kg_sources = ["leftover"]
 
+        empty_subgraph = Subgraph(query="xyz", seed_ids=[])
         mock_kg = MagicMock()
-        mock_kg.search = MagicMock(return_value=[])
+        mock_kg.extract_subgraph = MagicMock(return_value=empty_subgraph)
         screen._get_kg = MagicMock(return_value=mock_kg)
 
         result = screen._enrich_with_knowledge("xyz")
@@ -3670,6 +3675,7 @@ class TestKGAttribution:
         """_enrich_with_knowledge extracts source URL from node metadata."""
         from unittest.mock import MagicMock
 
+        from talk_box.knowledge_graph import Subgraph
         from talk_box.tui.screens import ChatScreen
 
         screen = ChatScreen.__new__(ChatScreen)
@@ -3683,8 +3689,10 @@ class TestKGAttribution:
         mock_node.content = "Chatlas is a Python package for LLMs."
         mock_node.metadata = {"source_url": "https://example.com/chatlas"}
 
+        mock_subgraph = Subgraph(nodes=[mock_node], edges=[], seed_ids=["url-1"], query="chatlas")
         mock_kg = MagicMock()
-        mock_kg.search = MagicMock(return_value=[mock_node])
+        mock_kg.extract_subgraph = MagicMock(return_value=mock_subgraph)
+        mock_kg.ontology = None
         screen._get_kg = MagicMock(return_value=mock_kg)
 
         screen._enrich_with_knowledge("chatlas")
