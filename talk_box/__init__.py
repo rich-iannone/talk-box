@@ -147,6 +147,7 @@ from talk_box.knowledge_graph import (
     Subgraph,
     cosine_similarity,
     general_ontology,
+    import_kg,
 )
 from talk_box.mcp_bridge import (
     MCPBridgeServer,
@@ -411,6 +412,7 @@ __all__ = [
     "Edge",
     "NodeType",
     "cosine_similarity",
+    "import_kg",
     # KG visualization
     "VisNode",
     "VisEdge",

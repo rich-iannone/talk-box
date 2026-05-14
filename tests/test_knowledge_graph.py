@@ -16,6 +16,7 @@ from talk_box.knowledge_graph import (
     _floats_to_blob,
     cosine_similarity,
     general_ontology,
+    import_kg,
 )
 
 
@@ -1635,3 +1636,256 @@ class TestSubgraphToContext:
         # 10 tokens ≈ 40 chars, should be truncated
         assert len(text) <= 50  # small budget + truncation overhead
         assert text.endswith("...")
+
+
+# ---------------------------------------------------------------------------
+# Export / Import / Compose
+# ---------------------------------------------------------------------------
+
+
+class TestExportBase:
+    def test_export_creates_file(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "src.db")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Doc"))
+        out = kg.export_base(tmp_path / "out.kg")
+        assert out.exists()
+
+    def test_export_base_only_includes_base_nodes(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "src.db")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Doc", layer=GraphLayer.BASE))
+        kg.add_node(
+            Node(id="e1", node_type=NodeType.ENTITY, name="Ent", layer=GraphLayer.ENRICHMENT)
+        )
+        kg.export_base(tmp_path / "out.kg")
+        imported = import_kg(tmp_path / "out.kg")
+        assert imported.node_count() == 1
+        assert imported.get_node("d1") is not None
+        assert imported.get_node("e1") is None
+        imported.close()
+
+    def test_export_includes_edges_for_layer(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "src.db")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Doc1"))
+        kg.add_node(Node(id="d2", node_type=NodeType.DOCUMENT, name="Doc2"))
+        kg.add_edge(Edge(source="d1", target="d2", relation="related"))
+        kg.export_base(tmp_path / "out.kg")
+        imported = import_kg(tmp_path / "out.kg")
+        edges = imported.get_edges("d1", direction="outgoing")
+        assert len(edges) == 1
+        assert edges[0].relation == "related"
+        imported.close()
+
+    def test_export_has_manifest(self, tmp_path):
+        import sqlite3
+
+        kg = KnowledgeGraph(tmp_path / "src.db", name="testgraph")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Doc"))
+        kg.export_base(tmp_path / "out.kg", description="test export", author="tester")
+        conn = sqlite3.connect(str(tmp_path / "out.kg"))
+        rows = dict(conn.execute("SELECT key, value FROM _manifest").fetchall())
+        assert rows["name"] == "testgraph"
+        assert rows["description"] == "test export"
+        assert rows["author"] == "tester"
+        assert "checksum" in rows
+        conn.close()
+
+
+class TestExportLayers:
+    def test_export_multiple_layers(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "src.db")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Doc", layer=GraphLayer.BASE))
+        kg.add_node(
+            Node(id="e1", node_type=NodeType.ENTITY, name="Ent", layer=GraphLayer.ENRICHMENT)
+        )
+        kg.add_node(
+            Node(id="x1", node_type=NodeType.DECISION, name="Dec", layer=GraphLayer.EXTENDED)
+        )
+        kg.export_layers([GraphLayer.BASE, GraphLayer.ENRICHMENT], tmp_path / "out.kg")
+        imported = import_kg(tmp_path / "out.kg")
+        assert imported.node_count() == 2
+        assert imported.get_node("x1") is None
+        imported.close()
+
+    def test_export_preserves_ontology(self, tmp_path):
+        o = general_ontology()
+        kg = KnowledgeGraph(tmp_path / "src.db", ontology=o)
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Doc"))
+        kg.export_base(tmp_path / "out.kg")
+        imported = import_kg(tmp_path / "out.kg")
+        assert "person" in imported.ontology.entity_types
+        imported.close()
+
+
+class TestImportKg:
+    def test_import_nonexistent_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            import_kg(tmp_path / "nope.kg")
+
+    def test_import_reads_manifest_name(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "src.db", name="mykg")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Doc"))
+        kg.export_base(tmp_path / "out.kg")
+        imported = import_kg(tmp_path / "out.kg")
+        assert imported.name == "mykg"
+        imported.close()
+
+    def test_import_plain_db_no_manifest(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "plain.db")
+        kg.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Doc"))
+        kg.close()
+        imported = import_kg(tmp_path / "plain.db")
+        assert imported.get_node("d1") is not None
+        imported.close()
+
+    def test_roundtrip_preserves_node_data(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "src.db")
+        kg.add_node(
+            Node(
+                id="d1",
+                node_type=NodeType.DOCUMENT,
+                name="My Doc",
+                content="hello world",
+                metadata={"key": "val"},
+            )
+        )
+        kg.export_base(tmp_path / "out.kg")
+        imported = import_kg(tmp_path / "out.kg")
+        n = imported.get_node("d1")
+        assert n is not None
+        assert n.name == "My Doc"
+        assert n.content == "hello world"
+        assert n.metadata == {"key": "val"}
+        imported.close()
+
+
+class TestCompose:
+    def test_compose_additive(self, tmp_path):
+        local = KnowledgeGraph(tmp_path / "local.db")
+        local.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Local Doc"))
+
+        remote = KnowledgeGraph(tmp_path / "remote.db")
+        remote.add_node(Node(id="d2", node_type=NodeType.DOCUMENT, name="Remote Doc"))
+
+        added = local.compose(remote)
+        assert added == 1
+        assert local.get_node("d2") is not None
+        assert local.get_node("d2").name == "Remote Doc"
+
+    def test_compose_with_namespace(self, tmp_path):
+        local = KnowledgeGraph(tmp_path / "local.db")
+        local.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Local Doc"))
+
+        remote = KnowledgeGraph(tmp_path / "remote.db")
+        remote.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Remote Doc"))
+
+        added = local.compose(remote, namespace="ext")
+        assert added == 1
+        # Both exist: local d1 and namespaced ext:d1
+        assert local.get_node("d1").name == "Local Doc"
+        assert local.get_node("ext:d1").name == "Remote Doc"
+
+    def test_compose_keep_local_on_conflict(self, tmp_path):
+        local = KnowledgeGraph(tmp_path / "local.db")
+        local.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Local"))
+
+        remote = KnowledgeGraph(tmp_path / "remote.db")
+        remote.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Remote"))
+
+        added = local.compose(remote, conflict="keep_local")
+        assert added == 0
+        assert local.get_node("d1").name == "Local"
+
+    def test_compose_keep_remote_on_conflict(self, tmp_path):
+        local = KnowledgeGraph(tmp_path / "local.db")
+        local.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Local"))
+
+        remote = KnowledgeGraph(tmp_path / "remote.db")
+        remote.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Remote"))
+
+        added = local.compose(remote, conflict="keep_remote")
+        assert added == 1
+        assert local.get_node("d1").name == "Remote"
+
+    def test_compose_edges_transferred(self, tmp_path):
+        local = KnowledgeGraph(tmp_path / "local.db")
+
+        remote = KnowledgeGraph(tmp_path / "remote.db")
+        remote.add_node(Node(id="a", node_type=NodeType.ENTITY, name="A"))
+        remote.add_node(Node(id="b", node_type=NodeType.ENTITY, name="B"))
+        remote.add_edge(Edge(source="a", target="b", relation="linked"))
+
+        local.compose(remote)
+        edges = local.get_edges("a", direction="outgoing")
+        assert len(edges) == 1
+        assert edges[0].relation == "linked"
+
+    def test_compose_edges_with_namespace(self, tmp_path):
+        local = KnowledgeGraph(tmp_path / "local.db")
+
+        remote = KnowledgeGraph(tmp_path / "remote.db")
+        remote.add_node(Node(id="a", node_type=NodeType.ENTITY, name="A"))
+        remote.add_node(Node(id="b", node_type=NodeType.ENTITY, name="B"))
+        remote.add_edge(Edge(source="a", target="b", relation="linked"))
+
+        local.compose(remote, namespace="ns")
+        edges = local.get_edges("ns:a", direction="outgoing")
+        assert len(edges) == 1
+        assert edges[0].source == "ns:a"
+        assert edges[0].target == "ns:b"
+
+    def test_compose_ontology_merge(self, tmp_path):
+        local_onto = Ontology(
+            entity_types={"person": EntityTypeDef(description="A human")},
+            relation_types={},
+        )
+        local = KnowledgeGraph(tmp_path / "local.db", ontology=local_onto)
+
+        remote_onto = Ontology(
+            entity_types={
+                "project": EntityTypeDef(description="A project"),
+                "person": EntityTypeDef(description="Remote person def"),
+            },
+            relation_types={"leads": RelationTypeDef(description="Leads")},
+        )
+        remote = KnowledgeGraph(tmp_path / "remote.db", ontology=remote_onto)
+
+        with pytest.warns(UserWarning, match="Entity type 'person'"):
+            local.compose(remote)
+        # Local definition kept for 'person'
+        assert local.ontology.entity_types["person"].description == "A human"
+        # Remote-only type 'project' added
+        assert "project" in local.ontology.entity_types
+        # Remote-only relation 'leads' added
+        assert "leads" in local.ontology.relation_types
+
+    def test_compose_invalid_strategy_raises(self, tmp_path):
+        local = KnowledgeGraph(tmp_path / "local.db")
+        remote = KnowledgeGraph(tmp_path / "remote.db")
+        with pytest.raises(ValueError, match="merge_strategy"):
+            local.compose(remote, merge_strategy="replace")
+
+    def test_compose_invalid_conflict_raises(self, tmp_path):
+        local = KnowledgeGraph(tmp_path / "local.db")
+        remote = KnowledgeGraph(tmp_path / "remote.db")
+        with pytest.raises(ValueError, match="conflict"):
+            local.compose(remote, conflict="bad")
+
+    def test_full_roundtrip_export_import_compose(self, tmp_path):
+        """End-to-end: create graph, export, import, compose into a new graph."""
+        src = KnowledgeGraph(tmp_path / "src.db", name="source")
+        src.add_node(Node(id="d1", node_type=NodeType.DOCUMENT, name="Doc1"))
+        src.add_node(Node(id="e1", node_type=NodeType.ENTITY, name="Ent1"))
+        src.add_edge(Edge(source="d1", target="e1", relation="mentions"))
+        src.export_base(tmp_path / "pkg.kg")
+
+        imported = import_kg(tmp_path / "pkg.kg")
+        target = KnowledgeGraph(tmp_path / "target.db")
+        target.add_node(Node(id="local1", node_type=NodeType.DOCUMENT, name="Local"))
+        added = target.compose(imported, namespace="src")
+
+        assert added == 2
+        assert target.get_node("src:d1") is not None
+        assert target.get_node("src:e1") is not None
+        edges = target.get_edges("src:d1", direction="outgoing")
+        assert any(e.relation == "mentions" and e.target == "src:e1" for e in edges)
+        imported.close()

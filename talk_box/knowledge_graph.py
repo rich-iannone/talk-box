@@ -1917,6 +1917,251 @@ class KnowledgeGraph:
         self._conn.commit()
         return cursor.rowcount
 
+    # ------------------------------------------------------------------
+    # Export / Import / Compose
+    # ------------------------------------------------------------------
+
+    def _write_manifest(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        layers: list[str],
+        description: str,
+        author: str,
+    ) -> None:
+        """Write a _manifest table into *conn*."""
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS _manifest "
+            "(key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '{}')"
+        )
+        now = time.time()
+        ontology_json = json.dumps(self._ontology.to_dict())
+        # Compute a SHA-256 checksum over node/edge content
+        import hashlib
+
+        h = hashlib.sha256()
+        for row in conn.execute("SELECT id, name, content FROM nodes ORDER BY id"):
+            h.update(f"{row[0]}|{row[1]}|{row[2]}".encode())
+        for row in conn.execute(
+            "SELECT source, target, relation FROM edges ORDER BY source, target, relation"
+        ):
+            h.update(f"{row[0]}|{row[1]}|{row[2]}".encode())
+        manifest = {
+            "name": self._name,
+            "description": description,
+            "ontology": ontology_json,
+            "created_at": now,
+            "author": author,
+            "layer_filter": layers,
+            "version": 1,
+            "checksum": h.hexdigest(),
+        }
+        for k, v in manifest.items():
+            conn.execute(
+                "INSERT OR REPLACE INTO _manifest (key, value) VALUES (?, ?)",
+                (k, json.dumps(v) if not isinstance(v, str) else v),
+            )
+        conn.commit()
+
+    def export_base(self, path: str | Path, *, description: str = "", author: str = "") -> Path:
+        """Export the BASE layer to a `.kg` file.
+
+        Parameters
+        ----------
+        path
+            Destination file path.
+        description
+            Optional human-readable description embedded in the manifest.
+        author
+            Optional author name.
+
+        Returns
+        -------
+        Path
+            The resolved output path.
+        """
+        return self.export_layers([GraphLayer.BASE], path, description=description, author=author)
+
+    def export_layers(
+        self,
+        layers: list[GraphLayer],
+        path: str | Path,
+        *,
+        description: str = "",
+        author: str = "",
+    ) -> Path:
+        """Export selected layers to a `.kg` file.
+
+        The `.kg` file is a self-contained SQLite database with the same
+        schema as a live graph, plus a ``_manifest`` table for metadata.
+
+        Parameters
+        ----------
+        layers
+            Which layers to include.
+        path
+            Destination file path.
+        description
+            Optional description embedded in the manifest.
+        author
+            Optional author name.
+
+        Returns
+        -------
+        Path
+            The resolved output path.
+        """
+        out = Path(path)
+        layer_vals = [l.value for l in layers]
+        placeholders = ",".join("?" * len(layer_vals))
+
+        dest = sqlite3.connect(str(out))
+        try:
+            dest.execute("PRAGMA journal_mode=WAL")
+            dest.execute("PRAGMA foreign_keys=ON")
+            dest.execute(_CREATE_NODES_SQL)
+            dest.execute(_CREATE_EDGES_SQL)
+            dest.execute(_CREATE_META_SQL)
+            dest.commit()
+
+            # Copy filtered nodes
+            for row in self._conn.execute(
+                f"SELECT * FROM nodes WHERE layer IN ({placeholders})",  # noqa: S608
+                layer_vals,
+            ):
+                dest.execute("INSERT OR REPLACE INTO nodes VALUES (?,?,?,?,?,?,?,?,?)", row)
+            # Copy filtered edges
+            for row in self._conn.execute(
+                f"SELECT * FROM edges WHERE layer IN ({placeholders})",  # noqa: S608
+                layer_vals,
+            ):
+                dest.execute("INSERT OR REPLACE INTO edges VALUES (?,?,?,?,?,?)", row)
+            # Copy ontology
+            onto_row = self._conn.execute(
+                "SELECT value FROM _meta WHERE key = 'ontology'"
+            ).fetchone()
+            if onto_row:
+                dest.execute(
+                    "INSERT OR REPLACE INTO _meta (key, value) VALUES ('ontology', ?)",
+                    (onto_row[0],),
+                )
+            dest.commit()
+
+            self._write_manifest(
+                dest,
+                layers=[l.value for l in layers],
+                description=description,
+                author=author,
+            )
+        finally:
+            dest.close()
+
+        return out
+
+    def compose(
+        self,
+        other: "KnowledgeGraph",
+        *,
+        namespace: str = "",
+        merge_strategy: str = "additive",
+        conflict: str = "keep_local",
+    ) -> int:
+        """Merge another graph into this one.
+
+        Parameters
+        ----------
+        other
+            The source graph to merge from.
+        namespace
+            If non-empty, node IDs from *other* are prefixed with
+            ``namespace:`` to avoid collisions.
+        merge_strategy
+            ``"additive"`` (default) — add new nodes/edges without removing
+            existing ones.
+        conflict
+            How to handle ID collisions: ``"keep_local"`` (default) skips
+            duplicates, ``"keep_remote"`` overwrites with the incoming node.
+
+        Returns
+        -------
+        int
+            Number of nodes added or updated.
+        """
+        if merge_strategy != "additive":
+            raise ValueError(f"Unsupported merge_strategy: {merge_strategy!r}")
+        if conflict not in ("keep_local", "keep_remote"):
+            raise ValueError(f"Unsupported conflict policy: {conflict!r}")
+
+        added = 0
+        # Gather all nodes from other
+        for node in other.list_nodes(limit=10_000_000):
+            nid = f"{namespace}:{node.id}" if namespace else node.id
+            existing = self.get_node(nid)
+            if existing is not None and conflict == "keep_local":
+                continue
+            self.add_node(
+                Node(
+                    id=nid,
+                    node_type=node.node_type,
+                    name=node.name,
+                    content=node.content,
+                    metadata=node.metadata,
+                    embedding=node.embedding,
+                    created_at=node.created_at,
+                    updated_at=node.updated_at,
+                    layer=node.layer,
+                )
+            )
+            added += 1
+
+        # Gather all edges from other
+        id_set: set[str] = set()
+        for node in other.list_nodes(limit=10_000_000):
+            nid = f"{namespace}:{node.id}" if namespace else node.id
+            id_set.add(nid)
+
+        for node in other.list_nodes(limit=10_000_000):
+            orig_id = node.id
+            for edge in other.get_edges(orig_id, direction="outgoing"):
+                src = f"{namespace}:{edge.source}" if namespace else edge.source
+                tgt = f"{namespace}:{edge.target}" if namespace else edge.target
+                # Only add edge if both endpoints exist in this graph
+                if self.get_node(src) is not None and self.get_node(tgt) is not None:
+                    self.add_edge(
+                        Edge(
+                            source=src,
+                            target=tgt,
+                            relation=edge.relation,
+                            weight=edge.weight,
+                            metadata=edge.metadata,
+                            layer=edge.layer,
+                        )
+                    )
+
+        # Merge ontology: union disjoint types, local wins on conflicts
+        if other.ontology.entity_types or other.ontology.relation_types:
+            merged_et = dict(self._ontology.entity_types)
+            for k, v in other.ontology.entity_types.items():
+                if k not in merged_et:
+                    merged_et[k] = v
+                else:
+                    warnings.warn(
+                        f"Entity type {k!r} exists in both graphs; keeping local definition.",
+                        stacklevel=2,
+                    )
+            merged_rt = dict(self._ontology.relation_types)
+            for k, v in other.ontology.relation_types.items():
+                if k not in merged_rt:
+                    merged_rt[k] = v
+                else:
+                    warnings.warn(
+                        f"Relation type {k!r} exists in both graphs; keeping local definition.",
+                        stacklevel=2,
+                    )
+            self.set_ontology(Ontology(entity_types=merged_et, relation_types=merged_rt))
+
+        return added
+
     def close(self) -> None:
         """Close the database connection."""
         self._conn.close()
@@ -2359,3 +2604,44 @@ def _row_to_edge(row: tuple[Any, ...]) -> Edge:
         metadata=json.loads(row[4]),
         layer=GraphLayer(row[5]) if len(row) > 5 and row[5] is not None else GraphLayer.BASE,
     )
+
+
+# ---------------------------------------------------------------------------
+# Import helper
+# ---------------------------------------------------------------------------
+
+
+def import_kg(path: str | Path) -> KnowledgeGraph:
+    """Open a ``.kg`` file (or any Talk Box SQLite graph) as a read-only graph.
+
+    The returned :class:`KnowledgeGraph` can be passed to
+    :meth:`KnowledgeGraph.compose` or inspected directly.
+
+    Parameters
+    ----------
+    path
+        Path to a ``.kg`` file exported by :meth:`KnowledgeGraph.export_base`
+        or :meth:`KnowledgeGraph.export_layers`.
+
+    Returns
+    -------
+    KnowledgeGraph
+        A graph instance backed by the given file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If *path* does not exist.
+    """
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"No such file: {p}")
+    kg = KnowledgeGraph(p)
+    # Read manifest name if available
+    try:
+        row = kg._conn.execute("SELECT value FROM _manifest WHERE key = 'name'").fetchone()
+        if row:
+            kg._name = row[0]
+    except sqlite3.OperationalError:
+        pass  # No _manifest table — plain graph file
+    return kg
