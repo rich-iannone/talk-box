@@ -4,13 +4,17 @@ import pytest
 
 from talk_box.knowledge_graph import (
     Edge,
+    EntityTypeDef,
     GraphLayer,
     KnowledgeGraph,
     Node,
     NodeType,
+    Ontology,
+    RelationTypeDef,
     _blob_to_floats,
     _floats_to_blob,
     cosine_similarity,
+    general_ontology,
 )
 
 
@@ -1103,3 +1107,335 @@ class TestAnswerQuestionDecision:
         trail = kg.decision_trail("entity-alex")
         assert len(trail) == 1
         assert trail[0].id == dec.id
+
+
+# ---------------------------------------------------------------------------
+# Ontology
+# ---------------------------------------------------------------------------
+
+
+class TestEntityTypeDef:
+    def test_basic(self):
+        etd = EntityTypeDef(description="A person", properties=["role"])
+        assert etd.description == "A person"
+        assert etd.properties == ["role"]
+        assert etd.parent is None
+
+    def test_with_parent(self):
+        etd = EntityTypeDef(description="A project", parent="initiative")
+        assert etd.parent == "initiative"
+
+    def test_roundtrip(self):
+        etd = EntityTypeDef(description="A person", properties=["role", "email"], parent="agent")
+        d = etd.to_dict()
+        restored = EntityTypeDef.from_dict(d)
+        assert restored == etd
+
+
+class TestRelationTypeDef:
+    def test_basic(self):
+        rtd = RelationTypeDef(description="Leads", source_type="person", target_type="project")
+        assert rtd.source_type == "person"
+        assert rtd.target_type == "project"
+
+    def test_roundtrip(self):
+        rtd = RelationTypeDef(
+            description="Drives",
+            source_type="metric",
+            target_type="metric",
+            properties=["strength"],
+        )
+        d = rtd.to_dict()
+        restored = RelationTypeDef.from_dict(d)
+        assert restored == rtd
+
+
+class TestOntology:
+    def test_empty(self):
+        o = Ontology()
+        assert o.entity_types == {}
+        assert o.relation_types == {}
+
+    def test_roundtrip(self):
+        o = Ontology(
+            entity_types={"person": EntityTypeDef(description="Human", properties=["role"])},
+            relation_types={"leads": RelationTypeDef(source_type="person", target_type="project")},
+        )
+        d = o.to_dict()
+        restored = Ontology.from_dict(d)
+        assert restored.entity_types["person"].description == "Human"
+        assert restored.relation_types["leads"].source_type == "person"
+
+    def test_ancestors_simple(self):
+        o = Ontology(
+            entity_types={
+                "initiative": EntityTypeDef(description="Top-level"),
+                "project": EntityTypeDef(description="Sub-initiative", parent="initiative"),
+            },
+        )
+        assert o.ancestors("project") == ["initiative"]
+        assert o.ancestors("initiative") == []
+
+    def test_ancestors_chain(self):
+        o = Ontology(
+            entity_types={
+                "thing": EntityTypeDef(description="Root"),
+                "initiative": EntityTypeDef(description="Mid", parent="thing"),
+                "project": EntityTypeDef(description="Leaf", parent="initiative"),
+            },
+        )
+        assert o.ancestors("project") == ["initiative", "thing"]
+
+    def test_is_subtype(self):
+        o = Ontology(
+            entity_types={
+                "initiative": EntityTypeDef(description="Top"),
+                "project": EntityTypeDef(description="Sub", parent="initiative"),
+            },
+        )
+        assert o.is_subtype("project", "initiative") is True
+        assert o.is_subtype("project", "project") is True
+        assert o.is_subtype("initiative", "project") is False
+
+    def test_validate_node_accepts_non_entity(self):
+        o = Ontology(entity_types={"person": EntityTypeDef()})
+        node = Node(id="d1", node_type=NodeType.DOCUMENT, name="doc")
+        assert o.validate_node(node) == []
+
+    def test_validate_node_accepts_known_type(self):
+        o = Ontology(entity_types={"person": EntityTypeDef(properties=["role"])})
+        node = Node(
+            id="e1",
+            node_type=NodeType.ENTITY,
+            name="Alice",
+            metadata={"entity_type": "person", "role": "engineer"},
+        )
+        assert o.validate_node(node) == []
+
+    def test_validate_node_warns_unknown_type(self):
+        o = Ontology(entity_types={"person": EntityTypeDef()})
+        node = Node(
+            id="e1",
+            node_type=NodeType.ENTITY,
+            name="Widget",
+            metadata={"entity_type": "widget"},
+        )
+        msgs = o.validate_node(node)
+        assert len(msgs) == 1
+        assert "widget" in msgs[0]
+
+    def test_validate_node_warns_unknown_property(self):
+        o = Ontology(entity_types={"person": EntityTypeDef(properties=["role"])})
+        node = Node(
+            id="e1",
+            node_type=NodeType.ENTITY,
+            name="Alice",
+            metadata={"entity_type": "person", "role": "eng", "shoe_size": "10"},
+        )
+        msgs = o.validate_node(node)
+        assert any("shoe_size" in m for m in msgs)
+
+    def test_validate_edge_accepts_correct_types(self):
+        o = Ontology(
+            relation_types={
+                "leads": RelationTypeDef(source_type="person", target_type="project"),
+            },
+        )
+        edge = Edge(source="e1", target="e2", relation="leads")
+        src = Node(id="e1", node_type=NodeType.ENTITY, name="A", metadata={"entity_type": "person"})
+        tgt = Node(
+            id="e2", node_type=NodeType.ENTITY, name="B", metadata={"entity_type": "project"}
+        )
+        assert o.validate_edge(edge, source_node=src, target_node=tgt) == []
+
+    def test_validate_edge_warns_wrong_source_type(self):
+        o = Ontology(
+            relation_types={
+                "leads": RelationTypeDef(source_type="person", target_type="project"),
+            },
+        )
+        edge = Edge(source="e1", target="e2", relation="leads")
+        src = Node(id="e1", node_type=NodeType.ENTITY, name="A", metadata={"entity_type": "metric"})
+        tgt = Node(
+            id="e2", node_type=NodeType.ENTITY, name="B", metadata={"entity_type": "project"}
+        )
+        msgs = o.validate_edge(edge, source_node=src, target_node=tgt)
+        assert len(msgs) == 1
+        assert "source type" in msgs[0]
+
+    def test_validate_edge_respects_inheritance(self):
+        o = Ontology(
+            entity_types={
+                "initiative": EntityTypeDef(),
+                "project": EntityTypeDef(parent="initiative"),
+            },
+            relation_types={
+                "reviews": RelationTypeDef(target_type="initiative"),
+            },
+        )
+        edge = Edge(source="e1", target="e2", relation="reviews")
+        src = Node(id="e1", node_type=NodeType.ENTITY, name="A", metadata={"entity_type": "person"})
+        tgt = Node(
+            id="e2", node_type=NodeType.ENTITY, name="B", metadata={"entity_type": "project"}
+        )
+        # project is a subtype of initiative, so this should be valid
+        assert o.validate_edge(edge, source_node=src, target_node=tgt) == []
+
+
+class TestGeneralOntology:
+    def test_has_common_types(self):
+        o = general_ontology()
+        assert "person" in o.entity_types
+        assert "organization" in o.entity_types
+        assert "project" in o.entity_types
+        assert "concept" in o.entity_types
+        assert "technology" in o.entity_types
+        assert "metric" in o.entity_types
+
+    def test_has_common_relations(self):
+        o = general_ontology()
+        assert "leads" in o.relation_types
+        assert "works_at" in o.relation_types
+        assert "related_to" in o.relation_types
+        assert "drives" in o.relation_types
+
+
+class TestKGOntologyIntegration:
+    def test_kg_default_empty_ontology(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        assert kg.ontology.entity_types == {}
+        assert kg.ontology.relation_types == {}
+
+    def test_kg_with_ontology(self, tmp_path):
+        o = general_ontology()
+        kg = KnowledgeGraph(tmp_path / "test.db", ontology=o)
+        assert "person" in kg.ontology.entity_types
+
+    def test_ontology_persists_across_reopen(self, tmp_path):
+        db = tmp_path / "test.db"
+        o = general_ontology()
+        kg = KnowledgeGraph(db, ontology=o)
+        kg.close()
+
+        kg2 = KnowledgeGraph(db)
+        assert "person" in kg2.ontology.entity_types
+        assert "leads" in kg2.ontology.relation_types
+        kg2.close()
+
+    def test_set_ontology(self, tmp_path):
+        kg = KnowledgeGraph(tmp_path / "test.db")
+        assert kg.ontology.entity_types == {}
+        kg.set_ontology(general_ontology())
+        assert "person" in kg.ontology.entity_types
+
+    def test_strict_mode_rejects_invalid_node(self, tmp_path):
+        o = Ontology(entity_types={"person": EntityTypeDef(properties=["role"])})
+        kg = KnowledgeGraph(tmp_path / "test.db", ontology=o, strict=True)
+        node = Node(
+            id="e1",
+            node_type=NodeType.ENTITY,
+            name="Widget",
+            metadata={"entity_type": "widget"},
+        )
+        with pytest.raises(ValueError, match="widget"):
+            kg.add_node(node)
+
+    def test_soft_mode_warns_invalid_node(self, tmp_path):
+        o = Ontology(entity_types={"person": EntityTypeDef(properties=["role"])})
+        kg = KnowledgeGraph(tmp_path / "test.db", ontology=o)
+        node = Node(
+            id="e1",
+            node_type=NodeType.ENTITY,
+            name="Widget",
+            metadata={"entity_type": "widget"},
+        )
+        with pytest.warns(UserWarning, match="widget"):
+            kg.add_node(node)
+        # Node should still be added in soft mode
+        assert kg.get_node("e1") is not None
+
+    def test_strict_mode_rejects_invalid_edge(self, tmp_path):
+        o = Ontology(
+            relation_types={
+                "leads": RelationTypeDef(source_type="person", target_type="project"),
+            },
+        )
+        kg = KnowledgeGraph(tmp_path / "test.db", ontology=o, strict=True)
+        kg.add_node(
+            Node(
+                id="e1",
+                node_type=NodeType.ENTITY,
+                name="A",
+                metadata={"entity_type": "metric"},
+            )
+        )
+        kg.add_node(
+            Node(
+                id="e2",
+                node_type=NodeType.ENTITY,
+                name="B",
+                metadata={"entity_type": "project"},
+            )
+        )
+        with pytest.raises(ValueError, match="source type"):
+            kg.add_edge(Edge(source="e1", target="e2", relation="leads"))
+
+    def test_soft_mode_warns_invalid_edge(self, tmp_path):
+        o = Ontology(
+            relation_types={
+                "leads": RelationTypeDef(source_type="person", target_type="project"),
+            },
+        )
+        kg = KnowledgeGraph(tmp_path / "test.db", ontology=o)
+        kg.add_node(
+            Node(
+                id="e1",
+                node_type=NodeType.ENTITY,
+                name="A",
+                metadata={"entity_type": "metric"},
+            )
+        )
+        kg.add_node(
+            Node(
+                id="e2",
+                node_type=NodeType.ENTITY,
+                name="B",
+                metadata={"entity_type": "project"},
+            )
+        )
+        with pytest.warns(UserWarning, match="source type"):
+            kg.add_edge(Edge(source="e1", target="e2", relation="leads"))
+        # Edge should still be added in soft mode
+        edges = kg.get_edges("e1", direction="outgoing")
+        assert len(edges) == 1
+
+    def test_valid_nodes_and_edges_no_warnings(self, tmp_path):
+        o = Ontology(
+            entity_types={
+                "person": EntityTypeDef(properties=["role"]),
+                "project": EntityTypeDef(properties=["status"]),
+            },
+            relation_types={
+                "leads": RelationTypeDef(source_type="person", target_type="project"),
+            },
+        )
+        kg = KnowledgeGraph(tmp_path / "test.db", ontology=o, strict=True)
+        kg.add_node(
+            Node(
+                id="p1",
+                node_type=NodeType.ENTITY,
+                name="Alice",
+                metadata={"entity_type": "person", "role": "eng"},
+            )
+        )
+        kg.add_node(
+            Node(
+                id="pr1",
+                node_type=NodeType.ENTITY,
+                name="Alpha",
+                metadata={"entity_type": "project", "status": "active"},
+            )
+        )
+        kg.add_edge(Edge(source="p1", target="pr1", relation="leads"))
+        assert kg.get_node("p1") is not None
+        assert len(kg.get_edges("p1", direction="outgoing")) == 1

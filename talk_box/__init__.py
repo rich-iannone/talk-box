@@ -136,12 +136,16 @@ from talk_box.kg_visualization import (
 )
 from talk_box.knowledge_graph import (
     Edge,
+    EntityTypeDef,
     GraphLayer,
     KnowledgeGraph,
     KnowledgeGraphRegistry,
     Node,
     NodeType,
+    Ontology,
+    RelationTypeDef,
     cosine_similarity,
+    general_ontology,
 )
 from talk_box.mcp_bridge import (
     MCPBridgeServer,
@@ -397,6 +401,10 @@ __all__ = [
     "KnowledgeGraph",
     "KnowledgeGraphRegistry",
     "GraphLayer",
+    "Ontology",
+    "EntityTypeDef",
+    "RelationTypeDef",
+    "general_ontology",
     "Node",
     "Edge",
     "NodeType",

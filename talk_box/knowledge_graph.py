@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
+import warnings
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -180,6 +181,373 @@ class Edge:
 
 
 # ---------------------------------------------------------------------------
+# Ontology
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class EntityTypeDef:
+    """Definition of an entity type within an ontology.
+
+    Parameters
+    ----------
+    description
+        Human-readable description (shown to LLMs for semantic grounding).
+    properties
+        Allowed metadata keys for entities of this type.
+    parent
+        Optional parent type for inheritance (e.g. ``"project"`` → ``"initiative"``).
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    person = tb.EntityTypeDef(
+        description="A human individual",
+        properties=["role", "team", "email"],
+    )
+    ```
+    """
+
+    description: str = ""
+    properties: list[str] = field(default_factory=list)
+    parent: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"description": self.description, "properties": self.properties}
+        if self.parent is not None:
+            d["parent"] = self.parent
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> EntityTypeDef:
+        return cls(
+            description=d.get("description", ""),
+            properties=d.get("properties", []),
+            parent=d.get("parent"),
+        )
+
+
+@dataclass(frozen=True)
+class RelationTypeDef:
+    """Definition of a relation type within an ontology.
+
+    Parameters
+    ----------
+    description
+        Human-readable description.
+    source_type
+        Required entity type for the source node (``None`` = any).
+    target_type
+        Required entity type for the target node (``None`` = any).
+    properties
+        Allowed metadata keys for edges of this type.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    leads = tb.RelationTypeDef(
+        description="Person is the lead of a project",
+        source_type="person",
+        target_type="project",
+    )
+    ```
+    """
+
+    description: str = ""
+    source_type: str | None = None
+    target_type: str | None = None
+    properties: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"description": self.description, "properties": self.properties}
+        if self.source_type is not None:
+            d["source_type"] = self.source_type
+        if self.target_type is not None:
+            d["target_type"] = self.target_type
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> RelationTypeDef:
+        return cls(
+            description=d.get("description", ""),
+            source_type=d.get("source_type"),
+            target_type=d.get("target_type"),
+            properties=d.get("properties", []),
+        )
+
+
+@dataclass
+class Ontology:
+    """Lightweight type system for a knowledge graph.
+
+    Provides semantic typing for entities and relationships. The ontology
+    is stored per-graph and used for optional validation in
+    ``add_node()``/``add_edge()``.
+
+    Parameters
+    ----------
+    entity_types
+        Mapping of type name → definition.
+    relation_types
+        Mapping of relation name → definition.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    ontology = tb.Ontology(
+        entity_types={
+            "person": tb.EntityTypeDef(description="A human individual", properties=["role"]),
+        },
+        relation_types={
+            "leads": tb.RelationTypeDef(
+                description="Person leads a project",
+                source_type="person",
+                target_type="project",
+            ),
+        },
+    )
+    ```
+    """
+
+    entity_types: dict[str, EntityTypeDef] = field(default_factory=dict)
+    relation_types: dict[str, RelationTypeDef] = field(default_factory=dict)
+
+    # ------------------------------------------------------------------
+    # Ancestry / inheritance helpers
+    # ------------------------------------------------------------------
+
+    def ancestors(self, entity_type: str) -> list[str]:
+        """Return the parent chain for *entity_type* (excluding itself).
+
+        Examples
+        --------
+        ```python
+        ontology.ancestors("project")  # ["initiative"] if project.parent == "initiative"
+        ```
+        """
+        chain: list[str] = []
+        current = entity_type
+        visited: set[str] = {current}
+        while True:
+            etd = self.entity_types.get(current)
+            if etd is None or etd.parent is None:
+                break
+            if etd.parent in visited:
+                break  # prevent cycles
+            chain.append(etd.parent)
+            visited.add(etd.parent)
+            current = etd.parent
+        return chain
+
+    def is_subtype(self, child: str, parent: str) -> bool:
+        """Check whether *child* is the same as or a subtype of *parent*.
+
+        Examples
+        --------
+        ```python
+        ontology.is_subtype("project", "initiative")  # True if project inherits from initiative
+        ```
+        """
+        if child == parent:
+            return True
+        return parent in self.ancestors(child)
+
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    def validate_node(self, node: Node) -> list[str]:
+        """Validate a node against the ontology.
+
+        Only ENTITY nodes are validated (documents, topics, and decisions
+        are always accepted).
+
+        Returns
+        -------
+        list[str]
+            Warning messages.  Empty list means valid.
+        """
+        msgs: list[str] = []
+        if node.node_type != NodeType.ENTITY:
+            return msgs
+        entity_type = node.metadata.get("entity_type", "")
+        if not entity_type:
+            return msgs  # no entity_type metadata → nothing to validate
+        if self.entity_types and entity_type not in self.entity_types:
+            msgs.append(
+                f"Entity type '{entity_type}' not in ontology "
+                f"(known: {', '.join(sorted(self.entity_types))})"
+            )
+        etd = self.entity_types.get(entity_type)
+        if etd is not None and etd.properties:
+            for key in node.metadata:
+                if key.startswith("_") or key == "entity_type":
+                    continue
+                if key not in etd.properties:
+                    msgs.append(
+                        f"Metadata key '{key}' not in allowed properties "
+                        f"for entity type '{entity_type}'"
+                    )
+        return msgs
+
+    def validate_edge(
+        self, edge: Edge, *, source_node: Node | None = None, target_node: Node | None = None
+    ) -> list[str]:
+        """Validate an edge against the ontology.
+
+        Parameters
+        ----------
+        edge
+            The edge to validate.
+        source_node
+            The source node (used to check type constraints).
+        target_node
+            The target node (used to check type constraints).
+
+        Returns
+        -------
+        list[str]
+            Warning messages.  Empty list means valid.
+        """
+        msgs: list[str] = []
+        if not self.relation_types:
+            return msgs
+        rtd = self.relation_types.get(edge.relation)
+        if rtd is None:
+            # Unknown relation — not an error, just not typed
+            return msgs
+        if rtd.source_type is not None and source_node is not None:
+            src_et = source_node.metadata.get("entity_type", "")
+            if src_et and not self.is_subtype(src_et, rtd.source_type):
+                msgs.append(
+                    f"Relation '{edge.relation}' expects source type "
+                    f"'{rtd.source_type}', got '{src_et}'"
+                )
+        if rtd.target_type is not None and target_node is not None:
+            tgt_et = target_node.metadata.get("entity_type", "")
+            if tgt_et and not self.is_subtype(tgt_et, rtd.target_type):
+                msgs.append(
+                    f"Relation '{edge.relation}' expects target type "
+                    f"'{rtd.target_type}', got '{tgt_et}'"
+                )
+        return msgs
+
+    # ------------------------------------------------------------------
+    # Serialisation
+    # ------------------------------------------------------------------
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the ontology to a dictionary."""
+        return {
+            "entity_types": {k: v.to_dict() for k, v in self.entity_types.items()},
+            "relation_types": {k: v.to_dict() for k, v in self.relation_types.items()},
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> Ontology:
+        """Deserialize an ontology from a dictionary."""
+        return cls(
+            entity_types={
+                k: EntityTypeDef.from_dict(v) for k, v in d.get("entity_types", {}).items()
+            },
+            relation_types={
+                k: RelationTypeDef.from_dict(v) for k, v in d.get("relation_types", {}).items()
+            },
+        )
+
+
+def general_ontology() -> Ontology:
+    """Return a starter ontology with common entity and relation types.
+
+    Provides a reasonable default for general-purpose knowledge graphs.
+
+    Examples
+    --------
+    ```python
+    import talk_box as tb
+
+    ontology = tb.general_ontology()
+    "person" in ontology.entity_types  # True
+    ```
+    """
+    return Ontology(
+        entity_types={
+            "person": EntityTypeDef(
+                description="A human individual",
+                properties=["role", "team", "email", "title"],
+            ),
+            "organization": EntityTypeDef(
+                description="A company, team, or institutional body",
+                properties=["industry", "size", "location"],
+            ),
+            "project": EntityTypeDef(
+                description="A planned initiative with a timeline and deliverables",
+                properties=["status", "start_date", "end_date"],
+            ),
+            "concept": EntityTypeDef(
+                description="An abstract idea, theory, or domain term",
+                properties=["domain", "definition"],
+            ),
+            "event": EntityTypeDef(
+                description="A discrete occurrence at a point or range in time",
+                properties=["date", "location", "duration"],
+            ),
+            "location": EntityTypeDef(
+                description="A physical or logical place",
+                properties=["coordinates", "region", "type"],
+            ),
+            "technology": EntityTypeDef(
+                description="A software tool, language, framework, or platform",
+                properties=["category", "version", "url"],
+            ),
+            "metric": EntityTypeDef(
+                description="A measurable business or technical quantity",
+                properties=["unit", "direction"],
+            ),
+        },
+        relation_types={
+            "leads": RelationTypeDef(
+                description="Person is the lead/owner of a project",
+                source_type="person",
+                target_type="project",
+            ),
+            "works_at": RelationTypeDef(
+                description="Person is employed by an organization",
+                source_type="person",
+                target_type="organization",
+            ),
+            "works_on": RelationTypeDef(
+                description="Person contributes to a project",
+                source_type="person",
+                target_type="project",
+            ),
+            "located_in": RelationTypeDef(
+                description="Entity is situated in a location",
+                target_type="location",
+            ),
+            "related_to": RelationTypeDef(
+                description="General semantic relationship between any two entities",
+            ),
+            "drives": RelationTypeDef(
+                description="One metric causally influences another",
+                source_type="metric",
+                target_type="metric",
+                properties=["strength", "lag_days"],
+            ),
+            "part_of": RelationTypeDef(
+                description="Entity is a component of another entity",
+            ),
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
 # SQL schema
 # ---------------------------------------------------------------------------
 
@@ -237,6 +605,13 @@ CREATE INDEX IF NOT EXISTS idx_nodes_layer ON nodes (layer)
 
 _CREATE_EDGES_LAYER_IDX = """
 CREATE INDEX IF NOT EXISTS idx_edges_layer ON edges (layer)
+"""
+
+_CREATE_META_SQL = """
+CREATE TABLE IF NOT EXISTS _meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL DEFAULT '{}'
+)
 """
 
 
@@ -298,13 +673,27 @@ class KnowledgeGraph:
     ```
     """
 
-    def __init__(self, path: str | Path = ":memory:", *, name: str = "") -> None:
+    def __init__(
+        self,
+        path: str | Path = ":memory:",
+        *,
+        name: str = "",
+        ontology: Ontology | None = None,
+        strict: bool = False,
+    ) -> None:
         self._path = str(path)
         self._name = name
+        self._strict = strict
         self._conn = sqlite3.connect(self._path)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")
         self._init_schema()
+        # Load or store ontology
+        if ontology is not None:
+            self._ontology = ontology
+            self._save_ontology()
+        else:
+            self._ontology = self._load_ontology()
 
     @property
     def name(self) -> str:
@@ -315,6 +704,7 @@ class KnowledgeGraph:
         """Create tables and indexes if they don't exist."""
         self._conn.execute(_CREATE_NODES_SQL)
         self._conn.execute(_CREATE_EDGES_SQL)
+        self._conn.execute(_CREATE_META_SQL)
         self._migrate_add_layer()
         self._conn.execute(_CREATE_NODES_TYPE_IDX)
         self._conn.execute(_CREATE_NODES_NAME_IDX)
@@ -336,6 +726,77 @@ class KnowledgeGraph:
         if "layer" not in edge_cols:
             self._conn.execute("ALTER TABLE edges ADD COLUMN layer TEXT NOT NULL DEFAULT 'base'")
 
+    # ------------------------------------------------------------------
+    # Ontology
+    # ------------------------------------------------------------------
+
+    @property
+    def ontology(self) -> Ontology:
+        """The ontology associated with this graph."""
+        return self._ontology
+
+    def set_ontology(self, ontology: Ontology) -> None:
+        """Replace the graph's ontology.
+
+        Parameters
+        ----------
+        ontology
+            The new ontology to set.
+
+        Examples
+        --------
+        ```python
+        kg.set_ontology(tb.general_ontology())
+        ```
+        """
+        self._ontology = ontology
+        self._save_ontology()
+
+    def _save_ontology(self) -> None:
+        """Persist the current ontology to the _meta table."""
+        data = json.dumps(self._ontology.to_dict())
+        self._conn.execute(
+            "INSERT INTO _meta (key, value) VALUES ('ontology', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (data,),
+        )
+        self._conn.commit()
+
+    def _load_ontology(self) -> Ontology:
+        """Load ontology from the _meta table, or return empty ontology."""
+        row = self._conn.execute("SELECT value FROM _meta WHERE key = 'ontology'").fetchone()
+        if row is None:
+            return Ontology()
+        return Ontology.from_dict(json.loads(row[0]))
+
+    def _validate_node(self, node: Node) -> None:
+        """Run ontology validation on a node; warn or raise."""
+        if not self._ontology.entity_types and not self._ontology.relation_types:
+            return
+        msgs = self._ontology.validate_node(node)
+        if msgs:
+            combined = "; ".join(msgs)
+            if self._strict:
+                raise ValueError(combined)
+            warnings.warn(combined, stacklevel=3)
+
+    def _validate_edge(
+        self,
+        edge: Edge,
+        *,
+        source_node: Node | None = None,
+        target_node: Node | None = None,
+    ) -> None:
+        """Run ontology validation on an edge; warn or raise."""
+        if not self._ontology.relation_types:
+            return
+        msgs = self._ontology.validate_edge(edge, source_node=source_node, target_node=target_node)
+        if msgs:
+            combined = "; ".join(msgs)
+            if self._strict:
+                raise ValueError(combined)
+            warnings.warn(combined, stacklevel=3)
+
     @property
     def path(self) -> str:
         """Path to the SQLite database file."""
@@ -348,10 +809,19 @@ class KnowledgeGraph:
     def add_node(self, node: Node) -> None:
         """Add a node to the graph, or update it if the ID already exists.
 
+        If the graph has an ontology, the node is validated first.
+        In strict mode a :class:`ValueError` is raised on violations;
+        otherwise a warning is emitted.
+
         Parameters
         ----------
         node
             The node to add or update.
+
+        Raises
+        ------
+        ValueError
+            If validation fails and ``strict=True``.
 
         Examples
         --------
@@ -363,6 +833,7 @@ class KnowledgeGraph:
         ))
         ```
         """
+        self._validate_node(node)
         embedding_blob = _floats_to_blob(node.embedding) if node.embedding is not None else None
         self._conn.execute(
             """
@@ -506,6 +977,10 @@ class KnowledgeGraph:
     def add_edge(self, edge: Edge) -> None:
         """Add an edge to the graph, or update it if the key already exists.
 
+        If the graph has an ontology, the edge is validated first.
+        In strict mode a :class:`ValueError` is raised on violations;
+        otherwise a warning is emitted.
+
         Parameters
         ----------
         edge
@@ -516,11 +991,17 @@ class KnowledgeGraph:
         ------
         KeyError
             If source or target node does not exist.
+        ValueError
+            If validation fails and ``strict=True``.
         """
         # Verify both nodes exist
-        for nid in (edge.source, edge.target):
-            if self.get_node(nid) is None:
+        source_node = self.get_node(edge.source)
+        target_node = self.get_node(edge.target)
+        for nid, n in ((edge.source, source_node), (edge.target, target_node)):
+            if n is None:
                 raise KeyError(f"Node '{nid}' not found in graph")
+
+        self._validate_edge(edge, source_node=source_node, target_node=target_node)
 
         self._conn.execute(
             """
