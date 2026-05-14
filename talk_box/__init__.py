@@ -144,6 +144,7 @@ from talk_box.knowledge_graph import (
     NodeType,
     Ontology,
     RelationTypeDef,
+    Subgraph,
     cosine_similarity,
     general_ontology,
 )
@@ -405,6 +406,7 @@ __all__ = [
     "EntityTypeDef",
     "RelationTypeDef",
     "general_ontology",
+    "Subgraph",
     "Node",
     "Edge",
     "NodeType",

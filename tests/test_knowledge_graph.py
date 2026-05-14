@@ -11,6 +11,7 @@ from talk_box.knowledge_graph import (
     NodeType,
     Ontology,
     RelationTypeDef,
+    Subgraph,
     _blob_to_floats,
     _floats_to_blob,
     cosine_similarity,
@@ -1439,3 +1440,198 @@ class TestKGOntologyIntegration:
         kg.add_edge(Edge(source="p1", target="pr1", relation="leads"))
         assert kg.get_node("p1") is not None
         assert len(kg.get_edges("p1", direction="outgoing")) == 1
+
+
+# ---------------------------------------------------------------------------
+# Subgraph
+# ---------------------------------------------------------------------------
+
+
+def _build_sample_graph(tmp_path):
+    """Helper: create a graph with docs, entities, topics, and edges."""
+    kg = KnowledgeGraph(tmp_path / "test.db")
+    kg.add_node(
+        Node(
+            id="d1",
+            node_type=NodeType.DOCUMENT,
+            name="Q3 planning notes",
+            content="The Q3 campaign targets a 15% revenue lift.",
+        )
+    )
+    kg.add_node(
+        Node(
+            id="d2",
+            node_type=NodeType.DOCUMENT,
+            name="Revenue dashboard spec",
+            content="Net revenue is calculated as gross minus returns.",
+        )
+    )
+    kg.add_node(
+        Node(
+            id="e1",
+            node_type=NodeType.ENTITY,
+            name="Q3 Campaign",
+            metadata={"entity_type": "project", "status": "active"},
+        )
+    )
+    kg.add_node(
+        Node(
+            id="e2",
+            node_type=NodeType.ENTITY,
+            name="Revenue Ledger",
+            metadata={"entity_type": "metric", "unit": "USD"},
+        )
+    )
+    kg.add_node(
+        Node(
+            id="e3",
+            node_type=NodeType.ENTITY,
+            name="Sarah Chen",
+            metadata={"entity_type": "person", "role": "CMO"},
+        )
+    )
+    kg.add_node(Node(id="t1", node_type=NodeType.TOPIC, name="revenue"))
+    # Edges
+    kg.add_edge(Edge(source="d1", target="e1", relation="mentions"))
+    kg.add_edge(Edge(source="d1", target="t1", relation="belongs_to"))
+    kg.add_edge(Edge(source="d2", target="e2", relation="mentions"))
+    kg.add_edge(Edge(source="d2", target="t1", relation="belongs_to"))
+    kg.add_edge(
+        Edge(source="e1", target="e2", relation="drives", weight=0.7, metadata={"strength": "0.7"})
+    )
+    kg.add_edge(Edge(source="e3", target="e1", relation="leads"))
+    return kg
+
+
+class TestSubgraphDataclass:
+    def test_empty_subgraph(self):
+        sg = Subgraph(query="test")
+        assert sg.nodes == []
+        assert sg.edges == []
+        assert sg.seed_ids == []
+
+    def test_to_context_plain_empty(self):
+        sg = Subgraph(query="test")
+        text = sg.to_context(format="plain")
+        assert "[Knowledge Context: test]" in text
+
+    def test_to_context_typed_empty(self):
+        sg = Subgraph(query="test")
+        text = sg.to_context(format="typed")
+        assert "[Knowledge Context]" in text
+
+
+class TestExtractSubgraph:
+    def test_basic_extraction(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("revenue")
+        assert len(sg.nodes) > 0
+        assert len(sg.seed_ids) > 0
+        assert sg.query == "revenue"
+
+    def test_seed_ids_are_direct_matches(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("Q3 Campaign")
+        # d1 and e1 both contain "Q3 Campaign" in name or content
+        seed_names = {n.name for n in sg.nodes if n.id in sg.seed_ids}
+        assert "Q3 Campaign" in seed_names or "Q3 planning notes" in seed_names
+
+    def test_expansion_finds_neighbors(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("Q3 Campaign", max_hops=1)
+        node_ids = {n.id for n in sg.nodes}
+        # e1 (Q3 Campaign) should be a seed, and its neighbors should be expanded
+        assert "e1" in node_ids
+        # d1 mentions e1, so should be expanded
+        assert "d1" in node_ids or "e2" in node_ids or "e3" in node_ids
+
+    def test_expansion_max_hops_zero(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("Q3 Campaign", max_hops=0)
+        # With 0 hops, only direct matches
+        node_ids = {n.id for n in sg.nodes}
+        assert node_ids == set(sg.seed_ids)
+
+    def test_max_nodes_limits_output(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("revenue", max_hops=3, max_nodes=2)
+        assert len(sg.nodes) <= 2
+
+    def test_edges_only_between_subgraph_nodes(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("revenue", max_hops=2)
+        node_ids = {n.id for n in sg.nodes}
+        for edge in sg.edges:
+            assert edge.source in node_ids
+            assert edge.target in node_ids
+
+    def test_no_results_returns_empty_subgraph(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("nonexistent_xyzzy")
+        assert sg.nodes == []
+        assert sg.edges == []
+        assert sg.seed_ids == []
+
+    def test_layer_filter(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        kg.add_node(
+            Node(
+                id="en1",
+                node_type=NodeType.ENTITY,
+                name="revenue growth",
+                layer=GraphLayer.ENRICHMENT,
+            )
+        )
+        sg = kg.extract_subgraph("revenue", layer=GraphLayer.ENRICHMENT, max_hops=0)
+        assert all(n.layer == GraphLayer.ENRICHMENT for n in sg.nodes if n.id in sg.seed_ids)
+
+
+class TestSubgraphToContext:
+    def test_typed_format_structure(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("revenue", max_hops=2)
+        text = sg.to_context()
+        assert "[Knowledge Context]" in text
+
+    def test_typed_format_with_ontology(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("Q3 Campaign", max_hops=1)
+        o = general_ontology()
+        text = sg.to_context(ontology=o)
+        assert "Types:" in text
+        assert "project" in text
+
+    def test_typed_format_entities_section(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("Q3 Campaign", max_hops=1)
+        text = sg.to_context()
+        assert "Entities:" in text
+        assert "Q3 Campaign" in text
+
+    def test_typed_format_relationships_section(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("Q3 Campaign", max_hops=1)
+        text = sg.to_context()
+        if sg.edges:
+            assert "Relationships:" in text
+
+    def test_typed_format_sources_section(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("Q3", max_hops=0)
+        text = sg.to_context()
+        assert "Sources:" in text
+        assert "Q3 planning notes" in text
+
+    def test_plain_format(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("revenue", max_hops=1)
+        text = sg.to_context(format="plain")
+        assert "[Knowledge Context: revenue]" in text
+
+    def test_max_tokens_truncation(self, tmp_path):
+        kg = _build_sample_graph(tmp_path)
+        sg = kg.extract_subgraph("revenue", max_hops=2)
+        text = sg.to_context(max_tokens=10)
+        # 10 tokens ≈ 40 chars, should be truncated
+        assert len(text) <= 50  # small budget + truncation overhead
+        assert text.endswith("...")

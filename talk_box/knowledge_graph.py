@@ -548,6 +548,179 @@ def general_ontology() -> Ontology:
 
 
 # ---------------------------------------------------------------------------
+# Subgraph
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Subgraph:
+    """A slice of a knowledge graph returned by :meth:`KnowledgeGraph.extract_subgraph`.
+
+    Contains the matched/expanded nodes, connecting edges, the original
+    query, and which node IDs were direct search hits (seeds).
+
+    Parameters
+    ----------
+    nodes
+        Nodes included in the subgraph.
+    edges
+        Edges whose *both* endpoints are in ``nodes``.
+    seed_ids
+        IDs of the initial search-hit nodes (before expansion).
+    query
+        The original search query.
+
+    Examples
+    --------
+    ```python
+    sg = kg.extract_subgraph("revenue")
+    sg.to_context()
+    ```
+    """
+
+    nodes: list[Node] = field(default_factory=list)
+    edges: list[Edge] = field(default_factory=list)
+    seed_ids: list[str] = field(default_factory=list)
+    query: str = ""
+
+    # ------------------------------------------------------------------
+    # Serialisation
+    # ------------------------------------------------------------------
+
+    def to_context(
+        self,
+        *,
+        format: str = "typed",
+        max_tokens: int | None = None,
+        ontology: Ontology | None = None,
+    ) -> str:
+        """Serialise the subgraph into an LLM-readable text block.
+
+        Parameters
+        ----------
+        format
+            ``"typed"`` (default) produces a structured block with entity
+            types and relationships.  ``"plain"`` produces a simpler flat
+            list.
+        max_tokens
+            Approximate token budget (4 chars ≈ 1 token).  ``None`` means
+            no limit.
+        ontology
+            If provided, type descriptions are prepended so the LLM
+            understands domain semantics.
+
+        Returns
+        -------
+        str
+            A text block suitable for injection into an LLM prompt.
+
+        Examples
+        --------
+        ```python
+        context = sg.to_context(max_tokens=2000)
+        ```
+        """
+        if format == "plain":
+            return self._to_plain(max_tokens=max_tokens)
+        return self._to_typed(max_tokens=max_tokens, ontology=ontology)
+
+    def _to_typed(
+        self,
+        *,
+        max_tokens: int | None = None,
+        ontology: Ontology | None = None,
+    ) -> str:
+        sections: list[str] = ["[Knowledge Context]"]
+
+        # Types section (from ontology)
+        if ontology is not None:
+            entity_types_seen: set[str] = set()
+            for node in self.nodes:
+                et = node.metadata.get("entity_type", "")
+                if et and et in ontology.entity_types:
+                    entity_types_seen.add(et)
+            if entity_types_seen:
+                type_parts = []
+                for et in sorted(entity_types_seen):
+                    desc = ontology.entity_types[et].description
+                    type_parts.append(f"{et} ({desc})" if desc else et)
+                sections.append(f"Types: {', '.join(type_parts)}")
+
+        # Entities section (non-document nodes)
+        entity_lines: list[str] = []
+        doc_lines: list[str] = []
+        for node in self.nodes:
+            if node.node_type == NodeType.DOCUMENT:
+                preview = node.content[:200].replace("\n", " ").strip()
+                doc_lines.append(f'- "{node.name}" (doc): "{preview}"')
+            elif node.node_type in (NodeType.ENTITY, NodeType.TOPIC):
+                et = node.metadata.get("entity_type", node.node_type.value)
+                props = {
+                    k: v
+                    for k, v in node.metadata.items()
+                    if not k.startswith("_") and k != "entity_type"
+                }
+                prop_str = ", ".join(f"{k}={v}" for k, v in props.items())
+                label = f"- {node.name} [{et}]"
+                if prop_str:
+                    label += f": {prop_str}"
+                entity_lines.append(label)
+
+        if entity_lines:
+            sections.append("")
+            sections.append("Entities:")
+            sections.extend(entity_lines)
+
+        # Relationships section
+        if self.edges:
+            rel_lines: list[str] = []
+            node_map = {n.id: n for n in self.nodes}
+            for edge in self.edges:
+                src_name = node_map[edge.source].name if edge.source in node_map else edge.source
+                tgt_name = node_map[edge.target].name if edge.target in node_map else edge.target
+                meta_parts = {k: v for k, v in edge.metadata.items() if not k.startswith("_")}
+                meta_str = (
+                    f" ({', '.join(f'{k}={v}' for k, v in meta_parts.items())})"
+                    if meta_parts
+                    else ""
+                )
+                rel_lines.append(f"- {src_name} --[{edge.relation}]--> {tgt_name}{meta_str}")
+            sections.append("")
+            sections.append("Relationships:")
+            sections.extend(rel_lines)
+
+        # Sources section (documents)
+        if doc_lines:
+            sections.append("")
+            sections.append("Sources:")
+            sections.extend(doc_lines)
+
+        text = "\n".join(sections)
+
+        if max_tokens is not None:
+            char_budget = max_tokens * 4
+            if len(text) > char_budget:
+                text = text[:char_budget].rsplit("\n", 1)[0] + "\n..."
+
+        return text
+
+    def _to_plain(self, *, max_tokens: int | None = None) -> str:
+        lines: list[str] = [f"[Knowledge Context: {self.query}]"]
+        for node in self.nodes:
+            preview = node.content[:200].replace("\n", " ").strip() if node.content else ""
+            line = f"- {node.name} ({node.node_type.value})"
+            if preview:
+                line += f": {preview}"
+            lines.append(line)
+        text = "\n".join(lines)
+        if max_tokens is not None:
+            char_budget = max_tokens * 4
+            if len(text) > char_budget:
+                text = text[:char_budget].rsplit("\n", 1)[0] + "\n..."
+        return text
+
+
+# ---------------------------------------------------------------------------
 # SQL schema
 # ---------------------------------------------------------------------------
 
@@ -1209,6 +1382,116 @@ class KnowledgeGraph:
 
         rows = self._conn.execute(sql, params).fetchall()
         return [_row_to_node(r) for r in rows]
+
+    # ------------------------------------------------------------------
+    # Subgraph extraction
+    # ------------------------------------------------------------------
+
+    def extract_subgraph(
+        self,
+        query: str,
+        *,
+        max_hops: int = 2,
+        max_nodes: int = 30,
+        node_type: NodeType | None = None,
+        layer: GraphLayer | None = None,
+        include_ontology: bool = False,
+    ) -> Subgraph:
+        """Extract a relevant subgraph for a query.
+
+        Pipeline: **match → expand → rank → prune**.
+
+        Parameters
+        ----------
+        query
+            Text query to find seed nodes.
+        max_hops
+            How many edge-hops to expand from each seed (default 2).
+        max_nodes
+            Maximum nodes in the returned subgraph (default 30).
+        node_type
+            Optional filter applied during the initial search.
+        layer
+            Optional layer filter applied during the initial search.
+        include_ontology
+            If ``True``, the graph's ontology is attached to the
+            returned :class:`Subgraph` for use by
+            :meth:`Subgraph.to_context`.
+
+        Returns
+        -------
+        Subgraph
+            The extracted subgraph with nodes, edges, and seed IDs.
+
+        Examples
+        --------
+        ```python
+        sg = kg.extract_subgraph("revenue", max_hops=2, max_nodes=20)
+        context = sg.to_context(ontology=kg.ontology)
+        ```
+        """
+        # 1. Match — find seed nodes via substring search
+        seeds = self.search(query, node_type=node_type, layer=layer, limit=max_nodes)
+        seed_ids = [n.id for n in seeds]
+
+        if not seeds:
+            return Subgraph(query=query, seed_ids=[])
+
+        # 2. Expand — BFS up to max_hops
+        collected: dict[str, Node] = {n.id: n for n in seeds}
+        frontier: set[str] = set(seed_ids)
+
+        for _hop in range(max_hops):
+            next_frontier: set[str] = set()
+            for nid in frontier:
+                for neighbor in self.neighbors(nid, direction="both"):
+                    if neighbor.id not in collected:
+                        collected[neighbor.id] = neighbor
+                        next_frontier.add(neighbor.id)
+            frontier = next_frontier
+            if not frontier:
+                break
+
+        # 3. Rank — score each node
+        query_lower = query.lower()
+        scored: list[tuple[float, str]] = []
+        for nid, node in collected.items():
+            score = 0.0
+            # (a) Direct seed bonus
+            if nid in seed_ids:
+                score += 10.0
+            # (b) Name relevance
+            if query_lower in node.name.lower():
+                score += 5.0
+            # (c) Content relevance
+            if query_lower in node.content.lower():
+                score += 2.0
+            # (d) Freshness bonus (newer is better)
+            score += min(node.updated_at / 1e10, 1.0)
+            scored.append((score, nid))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        # 4. Prune — keep top max_nodes
+        keep_ids = {nid for _, nid in scored[:max_nodes]}
+        final_nodes = [collected[nid] for _, nid in scored[:max_nodes]]
+
+        # Collect edges where both endpoints are in the subgraph
+        final_edges: list[Edge] = []
+        seen_edges: set[tuple[str, str, str]] = set()
+        for nid in keep_ids:
+            for edge in self.get_edges(nid, direction="both"):
+                key = (edge.source, edge.target, edge.relation)
+                if edge.source in keep_ids and edge.target in keep_ids and key not in seen_edges:
+                    final_edges.append(edge)
+                    seen_edges.add(key)
+
+        return Subgraph(
+            nodes=final_nodes,
+            edges=final_edges,
+            seed_ids=seed_ids,
+            query=query,
+        )
 
     # ------------------------------------------------------------------
     # Stats / health
