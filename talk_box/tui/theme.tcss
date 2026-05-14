@@ -1028,21 +1028,42 @@ SessionHistoryModal {
 
 /* -- Knowledge Graph screen ----------------------------------------------- */
 
-#kg-layout {
+#kg-sources-pane {
+    width: 2fr;
+    padding: 1 2;
+}
+
+#kg-status-pane {
     width: 3fr;
     padding: 1 2;
+    border-left: solid $primary-background;
 }
 
 #kg-outer {
     height: 1fr;
 }
 
-#kg-title {
+#kg-sources-title {
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#kg-status-title {
     text-style: bold;
     padding: 0 0 1 0;
 }
 
 #kg-stats {
+    height: auto;
+    padding: 0 0 1 0;
+}
+
+#kg-layer-counts {
+    height: auto;
+    padding: 0 0 1 0;
+}
+
+#kg-health-info {
     height: auto;
     padding: 0 0 1 0;
 }
@@ -1054,6 +1075,11 @@ SessionHistoryModal {
 
 #kg-actions Button {
     margin: 0 1 0 0;
+}
+
+#kg-model-row {
+    height: auto;
+    padding: 0 0 1 0;
 }
 
 #kg-table {
@@ -1070,7 +1096,45 @@ SessionHistoryModal {
     padding: 0 1;
 }
 
-/* Enrichment panel (right sidebar) */
+#kg-extracted-scroll {
+    height: 1fr;
+    max-height: 16;
+    padding: 0 0 1 0;
+}
+
+#kg-extracted-content {
+    padding: 0 1;
+}
+
+#kg-decisions-scroll {
+    height: auto;
+    max-height: 8;
+    padding: 0 0 1 0;
+}
+
+#kg-decisions-content {
+    padding: 0 1;
+}
+
+#kg-export-actions {
+    height: auto;
+    padding: 1 0 0 0;
+}
+
+#kg-export-actions Button {
+    margin: 0 1 0 0;
+}
+
+#kg-clear-actions {
+    height: auto;
+    padding: 0 0 0 0;
+}
+
+#kg-clear-actions Button {
+    margin: 0 1 0 0;
+}
+
+/* Enrichment panel (hidden sidebar) */
 #kg-enrich-panel {
     width: 2fr;
     padding: 1 2;

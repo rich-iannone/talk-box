@@ -5994,7 +5994,11 @@ class SkillScreen(Screen):
 
 
 class KnowledgeScreen(Screen):
-    """Explore the knowledge graph and inspect nodes."""
+    """Explore the knowledge graph — two-pane layout.
+
+    Left pane (Sources): user-curated documents with add/delete/re-enrich.
+    Right pane (Graph Status): system-processed state, metrics, export/import.
+    """
 
     BINDINGS = [
         Binding("a", "add_note", "Add Note"),
@@ -6005,7 +6009,8 @@ class KnowledgeScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
         with Horizontal(id="kg-outer"):
-            with Vertical(id="kg-layout"):
+            # ---------- Left pane: Sources ----------
+            with Vertical(id="kg-sources-pane"):
                 yield Button("← Home", id="kg-back-btn", variant="default", classes="back-home-btn")
                 with Horizontal(id="kg-graph-picker"):
                     yield Select(
@@ -6014,30 +6019,53 @@ class KnowledgeScreen(Screen):
                         id="kg-graph-select",
                         allow_blank=False,
                     )
-                    yield Button("+ New Graph", id="kg-new-graph-btn", variant="success")
+                    yield Button("+ New", id="kg-new-graph-btn", variant="success")
                     yield Button("🗑 Delete", id="kg-delete-graph-btn", variant="error")
                     yield Button("★ Default", id="kg-set-default-btn", variant="default")
-                with Horizontal(id="kg-stats"):
-                    yield Static("", id="kg-stats-content")
+                with Horizontal(id="kg-model-row"):
+                    yield Select(
+                        [],
+                        prompt="Select model…",
+                        id="kg-model-select",
+                        allow_blank=True,
+                    )
+                yield Static("[b]SOURCES[/b]  [dim](you)[/dim]", id="kg-sources-title")
                 with Horizontal(id="kg-actions"):
-                    yield Button("+ Add Note (a)", id="kg-add-note-btn", variant="primary")
-                    yield Button("+ Add File (f)", id="kg-add-file-btn", variant="default")
+                    yield Button("+ Note (a)", id="kg-add-note-btn", variant="primary")
+                    yield Button("+ File (f)", id="kg-add-file-btn", variant="default")
                     yield Button("Enrich (e)", id="kg-enrich-btn", variant="warning")
                 yield DataTable(id="kg-table")
                 with VerticalScroll(id="kg-detail-scroll"):
                     yield Static("", id="kg-detail")
+                yield Static("", id="kg-enrich-status")
+
+            # ---------- Right pane: Graph Status ----------
+            with Vertical(id="kg-status-pane"):
+                yield Static("[b]GRAPH STATUS[/b]  [dim](system)[/dim]", id="kg-status-title")
+                with Horizontal(id="kg-stats"):
+                    yield Static("", id="kg-stats-content")
+                yield Static("", id="kg-layer-counts")
+                yield Static("", id="kg-health-info")
+                yield Static("[b]Entities & Topics[/b]", id="kg-extracted-title")
+                with VerticalScroll(id="kg-extracted-scroll"):
+                    yield Static("", id="kg-extracted-content")
+                yield Static("[b]Decisions[/b]", id="kg-decisions-title")
+                with VerticalScroll(id="kg-decisions-scroll"):
+                    yield Static("", id="kg-decisions-content")
+                with Horizontal(id="kg-export-actions"):
+                    yield Button("Export Base", id="kg-export-base-btn", variant="default")
+                    yield Button("Export All", id="kg-export-all-btn", variant="default")
+                    yield Button("Import .kg", id="kg-import-btn", variant="default")
+                with Horizontal(id="kg-clear-actions"):
+                    yield Button("Clear Enrichment", id="kg-clear-enrichment-btn", variant="warning")
+                    yield Button("Clear Decisions", id="kg-clear-decisions-btn", variant="warning")
+
+            # ---------- Hidden: Enrichment / Chat sidebar ----------
             with Vertical(id="kg-enrich-panel"):
                 yield Static("[b]Enrichment[/b]", id="kg-enrich-title")
-                yield Select(
-                    [],
-                    prompt="Select model…",
-                    id="kg-model-select",
-                    allow_blank=True,
-                )
                 with Horizontal(id="kg-enrich-target"):
                     yield Button("Enrich Selected", id="kg-enrich-selected-btn", variant="primary")
                     yield Button("Enrich All", id="kg-enrich-all-btn", variant="default")
-                yield Static("", id="kg-enrich-status")
                 yield Static("[b]Chat[/b]  [dim]Ask about documents[/dim]", id="kg-chat-title")
                 with VerticalScroll(id="kg-chat-log"):
                     yield Static("", id="kg-chat-messages")
@@ -6048,7 +6076,7 @@ class KnowledgeScreen(Screen):
         """Populate the knowledge graph summary."""
         table = self.query_one("#kg-table", DataTable)
         table.cursor_type = "row"
-        table.add_columns("ID", "Type", "Name", "")
+        table.add_columns("ID", "Name", "Status", "")
 
         # Hide enrichment panel by default
         self.query_one("#kg-enrich-panel").display = False
@@ -6134,31 +6162,101 @@ class KnowledgeScreen(Screen):
             self._update_stats_and_table()
 
     def _update_stats_and_table(self) -> None:
-        """Refresh stats and table for the current graph."""
+        """Refresh stats, table, and graph-status pane for the current graph."""
         table = self.query_one("#kg-table", DataTable)
         table.clear()
         if self._kg is None:
             self.query_one("#kg-stats-content", Static).update(
                 "  [dim]No knowledge graph loaded[/dim]"
             )
+            self.query_one("#kg-layer-counts", Static).update("")
+            self.query_one("#kg-health-info", Static).update("")
+            self.query_one("#kg-extracted-content", Static).update("")
+            self.query_one("#kg-decisions-content", Static).update("")
             return
         try:
-            from talk_box.knowledge_graph import NodeType
+            from talk_box.knowledge_graph import GraphLayer, NodeType
 
             docs = self._kg.node_count(node_type=NodeType.DOCUMENT)
             entities = self._kg.node_count(node_type=NodeType.ENTITY)
             topics = self._kg.node_count(node_type=NodeType.TOPIC)
+            decisions = self._kg.node_count(node_type=NodeType.DECISION)
             edges = self._kg.edge_count()
 
             graph_label = self._kg.name or "unnamed"
-            stats = (
-                f"  [b]{graph_label}[/b]  |  Documents: {docs}  |  Entities: {entities}  |  "
+
+            # --- Stats summary ---
+            stats_text = (
+                f"  [b]{graph_label}[/b]  |  "
+                f"Documents: {docs}  |  Entities: {entities}  |  "
                 f"Topics: {topics}  |  Edges: {edges}"
             )
-            self.query_one("#kg-stats-content", Static).update(stats)
+            self.query_one("#kg-stats-content", Static).update(stats_text)
 
-            for node in self._kg.list_nodes(limit=50):
-                table.add_row(node.id, node.node_type.value, node.name, "🗑", key=node.id)
+            # --- Layer breakdown ---
+            base_n = self._kg.node_count(layer=GraphLayer.BASE)
+            enrich_n = self._kg.node_count(layer=GraphLayer.ENRICHMENT)
+            ext_n = self._kg.node_count(layer=GraphLayer.EXTENDED)
+            ontology_info = ""
+            if self._kg.ontology and self._kg.ontology.entity_types:
+                et_count = len(self._kg.ontology.entity_types)
+                ontology_info = f"  Ontology: {et_count} entity type(s)\n"
+            layer_text = (
+                f"{ontology_info}"
+                f"  Layer: base {base_n} │ enriched {enrich_n} │ extended {ext_n}"
+            )
+            self.query_one("#kg-layer-counts", Static).update(layer_text)
+
+            # --- Health ---
+            try:
+                h = self._kg.health()
+                orphans = h.get("orphan_nodes", 0)
+                connected = h.get("connected_nodes", 0)
+                emb_cov = h.get("embedding_coverage", 0.0)
+                health_text = (
+                    f"  Health: {connected} connected, {orphans} orphans  |  "
+                    f"Embeddings: {emb_cov:.0%}"
+                )
+                self.query_one("#kg-health-info", Static).update(health_text)
+            except Exception:
+                self.query_one("#kg-health-info", Static).update("")
+
+            # --- Sources table (base-layer docs) ---
+            for node in self._kg.list_nodes(node_type=NodeType.DOCUMENT, layer=GraphLayer.BASE, limit=50):
+                enriched = "✓" if node.metadata.get("_enriched") else "…"
+                table.add_row(node.id, node.name, enriched, "🗑", key=node.id)
+
+            # --- Extracted entities & topics (right pane) ---
+            ent_lines: list[str] = []
+            for ent in self._kg.list_nodes(node_type=NodeType.ENTITY, limit=20):
+                etype = ent.metadata.get("entity_type", "")
+                label = f"  • {ent.name}"
+                if etype:
+                    label += f" [dim][{etype}][/dim]"
+                ent_lines.append(label)
+            topic_lines: list[str] = []
+            for t in self._kg.list_nodes(node_type=NodeType.TOPIC, limit=15):
+                topic_lines.append(f"  • {t.name}")
+            extracted_parts: list[str] = []
+            if ent_lines:
+                extracted_parts.append(f"[b]Entities ({entities})[/b]\n" + "\n".join(ent_lines))
+            if topic_lines:
+                extracted_parts.append(f"[b]Topics ({topics})[/b]\n" + "\n".join(topic_lines))
+            self.query_one("#kg-extracted-content", Static).update(
+                "\n\n".join(extracted_parts) if extracted_parts else "  [dim]No extractions yet[/dim]"
+            )
+
+            # --- Decisions ---
+            dec_lines: list[str] = []
+            for d in self._kg.list_nodes(node_type=NodeType.DECISION, limit=15):
+                dtype = d.metadata.get("decision_type", "")
+                label = f"  • {d.name}"
+                if dtype:
+                    label += f" [dim]({dtype})[/dim]"
+                dec_lines.append(label)
+            self.query_one("#kg-decisions-content", Static).update(
+                "\n".join(dec_lines) if dec_lines else "  [dim]No decisions yet[/dim]"
+            )
         except Exception:
             self.query_one("#kg-stats-content", Static).update("  [dim]Error loading graph[/dim]")
 
@@ -6291,6 +6389,16 @@ class KnowledgeScreen(Screen):
             self._action_delete_graph()
         elif event.button.id == "kg-set-default-btn":
             self._action_set_default_graph()
+        elif event.button.id == "kg-export-base-btn":
+            self._action_export(base_only=True)
+        elif event.button.id == "kg-export-all-btn":
+            self._action_export(base_only=False)
+        elif event.button.id == "kg-import-btn":
+            self._action_import_kg()
+        elif event.button.id == "kg-clear-enrichment-btn":
+            self._action_clear_layer("enrichment")
+        elif event.button.id == "kg-clear-decisions-btn":
+            self._action_clear_layer("extended")
 
     def _action_new_graph(self) -> None:
         """Prompt for a name and create a new knowledge graph."""
@@ -6353,6 +6461,76 @@ class KnowledgeScreen(Screen):
             select.value = name
             self.query_one("#kg-detail", Static).update(
                 f"[green]★[/green] Default graph set to: [b]{name}[/b]"
+            )
+        except Exception as e:
+            self.query_one("#kg-detail", Static).update(f"[red]Error:[/red] {e}")
+
+    def _action_export(self, *, base_only: bool) -> None:
+        """Export the current graph to a .kg file via file browser."""
+        kg = self._ensure_kg()
+        if kg is None:
+            return
+
+        def _on_path(path: str | None) -> None:
+            if not path:
+                return
+            try:
+                from talk_box.knowledge_graph import GraphLayer
+
+                if base_only:
+                    kg.export_base(path)
+                else:
+                    kg.export_layers(
+                        [GraphLayer.BASE, GraphLayer.ENRICHMENT, GraphLayer.EXTENDED], path
+                    )
+                self.query_one("#kg-detail", Static).update(
+                    f"[green]✓[/green] Exported to [b]{path}[/b]"
+                )
+            except Exception as e:
+                self.query_one("#kg-detail", Static).update(f"[red]Export error:[/red] {e}")
+
+        self.app.push_screen(
+            TextInputModal("Export path", placeholder="e.g. ~/my_graph.kg"),
+            callback=_on_path,
+        )
+
+    def _action_import_kg(self) -> None:
+        """Import a .kg file into the current graph via compose."""
+
+        def _on_file(path: str | None) -> None:
+            if not path:
+                return
+            kg = self._ensure_kg()
+            if kg is None:
+                return
+            try:
+                from talk_box.knowledge_graph import import_kg
+
+                imported = import_kg(path)
+                added = kg.compose(imported, namespace=imported.name or "imported")
+                imported.close()
+                self._refresh_table()
+                self.query_one("#kg-detail", Static).update(
+                    f"[green]✓[/green] Imported {added} node(s) from [b]{path}[/b]"
+                )
+            except Exception as e:
+                self.query_one("#kg-detail", Static).update(f"[red]Import error:[/red] {e}")
+
+        self.app.push_screen(FileBrowserModal(), callback=_on_file)
+
+    def _action_clear_layer(self, layer_name: str) -> None:
+        """Clear a specific layer from the current graph."""
+        kg = self._ensure_kg()
+        if kg is None:
+            return
+        try:
+            from talk_box.knowledge_graph import GraphLayer
+
+            layer = GraphLayer(layer_name)
+            removed = kg.clear_layer(layer)
+            self._refresh_table()
+            self.query_one("#kg-detail", Static).update(
+                f"[green]✓[/green] Cleared {removed} node(s) from [b]{layer_name}[/b] layer"
             )
         except Exception as e:
             self.query_one("#kg-detail", Static).update(f"[red]Error:[/red] {e}")
