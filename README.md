@@ -2,7 +2,7 @@
 
 ![Talk Box Logo](talk-box-logo.png)
 
-**The best way to generate, test, and deploy LLM chatbots with attention-optimized prompt engineering**
+**A great way to generate, test, and deploy LLM chatbots with attention-optimized prompt engineering**
 
 [![PyPI](https://img.shields.io/pypi/v/talk-box)](https://pypi.org/project/talk-box/#history)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
